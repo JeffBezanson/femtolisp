@@ -1,0 +1,41 @@
+- readable gensyms. have uninterned symbols, but have all same-named
+  gensyms read to the same (eq) symbol within an expression.
+- fat pointers, i.e. 64 bits on 32-bit platforms. we could have full 32-bit
+  integers too. the mind boggles at the possibilities.
+  (it would be great if everybody decided that pointer types should forever
+   be wider than address spaces, with some bits reserved for application use)
+- any way at all to provide O(1) computed lookups (i.e. indexing).
+  CL uses vectors for this. once you have it, it's sufficient to get
+  efficient hash tables and everything else.
+  - could be done just by generalizing cons cells to have more than
+    car, cdr: c2r, c3r, etc. maybe (1 . 2 . 3 . 4 . ...)
+    all you need is a tag+size on the front of the object so the collector
+    knows how to deal with it.
+    (car x)      == (ref x 0), etc.
+    (rplaca x v) == (rplac x 0 v), etc.
+    (size (cons 1 2)) == 2, etc.
+  - one possibility: if we see a cons whose CAR is tagptr(0x10,TAG_SYM),
+    then the CDR is the size and the following words are the elements.
+    . this approach is especially good if vectors are separate types from
+      conses
+  - another: add u_int32_t size to cons_t, making them all 50% bigger.
+    access is simpler and more uniform, without fully doubling the size like
+    we'd get with fat pointers.
+
+Notice that the size is one byte more than the number of characters in
+the string. This is because femtoLisp adds a NUL terminator to make its
+strings compatible with C. No effort is made to hide this fact.
+But since femtoLisp tracks the sizes of cvalues, it doesn't need the
+terminator itself. Therefore it treats zero bytes specially as rarely
+as possible. In particular, zeros are only special in values whose type
+is exactly <tt>(array char)</tt>, and are only interpreted in the
+following cases:
+<ul>
+<li>When printing strings, a final NUL is never printed. NULs in the
+middle of a string are printed though.
+<li>String constructors NUL-terminate their output.
+<li>Explicit string functions (like <tt>strlen</tt>) treat NULs the same
+way equivalent C functions would.
+</ul>
+Arrays of uchar, int8, etc. are treated as raw data and zero bytes are
+never special.

@@ -1,0 +1,206 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+   "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
+<title>femtoLisp</title>
+</head>
+<body>
+<h1>femtoLisp</h1>
+<hr>
+femtoLisp is an elegant Lisp implementation. Its goal is to be a
+reasonably efficient and capable interpreter with the shortest, simplest
+code possible. As its name implies, it is small (10<sup>-15</sup>).
+Right now it is just 1000 lines of C (give or take). It would make a great
+teaching example, or a useful system anywhere a very small Lisp is wanted.
+It is also a useful basis for developing other interpreters or related
+languages.
+
+
+<h2>The language implemented</h2>
+
+femtoLisp tries to be a generic, simple Lisp dialect, influenced by McCarthy's
+original.
+
+<ul>
+<li>Types: cons, symbol, 30-bit integer, builtin function
+<li>Self-evaluating lambda, macro, and label forms
+<li>Full Common Lisp-style macros
+<li>Case-sensitive symbol names
+<li>Scheme-style evaluation rule where any expression may appear in head
+    position as long as it evaluates to a callable
+<li>Scheme-style formal argument lists (dotted lists for varargs)
+<li>Transparent closure representation <tt>(lambda args body . env)</tt>
+<li>A lambda body may contain only one form. Use explicit <tt>progn</tt> for
+    multiple forms. Included macros, however, allow <tt>defun</tt>,
+    <tt>let</tt>, etc. to accept multiple body forms.
+<li>Builtin function names are constants and cannot be redefined.
+<li>Symbols have one binding, as in Scheme.
+</ul>
+<b>Builtin special forms:</b><br>
+<tt>quote, cond, if, and, or, lambda, macro, label, while, progn, prog1</tt>
+<p>
+<b>Builtin functions:</b><br>
+<tt>eq, atom, not, symbolp, numberp, boundp, cons, car, cdr,
+    read, eval, print, load, set, 
+    +, -, *, /, &lt;, apply, rplaca, rplacd</tt>
+<p>
+<b>Included library functions and macros:</b><br>
+<tt>
+setq, setf, defmacro, defun, define, let, let*, labels, dotimes,
+macroexpand-1, macroexpand, backquote,
+
+null, consp, builtinp, self-evaluating-p, listp, eql, equal, every, any,
+when, unless,
+
+=, !=, &gt;, &lt;=, &gt;=, compare, mod, abs, identity,
+
+list, list*, length, last, nthcdr, lastcdr, list-ref, reverse, nreverse,
+assoc, member, append, nconc, copy-list, copy-tree, revappend, nreconc,
+
+mapcar, filter, reduce, map-int,
+
+symbol-plist, set-symbol-plist, put, get
+</tt>
+<p>
+<a href="system.lsp">system.lsp</a>
+
+
+<h2>The implementation</h2>
+
+<ul>
+<li>Compacting copying garbage collector (<tt>O(1)</tt> in number of dead
+    objects)
+<li>Tagged pointers for efficient type checking and fast integers
+<li>Tail-recursive evaluator (tail calls use no stack space)
+<li>Minimally-consing <tt>apply</tt>
+<li>Interactive and script execution modes
+</ul>
+<p>
+<a href="lisp.c">lisp.c</a>
+
+
+<h2>femtoLisp2</h2>
+
+This version includes robust reading and printing capabilities for
+circular structures and escaped symbol names. It adds read and print support
+for the Common Lisp read-macros <tt>#., #n#,</tt> and <tt>#n=</tt>.
+This allows builtins to be printed in a readable fashion as e.g.
+"<tt>#.eq</tt>".
+<p>
+The net result is that the interpreter achieves a highly satisfying property
+of closure under I/O. In other words, every representable Lisp value can be
+read and printed.
+<p>
+The traditional builtin <tt>label</tt> provides a purely-functional,
+non-circular way
+to write an anonymous recursive function. In femtoLisp2 you can
+achieve the same effect "manually" using nothing more than the reader:
+<br>
+<tt>#0=(lambda (x) (if (&lt;= x 0) 1 (* x (#0# (- x 1)))))</tt>
+<p>
+femtoLisp2 has the following extra features and optimizations:
+<ul>
+<li> builtin functions <tt>error, exit,</tt> and <tt>princ</tt>
+<li> read support for backquote expressions
+<li> delayed environment consing
+<li> collective allocation of cons chains
+</ul>
+Those two optimizations are a Big Deal.
+<p>
+<a href="lisp2.c">lisp2.c</a> (uses <a href="flutils.c">flutils.c</a>)
+
+
+<h2>Performance</h2>
+
+femtoLisp's performance is surprising. It is faster than most
+interpreters, and it is usually within a factor of 2-5 of compiled CLISP.
+
+<table border=1>
+<tr>
+<td colspan=3><center><b>solve 5 queens problem 100x</b></center></td>
+<tr>
+<td>          <td>interpreted<td>compiled
+<tr>
+<td>CLISP     <td>4.02 sec   <td>0.68 sec
+<tr>
+<td>femtoLisp2<td>2.62 sec   <td>2.03 sec**
+<tr>
+<td>femtoLisp <td>6.02 sec   <td>5.64 sec**
+<tr>
+
+<td colspan=3><center><b>recursive fib(34)</b></center></td>
+<tr>
+<td>          <td>interpreted<td>compiled
+<tr>
+<td>CLISP     <td>23.12 sec  <td>4.04 sec
+<tr>
+<td>femtoLisp2<td>4.71 sec   <td>n/a
+<tr>
+<td>femtoLisp <td>7.25 sec   <td>n/a
+<tr>
+
+</table>
+** femtoLisp is not a compiler; in this context "compiled" means macros
+were pre-expanded.
+
+
+<h2>"Installation"</h2>
+
+Here is a <a href="Makefile">Makefile</a>. Type <tt>make</tt> to build
+femtoLisp, <tt>make NAME=lisp2</tt> to build femtoLisp2.
+
+
+<h2>Tail recursion</h2>
+The femtoLisp evaluator is tail-recursive, following the idea in
+<a href="http://library.readscheme.org/servlets/cite.ss?pattern=Ste-76b">
+Lambda: The Ultimate Declarative</a> (should be required reading
+for all schoolchildren).
+<p>
+The femtoLisp source provides a simple concrete example showing why a function
+call is best viewed as a "renaming plus goto" rather than as a set of stack
+operations.
+<p>
+Here is the non-tail-recursive evaluator code to evaluate the body of a
+lambda (function), from <a href="lisp-nontail.c">lisp-nontail.c</a>:
+<pre>
+        PUSH(*lenv);    // preserve environment on stack
+        lenv = &amp;Stack[SP-1];
+        v = eval(*body, lenv);
+        POP();
+        return v;
+</pre>
+(Note that because of the copying garbage collector, values are referenced
+through relocatable handles.)
+<p>
+Superficially, the call to <tt>eval</tt> is not a tail call, because work
+remains after it returns&mdash;namely, popping the environment off the stack.
+In other words, the control stack must be saved and restored to allow us to
+eventually restore the environment stack. However, restoring the environment
+stack is the <i>only</i> work to be done. Yet after this point the old
+environment is not used! So restoring the environment stack isn't
+necessary, therefore restoring the control stack isn't either.
+<p>
+This perspective makes proper tail recursion seem like more than an
+alternate design or optimization. It seems more correct.
+<p>
+Here is the corrected, tail-recursive version of the code:
+<pre>
+        SP = saveSP;    // restore stack completely
+        e = *body;      // reassign arguments
+        *penv = *lenv;
+        goto eval_top;
+</pre>
+<tt>penv</tt> is a pointer to the old environment, which we overwrite.
+(Notice that the variable <tt>penv</tt> does not even appear in the first code
+example.)
+So where is the environment saved and restored, if not here? The answer
+is that the burden is shifted to the caller; a caller to <tt>eval</tt> must
+expect that its environment might be overwritten, and take steps to save it
+if it will be needed further after the call. In practice, this means
+the environment is saved and restored around the evaluation of
+arguments, rather than around function applications. Hence <tt>(f x)</tt>
+might be a tail call to <tt>f</tt>, but <tt>(+ y (f x))</tt> is not.
+
+</body>
+</html>
