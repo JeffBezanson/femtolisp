@@ -5,9 +5,10 @@ SRCS = $(NAME).c builtins.c equal.c
 OBJS = $(SRCS:%.c=%.o)
 DOBJS = $(SRCS:%.c=%.do)
 EXENAME = $(NAME)
-LLT = llt/libllt.a
+LLTDIR = ../llt
+LLT = $(LLTDIR)/libllt.a
 
-FLAGS = -Wall -Wextra -Wno-strict-aliasing -I./llt $(CFLAGS)
+FLAGS = -Wall -Wextra -Wno-strict-aliasing -I$(LLTDIR) $(CFLAGS)
 LIBS = $(LLT) -lm
 
 DEBUGFLAGS = -g -DDEBUG $(FLAGS)
@@ -27,7 +28,7 @@ flisp.o: flisp.c cvalues.c flisp.h print.c read.c
 flisp.do: flisp.c cvalues.c flisp.h print.c read.c
 
 $(LLT):
-	cd llt && make
+	cd $(LLTDIR) && make
 
 debug: $(DOBJS) $(LIBS)
 	$(CC) $(DEBUGFLAGS) $(DOBJS) -o $(EXENAME) $(LIBS)
