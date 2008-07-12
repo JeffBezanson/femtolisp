@@ -112,7 +112,16 @@ for internal use:
 - a special version of apply that takes arguments on the stack, to avoid
   consing when implementing "call-with" style primitives like trycatch,
   hashtable-foreach, or the fl_apply API
-
+try this environment representation:
+ for all kinds of functions (except maybe builtin special forms) push
+ all arguments on the stack, either evaluated or not.
+ for lambdas, push the lambda list and next-env pointers.
+ to capture, save the n+2 pointers to a vector
+ . this uses n+2 heap or stack words per environment instead of 2n+1 words
+ . argument handling is more uniform which could lead to simplifications,
+   and a more efficient apply() entry point
+ . disadvantage is looking through the lambda list on every lookup. maybe
+   improve by making lambda lists vectors somehow?
 
 bugs:
 * with the fully recursive (simpler) relocate(), the size of cons chains

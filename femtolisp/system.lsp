@@ -86,6 +86,9 @@
 
 (define (cadr x) (car (cdr x)))
 
+(setq *special-forms* '(quote cond if and or while lambda label trycatch
+                        %top progn))
+
 (defun macroexpand (e)
   ((label mexpand
           (lambda (e env f)
@@ -94,28 +97,33 @@
                           (not (member (car e) env))
                           (set 'f (macrocallp e)))
                 (set 'e (apply f (cdr e))))
-              (if (and (consp e)
-                       (not (eq (car e) 'quote)))
-                  (let ((newenv
-                         (if (and (eq (car e) 'lambda)
-                                  (consp (cdr e)))
-                             (append.2 (cadr e) env)
-                           env)))
-                    (map (lambda (x) (mexpand x newenv nil)) e))
-                e))))
+              (cond ((and (consp e)
+                          (not (eq (car e) 'quote)))
+                     (let ((newenv
+                            (if (and (or (eq (car e) 'lambda)
+                                         (eq (car e) 'label))
+                                     (consp (cdr e)))
+                                (append.2 (cadr e) env)
+                              env)))
+                       (map (lambda (x) (mexpand x newenv nil)) e)))
+                    ;((and (symbolp e) (constantp e)) (eval e))
+                    ;((and (symbolp e)
+                    ;      (not (member e *special-forms*))
+                    ;      (not (member e env))) (cons '%top e))
+                    (T e)))))
    e nil nil))
 
 ; uncomment this to macroexpand functions at definition time.
 ; makes typical code ~25% faster, but only works for defun expressions
 ; at the top level.
 (defmacro defun (name args . body)
-  (list 'setq name (list 'lambda args (macroexpand (f-body body)))))
+  (list 'setq name (macroexpand (list 'lambda args (f-body body)))))
 
 ; same thing for macros. enabled by default because macros are usually
 ; defined at the top level.
 (defmacro defmacro (name args . body)
   (list 'set-syntax (list 'quote name)
-        (list 'lambda args (macroexpand (f-body body)))))
+        (macroexpand (list 'lambda args (f-body body)))))
 
 (setq =   equal)
 (setq eql equal)
