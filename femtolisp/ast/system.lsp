@@ -4,12 +4,8 @@
 
 (set 'list (lambda args args))
 
-(set 'setq (macro (name val)
-                  (list set (list 'quote name) val)))
-
-(setq sp '| |)
-(setq nl '|
-|)
+(set-syntax 'setq (lambda (name val)
+                    (list set (list 'quote name) val)))
 
 ; convert a sequence of body statements to a single expression.
 ; this allows define, defun, defmacro, let, etc. to contain multiple
@@ -19,9 +15,13 @@
                      ((eq (cdr e) ()) (car e))
                      (T               (cons 'progn e)))))
 
-(setq defmacro
-      (macro (name args . body)
-             (list 'setq name (list 'macro args (f-body body)))))
+(set-syntax 'defmacro
+            (lambda (name args . body)
+              (list 'set-syntax (list 'quote name)
+                    (list 'lambda args (f-body body)))))
+
+(defmacro label (name fn)
+  (list (list 'lambda (cons name nil) (list 'setq name fn)) nil))
 
 ; support both CL defun and Scheme-style define
 (defmacro defun (name args . body)
@@ -34,7 +34,6 @@
 
 (defun identity (x) x)
 (setq null not)
-(defun consp (x) (not (atom x)))
 
 (defun map (f lst)
   (if (atom lst) lst
@@ -69,16 +68,17 @@
         ((equal (car lst) item) lst)
         (T (member item (cdr lst)))))
 
-(defun macrop (e) (and (consp e) (eq (car e) 'macro) e))
 (defun macrocallp (e) (and (symbolp (car e))
-                           (boundp (car e))
-                           (macrop (eval (car e)))))
-(defun macroapply (m args) (apply (cons 'lambda (cdr m)) args))
+                           (symbol-syntax (car e))))
+
+(defun functionp (x)
+  (or (builtinp x)
+      (and (consp x) (eq (car x) 'lambda))))
 
 (defun macroexpand-1 (e)
   (if (atom e) e
     (let ((f (macrocallp e)))
-      (if f (macroapply f (cdr e))
+      (if f (apply f (cdr e))
         e))))
 
 ; convert to proper list, i.e. remove "dots", and append
@@ -89,6 +89,9 @@
 
 (define (cadr x) (car (cdr x)))
 
+(setq *special-forms* '(quote cond if and or while lambda label trycatch
+                        %top progn))
+
 (defun macroexpand (e)
   ((label mexpand
           (lambda (e env f)
@@ -96,32 +99,38 @@
               (while (and (consp e)
                           (not (member (car e) env))
                           (set 'f (macrocallp e)))
-                (set 'e (macroapply f (cdr e))))
-              (if (and (consp e)
-                       (not (eq (car e) 'quote)))
-                  (let ((newenv
-                         (if (and (or (eq (car e) 'lambda) (eq (car e) 'macro))
-                                  (consp (cdr e)))
-                             (append.2 (cadr e) env)
-                           env)))
-                    (map (lambda (x) (mexpand x newenv nil)) e))
-                e))))
+                (set 'e (apply f (cdr e))))
+              (cond ((and (consp e)
+                          (not (eq (car e) 'quote)))
+                     (let ((newenv
+                            (if (and (or (eq (car e) 'lambda)
+                                         (eq (car e) 'label))
+                                     (consp (cdr e)))
+                                (append.2 (cadr e) env)
+                              env)))
+                       (map (lambda (x) (mexpand x newenv nil)) e)))
+                    ((and (symbolp e) (constantp e)) (eval e))
+                    ;((and (symbolp e)
+                    ;      (not (member e *special-forms*))
+                    ;      (not (member e env))) (cons '%top e))
+                    (T e)))))
    e nil nil))
 
 ; uncomment this to macroexpand functions at definition time.
 ; makes typical code ~25% faster, but only works for defun expressions
 ; at the top level.
 (defmacro defun (name args . body)
-  (list 'setq name (list 'lambda args (macroexpand (f-body body)))))
+  (list 'setq name (macroexpand (list 'lambda args (f-body body)))))
 
 ; same thing for macros. enabled by default because macros are usually
 ; defined at the top level.
 (defmacro defmacro (name args . body)
-  (list 'setq name (list 'macro args (macroexpand (f-body body)))))
+  (list 'set-syntax (list 'quote name)
+        (macroexpand (list 'lambda args (f-body body)))))
 
-(setq =   eq)
-(setq eql eq)
-(define (/= a b) (not (eq a b)))
+(setq =   equal)
+(setq eql equal)
+(define (/= a b) (not (equal a b)))
 (define != /=)
 (define (>  a b) (< b a))
 (define (<= a b) (not (< b a)))
@@ -130,11 +139,11 @@
 (define (1- n) (- n 1))
 (define (mod x y) (- x (* (/ x y) y)))
 (define (abs x)   (if (< x 0) (- x) x))
-(define (truncate x) x)
 (setq K prog1)  ; K combinator ;)
 (define (funcall f . args) (apply f args))
-(define (symbol-function sym) (eval sym))
-(define (symbol-value    sym) (eval sym))
+(define (symbol-value sym) (eval sym))
+(define symbol-function symbol-value)
+(define (terpri) (princ "\n") nil)
 
 (define (caar x) (car (car x)))
 (define (cdar x) (cdr (car x)))
@@ -148,23 +157,6 @@
 (define (cddar x) (cdr (cdr (car x))))
 (define (cdddr x) (cdr (cdr (cdr x))))
 
-(define (equal a b)
-  (if (and (consp a) (consp b))
-      (and (equal (car a) (car b))
-           (equal (cdr a) (cdr b)))
-    (eq a b)))
-
-; compare imposes an ordering on all values. yields -1 for a<b,
-; 0 for a==b, and 1 for a>b. lists are compared up to the first
-; point of difference.
-(defun compare (a b)
-  (cond ((eq a b) 0)
-        ((or (atom a) (atom b)) (if (< a b) -1 1))
-        (T (let ((c (compare (car a) (car b))))
-             (if (not (eq c 0))
-                 c
-               (compare (cdr a) (cdr b)))))))
-
 (defun every (pred lst)
   (or (atom lst)
       (and (pred (car lst))
@@ -176,10 +168,6 @@
            (any pred (cdr lst)))))
 
 (defun listp (a) (or (eq a ()) (consp a)))
-
-(defun length (l)
-  (if (null l) 0
-    (+ 1 (length (cdr l)))))
 
 (defun nthcdr (n lst)
   (if (<= n 0) lst
@@ -226,8 +214,8 @@
 
 (defun filter (pred lst)
   (cond ((null lst) ())
-        ((not (pred (car lst))) (filter pred (cdr lst)))
-        (T (cons (car lst) (filter pred (cdr lst))))))
+        ((pred (car lst)) (cons (car lst) (filter pred (cdr lst))))
+        (T (filter pred (cdr lst)))))
 
 (define (foldr f zero lst)
   (if (null lst) zero
@@ -251,11 +239,6 @@
   (if (atom l) l
     (cons (copy-tree (car l))
           (copy-tree (cdr l)))))
-
-(define (assoc item lst)
-  (cond ((atom lst) ())
-        ((eq (caar lst) item) (car lst))
-        (T (assoc item (cdr lst)))))
 
 (define (nreverse l)
   (let ((prev nil))
@@ -281,8 +264,8 @@
                            body)))
         (map (lambda (x) nil) binds)))
 
-(defmacro when   (c . body) (list if c (f-body body) nil))
-(defmacro unless (c . body) (list if c nil (f-body body)))
+(defmacro when   (c . body) (list 'if c (f-body body) nil))
+(defmacro unless (c . body) (list 'if c nil (f-body body)))
 
 (defmacro dotimes (var . body)
   (let ((v (car var))
@@ -292,10 +275,18 @@
                 (list prog1 (f-body body) (list 'setq v (list + v 1)))))))
 
 (defun map-int (f n)
-  (let ((acc nil))
-    (dotimes (i n)
-      (setq acc (cons (f i) acc)))
-    (nreverse acc)))
+  (if (<= n 0)
+      ()
+    (let ((first (cons (f 0) nil)))
+      ((label map-int-
+              (lambda (acc i n)
+                (if (= i n)
+                    first
+                  (progn (rplacd acc (cons (f i) nil))
+                         (map-int- (cdr acc) (+ i 1) n)))))
+       first 1 n))))
+
+(defun iota (n) (map-int identity n))
 
 (defun error args (raise (cons 'error args)))
 
@@ -339,7 +330,7 @@
                                                    (eq (car ,e)
                                                        ',extype)))
                                        T); (catch (e) ...), match anything
-                                    (let ((,var ,e)) ,@todo))))
+                                    (let ((,var ,e)) (progn ,@todo)))))
                               catches)
                        (T (raise ,e))))) ; no matches, reraise
     (if final
@@ -358,35 +349,6 @@
              ,final))
       ; catch, no finally
       `(trycatch ,expr (lambda (,e) ,catchblock)))))
-
-; property lists
-(setq *plists* nil)
-
-(defun symbol-plist (sym)
-  (cdr (or (assoc sym *plists*) '(()))))
-
-(defun set-symbol-plist (sym lst)
-  (let ((p (assoc sym *plists*)))
-    (if (null p)  ; sym has no plist yet
-        (setq *plists* (cons (cons sym lst) *plists*))
-      (rplacd p lst))))
-
-(defun get (sym prop)
-  (let ((pl (symbol-plist sym)))
-    (if pl
-        (let ((pr (member prop pl)))
-          (if pr (cadr pr) nil))
-      nil)))
-
-(defun put (sym prop val)
-  (let ((p (assoc sym *plists*)))
-    (if (null p)  ; sym has no plist yet
-        (setq *plists* (cons (list sym prop val) *plists*))
-      (let ((pr (member prop p)))
-        (if (null pr)  ; sym doesn't have this property yet
-            (rplacd p (cons prop (cons val (cdr p))))
-          (rplaca (cdr pr) val)))))
-  val)
 
 ; setf
 ; expands (setf (place x ...) v) to (mutator (f x ...) v)
@@ -411,7 +373,8 @@
         (aref    aset     identity)
         (symbol-function   set                identity)
         (symbol-value      set                identity)
-        (symbol-plist      set-symbol-plist   identity)))
+        (symbol-plist      set-symbol-plist   identity)
+        (symbol-syntax     set-syntax         identity)))
 
 (defun setf-place-mutator (place val)
   (if (symbolp place)
@@ -452,10 +415,6 @@
       (eq x T)
       (and (atom x)
            (not (symbolp x)))))
-
-(defun functionp (x)
-  (or (builtinp x)
-      (and (consp x) (eq (car x) 'lambda))))
 
 ; backquote
 (defmacro backquote (x) (bq-process x))
@@ -509,3 +468,10 @@
     (bq-process x)))
 
 (defmacro assert (expr) `(if ,expr T (raise '(assert-failed ,expr))))
+
+(defmacro time (expr)
+  (let ((t0 (gensym)))
+    `(let ((,t0 (time.now)))
+       (prog1
+           ,expr
+         (princ "Elapsed time: " (- (time.now) ,t0) " seconds\n")))))

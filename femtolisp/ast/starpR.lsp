@@ -1,4 +1,4 @@
-(r-expressions
+'(r-expressions
  (r-call library \M\A\S\S)
  (r-call dyn.load "starp.so")
  (<- ppcommand (function ((*named* ... *r-missing*)) (r-call .\Call "ppcommand" (r-call list r-dotdotdot)) ()))

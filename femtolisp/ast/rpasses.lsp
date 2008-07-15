@@ -1,5 +1,5 @@
-(load '|match.lsp|)
-(load '|asttools.lsp|)
+(load "match.lsp")
+(load "asttools.lsp")
 
 (define missing-arg-tag '*r-missing*)
 
@@ -110,11 +110,9 @@
 ;)
 (define (main)
   (progn
-    (define *input* (read))
+    (define *input* (load "starpR.lsp"))
     ;(define t0 ((java.util.Date:new):getTime))
-    (clock)
-    (compile-ish *input*)
-    (clock)
+    (time (compile-ish *input*))
     ;(define t1 ((java.util.Date:new):getTime))
 ))
 
