@@ -1227,7 +1227,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
                 v = Stack[saveSP] = cdr_(Stack[saveSP]);
             }
             if (*argsyms != NIL && issymbol(*argsyms)) {
-                PUSH(NIL);
+                PUSH(Stack[saveSP]);
                 // this version uses collective allocation. about 7-10%
                 // faster for lists with > 2 elements, but uses more
                 // stack space
