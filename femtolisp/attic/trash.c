@@ -115,3 +115,15 @@ value_t fl_inv(value_t b)
  inv_error:
     lerror(DivideError, "/: division by zero");
 }
+
+static void printstack(value_t *penv, uint32_t envsz)
+{
+    int i;
+    printf("env=%d, size=%d\n", penv - &Stack[0], envsz);
+    for(i=0; i < SP; i++) {
+        printf("%d: ", i);
+        print(stdout, Stack[i], 0);
+        printf("\n");
+    }
+    printf("\n");
+}

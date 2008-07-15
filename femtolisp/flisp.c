@@ -68,7 +68,7 @@
 #include "flisp.h"
 
 static char *builtin_names[] =
-    { "quote", "cond", "if", "and", "or", "while", "lambda", "label",
+    { "quote", "cond", "if", "and", "or", "while", "lambda",
       "trycatch", "progn",
 
       "eq", "atom", "not", "symbolp", "numberp", "boundp", "consp",
@@ -84,13 +84,13 @@ static char *stack_bottom;
 value_t Stack[N_STACK];
 u_int32_t SP = 0;
 
-value_t NIL, T, LAMBDA, LABEL, QUOTE, VECTOR, IF, TRYCATCH;
+value_t NIL, T, LAMBDA, QUOTE, VECTOR, IF, TRYCATCH;
 value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT;
 value_t IOError, ParseError, TypeError, ArgError, UnboundError, MemoryError;
 value_t DivideError, BoundsError, Error;
 value_t conssym, symbolsym, fixnumsym, vectorsym, builtinsym;
 
-static value_t eval_sexpr(value_t e, value_t *penv, int tail, u_int32_t envend);
+static value_t eval_sexpr(value_t e, value_t *penv, int tail);
 static value_t *alloc_words(int n);
 static value_t relocate(value_t v);
 static void do_print(FILE *f, value_t v, int princ);
@@ -608,13 +608,13 @@ static value_t assoc(value_t item, value_t v)
     return NIL;
 }
 
-#define eval(e)         ((tag(e)<0x2) ? (e) : eval_sexpr((e),penv,0,envend))
-#define topeval(e, env) ((tag(e)<0x2) ? (e) : eval_sexpr((e),env,1,SP))
+#define eval(e)         ((tag(e)<0x2) ? (e) : eval_sexpr((e),penv,0))
+#define topeval(e, env) ((tag(e)<0x2) ? (e) : eval_sexpr((e),env,1))
 #define tail_eval(xpr) do { SP = saveSP;  \
     if (tag(xpr)<0x2) { return (xpr); } \
     else { e=(xpr); goto eval_top; } } while (0)
 
-static value_t do_trycatch(value_t expr, value_t *penv, u_int32_t envend)
+static value_t do_trycatch(value_t expr, value_t *penv)
 {
     value_t v;
 
@@ -639,26 +639,27 @@ static value_t do_trycatch(value_t expr, value_t *penv, u_int32_t envend)
 /* stack setup on entry:
   n     n+1   ...
  +-----+-----+-----+-----+-----+-----+-----+-----+
- | SYM | VAL | SYM | VAL | CLO |     |     |     |
+ | LL  | VAL | VAL | CLO |     |     |     |     |
  +-----+-----+-----+-----+-----+-----+-----+-----+
-  ^                             ^                      ^
-  |                             |                      |
-  penv                          envend                 SP (who knows where)
+  ^                                                   ^
+  |                                                   |
+  penv                                                SP (who knows where)
 
- sym is an argument name and val is its binding. CLO is a closed-up
- environment vector (which can be empty, i.e. NIL).
- CLO is always there, but there might be zero SYM/VAL pairs.
+ where LL is the lambda list, CLO is a closed-up environment vector
+ (which can be empty, i.e. NIL). An environment vector is just a copy
+ of the stack from LL through CLO.
+ There might be zero values, in which case LL is NIL.
 
  if tail==1, you are allowed (indeed encouraged) to overwrite this
  environment, otherwise you have to put any new environment on the top
  of the stack.
 */
-static value_t eval_sexpr(value_t e, value_t *penv, int tail, u_int32_t envend)
+static value_t eval_sexpr(value_t e, value_t *penv, int tail)
 {
-    value_t f, v, asym, *pv, *argsyms, *body, *lenv, *argenv;
+    value_t f, v, *pv, *argsyms, *body, *lenv;
     cons_t *c;
     symbol_t *sym;
-    u_int32_t saveSP;
+    u_int32_t saveSP, envsz;
     int i, nargs, noeval=0;
     fixnum_t s;
     cvalue_t *cv;
@@ -669,15 +670,18 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, u_int32_t envend)
         sym = (symbol_t*)ptr(e);
         if (sym->syntax == TAG_CONST) return sym->binding;
         while (1) {
-            if (tag(*penv) == TAG_BUILTIN)
-                penv = &vector_elt(*penv, 0);
-            if (*penv == e)
-                return penv[1];
-            else if (*penv == NIL)
+            v = *penv++;
+            while (iscons(v)) {
+                if (car_(v)==e) return *penv;
+                v = cdr_(v); penv++;
+            }
+            if (v == e) return *penv;  // dotted list
+            if (v != NIL) penv++;
+            if (*penv == NIL)
                 break;
-            penv+=2;
+            penv = &vector_elt(*penv, 0);
         }
-        if ((v = sym->binding) == UNBOUND)   // 3. global env
+        if ((v = sym->binding) == UNBOUND)
             raise(list2(UnboundError, e));
         return v;
     }
@@ -696,7 +700,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, u_int32_t envend)
         else
             noeval = 2;
     }
-    else f = eval_sexpr(v, penv, 0, envend);
+    else f = eval(v);
     v = Stack[saveSP];
     if (tag(f) == TAG_BUILTIN) {
         // handle builtin function
@@ -718,25 +722,30 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, u_int32_t envend)
             break;
         case F_LAMBDA:
             // build a closure (lambda args body . env)
-            if (issymbol(*penv) && *penv != NIL) {
+            if (*penv != NIL) {
                 // save temporary environment to the heap
-                // find out how much space we need
-                nargs = ((int)(&Stack[envend] - penv - 1));
                 lenv = penv;
-                pv = alloc_words(nargs + 2);
+                //envsz = saveSP - (penv - &Stack[0]);
+                envsz = 2;
+                v = *penv;
+                while (iscons(v)) {
+                    envsz++;
+                    v = cdr_(v);
+                }
+                if (v != NIL) envsz++;
+                pv = alloc_words(envsz + 1);
                 PUSH(tagptr(pv, TAG_BUILTIN));
-                pv[0] = (nargs+1)<<2;
+                pv[0] = envsz<<2;
                 pv++;
-                while (nargs--)
+                while (envsz--)
                     *pv++ = *penv++;
-                // final element points to existing cloenv
-                *pv = Stack[envend-1];
                 // environment representation changed; install
                 // the new representation so everybody can see it
-                *lenv = Stack[SP-1];
+                lenv[0] = NIL;
+                lenv[1] = Stack[SP-1];
             }
             else {
-                PUSH(*penv); // env has already been captured; share
+                PUSH(penv[1]); // env has already been captured; share
             }
             c = (cons_t*)ptr(v=cons_reserve(3));
             c->car = LAMBDA;
@@ -745,22 +754,6 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, u_int32_t envend)
             c->cdr = tagptr(c+1, TAG_CONS); c++;
             c->car = car(cdr_(Stack[saveSP])); //body
             c->cdr = Stack[SP-1]; //env
-            break;
-        case F_LABEL:
-            // the syntax of label is (label name (lambda args body))
-            // nothing else is guaranteed to work
-            PUSH(car(Stack[saveSP]));
-            PUSH(car(cdr_(Stack[saveSP])));
-            body = &Stack[SP-1];
-            *body = eval(*body);  // evaluate lambda
-            pv = alloc_words(4);
-            pv[0] = 3<<2;  // vector size 3
-            // add [name fn] to front of function's environment
-            pv[1] = Stack[SP-2]; // name
-            pv[2] = v = *body;   // lambda
-            f = cdr(cdr(v));
-            pv[3] = cdr(f);
-            cdr_(f) = tagptr(pv, TAG_BUILTIN);
             break;
         case F_IF:
             v = car(Stack[saveSP]);
@@ -843,7 +836,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, u_int32_t envend)
             }
             break;
         case F_TRYCATCH:
-            v = do_trycatch(car(Stack[saveSP]), penv, envend);
+            v = do_trycatch(car(Stack[saveSP]), penv);
             break;
 
         // ordinary functions
@@ -851,15 +844,24 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, u_int32_t envend)
             argcount("set", nargs, 2);
             e = Stack[SP-2];
             while (1) {
-                if (tag(*penv) == TAG_BUILTIN)
-                    penv = &vector_elt(*penv, 0);
-                if (*penv == e) {
-                    penv[1] = Stack[SP-1];
-                    SP=saveSP; return penv[1];
+                v = *penv++;
+                while (iscons(v)) {
+                    if (car_(v)==e) {
+                        *penv = Stack[SP-1];
+                        SP=saveSP;
+                        return *penv;
+                    }
+                    v = cdr_(v); penv++;
                 }
-                else if (*penv == NIL)
+                if (v == e) {
+                    *penv = Stack[SP-1];
+                    SP=saveSP;
+                    return *penv;
+                }
+                if (v != NIL) penv++;
+                if (*penv == NIL)
                     break;
-                penv+=2;
+                penv = &vector_elt(*penv, 0);
             }
             sym = tosymbol(e, "set");
             v = Stack[SP-1];
@@ -1132,13 +1134,17 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, u_int32_t envend)
             v = Stack[SP-1];
             if (tag(v)<0x2) { SP=saveSP; return v; }
             if (tail) {
-                *penv = NIL;
-                envend = SP = (u_int32_t)(penv-&Stack[0]) + 1;
-                e=v; goto eval_top;
+                penv[0] = NIL;
+                penv[1] = NIL;
+                //envsz = 0;
+                SP = (u_int32_t)(penv-&Stack[0]) + 2;
+                e=v;
+                goto eval_top;
             }
             else {
                 PUSH(NIL);
-                v = eval_sexpr(v, &Stack[SP-1], 1, SP);
+                PUSH(NIL);
+                v = eval_sexpr(v, &Stack[SP-2], 1);
             }
             break;
         case F_RAISE:
@@ -1184,70 +1190,80 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, u_int32_t envend)
     }
  apply_lambda:
     if (iscons(f)) {
-        // apply lambda or macro expression
-        PUSH(cdr(cdr_(f)));
-        PUSH(car_(cdr_(f)));
+        // apply lambda expression
+        f = cdr_(f);
+        PUSH(f);
+        PUSH(car(f)); // arglist
         argsyms = &Stack[SP-1];
-        argenv = &Stack[SP];  // argument environment starts now
         // build a calling environment for the lambda
         // the environment is the argument binds on top of the captured
         // environment
-        while (iscons(v)) {
-            // bind args
-            if (!iscons(*argsyms)) {
-                if (*argsyms == NIL)
-                    lerror(ArgError, "apply: too many arguments");
-                break;
+        if (noeval) {
+            while (iscons(v)) {
+                // bind args
+                if (!iscons(*argsyms)) {
+                    if (*argsyms == NIL)
+                        lerror(ArgError, "apply: too many arguments");
+                    break;
+                }
+                PUSH(car_(v));
+                *argsyms = cdr_(*argsyms);
+                v = cdr_(v);
             }
-            asym = car_(*argsyms);
-            if (asym==NIL || !issymbol(asym))
-                lerror(ArgError, "apply: invalid formal argument");
-            v = car_(v);
-            if (!noeval) {
-                v = eval(v);
-            }
-            PUSH(asym);
-            PUSH(v);
-            *argsyms = cdr_(*argsyms);
-            v = Stack[saveSP] = cdr_(Stack[saveSP]);
+            if (*argsyms != NIL && issymbol(*argsyms))
+                PUSH(v);
         }
-        if (*argsyms != NIL) {
-            if (issymbol(*argsyms)) {
-                PUSH(*argsyms);
-                PUSH(Stack[saveSP]);
-                if (!noeval) {
-                    // this version uses collective allocation. about 7-10%
-                    // faster for lists with > 2 elements, but uses more
-                    // stack space
-                    i = SP;
-                    while (iscons(Stack[saveSP])) {
-                        PUSH(eval(car_(Stack[saveSP])));
-                        Stack[saveSP] = cdr_(Stack[saveSP]);
+        else {
+            while (iscons(v)) {
+                // bind args
+                if (!iscons(*argsyms)) {
+                    if (*argsyms == NIL)
+                        lerror(ArgError, "apply: too many arguments");
+                    break;
+                }
+                v = eval(car_(v));
+                PUSH(v);
+                *argsyms = cdr_(*argsyms);
+                v = Stack[saveSP] = cdr_(Stack[saveSP]);
+            }
+            if (*argsyms != NIL && issymbol(*argsyms)) {
+                PUSH(NIL);
+                // this version uses collective allocation. about 7-10%
+                // faster for lists with > 2 elements, but uses more
+                // stack space
+                i = SP;
+                while (iscons(Stack[saveSP])) {
+                    v = car_(Stack[saveSP]);
+                    v = eval(v);
+                    PUSH(v);
+                    Stack[saveSP] = cdr_(Stack[saveSP]);
+                }
+                nargs = SP-i;
+                if (nargs) {
+                    Stack[i-1] = cons_reserve(nargs);
+                    c = (cons_t*)ptr(Stack[i-1]);
+                    for(; i < (int)SP; i++) {
+                        c->car = Stack[i];
+                        c->cdr = tagptr(c+1, TAG_CONS);
+                        c++;
                     }
-                    nargs = SP-i;
-                    if (nargs) {
-                        Stack[i-1] = cons_reserve(nargs);
-                        c = (cons_t*)ptr(Stack[i-1]);
-                        for(; i < (int)SP; i++) {
-                            c->car = Stack[i];
-                            c->cdr = tagptr(c+1, TAG_CONS);
-                            c++;
-                        }
-                        (c-1)->cdr = Stack[saveSP];
-                        POPN(nargs);
-                    }
+                    (c-1)->cdr = Stack[saveSP];
+                    POPN(nargs);
                 }
             }
-            else if (iscons(*argsyms)) {
-                lerror(ArgError, "apply: too few arguments");
-            }
         }
-        PUSH(cdr(Stack[saveSP+1])); // add cloenv to new environment
-        e = car_(Stack[saveSP+1]);
+        if (iscons(*argsyms)) {
+            lerror(ArgError, "apply: too few arguments");
+        }
+        *argsyms = car_(Stack[saveSP+1]);
+        f = cdr_(Stack[saveSP+1]);
+        PUSH(cdr(f));
+        e = car_(f);
+
         // macro: evaluate expansion in the calling environment
         if (noeval == 2) {
             if (tag(e)<0x2) ;
-            else e = eval_sexpr(e, argenv, 1, SP);
+            else e = eval_sexpr(e, argsyms, 1);
             SP = saveSP;
             if (tag(e)<0x2) return(e);
             noeval = 0;
@@ -1258,14 +1274,15 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, u_int32_t envend)
             if (tail) {
                 noeval = 0;
                 // ok to overwrite environment
-                nargs = (int)(&Stack[SP] - argenv);
-                for(i=0; i < nargs; i++)
-                    penv[i] = argenv[i];
-                envend = SP = (u_int32_t)((penv+nargs) - &Stack[0]);
+                s = SP - saveSP - 2;
+                for(i=0; i < s; i++)
+                    penv[i] = argsyms[i];
+                SP = (u_int32_t)((penv+s) - &Stack[0]);
+                //envsz = s;
                 goto eval_top;
             }
             else {
-                v = eval_sexpr(e, argenv, 1, SP);
+                v = eval_sexpr(e, argsyms, 1);
                 SP = saveSP;
                 return v;
             }
@@ -1296,7 +1313,6 @@ void lisp_init(void)
     NIL = symbol("nil"); setc(NIL, NIL);
     T   = symbol("T");   setc(T,   T);
     LAMBDA = symbol("lambda");
-    LABEL = symbol("label");
     QUOTE = symbol("quote");
     VECTOR = symbol("vector");
     TRYCATCH = symbol("trycatch");
@@ -1351,7 +1367,8 @@ value_t toplevel_eval(value_t expr)
     value_t v;
     u_int32_t saveSP = SP;
     PUSH(NIL);
-    v = topeval(expr, &Stack[SP-1]);
+    PUSH(NIL);
+    v = topeval(expr, &Stack[SP-2]);
     SP = saveSP;
     return v;
 }

@@ -15,3 +15,7 @@
 (princ "mexpand: ")
 (time (dotimes (n 5000) (macroexpand '(dotimes (i 100) body1 body2))))
 
+(path.cwd "ast")
+(princ "p-lambda: ")
+(load "rpasses.lsp")
+(path.cwd "..")

@@ -77,7 +77,7 @@ extern u_int32_t SP;
 
 enum {
     // special forms
-    F_QUOTE=0, F_COND, F_IF, F_AND, F_OR, F_WHILE, F_LAMBDA, F_LABEL,
+    F_QUOTE=0, F_COND, F_IF, F_AND, F_OR, F_WHILE, F_LAMBDA,
     F_TRYCATCH, F_PROGN,
     // functions
     F_EQ, F_ATOM, F_NOT, F_SYMBOLP, F_NUMBERP, F_BOUNDP, F_CONSP,

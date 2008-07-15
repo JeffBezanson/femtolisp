@@ -20,6 +20,9 @@
               (list 'set-syntax (list 'quote name)
                     (list 'lambda args (f-body body)))))
 
+(defmacro label (name fn)
+  (list (list 'lambda (cons name nil) (list 'setq name fn)) nil))
+
 ; support both CL defun and Scheme-style define
 (defmacro defun (name args . body)
   (list 'setq name (list 'lambda args (f-body body))))
