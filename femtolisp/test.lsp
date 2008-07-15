@@ -48,9 +48,6 @@
              (list piv)
              (sort (filter (lambda (x) (>  x piv)) (cdr l)))))))
 
-;(setq r (map-int (lambda (x) (mod (+ (* x 9421) 12345) 1024)) 1000))
-;(sort r)
-
 (defmacro dotimes (var . body)
   (let ((v   (car var))
         (cnt (cadr var)))
@@ -61,9 +58,7 @@
            (setq ,v (+ ,v 1)))))))
 
 (defmacro labl (name fn)
-  (list (list lambda (cons name nil) (list 'setq name fn)) nil))
-
-;(dotimes (n 5000) (macroexpand '(dotimes (i 100) body1 body2)))
+  `((lambda (,name) (setq ,name ,fn)) nil))
 
 (define (square x) (* x x))
 (define (evenp  x) (= x (* (/ x 2) 2)))
@@ -178,6 +173,11 @@
      (lambda (h)
        (f (lambda (x) ((h h) x)))))))
 
+(define yfib
+  (Y (lambda (fib)
+       (lambda (n)
+         (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))))))
+
 (defmacro debug ()
   (let ((g (gensym)))
     `(progn (princ "Debug REPL:\n")
@@ -188,7 +188,7 @@
                                      identity))
                   (setq ,g (read))))))))
 
-(defun tt () (time (dotimes (i 500000) (* 0x1fffffff 1) )))
-(tt)
-(tt)
-(tt)
+;(defun tt () (time (dotimes (i 500000) (* 0x1fffffff 1) )))
+;(tt)
+;(tt)
+;(tt)
