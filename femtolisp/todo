@@ -112,7 +112,7 @@ for internal use:
 - a special version of apply that takes arguments on the stack, to avoid
   consing when implementing "call-with" style primitives like trycatch,
   hashtable-foreach, or the fl_apply API
-try this environment representation:
+- try this environment representation:
  for all kinds of functions (except maybe builtin special forms) push
  all arguments on the stack, either evaluated or not.
  for lambdas, push the lambda list and next-env pointers.
@@ -770,7 +770,7 @@ String API
  string.dec
  string.char    - char at byte offset
  string.count   - # of chars between 2 byte offsets
-*string.sub     - substring between 2 byte offsets, or nil for beginning/end
+*string.sub     - substring between 2 byte offsets
 *string.split   - (string.split s sep-chars)
  string.trim    - (string.trim s chars-at-start chars-at-end)
 *string.reverse

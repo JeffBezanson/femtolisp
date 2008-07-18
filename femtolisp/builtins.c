@@ -148,13 +148,18 @@ value_t fl_global_env(value_t *args, u_int32_t nargs)
     return POP();
 }
 
+extern value_t QUOTE;
+
 value_t fl_constantp(value_t *args, u_int32_t nargs)
 {
     argcount("constantp", nargs, 1);
     if (issymbol(args[0]))
         return (isconstant(args[0]) ? T : NIL);
-    if (iscons(args[0]))
+    if (iscons(args[0])) {
+        if (car_(args[0]) == QUOTE)
+            return T;
         return NIL;
+    }
     return T;
 }
 
