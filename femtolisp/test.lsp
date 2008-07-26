@@ -57,6 +57,18 @@
              ,(f-body body)
            (setq ,v (+ ,v 1)))))))
 
+(defun map-int (f n)
+  (if (<= n 0)
+      ()
+    (let ((first (cons (f 0) nil)))
+      ((label map-int-
+              (lambda (acc i n)
+                (if (= i n)
+                    first
+                  (progn (rplacd acc (cons (f i) nil))
+                         (map-int- (cdr acc) (+ i 1) n)))))
+       first 1 n))))
+
 (defmacro labl (name fn)
   `((lambda (,name) (setq ,name ,fn)) nil))
 

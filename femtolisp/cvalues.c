@@ -130,7 +130,7 @@ value_t cvalue_from_data(value_t type, void *data, size_t sz)
 // ptr is user-managed; we don't autorelease it unless the
 // user explicitly calls (autorelease ) on the result of this function.
 // 'parent' is an optional cvalue that this pointer is known to point
-// into; UNBOUND if none.
+// into; NIL if none.
 value_t cvalue_from_ref(value_t type, void *ptr, size_t sz, value_t parent)
 {
     cvalue_t *pcv;
@@ -146,7 +146,7 @@ value_t cvalue_from_ref(value_t type, void *ptr, size_t sz, value_t parent)
     pcv->deps = NIL;
     pcv->type = POP();
     parent = POP();
-    if (parent != UNBOUND) {
+    if (parent != NIL) {
         // TODO: add dependency
     }
     cv = tagptr(pcv, TAG_BUILTIN);
@@ -178,7 +178,7 @@ value_t cvalue_string(size_t sz)
 value_t cvalue_pinned_cstring(char *str)
 {
     value_t v = cvalue_from_ref(symbol_value(stringtypesym), str, strlen(str),
-                                UNBOUND);
+                                NIL);
     ((cvalue_t*)ptr(v))->flags.cstring = 1;
     return v;
 }

@@ -20,17 +20,6 @@
   * read macros for backquote
   * symbol character-escaping printer
 
-  * new print algorithm
-     1. traverse & tag all conses to be printed. when you encounter a cons
-        that is already tagged, add it to a table to give it a #n# index
-     2. untag a cons when printing it. if cons is in the table, print
-        "#n=" before it in the car, " . #n=" in the cdr. if cons is in the
-        table but already untagged, print #n# in car or " . #n#" in the cdr.
-  * read macros for #n# and #n= using the same kind of table
-    * also need a table of read labels to translate from input indexes to
-      normalized indexes (0 for first label, 1 for next, etc.)
-  * read macro #. for eval-when-read. use for printing builtins, e.g. "#.eq"
-
   The value of this extra complexity, and what makes this fork worthy of
   the femtoLisp brand, is that the interpreter is fully "closed" in the
   sense that all representable values can be read and printed.
@@ -48,8 +37,8 @@
   * strings
   - hash tables
 
-  by Jeff Bezanson
-  Public Domain
+  by Jeff Bezanson (C) 2008
+  Distributed under the Common Public License v1.0
 */
 
 #include <stdlib.h>
@@ -76,7 +65,8 @@ static char *builtin_names[] =
       "cons", "car", "cdr", "rplaca", "rplacd",
       "eval", "apply", "set", "prog1", "raise",
       "+", "-", "*", "/", "<", "~", "&", "!", "$",
-      "vector", "aref", "aset", "length", "assoc", "compare" };
+      "vector", "aref", "aset", "length", "assoc", "compare",
+      "for" };
 
 static char *stack_bottom;
 #define PROCESS_STACK_SIZE (2*1024*1024)
@@ -651,7 +641,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
     symbol_t *sym;
     uint32_t saveSP, envsz, lenv;
     int i, nargs, noeval=0;
-    fixnum_t s;
+    fixnum_t s, lo, hi;
     cvalue_t *cv;
     int64_t accum;
 
@@ -1144,12 +1134,34 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             argcount("assoc", nargs, 2);
             v = assoc(Stack[SP-2], Stack[SP-1]);
             break;
+        case F_FOR:
+            argcount("for", nargs, 3);
+            lo = tofixnum(Stack[SP-3], "for");
+            hi = tofixnum(Stack[SP-2], "for");
+            f = Stack[SP-1];
+            v = car(cdr(f));
+            if (!iscons(v) || !iscons(cdr_(cdr_(f))) ||
+                cdr_(v) != NIL)
+                lerror(ArgError, "for: expected 1 argument lambda");
+            f = cdr_(f);
+            PUSH(f);  // save function cdr
+            SP += 4;  // make space
+            Stack[SP-4] = fixnum(3);       // env size
+            Stack[SP-1] = cdr_(cdr_(f));   // cloenv
+            for(s=lo; s <= hi; s++) {
+                f = Stack[SP-5];
+                Stack[SP-3] = car_(f);     // lambda list
+                Stack[SP-2] = fixnum(s);   // argument value
+                v = eval_sexpr(car_(cdr_(f)), SP-3, 0);
+            }
+            break;
         case F_SPECIAL_APPLY:
             v = Stack[saveSP-4];
             f = Stack[saveSP-5];
             PUSH(f);
             PUSH(v);
             nargs = 2;
+            // falls through!!
         case F_APPLY:
             argcount("apply", nargs, 2);
             v = Stack[saveSP] = Stack[SP-1];  // second arg is new arglist

@@ -122,6 +122,7 @@ for internal use:
    and a more efficient apply() entry point
  . disadvantage is looking through the lambda list on every lookup. maybe
    improve by making lambda lists vectors somehow?
+* fast builtin bounded iteration construct (for lo hi (lambda (x) ...))
 
 bugs:
 * with the fully recursive (simpler) relocate(), the size of cons chains
@@ -829,6 +830,19 @@ IOStream API
 *rand.uint32
 *rand.uint64
 *rand.double
+
+-----------------------------------------------------------------------------
+
+  * new print algorithm
+     1. traverse & tag all conses to be printed. when you encounter a cons
+        that is already tagged, add it to a table to give it a #n# index
+     2. untag a cons when printing it. if cons is in the table, print
+        "#n=" before it in the car, " . #n=" in the cdr. if cons is in the
+        table but already untagged, print #n# in car or " . #n#" in the cdr.
+  * read macros for #n# and #n= using the same kind of table
+    * also need a table of read labels to translate from input indexes to
+      normalized indexes (0 for first label, 1 for next, etc.)
+  * read macro #. for eval-when-read. use for printing builtins, e.g. "#.eq"
 
 -----------------------------------------------------------------------------
 

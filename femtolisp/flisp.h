@@ -86,7 +86,7 @@ enum {
     F_CONS, F_CAR, F_CDR, F_RPLACA, F_RPLACD,
     F_EVAL, F_APPLY, F_SET, F_PROG1, F_RAISE,
     F_ADD, F_SUB, F_MUL, F_DIV, F_LT, F_BNOT, F_BAND, F_BOR, F_BXOR,
-    F_VECTOR, F_AREF, F_ASET, F_LENGTH, F_ASSOC, F_COMPARE,
+    F_VECTOR, F_AREF, F_ASET, F_LENGTH, F_ASSOC, F_COMPARE, F_FOR,
     N_BUILTINS
 };
 #define isspecial(v) (uintval(v) <= (unsigned int)F_PROGN)

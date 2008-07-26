@@ -1,6 +1,6 @@
 ; femtoLisp standard library
-; by Jeff Bezanson
-; Public Domain
+; by Jeff Bezanson (C) 2008
+; Distributed under the Common Public License v1.0
 
 (set 'list (lambda args args))
 
@@ -269,22 +269,23 @@
 
 (defmacro dotimes (var . body)
   (let ((v (car var))
-        (cnt (cadr var)))
-    (list 'let (list (list v 0))
-          (list 'while (list < v cnt)
-                (list prog1 (f-body body) (list 'setq v (list + v 1)))))))
+        (cnt (cadr var))
+        (lim (gensym)))
+    `(let ((,lim (- ,cnt 1)))
+       (for 0 ,lim
+            (lambda (,v) ,(f-body body))))))
 
 (defun map-int (f n)
   (if (<= n 0)
       ()
-    (let ((first (cons (f 0) nil)))
-      ((label map-int-
-              (lambda (acc i n)
-                (if (= i n)
-                    first
-                  (progn (rplacd acc (cons (f i) nil))
-                         (map-int- (cdr acc) (+ i 1) n)))))
-       first 1 n))))
+    (let ((first (cons (f 0) nil))
+          (acc nil))
+      (setq acc first)
+      (for 1 (- n 1)
+           (lambda (i)
+             (progn (rplacd acc (cons (f i) nil))
+                    (setq acc (cdr acc)))))
+      first)))
 
 (defun iota (n) (map-int identity n))
 
@@ -403,11 +404,11 @@
 
 (defun list-to-vector (l) (apply vector l))
 (defun vector-to-list (v)
-  (let ((i (- (length v) 1))
+  (let ((n (length v))
         (l nil))
-    (while (>= i 0)
-      (setq l (cons (aref v i) l))
-      (setq i (- i 1)))
+    (for 1 n
+         (lambda (i)
+           (setq l (cons (aref v (- n i)) l))))
     l))
 
 (defun self-evaluating-p (x)
