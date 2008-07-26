@@ -69,7 +69,7 @@
 
 static char *builtin_names[] =
     { "quote", "cond", "if", "and", "or", "while", "lambda",
-      "trycatch", "progn",
+      "trycatch", "%apply", "progn",
 
       "eq", "atom", "not", "symbolp", "numberp", "boundp", "consp",
       "builtinp", "vectorp", "fixnump", "equal",
@@ -435,6 +435,8 @@ static void trace_globals(symbol_t *root)
     }
 }
 
+static value_t special_apply_form;
+
 void gc(int mustgrow)
 {
     static int grew = 0;
@@ -457,6 +459,7 @@ void gc(int mustgrow)
         rs = rs->prev;
     }
     lasterror = relocate(lasterror);
+    special_apply_form = relocate(special_apply_form);
 #ifdef VERBOSEGC
     printf("gc found %d/%d live conses\n",
            (curheap-tospace)/sizeof(cons_t), heapsize/sizeof(cons_t));
@@ -494,22 +497,7 @@ value_t apply(value_t f, value_t l)
 {
     PUSH(f);
     PUSH(l);
-    value_t e = cons_reserve(5);
-    value_t x = e;
-    car_(e) = builtin(F_APPLY);
-    cdr_(e) = tagptr(((cons_t*)ptr(e))+1, TAG_CONS); e = cdr_(e);
-    // TODO: consider quoting this if it's a lambda expression
-    car_(e) = Stack[SP-2];
-    cdr_(e) = tagptr(((cons_t*)ptr(e))+1, TAG_CONS); e = cdr_(e);
-    car_(e) = tagptr(((cons_t*)ptr(e))+1, TAG_CONS);
-    cdr_(e) = NIL;
-    e = car_(e);
-    car_(e) = QUOTE;
-    cdr_(e) = tagptr(((cons_t*)ptr(e))+1, TAG_CONS); e = cdr_(e);
-    car_(e) = Stack[SP-1];
-    cdr_(e) = NIL;
-    POPN(2);
-    return toplevel_eval(x);
+    return toplevel_eval(special_apply_form);
 }
 
 value_t listn(size_t n, ...)
@@ -608,10 +596,10 @@ static value_t assoc(value_t item, value_t v)
     return NIL;
 }
 
-#define eval(e)         ((tag(e)<0x2) ? (e) : eval_sexpr((e),penv,0))
-#define topeval(e, env) ((tag(e)<0x2) ? (e) : eval_sexpr((e),env,1))
+#define eval(e)         (selfevaluating(e) ? (e) : eval_sexpr((e),penv,0))
+#define topeval(e, env) (selfevaluating(e) ? (e) : eval_sexpr((e),env,1))
 #define tail_eval(xpr) do { SP = saveSP;  \
-    if (tag(xpr)<0x2) { return (xpr); } \
+    if (selfevaluating(xpr)) { return (xpr); }  \
     else { e=(xpr); goto eval_top; } } while (0)
 
 static value_t do_trycatch(value_t expr, uint32_t penv)
@@ -692,7 +680,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
     saveSP = SP;
     v = car_(e);
     PUSH(cdr_(e));
-    if (tag(v)<0x2) f=v;
+    if (selfevaluating(v)) f=v;
     else if (issymbol(v) && (f=((symbol_t*)ptr(v))->syntax)) {
         // handle special syntax forms
         if (isspecial(f))
@@ -1127,7 +1115,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
         case F_EVAL:
             argcount("eval", nargs, 1);
             v = Stack[SP-1];
-            if (tag(v)<0x2) { SP=saveSP; return v; }
+            if (selfevaluating(v)) { SP=saveSP; return v; }
             if (tail) {
                 Stack[penv-1] = fixnum(2);
                 Stack[penv] = NIL;
@@ -1156,6 +1144,12 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             argcount("assoc", nargs, 2);
             v = assoc(Stack[SP-2], Stack[SP-1]);
             break;
+        case F_SPECIAL_APPLY:
+            v = Stack[saveSP-4];
+            f = Stack[saveSP-5];
+            PUSH(f);
+            PUSH(v);
+            nargs = 2;
         case F_APPLY:
             argcount("apply", nargs, 2);
             v = Stack[saveSP] = Stack[SP-1];  // second arg is new arglist
@@ -1251,26 +1245,23 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
         if (iscons(*argsyms)) {
             lerror(ArgError, "apply: too few arguments");
         }
-        *argsyms = car_(Stack[saveSP+1]);
         f = cdr_(Stack[saveSP+1]);
-        PUSH(cdr(f));
-        e = car_(f);
+        e = car(f);
+        if (selfevaluating(e)) { SP=saveSP; return(e); }
+        PUSH(cdr_(f));                     // add closed environment
+        *argsyms = car_(Stack[saveSP+1]);  // put lambda list
 
         if (noeval == 2) {
             // macro: evaluate body in lambda environment
-            if (tag(e)<0x2) ;
-            else {
-                Stack[saveSP+1] = fixnum(SP-saveSP-2);
-                e = eval_sexpr(e, saveSP+2, 1);
-            }
+            Stack[saveSP+1] = fixnum(SP-saveSP-2);
+            e = eval_sexpr(e, saveSP+2, 1);
             SP = saveSP;
-            if (tag(e)<0x2) return(e);
+            if (selfevaluating(e)) return(e);
             noeval = 0;
             // macro: evaluate expansion in calling environment
             goto eval_top;
         }
         else {
-            if (tag(e)<0x2) { SP=saveSP; return(e); }
             envsz = SP - saveSP - 2;
             if (tail) {
                 noeval = 0;
@@ -1337,9 +1328,11 @@ void lisp_init(void)
     builtinsym = symbol("builtin");
     lasterror = NIL;
     lerrorbuf[0] = '\0';
+    special_apply_form = fl_cons(builtin(F_SPECIAL_APPLY), NIL);
     i = 0;
     while (isspecial(builtin(i))) {
-        ((symbol_t*)ptr(symbol(builtin_names[i])))->syntax = builtin(i);
+        if (i != F_SPECIAL_APPLY)
+            ((symbol_t*)ptr(symbol(builtin_names[i])))->syntax = builtin(i);
         i++;
     }
     for (; i < N_BUILTINS; i++) {

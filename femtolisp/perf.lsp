@@ -15,6 +15,10 @@
 (princ "mexpand: ")
 (time (dotimes (n 5000) (macroexpand '(dotimes (i 100) body1 body2))))
 
+(princ "append: ")
+(setq L (map-int (lambda (x) (map-int identity 20)) 20))
+(time (dotimes (n 1000) (apply append L)))
+
 (path.cwd "ast")
 (princ "p-lambda: ")
 (load "rpasses.lsp")

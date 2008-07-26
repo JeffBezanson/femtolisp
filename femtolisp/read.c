@@ -487,7 +487,7 @@ static value_t do_read_sexpr(FILE *f, value_t label)
         PUSH(NIL);
         read_list(f, &Stack[SP-1], UNBOUND);
         v = POP();
-        return apply(sym, v);
+        return apply(symbol_value(sym), v);
     case TOK_OPENB:
         return read_vector(f, label, TOK_CLOSEB);
     case TOK_SHARPOPEN:

@@ -109,7 +109,7 @@ target without moving away from s-expressions:
 - (*global* . a)  ; special form, don't look in local env first
 - (*local* . 2)   ; direct stackframe access
 for internal use:
-- a special version of apply that takes arguments on the stack, to avoid
+* a special version of apply that takes arguments on the stack, to avoid
   consing when implementing "call-with" style primitives like trycatch,
   hashtable-foreach, or the fl_apply API
 - try this environment representation:

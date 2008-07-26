@@ -50,6 +50,7 @@ typedef struct _symbol_t {
 #define isvectorish(x) ((tag(x) == TAG_BUILTIN) && uintval(x) > N_BUILTINS)
 #define isvector(x) (isvectorish(x) && !(((value_t*)ptr(x))[0] & 0x2))
 #define iscvalue(x) (isvectorish(x) && (((value_t*)ptr(x))[0] & 0x2))
+#define selfevaluating(x) (tag(x)<0x2)
 // distinguish a vector from a cvalue
 #define discriminateAsVector(x) (!(((value_t*)ptr(x))[0] & 0x2))
 #define vector_size(v) (((size_t*)ptr(v))[0]>>2)
@@ -78,7 +79,7 @@ extern u_int32_t SP;
 enum {
     // special forms
     F_QUOTE=0, F_COND, F_IF, F_AND, F_OR, F_WHILE, F_LAMBDA,
-    F_TRYCATCH, F_PROGN,
+    F_TRYCATCH, F_SPECIAL_APPLY, F_PROGN,
     // functions
     F_EQ, F_ATOM, F_NOT, F_SYMBOLP, F_NUMBERP, F_BOUNDP, F_CONSP,
     F_BUILTINP, F_VECTORP, F_FIXNUMP, F_EQUAL,
