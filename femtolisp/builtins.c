@@ -439,6 +439,22 @@ value_t fl_string_sub(value_t *args, u_int32_t nargs)
     return ns;
 }
 
+value_t fl_string_char(value_t *args, u_int32_t nargs)
+{
+    argcount("string.char", nargs, 2);
+    char *s = tostring(args[0], "string.char");
+    size_t len = cv_len((cvalue_t*)ptr(args[0]));
+    size_t i;
+    i = toulong(args[1], "string.char");
+    if (i > len)
+        bounds_error("string.char", args[0], args[1]);
+    size_t sl = u8_seqlen(&s[i]);
+    if (sl > len || i > len-sl)
+        bounds_error("string.char", args[0], args[1]);
+    value_t ccode = fixnum(u8_nextchar(s, &i));
+    return cvalue_char(&ccode, 1);
+}
+
 value_t fl_time_now(value_t *args, u_int32_t nargs)
 {
     argcount("time.now", nargs, 0);
@@ -568,6 +584,7 @@ void builtins_init()
     set(symbol("string.length"), guestfunc(fl_string_length));
     set(symbol("string.split"), guestfunc(fl_string_split));
     set(symbol("string.sub"), guestfunc(fl_string_sub));
+    set(symbol("string.char"), guestfunc(fl_string_char));
     set(symbol("string.reverse"), guestfunc(fl_string_reverse));
     set(symbol("string.encode"), guestfunc(fl_string_encode));
     set(symbol("string.decode"), guestfunc(fl_string_decode));

@@ -7,9 +7,6 @@
 #include "llt.h"
 #include "flisp.h"
 
-// comparable with ==
-#define eq_comparable(a,b) (!(((a)|(b))&0x1))
-
 // is it a leaf? (i.e. does not lead to other values)
 static inline int leafp(value_t a)
 {

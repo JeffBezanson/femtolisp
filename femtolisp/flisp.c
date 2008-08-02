@@ -104,7 +104,6 @@ static unsigned char *curheap;
 static unsigned char *lim;
 static u_int32_t heapsize = 256*1024;//bytes
 static u_int32_t *consflags;
-static u_int32_t printlabel;
 
 // error utilities ------------------------------------------------------------
 
@@ -1140,14 +1139,14 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             hi = tofixnum(Stack[SP-2], "for");
             f = Stack[SP-1];
             v = car(cdr(f));
-            if (!iscons(v) || !iscons(cdr_(cdr_(f))) ||
-                cdr_(v) != NIL)
+            if (!iscons(v) || !iscons(cdr_(cdr_(f))) || cdr_(v) != NIL)
                 lerror(ArgError, "for: expected 1 argument lambda");
             f = cdr_(f);
             PUSH(f);  // save function cdr
             SP += 4;  // make space
             Stack[SP-4] = fixnum(3);       // env size
             Stack[SP-1] = cdr_(cdr_(f));   // cloenv
+            v = NIL;
             for(s=lo; s <= hi; s++) {
                 f = Stack[SP-5];
                 Stack[SP-3] = car_(f);     // lambda list

@@ -51,6 +51,8 @@ typedef struct _symbol_t {
 #define isvector(x) (isvectorish(x) && !(((value_t*)ptr(x))[0] & 0x2))
 #define iscvalue(x) (isvectorish(x) && (((value_t*)ptr(x))[0] & 0x2))
 #define selfevaluating(x) (tag(x)<0x2)
+// comparable with ==
+#define eq_comparable(a,b) (!(((a)|(b))&0x1))
 // distinguish a vector from a cvalue
 #define discriminateAsVector(x) (!(((value_t*)ptr(x))[0] & 0x2))
 #define vector_size(v) (((size_t*)ptr(v))[0]>>2)
@@ -226,6 +228,7 @@ value_t cvalue_pinned_cstring(char *str);
 int isstring(value_t v);
 int isnumber(value_t v);
 value_t cvalue_compare(value_t a, value_t b);
+value_t cvalue_char(value_t *args, uint32_t nargs);
 
 value_t mk_double(double_t n);
 value_t mk_uint32(uint32_t n);

@@ -14,7 +14,7 @@ static int struct_aligns[8] = {
     sizeof(struct { char a; char i[6]; }),
     sizeof(struct { char a; char i[7]; }),
     sizeof(struct { char a; int64_t i; }) };
-static int ALIGN2, ALIGN4, ALIGN8;
+static int ALIGN2, ALIGN4, ALIGN8, ALIGNPTR;
 
 typedef void (*cvinitfunc_t)(value_t*, u_int32_t, void*, void*);
 
@@ -594,7 +594,7 @@ size_t ctype_sizeof(value_t type, int *palign)
     if (iscons(type)) {
         value_t hed = car_(type);
         if (hed == pointersym || hed == cfunctionsym || hed == lispvaluesym) {
-            *palign = struct_aligns[sizeof(void*)-1];
+            *palign = ALIGNPTR;
             return sizeof(void*);
         }
         if (hed == arraysym) {
@@ -872,6 +872,7 @@ void cvalues_init()
     ALIGN2 = struct_aligns[1];
     ALIGN4 = struct_aligns[3];
     ALIGN8 = struct_aligns[7];
+    ALIGNPTR = struct_aligns[sizeof(void*)-1];
 
     cv_intern(uint32);
     cv_intern(pointer);

@@ -1,4 +1,5 @@
 static ptrhash_t printconses;
+static u_int32_t printlabel;
 
 static int HPOS, VPOS;
 static void outc(char c, FILE *f)

@@ -112,7 +112,7 @@ for internal use:
 * a special version of apply that takes arguments on the stack, to avoid
   consing when implementing "call-with" style primitives like trycatch,
   hashtable-foreach, or the fl_apply API
-- try this environment representation:
+* try this environment representation:
  for all kinds of functions (except maybe builtin special forms) push
  all arguments on the stack, either evaluated or not.
  for lambdas, push the lambda list and next-env pointers.
@@ -572,7 +572,7 @@ cvalues todo:
   . keep track of whether a cvalue leads to any lispvalues, so they can
     be automatically relocated (?)
 * float, double
-- struct, union
+- struct, union (may want to start with more general layout type)
 - pointer type, function type
 - finalizers and lifetime dependency tracking
 - functions autorelease, guestfunction
@@ -769,8 +769,9 @@ String API
 *string         - append/construct
  string.inc     - (string.inc s i [nchars])
  string.dec
- string.char    - char at byte offset
  string.count   - # of chars between 2 byte offsets
+ string.width   - # columns
+*string.char    - char at byte offset
 *string.sub     - substring between 2 byte offsets
 *string.split   - (string.split s sep-chars)
  string.trim    - (string.trim s chars-at-start chars-at-end)
@@ -779,7 +780,6 @@ String API
  string.map     - (string.map f s)
 *string.encode  - to utf8
 *string.decode  - from utf8 to UCS
- string.width   - # columns
 
 
 IOStream API
@@ -861,3 +861,9 @@ switch to miser mode, otherwise default is ok, for example:
 
 * write try_predict_len that gives a length for easy cases like
   symbols, else -1. use it to avoid wrapping symbols around lines
+
+- print defun and defmacro more like lambda (2 spaces)
+
+- *print-pretty* to control it
+
+- if indent gets too large, dedent back to left edge

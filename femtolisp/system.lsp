@@ -411,6 +411,14 @@
            (setq l (cons (aref v (- n i)) l))))
     l))
 
+(defun vector.map (f v)
+  (let* ((n (length v))
+         (nv (vector.alloc n)))
+    (for 0 (- n 1)
+         (lambda (i)
+           (aset nv i (f (aref v i)))))
+    nv))
+
 (defun self-evaluating-p (x)
   (or (eq x nil)
       (eq x T)
