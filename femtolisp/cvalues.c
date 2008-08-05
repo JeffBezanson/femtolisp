@@ -183,6 +183,11 @@ value_t cvalue_pinned_cstring(char *str)
     return v;
 }
 
+int isstring(value_t v)
+{
+    return (iscvalue(v) && ((cvalue_t*)ptr(v))->flags.cstring);
+}
+
 // convert to malloc representation (fixed address)
 /*
 static void cv_pin(cvalue_t *cv)

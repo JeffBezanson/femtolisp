@@ -397,7 +397,8 @@ static value_t relocate(value_t v)
     else if (iscvalue(v)) {
         return cvalue_relocate(v);
     }
-    else if (ismanaged(v) && issymbol(v)) {
+    else if (ismanaged(v)) {
+        assert(issymbol(v));
         gensym_t *gs = (gensym_t*)ptr(v);
         if (gs->id == 0xffffffff)
             return gs->binding;

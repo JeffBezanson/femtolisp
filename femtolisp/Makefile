@@ -1,7 +1,7 @@
 CC = gcc
 
 NAME = flisp
-SRCS = $(NAME).c builtins.c equal.c
+SRCS = $(NAME).c equal.c builtins.c string.c
 OBJS = $(SRCS:%.c=%.o)
 DOBJS = $(SRCS:%.c=%.do)
 EXENAME = $(NAME)

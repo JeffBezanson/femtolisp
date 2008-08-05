@@ -768,8 +768,8 @@ raise `(,e ,S). first argument e should be a symbol.
 String API
 
 *string         - append/construct
- string.inc     - (string.inc s i [nchars])
- string.dec
+*string.inc     - (string.inc s i [nchars])
+*string.dec
  string.count   - # of chars between 2 byte offsets
  string.width   - # columns
 *string.char    - char at byte offset
@@ -798,8 +798,8 @@ IOStream API
  stream.copy      - (stream.copy to from [nbytes])
  stream.copyuntil - (stream.copy to from byte)
  stream.flush
- stream.pos
- stream.seek
+ stream.pos       - (stream.pos s [set-pos])
+ stream.seek      - (stream.seek s offset)
  stream.trunc
  stream.getc      - get utf8 character(s)
 
