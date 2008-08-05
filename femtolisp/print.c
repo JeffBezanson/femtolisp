@@ -1,5 +1,6 @@
 static ptrhash_t printconses;
 static u_int32_t printlabel;
+static int print_pretty;
 
 static int HPOS, VPOS;
 static void outc(char c, FILE *f)
@@ -43,25 +44,24 @@ static void print_traverse(value_t v)
     }
     if (!ismanaged(v) || issymbol(v))
         return;
-    if (isvectorish(v)) {
-        if (ismarked(v)) {
-            bp = (value_t*)ptrhash_bp(&printconses, (void*)v);
-            if (*bp == (value_t)PH_NOTFOUND)
-                *bp = fixnum(printlabel++);
-            return;
-        }
-        if (discriminateAsVector(v)) {
+    if (ismarked(v)) {
+        bp = (value_t*)ptrhash_bp(&printconses, (void*)v);
+        if (*bp == (value_t)PH_NOTFOUND)
+            *bp = fixnum(printlabel++);
+        return;
+    }
+    if (isvector(v)) {
+        mark_cons(v);
+        unsigned int i;
+        for(i=0; i < vector_size(v); i++)
+            print_traverse(vector_elt(v,i));
+    }
+    else {
+        assert(iscvalue(v));
+        cvalue_t *cv = (cvalue_t*)ptr(v);
+        // don't consider shared references to ""
+        if (!cv->flags.cstring || cv_len(cv)!=0)
             mark_cons(v);
-            unsigned int i;
-            for(i=0; i < vector_size(v); i++)
-                print_traverse(vector_elt(v,i));
-        }
-        else {
-            cvalue_t *cv = (cvalue_t*)ptr(v);
-            // don't consider shared references to ""
-            if (!cv->flags.cstring || cv_len(cv)!=0)
-                mark_cons(v);
-        }
     }
 }
 
@@ -119,7 +119,7 @@ static void print_symbol_name(FILE *f, char *name)
 */
 static inline int tinyp(value_t v)
 {
-    return (issymbol(v) || isfixnum(v) || isbuiltin(v));
+    return (issymbol(v) || isfixnum(v) || isbuiltinish(v));
 }
 
 static int smallp(value_t v)
@@ -142,10 +142,11 @@ static int smallp(value_t v)
     return 0;
 }
 
-static int specialindent(value_t v)
+static int specialindent(value_t head)
 {
     // indent these forms 2 spaces, not lined up with the first argument
-    if (v == LAMBDA || v == TRYCATCH)
+    if (head == LAMBDA || head == TRYCATCH || head == defunsym ||
+        head == defmacrosym || head == forsym || head == labelsym)
         return 2;
     return -1;
 }
@@ -172,12 +173,19 @@ static int allsmallp(value_t v)
     return n;
 }
 
+static int indentafter3(value_t head, value_t v)
+{
+    // for certain X always indent (X a b c) after b
+    return ((head == defunsym || head == defmacrosym || head == forsym) &&
+            !allsmallp(cdr_(v)));
+}
+
 static int indentevery(value_t v)
 {
     // indent before every subform of a special form, unless every
     // subform is "small"
     value_t c = car_(v);
-    if (c == LAMBDA)
+    if (c == LAMBDA || c == labelsym)
         return 0;
     value_t f;
     if (issymbol(c) && (f=((symbol_t*)ptr(c))->syntax) && isspecial(f))
@@ -218,6 +226,7 @@ static void print_pair(FILE *f, value_t v, int princ)
     int lastv, n=0, si, ind=0, est, always=0, nextsmall;
     if (!blk) always = indentevery(v);
     value_t head = car_(v);
+    int after3 = indentafter3(head, v);
     while (1) {
         lastv = VPOS;
         unmark_cons(v);
@@ -232,7 +241,8 @@ static void print_pair(FILE *f, value_t v, int princ)
             break;
         }
 
-        if (princ || (head == LAMBDA && n == 0)) {
+        if (princ || !print_pretty ||
+            ((head == LAMBDA || head == labelsym) && n == 0)) {
             // never break line before lambda-list or in princ
             ind = 0;
         }
@@ -243,16 +253,18 @@ static void print_pair(FILE *f, value_t v, int princ)
                     ((!nextsmall && HPOS>28) || (VPOS > lastv))) ||
                    
                    ((VPOS > lastv) && (!nextsmall || n==0)) ||
-
+                   
                    (HPOS > 50 && !nextsmall) ||
                    
                    (HPOS > 74) ||
                    
                    (est!=-1 && (HPOS+est > 78)) ||
                    
-                   (head == LAMBDA && !nextsmall) ||
+                   ((head == LAMBDA || head == labelsym) && !nextsmall) ||
                    
-                   (n > 0 && always));
+                   (n > 0 && always) ||
+                   
+                   (n == 2 && after3));
         }
 
         if (ind) {
@@ -282,7 +294,8 @@ static void do_print(FILE *f, value_t v, int princ)
     char *name;
 
     switch (tag(v)) {
-    case TAG_NUM: HPOS+=fprintf(f, "%ld", numval(v)); break;
+    case TAG_NUM :
+    case TAG_NUM1: HPOS+=fprintf(f, "%ld", numval(v)); break;
     case TAG_SYM:
         name = symbol_name(v);
         if (princ)
@@ -302,10 +315,10 @@ static void do_print(FILE *f, value_t v, int princ)
             outs(builtin_names[uintval(v)], f);
             break;
         }
-        if (!ismanaged(v)) {
-            assert(iscvalue(v));
-            cvalue_print(f, v, princ); break;
-        }
+        cvalue_print(f, v, princ);
+        break;
+    case TAG_CVALUE:
+    case TAG_VECTOR:
     case TAG_CONS:
         if ((label=(value_t)ptrhash_get(&printconses, (void*)v)) !=
             (value_t)PH_NOTFOUND) {
@@ -563,6 +576,7 @@ void cvalue_print(FILE *f, value_t v, int princ)
 
 void print(FILE *f, value_t v, int princ)
 {
+    print_pretty = (symbol_value(printprettysym) != NIL);
     ptrhash_reset(&printconses, 32);
     printlabel = 0;
     print_traverse(v);

@@ -90,7 +90,7 @@ value_t cvalue(value_t type, size_t sz)
         pcp->flags.inlined = 1;
         pcp->flags.prim = 1;
         pcp->type = type;
-        return tagptr(pcp, TAG_BUILTIN);
+        return tagptr(pcp, TAG_CVALUE);
     }
     PUSH(type);
     if (sz <= MAX_INL_SIZE) {
@@ -110,7 +110,7 @@ value_t cvalue(value_t type, size_t sz)
     }
     pcv->deps = NIL;
     pcv->type = POP();
-    return tagptr(pcv, TAG_BUILTIN);
+    return tagptr(pcv, TAG_CVALUE);
 }
 
 value_t cvalue_from_data(value_t type, void *data, size_t sz)
@@ -149,7 +149,7 @@ value_t cvalue_from_ref(value_t type, void *ptr, size_t sz, value_t parent)
     if (parent != NIL) {
         // TODO: add dependency
     }
-    cv = tagptr(pcv, TAG_BUILTIN);
+    cv = tagptr(pcv, TAG_CVALUE);
     return cv;
 }
 
@@ -317,6 +317,14 @@ size_t toulong(value_t n, char *fname)
     }
     type_error(fname, "number", n);
     return 0;
+}
+
+value_t char_from_code(uint32_t code)
+{
+    value_t ccode = fixnum(code);
+    if (code > 0x7f)
+        return cvalue_wchar(&ccode, 1);
+    return cvalue_char(&ccode, 1);
 }
 
 static void cvalue_enum_init(value_t *args, u_int32_t nargs, void *dest,
@@ -507,7 +515,7 @@ value_t cvalue_relocate(value_t v)
     if (!cv->flags.islispfunction) {
         nv = (cvalue_t*)alloc_words(nw);
         memcpy(nv, cv, nw*sizeof(value_t));
-        ncv = tagptr(nv, TAG_BUILTIN);
+        ncv = tagptr(nv, TAG_CVALUE);
         cv->type = ncv;
         cv->flags.moved = 1;
     }
@@ -637,13 +645,11 @@ value_t cvalue_typeof(value_t *args, u_int32_t nargs)
     argcount("typeof", nargs, 1);
     switch(tag(args[0])) {
     case TAG_CONS: return conssym;
+    case TAG_NUM1:
     case TAG_NUM:  return fixnumsym;
     case TAG_SYM:  return symbolsym;
-    case TAG_BUILTIN:
-        if (isbuiltin(args[0]))
-            return builtinsym;
-        if (discriminateAsVector(args[0]))
-            return vectorsym;
+    case TAG_VECTOR: return vectorsym;
+    case TAG_BUILTIN: return builtinsym;
     }
     return cv_type((cvalue_t*)ptr(args[0]));
 }
@@ -669,7 +675,7 @@ value_t cvalue_copy(value_t v)
         autorelease((cvalue_t*)pnv);
     }
 
-    return tagptr(pnv, TAG_BUILTIN);
+    return tagptr(pnv, TAG_CVALUE);
 }
 
 static void cvalue_init(value_t type, value_t *vs, u_int32_t nv, void *dest)
@@ -852,7 +858,7 @@ value_t guestfunc(guestfunc_t f)
     // directly-callable values are assumed not to move for
     // evaluator performance, so put guestfunction metadata on the
     // unmanaged heap
-    cvalue_t *buf = malloc(nw * sizeof(value_t));
+    cvalue_t *buf = malloc_aligned(nw * sizeof(value_t), 8);
     memcpy(buf, ptr(gf), nw*sizeof(value_t));
     return tagptr(buf, TAG_BUILTIN);
 }

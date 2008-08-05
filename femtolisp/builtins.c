@@ -451,8 +451,7 @@ value_t fl_string_char(value_t *args, u_int32_t nargs)
     size_t sl = u8_seqlen(&s[i]);
     if (sl > len || i > len-sl)
         bounds_error("string.char", args[0], args[1]);
-    value_t ccode = fixnum(u8_nextchar(s, &i));
-    return cvalue_char(&ccode, 1);
+    return char_from_code(u8_nextchar(s, &i));
 }
 
 value_t fl_time_now(value_t *args, u_int32_t nargs)

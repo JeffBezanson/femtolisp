@@ -28,33 +28,42 @@ typedef struct _symbol_t {
 } symbol_t;
 
 #define TAG_NUM      0x0
-#define TAG_BUILTIN  0x1
-#define TAG_SYM      0x2
-#define TAG_CONS     0x3
-#define UNBOUND      ((value_t)TAG_SYM) // an invalid symbol pointer
+                   //0x1 unused
+#define TAG_BUILTIN  0x2
+#define TAG_VECTOR   0x3
+#define TAG_NUM1     0x4
+#define TAG_CVALUE   0x5
+#define TAG_SYM      0x6
+#define TAG_CONS     0x7
+#define UNBOUND      ((value_t)0x1) // an invalid value
 #define TAG_CONST    ((value_t)-2)  // in sym->syntax for constants
-#define tag(x) ((x)&0x3)
-#define ptr(x) ((void*)((x)&(~(value_t)0x3)))
+#define tag(x) ((x)&0x7)
+#define ptr(x) ((void*)((x)&(~(value_t)0x7)))
 #define tagptr(p,t) (((value_t)(p)) | (t))
 #define fixnum(x) ((value_t)((x)<<2))
 #define numval(x)  (((fixnum_t)(x))>>2)
+#ifdef BITS64
+#define fits_fixnum(x) (((x)>>61) == 0 || (~((x)>>61)) == 0)
+#else
 #define fits_fixnum(x) (((x)>>29) == 0 || (~((x)>>29)) == 0)
+#endif
 #define fits_bits(x,b) (((x)>>(b-1)) == 0 || (~((x)>>(b-1))) == 0)
-#define uintval(x)  (((unsigned int)(x))>>2)
-#define builtin(n) tagptr((((int)n)<<2), TAG_BUILTIN)
+#define uintval(x)  (((unsigned int)(x))>>3)
+#define builtin(n) tagptr((((int)n)<<3), TAG_BUILTIN)
 #define iscons(x)    (tag(x) == TAG_CONS)
 #define issymbol(x)  (tag(x) == TAG_SYM)
-#define isfixnum(x)  (tag(x) == TAG_NUM)
-#define bothfixnums(x,y) (tag((x)|(y)) == TAG_NUM)
+#define isfixnum(x)  (((x)&3) == TAG_NUM)
+#define bothfixnums(x,y) ((((x)|(y))&3) == TAG_NUM)
 #define isbuiltin(x) ((tag(x) == TAG_BUILTIN) && uintval(x) < N_BUILTINS)
-#define isvectorish(x) ((tag(x) == TAG_BUILTIN) && uintval(x) > N_BUILTINS)
-#define isvector(x) (isvectorish(x) && !(((value_t*)ptr(x))[0] & 0x2))
-#define iscvalue(x) (isvectorish(x) && (((value_t*)ptr(x))[0] & 0x2))
-#define selfevaluating(x) (tag(x)<0x2)
+#define isbuiltinish(x) (tag(x) == TAG_BUILTIN)
+#define isvector(x) (tag(x) == TAG_VECTOR)
+#define iscvalue(x) (tag(x) == TAG_CVALUE)
+#define selfevaluating(x) (tag(x)<0x6)
 // comparable with ==
 #define eq_comparable(a,b) (!(((a)|(b))&0x1))
-// distinguish a vector from a cvalue
-#define discriminateAsVector(x) (!(((value_t*)ptr(x))[0] & 0x2))
+// doesn't lead to other values
+#define leafp(a) (((a)&3) != 3)
+
 #define vector_size(v) (((size_t*)ptr(v))[0]>>2)
 #define vector_setsize(v,n) (((size_t*)ptr(v))[0] = ((n)<<2))
 #define vector_elt(v,i) (((value_t*)ptr(v))[1+(i)])
@@ -229,11 +238,13 @@ int isstring(value_t v);
 int isnumber(value_t v);
 value_t cvalue_compare(value_t a, value_t b);
 value_t cvalue_char(value_t *args, uint32_t nargs);
+value_t cvalue_wchar(value_t *args, uint32_t nargs);
 
 value_t mk_double(double_t n);
 value_t mk_uint32(uint32_t n);
 value_t mk_uint64(uint64_t n);
 value_t return_from_uint64(uint64_t Uaccum);
 value_t return_from_int64(int64_t Saccum);
+value_t char_from_code(uint32_t code);
 
 #endif

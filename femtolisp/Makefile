@@ -32,6 +32,7 @@ $(LLT):
 
 debug: $(DOBJS) $(LIBS)
 	$(CC) $(DEBUGFLAGS) $(DOBJS) -o $(EXENAME) $(LIBS)
+	make test
 
 release: $(OBJS) $(LIBS)
 	$(CC) $(SHIPFLAGS) $(OBJS) -o $(EXENAME) $(LIBS)

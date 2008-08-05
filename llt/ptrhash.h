@@ -7,7 +7,7 @@ typedef struct _ptrhash_t {
 } ptrhash_t;
 
 // define this to be an invalid key/value
-#define PH_NOTFOUND ((void*)2)
+#define PH_NOTFOUND ((void*)1)
 
 // initialize and free
 ptrhash_t *ptrhash_new(ptrhash_t *h, size_t size);

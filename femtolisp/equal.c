@@ -7,11 +7,8 @@
 #include "llt.h"
 #include "flisp.h"
 
-// is it a leaf? (i.e. does not lead to other values)
-static inline int leafp(value_t a)
-{
-    return (!iscons(a) && !isvector(a));
-}
+// comparable tag
+#define cmptag(v) (isfixnum(v) ? TAG_NUM : tag(v))
 
 static value_t eq_class(ptrhash_t *table, value_t key)
 {
@@ -80,8 +77,11 @@ static value_t bounded_compare(value_t a, value_t b, int bound)
     if (a == b) return fixnum(0);
     if (bound <= 0)
         return NIL;
-    switch (tag(a)) {
-    case TAG_NUM:
+    int taga = tag(a);
+    int tagb = cmptag(b);
+    switch (taga) {
+    case TAG_NUM :
+    case TAG_NUM1:
         if (isfixnum(b)) {
             return (numval(a) < numval(b)) ? fixnum(-1) : fixnum(1);
         }
@@ -90,24 +90,15 @@ static value_t bounded_compare(value_t a, value_t b, int bound)
         }
         return fixnum(-1);
     case TAG_SYM:
-        if (tag(b) < TAG_SYM) return fixnum(1);
-        if (tag(b) > TAG_SYM) return fixnum(-1);
+        if (tagb < TAG_SYM) return fixnum(1);
+        if (tagb > TAG_SYM) return fixnum(-1);
         return fixnum(strcmp(symbol_name(a), symbol_name(b)));
-    case TAG_BUILTIN:
-        if (tag(b) > TAG_BUILTIN) return fixnum(-1);
-        if (tag(b) == TAG_BUILTIN) {
-            if (uintval(a) < N_BUILTINS || uintval(b) < N_BUILTINS) {
-                return (uintval(a) < uintval(b)) ? fixnum(-1) : fixnum(1);
-            }
-            if (discriminateAsVector(a)) {
-                if (discriminateAsVector(b))
-                    return bounded_vector_compare(a, b, bound);
-                return fixnum(1);
-            }
-            if (discriminateAsVector(b))
-                return fixnum(-1);
-            assert(iscvalue(a));
-            assert(iscvalue(b));
+    case TAG_VECTOR:
+        if (isvector(b))
+            return bounded_vector_compare(a, b, bound);
+        break;
+    case TAG_CVALUE:
+        if (iscvalue(b)) {
             cvalue_t *acv=(cvalue_t*)ptr(a), *bcv=(cvalue_t*)ptr(b);
             numerictype_t at, bt;
             if (valid_numtype(at=cv_numtype(acv)) &&
@@ -122,17 +113,24 @@ static value_t bounded_compare(value_t a, value_t b, int bound)
             }
             return cvalue_compare(a, b);
         }
-        assert(isfixnum(b));
-        return fixnum(-compare_num_cvalue(b, a));
+        else if (isfixnum(b)) {
+            return fixnum(-compare_num_cvalue(b, a));
+        }
+        break;
+    case TAG_BUILTIN:
+        if (tagb == TAG_BUILTIN) {
+            return (uintval(a) < uintval(b)) ? fixnum(-1) : fixnum(1);
+        }
+        break;
     case TAG_CONS:
-        if (tag(b) < TAG_CONS) return fixnum(1);
+        if (tagb < TAG_CONS) return fixnum(1);
         d = bounded_compare(car_(a), car_(b), bound-1);
         if (numval(d) != 0) return d;
         a = cdr_(a); b = cdr_(b);
         bound--;
         goto compare_top;
     }
-    return NIL;
+    return (taga < tagb) ? fixnum(-1) : fixnum(1);
 }
 
 static value_t cyc_vector_compare(value_t a, value_t b, ptrhash_t *table)
@@ -151,10 +149,10 @@ static value_t cyc_vector_compare(value_t a, value_t b, ptrhash_t *table)
             d = bounded_compare(xa, xb, 1);
             if (numval(d)!=0) return d;
         }
-        else if (tag(xa) < tag(xb)) {
+        else if (cmptag(xa) < cmptag(xb)) {
             return fixnum(-1);
         }
-        else if (tag(xa) > tag(xb)) {
+        else if (cmptag(xa) > cmptag(xb)) {
             return fixnum(1);
         }
     }
@@ -189,22 +187,24 @@ static value_t cyc_compare(value_t a, value_t b, ptrhash_t *table)
         if (iscons(b)) {
             value_t aa = car_(a); value_t da = cdr_(a);
             value_t ab = car_(b); value_t db = cdr_(b);
+            int tagaa = cmptag(aa); int tagda = cmptag(da);
+            int tagab = cmptag(ab); int tagdb = cmptag(db);
             value_t d, ca, cb;
             if (leafp(aa) || leafp(ab)) {
                 d = bounded_compare(aa, ab, 1);
                 if (numval(d)!=0) return d;
             }
-            else if (tag(aa) < tag(ab))
+            else if (tagaa < tagab)
                 return fixnum(-1);
-            else if (tag(aa) > tag(ab))
+            else if (tagaa > tagab)
                 return fixnum(1);
             if (leafp(da) || leafp(db)) {
                 d = bounded_compare(da, db, 1);
                 if (numval(d)!=0) return d;
             }
-            else if (tag(da) < tag(db))
+            else if (tagda < tagdb)
                 return fixnum(-1);
-            else if (tag(da) > tag(db))
+            else if (tagda > tagdb)
                 return fixnum(1);
 
             ca = eq_class(table, a);
@@ -246,5 +246,5 @@ value_t compare(value_t a, value_t b)
     bp once and use it twice.
   - preallocate hash table and call reset() instead of new/free
   - specialized version for equal (unordered comparison)
-  - less redundant tag checking, 3-bit tags
+  * less redundant tag checking, 3-bit tags
 */

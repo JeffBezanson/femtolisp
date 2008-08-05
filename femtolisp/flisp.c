@@ -74,11 +74,12 @@ static char *stack_bottom;
 value_t Stack[N_STACK];
 u_int32_t SP = 0;
 
-value_t NIL, T, LAMBDA, QUOTE, VECTOR, IF, TRYCATCH;
+value_t NIL, T, LAMBDA, QUOTE, IF, TRYCATCH;
 value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT;
 value_t IOError, ParseError, TypeError, ArgError, UnboundError, MemoryError;
 value_t DivideError, BoundsError, Error;
 value_t conssym, symbolsym, fixnumsym, vectorsym, builtinsym;
+value_t defunsym, defmacrosym, forsym, labelsym, printprettysym;
 
 static value_t eval_sexpr(value_t e, uint32_t penv, int tail);
 static value_t *alloc_words(int n);
@@ -193,7 +194,9 @@ static symbol_t *mk_symbol(char *str)
 {
     symbol_t *sym;
 
-    sym = (symbol_t*)malloc(sizeof(symbol_t) - sizeof(void*) + strlen(str)+1);
+    sym = (symbol_t*)malloc_aligned(sizeof(symbol_t)-sizeof(void*) +
+                                        strlen(str)+1,
+                                    8);
     sym->left = sym->right = NULL;
     sym->binding = UNBOUND;
     sym->syntax = 0;
@@ -297,8 +300,8 @@ static value_t *alloc_words(int n)
 {
     value_t *first;
 
-    // the minimum allocation is a 2-word block
-    if (n < 2) n = 2;
+    if (n < 2) n = 2;  // the minimum allocation is a 2-word block
+    n = ALIGN(n, 2);   // only allocate multiples of 2 words
     if ((value_t*)curheap > ((value_t*)lim)+2-n) {
         gc(0);
         while ((value_t*)curheap > ((value_t*)lim)+2-n) {
@@ -321,7 +324,7 @@ static value_t *alloc_words(int n)
 value_t alloc_vector(size_t n, int init)
 {
     value_t *c = alloc_words(n+1);
-    value_t v = tagptr(c, TAG_BUILTIN);
+    value_t v = tagptr(c, TAG_VECTOR);
     vector_setsize(v, n);
     if (init) {
         unsigned int i;
@@ -369,35 +372,32 @@ static value_t relocate(value_t v)
 
         return first;
     }
-    else if (isvectorish(v)) {
-        if (discriminateAsVector(v)) {
-            // 0-length vectors secretly have space for a first element
-            if (vector_elt(v,0) == UNBOUND)
-                return vector_elt(v,-1);
-            size_t i, newsz, sz = vector_size(v);
-            newsz = sz;
-            if (vector_elt(v,-1) & 0x1)
-                newsz += vector_grow_amt(sz);
-            nc = alloc_vector(newsz, 0);
-            a = vector_elt(v,0);
-            vector_elt(v,0) = UNBOUND;
-            vector_elt(v,-1) = nc;
-            i = 0;
-            if (sz > 0) {
-                vector_elt(nc,0) = relocate(a); i++;
-                for(; i < sz; i++)
-                    vector_elt(nc,i) = relocate(vector_elt(v,i));
-            }
-            for(; i < newsz; i++)
-                vector_elt(nc,i) = NIL;
-            return nc;
+    else if (isvector(v)) {
+        // 0-length vectors secretly have space for a first element
+        if (vector_elt(v,0) == UNBOUND)
+            return vector_elt(v,-1);
+        size_t i, newsz, sz = vector_size(v);
+        newsz = sz;
+        if (vector_elt(v,-1) & 0x1)
+            newsz += vector_grow_amt(sz);
+        nc = alloc_vector(newsz, 0);
+        a = vector_elt(v,0);
+        vector_elt(v,0) = UNBOUND;
+        vector_elt(v,-1) = nc;
+        i = 0;
+        if (sz > 0) {
+            vector_elt(nc,0) = relocate(a); i++;
+            for(; i < sz; i++)
+                vector_elt(nc,i) = relocate(vector_elt(v,i));
         }
-        else {
-            return cvalue_relocate(v);
-        }
+        for(; i < newsz; i++)
+            vector_elt(nc,i) = NIL;
+        return nc;
     }
-    else if (ismanaged(v)) {
-        assert(issymbol(v));
+    else if (iscvalue(v)) {
+        return cvalue_relocate(v);
+    }
+    else if (ismanaged(v) && issymbol(v)) {
         gensym_t *gs = (gensym_t*)ptr(v);
         if (gs->id == 0xffffffff)
             return gs->binding;
@@ -461,7 +461,7 @@ void gc(int mustgrow)
     // more space to fill next time. if we grew tospace last time,
     // grow the other half of the heap this time to catch up.
     if (grew || ((lim-curheap) < (int)(heapsize/5)) || mustgrow) {
-        temp = realloc(tospace, grew ? heapsize : heapsize*2);
+        temp = realloc_aligned(tospace, grew ? heapsize : heapsize*2, 16);
         if (temp == NULL)
             lerror(MemoryError, "out of memory");
         tospace = temp;
@@ -681,7 +681,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
     }
     else f = eval(v);
     v = Stack[saveSP];
-    if (tag(f) == TAG_BUILTIN) {
+    if (isbuiltinish(f)) {
         // handle builtin function
         // evaluate argument list, placing arguments on stack
         while (iscons(v)) {
@@ -706,8 +706,8 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                 lenv = penv;
                 envsz = numval(Stack[penv-1]);
                 pv = alloc_words(envsz + 1);
-                PUSH(tagptr(pv, TAG_BUILTIN));
-                pv[0] = envsz<<2;
+                PUSH(tagptr(pv, TAG_VECTOR));
+                pv[0] = fixnum(envsz);
                 pv++;
                 while (envsz--)
                     *pv++ = Stack[penv++];
@@ -881,26 +881,24 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             break;
         case F_LENGTH:
             argcount("length", nargs, 1);
-            if (isvectorish(Stack[SP-1])) {
-                if (discriminateAsVector(Stack[SP-1])) {
-                    v = fixnum(vector_size(Stack[SP-1]));
+            if (isvector(Stack[SP-1])) {
+                v = fixnum(vector_size(Stack[SP-1]));
+                break;
+            }
+            else if (iscvalue(Stack[SP-1])) {
+                cv = (cvalue_t*)ptr(Stack[SP-1]);
+                v = cv_type(cv);
+                if (iscons(v) && car_(v) == arraysym) {
+                    v = size_wrap(cvalue_arraylen(Stack[SP-1]));
                     break;
                 }
-                else {
-                    cv = (cvalue_t*)ptr(Stack[SP-1]);
-                    v = cv_type(cv);
-                    if (iscons(v) && car_(v) == arraysym) {
-                        v = size_wrap(cvalue_arraylen(Stack[SP-1]));
-                        break;
-                    }
-                    else if (v == charsym) {
-                        v = fixnum(1);
-                        break;
-                    }
-                    else if (v == wcharsym) {
-                        v = fixnum(u8_charlen(*(wchar_t*)cv_data(cv)));
-                        break;
-                    }
+                else if (v == charsym) {
+                    v = fixnum(1);
+                    break;
+                }
+                else if (v == wcharsym) {
+                    v = fixnum(u8_charlen(*(wchar_t*)cv_data(cv)));
+                    break;
                 }
             }
             else if (Stack[SP-1] == NIL) {
@@ -963,7 +961,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             break;
         case F_BUILTINP:
             argcount("builtinp", nargs, 1);
-            v = (isbuiltin(Stack[SP-1]) ||
+            v = (isbuiltinish(Stack[SP-1]) ||
                  (iscvalue(Stack[SP-1]) &&
                   ((cvalue_t*)ptr(Stack[SP-1]))->flags.islispfunction))? T:NIL;
             break;
@@ -1094,7 +1092,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             break;
         case F_EQUAL:
             argcount("equal", nargs, 2);
-            if (!((Stack[SP-2] | Stack[SP-1])&0x1)) {
+            if (eq_comparable(Stack[SP-2],Stack[SP-1])) {
                 v = (Stack[SP-2] == Stack[SP-1]) ? T : NIL;
             }
             else {
@@ -1166,7 +1164,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             v = Stack[saveSP] = Stack[SP-1];  // second arg is new arglist
             f = Stack[SP-2];            // first arg is new function
             POPN(2);                    // pop apply's args
-            if (tag(f) == TAG_BUILTIN) {
+            if (isbuiltinish(f)) {
                 assert(!isspecial(f));
                 // unpack arglist onto the stack
                 while (iscons(v)) {
@@ -1178,8 +1176,9 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             noeval = 1;
             goto apply_lambda;
         default:
+            // a guest function is a cvalue tagged as a builtin
             cv = (cvalue_t*)ptr(f);
-            if (!discriminateAsVector(f) && cv->flags.islispfunction) {
+            if (cv->flags.islispfunction) {
                 v = ((guestfunc_t)cv->data)(&Stack[saveSP+1], nargs);
             }
             else {
@@ -1306,8 +1305,8 @@ void lisp_init(void)
 
     llt_init();
 
-    fromspace = malloc(heapsize);
-    tospace   = malloc(heapsize);
+    fromspace = malloc_aligned(heapsize, 16);
+    tospace   = malloc_aligned(heapsize, 16);
     curheap = fromspace;
     lim = curheap+heapsize-sizeof(cons_t);
     consflags = bitvector_new(heapsize/sizeof(cons_t), 1);
@@ -1317,7 +1316,6 @@ void lisp_init(void)
     T   = symbol("T");   setc(T,   T);
     LAMBDA = symbol("lambda");
     QUOTE = symbol("quote");
-    VECTOR = symbol("vector");
     TRYCATCH = symbol("trycatch");
     BACKQUOTE = symbol("backquote");
     COMMA = symbol("*comma*");
@@ -1337,6 +1335,11 @@ void lisp_init(void)
     fixnumsym = symbol("fixnum");
     vectorsym = symbol("vector");
     builtinsym = symbol("builtin");
+    defunsym = symbol("defun");
+    defmacrosym = symbol("defmacro");
+    forsym = symbol("for");
+    labelsym = symbol("label");
+    set(printprettysym=symbol("*print-pretty*"), T);
     lasterror = NIL;
     lerrorbuf[0] = '\0';
     special_apply_form = fl_cons(builtin(F_SPECIAL_APPLY), NIL);
