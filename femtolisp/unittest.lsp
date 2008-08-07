@@ -62,6 +62,9 @@
 (assert (equal (* 2 #int64(0x4000000000000000))
                #uint64(0x8000000000000000)))
 
+(assert (equal (string 'sym #char(65) #wchar(945) "blah") "symA\u03B1blah"))
+
+
 ; ok, a couple end-to-end tests as well
 (define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))
 (assert (equal (fib 20) 6765))

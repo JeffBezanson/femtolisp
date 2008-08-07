@@ -169,10 +169,11 @@ constructors:
 (double b3 b2 b1 b0) or (double "3.14")
 (array ctype (val ...))
 (struct ((name type) ...) (val ...))
+(pointer ctype)      ; null pointer
 (pointer cvalue)     ; constructs pointer to the given value
-(pointer ctype ptr)  ; copies/casts a pointer to a different type
-so (pointer 'int8 #int32(0)) doesn't make sense, but
-   (pointer 'int8 (pointer #int32(0))) does.
+                     ; same as (pointer (typeof x) x)
+(pointer ctype cvalue)  ; pointer of given type, to given value
+(pointer ctype cvalue addr)  ; (ctype*)((char*)cvalue + addr)
 (c-function ret-type (argtype ...) ld-symbol-name)
 
 ? struct/enum tag:
@@ -583,6 +584,7 @@ cvalues todo:
 - ccall
 - anonymous unions
 * fix princ for cvalues
+- make header size for primitives 8 bytes, even on 64-bit arch
 
 - string constructor/concatenator:
 (string 'sym #char(65) #wchar(945) "blah" 23)
@@ -591,22 +593,32 @@ cvalues todo:
 
 low-level functions:
 ; these are type/bounds-checked accesses
-- (cref|ccopy cvalue key)         ; key is field name or index
-- (cset cvalue key cvalue)  ; key is field name, index, or struct offset
-- (get-[u]int[8,16,32,64] cvalue addr)
-  ; n is a lisp number or cvalue of size <= 8
-- (set-[u]int[8,16,32,64] cvalue addr n)
-- (c-struct-offset type field)
+- (cref cvalue key)         ; key is field name or index. access by reference.
+- (aref cvalue key)         ; access by value, returns fixnums where possible
+- (cset cvalue key value)   ; key is field name, index, or struct offset
+  . write&use conv_from_long to put fixnums into typed locations
+  . aset is the same
+- (copy cv)
+- (offset type|cvalue field [field ...])
+- (eltype type field [field ...])
+- (memcpy dest-cv src-cv)
+- (memcpy dest doffs src soffs nbytes)
 - (c2lisp cvalue)  ; convert to sexpr form
-- (autorelease cvalue)   ; mark cvalue as free-on-gc
 * (typeof cvalue)
 * (sizeof cvalue|type)
-- (deref pointer[, type])  ; convert an unknown pointer to a safe cvalue
-- (ccopy cv)
+- (autorelease cvalue)     ; mark cvalue as free-on-gc
+- (deref pointer[, type])  ; convert an arbitrary pointer to a cvalue
+                           ; this is the unsafe operation
 
 ; (sizeof '(pointer type)) == sizeof(void*)
 ; (sizeof '(array type N)) == N * sizeof(type)
 
+(define (reinterpret-cast cv type)
+  (if (= (sizeof cv) (sizeof type))
+      (deref (pointer 'void cv) type)
+      (error "Invalid cast")))
+
+a[n].x looks like (cref (cref a n) 'x), (reduce cref head subs)
 
 things you can do with cvalues:
 

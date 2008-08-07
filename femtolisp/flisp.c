@@ -300,7 +300,7 @@ static value_t *alloc_words(int n)
 {
     value_t *first;
 
-    if (n < 2) n = 2;  // the minimum allocation is a 2-word block
+    assert(n > 0);
     n = ALIGN(n, 2);   // only allocate multiples of 2 words
     if ((value_t*)curheap > ((value_t*)lim)+2-n) {
         gc(0);
@@ -487,7 +487,9 @@ value_t apply(value_t f, value_t l)
 {
     PUSH(f);
     PUSH(l);
-    return toplevel_eval(special_apply_form);
+    value_t v = toplevel_eval(special_apply_form);
+    POPN(2);
+    return v;
 }
 
 value_t listn(size_t n, ...)
