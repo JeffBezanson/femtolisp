@@ -316,27 +316,49 @@ value_t fl_os_setenv(value_t *args, uint32_t nargs)
 
 value_t fl_rand(value_t *args, u_int32_t nargs)
 {
-    (void)args;
-    (void)nargs;
-    return fixnum(random()&0x1fffffff);
+    (void)args; (void)nargs;
+    fixnum_t r;
+#ifdef BITS64
+    r = ((((uint64_t)random())<<32) | random()) & 0x1fffffffffffffffLL;
+#else
+    r = random() & 0x1fffffff;
+#endif
+    return fixnum(r);
 }
 value_t fl_rand32(value_t *args, u_int32_t nargs)
 {
-    (void)args;
-    (void)nargs;
-    return mk_uint32(random());
+    (void)args; (void)nargs;
+    ulong r = random();
+#ifdef BITS64
+    return fixnum(r);
+#else
+    if (fits_fixnum(r)) return fixnum(r);
+    return mk_uint32(r);
+#endif
 }
 value_t fl_rand64(value_t *args, u_int32_t nargs)
 {
-    (void)args;
-    (void)nargs;
-    return mk_uint64(((uint64_t)random())<<32 | ((uint64_t)random()));
+    (void)args; (void)nargs;
+    ulong r = (((uint64_t)random())<<32) | random();
+#ifdef BITS64
+    if (fits_fixnum(r)) return fixnum(r);
+#endif
+    return mk_uint64(r);
 }
 value_t fl_randd(value_t *args, u_int32_t nargs)
 {
-    (void)args;
-    (void)nargs;
+    (void)args; (void)nargs;
     return mk_double(rand_double());
+}
+value_t fl_randf(value_t *args, u_int32_t nargs)
+{
+    (void)args; (void)nargs;
+    return mk_float(rand_float());
+}
+value_t fl_randn(value_t *args, u_int32_t nargs)
+{
+    (void)args; (void)nargs;
+    return mk_double(randn());
 }
 
 extern void stringfuncs_init();
@@ -366,6 +388,8 @@ void builtins_init()
     set(symbol("rand.uint32"), guestfunc(fl_rand32));
     set(symbol("rand.uint64"), guestfunc(fl_rand64));
     set(symbol("rand.double"), guestfunc(fl_randd));
+    set(symbol("rand.float"), guestfunc(fl_randf));
+    set(symbol("randn"), guestfunc(fl_randn));
 
     set(symbol("path.cwd"), guestfunc(fl_path_cwd));
 

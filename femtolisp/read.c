@@ -31,6 +31,10 @@ static int isnumtok(char *tok, value_t *pval)
             if (pval) *pval = mk_double(d);
             return 1;
         }
+        if (end > tok && *end == 'f' && end[1] == '\0') {
+            if (pval) *pval = mk_float((float)d);
+            return 1;
+        }
     }
     if (isdigit(tok[0]) || tok[0]=='-' || tok[0]=='+') {
         if (tok[0]=='-') {

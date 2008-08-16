@@ -241,6 +241,7 @@ value_t cvalue_char(value_t *args, uint32_t nargs);
 value_t cvalue_wchar(value_t *args, uint32_t nargs);
 
 value_t mk_double(double_t n);
+value_t mk_float(float_t n);
 value_t mk_uint32(uint32_t n);
 value_t mk_uint64(uint64_t n);
 value_t return_from_uint64(uint64_t Uaccum);

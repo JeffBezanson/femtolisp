@@ -24,6 +24,8 @@
 #include "socket.h"
 #include "timefuncs.h"
 
+#define MOST_OF(x) ((x) - ((x)>>4))
+
 /* OS-level primitive wrappers */
 
 static int _fd_available(long fd)
@@ -36,7 +38,7 @@ static int _fd_available(long fd)
     FD_SET(fd, &set);
     return (select(fd+1, &set, NULL, NULL, &tv)!=0);
 #else
-    return 0;
+    return 1;
 #endif
 }
 
@@ -118,7 +120,7 @@ static int _os_write(long fd, void *buf, size_t n, size_t *nwritten)
             *nwritten = 0;
             return errno;
         }
-        sleep_ms(5);
+        sleep_ms(SLEEP_TIME);
     }
     return 0;
 }
@@ -212,7 +214,7 @@ static size_t _writebuf_force(ios_t *s, char *data, size_t n)
         }
         s->size = s->bpos + n;
     }
-    memcpy(&s->buf[s->bpos], data, n);
+    memcpy(s->buf + s->bpos, data, n);
     s->bpos += n;
 
     return n;
@@ -254,24 +256,31 @@ size_t ios_read(ios_t *s, char *dest, size_t n, int all)
             s->state = bst_rd;
         }
         
-        if (n > (s->maxsize - (s->maxsize>>4))) {
+        if (n > MOST_OF(s->maxsize)) {
             // doesn't fit comfortably in buffer; go direct
             if (all)
                 result = _os_read_all(s->fd, dest, n, &got);
             else
                 result = _os_read(s->fd, dest, n, &got);
-            return tot+got;
+            tot += got;
+            if (got < n)
+                s->_eof = 1;
+            return tot;
         }
         else {
             // refill buffer
             if (_os_read(s->fd, s->buf, s->maxsize, &got)) {
+                s->_eof = 1;
                 return tot;
             }
             if (got == 0) {
-                if (all)
+                if (all) {
                     _fd_poll(s->fd, 0);
-                else
+                }
+                else {
+                    s->_eof = 1;
                     return tot;
+                }
             }
             s->size = got;
         }
@@ -282,18 +291,57 @@ size_t ios_read(ios_t *s, char *dest, size_t n, int all)
 
 size_t ios_write(ios_t *s, char *data, size_t n)
 {
+    if (n == 0) return 0;
+    size_t space;
+    size_t wrote = 0;
+
+    if (s->state == bst_wr)
+        space = s->maxsize - s->bpos;
+    else
+        space = s->size - s->bpos;
+
+    if (s->bm == bm_mem) {
+        wrote = _writebuf_force(s, data, n);
+    }
+    else if (s->bm == bm_none) {
+        int result = _os_write_all(s->fd, data, n, &wrote);
+        return wrote;
+    }
+    else if (n <= space) {
+        memcpy(s->buf + s->bpos, data, n);
+        s->bpos += n;
+        wrote = n;
+    }
+    else {
+        s->state = bst_wr;
+        ios_flush(s);
+        if (n > MOST_OF(s->maxsize)) {
+            int result = _os_write_all(s->fd, data, n, &wrote);
+            return wrote;
+        }
+        return ios_write(s, data, n);
+    }
+    if (s->bpos > s->ndirty)
+        s->ndirty = s->bpos;
+    if (s->bpos > s->size)
+        s->size = s->bpos;
+    return wrote;
 }
 
 off_t ios_seek(ios_t *s, off_t pos)
 {
+    s->_eof = 0;
 }
 
 off_t ios_seek_end(ios_t *s)
 {
+    s->_eof = 1;
 }
 
 off_t ios_skip(ios_t *s, off_t offs)
 {
+    if (offs < 0)
+        s->_eof = 0;
 }
 
 off_t ios_pos(ios_t *s)
@@ -314,6 +362,22 @@ off_t ios_pos(ios_t *s)
 
 size_t ios_trunc(ios_t *s, size_t size)
 {
+    if (s->bm == bm_mem) {
+        if (size == s->size)
+            return s->size;
+        if (size < s->size) {
+            if (s->bpos > size)
+                s->bpos = size;
+        }
+        else {
+            if (_buf_realloc(s, size)==NULL)
+                return s->size;
+        }
+        s->size = size;
+        return size;
+    }
+    //todo
+    return 0;
 }
 
 int ios_eof(ios_t *s)
@@ -322,7 +386,12 @@ int ios_eof(ios_t *s)
         return (s->bpos >= s->size);
     if (s->fd == -1)
         return 1;
-    // todo
+    if (s->_eof)
+        return 1;
+    if (_fd_available(s->fd))
+        return 0;
+    s->_eof = 1;
+    return 1;
 }
 
 static void _discard_partial_buffer(ios_t *s)
@@ -356,12 +425,16 @@ int ios_flush(ios_t *s)
     }
 
     size_t nw, ntowrite=s->ndirty;
-    // todo: this should use sendall
-    int err = _os_write(s->fd, s->buf, ntowrite, &nw);
+    int err = _os_write_all(s->fd, s->buf, ntowrite, &nw);
     // todo: try recovering from some kinds of errors (e.g. retry)
 
     if (s->state == bst_rd) {
         if (lseek(s->fd, s->size - nw, SEEK_CUR) == (off_t)-1) {
+        }
+    }
+    else if (s->state == bst_wr) {
+        if (s->bpos != nw &&
+            lseek(s->fd, (off_t)s->bpos - (off_t)nw, SEEK_CUR) == (off_t)-1) {
         }
     }
 
@@ -386,6 +459,20 @@ void ios_close(ios_t *s)
     s->fd = -1;
 }
 
+static void _buf_init(ios_t *s, bufmode_t bm)
+{
+    s->bm = bm;
+    if (s->bm == bm_mem || s->bm == bm_none) {
+        s->buf = &s->local[0];
+        s->maxsize = IOS_INLSIZE;
+    }
+    else {
+        s->buf = NULL;
+        _buf_realloc(s, IOS_BUFSIZE);
+    }
+    s->size = s->bpos = 0;
+}
+
 char *ios_takebuf(ios_t *s, size_t *psize)
 {
     char *buf;
@@ -407,15 +494,7 @@ char *ios_takebuf(ios_t *s, size_t *psize)
     *psize = s->size+1;  // buffer is actually 1 bigger for terminating NUL
 
     /* empty stream and reinitialize */
-    if (s->bm == bm_mem || s->bm == bm_none) {
-        s->buf = &s->local[0];
-        s->maxsize = IOS_INLSIZE;
-    }
-    else {
-        s->buf = NULL;
-        _buf_realloc(s, IOS_BUFSIZE);
-    }
-    s->size = s->bpos = 0;
+    _buf_init(s, s->bm);
 
     return buf;
 }
@@ -455,8 +534,18 @@ void ios_bswap(ios_t *s, int bswap)
     s->byteswap = !!bswap;
 }
 
-int ios_copy(ios_t *to, ios_t *from, size_t nbytes, bool_t all)
+static int ios_copy_(ios_t *to, ios_t *from, size_t nbytes, bool_t all)
 {
+}
+
+int ios_copy(ios_t *to, ios_t *from, size_t nbytes)
+{
+    return ios_copy_(to, from, nbytes, 0);
+}
+
+int ios_copyall(ios_t *to, ios_t *from)
+{
+    return ios_copy_(to, from, 0, 1);
 }
 
 

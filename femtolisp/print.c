@@ -469,11 +469,13 @@ static void cvalue_printdata(FILE *f, void *data, size_t len, value_t type,
     else if (type == floatsym || type == doublesym) {
         char buf[64];
         double d;
-        if (type == floatsym) d = (double)*(float*)data;
-        else d = *(double*)data;
-        snprint_real(buf, sizeof(buf), d, 0, 16, 3, 10);
-        if (weak || princ || (type==doublesym && strpbrk(buf, ".eE"))) {
+        int ndec;
+        if (type == floatsym) { d = (double)*(float*)data; ndec = 8; }
+        else { d = *(double*)data; ndec = 16; }
+        snprint_real(buf, sizeof(buf), d, 0, ndec, 3, 10);
+        if (weak || princ || strpbrk(buf, ".eE")) {
             outs(buf, f);
+            if (type == floatsym) outc('f', f);
         }
         else {
             if (!DFINITE(d))

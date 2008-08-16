@@ -22,17 +22,18 @@
 #include "timefuncs.h"
 
 #ifdef WIN32
+/*
 double tvals2float(struct tm *t, struct timeb *tstruct)
 {
-	return (double)t->tm_hour * 3600 + (double)t->tm_min * 60 +
+    return (double)t->tm_hour * 3600 + (double)t->tm_min * 60 +
         (double)t->tm_sec + (double)tstruct->millitm/1.0e3;
 }
-
+*/
 double floattime()
 {
     struct timeb tstruct;
 
-	ftime(&tstruct);
+    ftime(&tstruct);
     return (double)tstruct.time + (double)tstruct.millitm/1.0e3;
 }
 #else
@@ -53,7 +54,7 @@ u_int64_t i64time()
     u_int64_t a;
 #ifdef WIN32
     struct timeb tstruct;
-	ftime(&tstruct);
+    ftime(&tstruct);
     a = (((u_int64_t)tstruct.time)<<32) + (u_int64_t)tstruct.millitm;
 #else
     struct timeval now;
@@ -76,12 +77,6 @@ double clock_now()
 #endif
 }
 
-#ifndef LINUX
-static char *wdaystr[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
-static char *monthstr[] = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug",
-                           "Sep","Oct","Nov","Dec"};
-#endif
-
 void timestring(double seconds, char *buffer, size_t len)
 {
     time_t tme = (time_t)seconds;
@@ -93,6 +88,9 @@ void timestring(double seconds, char *buffer, size_t len)
     localtime_r(&tme, &tm);
     strftime(buffer, len, fmt, &tm);
 #else
+    static char *wdaystr[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
+    static char *monthstr[] = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug",
+                               "Sep","Oct","Nov","Dec"};
     struct tm *tm;
     int hr;
 

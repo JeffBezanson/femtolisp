@@ -41,6 +41,7 @@ typedef struct {
     //unsigned char readonly:1;
     unsigned char ownbuf:1;
     unsigned char ownfd:1;
+    unsigned char _eof:1;
 
     // this means you can read, seek back, then read the same data
     // again any number of times. usually only true for files and strings.
@@ -50,7 +51,7 @@ typedef struct {
     // seek without flushing in between. this performs read-before-write
     // to populate the buffer, so "rereadable" capability is required.
     // this is off by default.
-    unsigned char stenciled:1;
+    //unsigned char stenciled:1;
 
     // request durable writes (fsync)
     // unsigned char durable:1;
@@ -75,7 +76,10 @@ char *ios_takebuf(ios_t *s, size_t *psize);  // release buffer to caller
 int ios_setbuf(ios_t *s, char *buf, size_t size, int own);
 int ios_bufmode(ios_t *s, bufmode_t mode);
 void ios_bswap(ios_t *s, int bswap);
-int ios_copy(ios_t *to, ios_t *from, size_t nbytes, bool_t all);
+int ios_copy(ios_t *to, ios_t *from, size_t nbytes);
+int ios_copyall(ios_t *to, ios_t *from);
+// ensure at least n bytes are buffered if possible. returns actual #.
+//size_t ios_ensure(ios_t *from, size_t n);
 //void ios_lock(ios_t *s);
 //int ios_trylock(ios_t *s);
 //int ios_unlock(ios_t *s);
@@ -109,11 +113,11 @@ int ios_prevutf8(ios_t *s);
 /* stdio-style functions */
 #define IOS_EOF (-1)
 int ios_putc(ios_t *s, int c);
-wint_t ios_putwc(ios_t *s, wchar_t wc);
+//wint_t ios_putwc(ios_t *s, wchar_t wc);
 int ios_getc(ios_t *s);
-wint_t ios_getwc(ios_t *s);
+//wint_t ios_getwc(ios_t *s);
 int ios_ungetc(ios_t *s, int c);
-wint_t ios_ungetwc(ios_t *s, wint_t wc);
+//wint_t ios_ungetwc(ios_t *s, wint_t wc);
 #define ios_puts(s, str) ios_write(s, str, strlen(str))
 
 /*

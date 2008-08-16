@@ -15,7 +15,7 @@ u_int64_t memhash(char* buf, size_t n);
 #define srandom(n) init_genrand(n)
 double rand_double();
 float rand_float();
-void randn(double *pre, double *pim);
+double randn();
 u_int64_t i64time();
 void randomize();
 unsigned long genrand_int32();
