@@ -61,7 +61,8 @@ typedef struct {
 } ios_t;
 
 /* low-level interface functions */
-size_t ios_read(ios_t *s, char *dest, size_t n, int all);
+size_t ios_read(ios_t *s, char *dest, size_t n);
+size_t ios_readall(ios_t *s, char *dest, size_t n);
 size_t ios_write(ios_t *s, char *data, size_t n);
 off_t ios_seek(ios_t *s, off_t pos);   // absolute seek
 off_t ios_seek_end(ios_t *s);
@@ -87,8 +88,12 @@ int ios_copyall(ios_t *to, ios_t *from);
 /* stream creation */
 ios_t *ios_file(ios_t *s, char *fname, int create, int rewrite);
 ios_t *ios_mem(ios_t *s, size_t initsize);
-ios_t *ios_fd(ios_t *s, long fd);
+ios_t *ios_str(ios_t *s, char *str);
+ios_t *ios_fd(ios_t *s, long fd, int isfile);
 // todo: ios_socket
+ios_t *ios_stdin();
+ios_t *ios_stdout();
+ios_t *ios_stderr();
 
 /* high-level functions - output */
 int ios_putnum(ios_t *s, char *data, uint32_t type);
@@ -112,13 +117,13 @@ int ios_prevutf8(ios_t *s);
 
 /* stdio-style functions */
 #define IOS_EOF (-1)
-int ios_putc(ios_t *s, int c);
+int ios_putc(int c, ios_t *s);
 //wint_t ios_putwc(ios_t *s, wchar_t wc);
 int ios_getc(ios_t *s);
 //wint_t ios_getwc(ios_t *s);
-int ios_ungetc(ios_t *s, int c);
+int ios_ungetc(int c, ios_t *s);
 //wint_t ios_ungetwc(ios_t *s, wint_t wc);
-#define ios_puts(s, str) ios_write(s, str, strlen(str))
+#define ios_puts(str, s) ios_write(s, str, strlen(str))
 
 /*
   With memory streams, mixed reads and writes are equivalent to performing
@@ -164,21 +169,18 @@ int ios_ungetc(ios_t *s, int c);
 
   design points:
   - data-source independence, including memory streams
-  - support 64-bit and large files
-  - efficient, low-latency buffering
-  - unget
   - expose buffer to user, allow user-owned buffers
   - allow direct I/O, don't always go through buffer
   - buffer-internal seeking. makes seeking back 1-2 bytes very fast,
     and makes it possible for sockets where it otherwise wouldn't be
-  - special support for utf8
   - tries to allow switching between reading and writing
+  - support 64-bit and large files
+  - efficient, low-latency buffering
+  - special support for utf8
   - type-aware functions with byte-order swapping service
   - position counter for meaningful data offsets with sockets
 
-  note:
-  the current code needs to be mostly rewritten. the design should be
-  as follows:
+  theory of operation:
 
   the buffer is a view of part of a file/stream. you can seek, read, and
   write around in it as much as you like, as if it were just a string.

@@ -5,6 +5,7 @@
 #include <limits.h>
 #include <errno.h>
 #include <wchar.h>
+#include <stdio.h> // for printf
 
 #ifdef WIN32
 #include <malloc.h>
@@ -15,6 +16,8 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/select.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #endif
 
 #include "dtypes.h"
@@ -223,7 +226,7 @@ static size_t _writebuf_force(ios_t *s, char *data, size_t n)
 
 /* interface functions, low level */
 
-size_t ios_read(ios_t *s, char *dest, size_t n, int all)
+static size_t _ios_read(ios_t *s, char *dest, size_t n, int all)
 {
     size_t tot = 0;
     size_t got, avail;
@@ -289,12 +292,23 @@ size_t ios_read(ios_t *s, char *dest, size_t n, int all)
     return tot;
 }
 
+size_t ios_read(ios_t *s, char *dest, size_t n)
+{
+    return _ios_read(s, dest, n, 0);
+}
+
+size_t ios_readall(ios_t *s, char *dest, size_t n)
+{
+    return _ios_read(s, dest, n, 1);
+}
+
 size_t ios_write(ios_t *s, char *data, size_t n)
 {
     if (n == 0) return 0;
     size_t space;
     size_t wrote = 0;
 
+    if (s->state == bst_none) s->state = bst_wr;
     if (s->state == bst_wr)
         space = s->maxsize - s->bpos;
     else
@@ -308,9 +322,21 @@ size_t ios_write(ios_t *s, char *data, size_t n)
         return wrote;
     }
     else if (n <= space) {
+        if (s->bm == bm_line) {
+            char *nl;
+            if ((nl=(char*)memrchr(data, '\n', n)) != NULL) {
+                size_t linesz = nl-data+1;
+                s->bm = bm_block;
+                wrote += ios_write(s, data, linesz);
+                ios_flush(s);
+                s->bm = bm_line;
+                n -= linesz;
+                data += linesz;
+            }
+        }
         memcpy(s->buf + s->bpos, data, n);
         s->bpos += n;
-        wrote = n;
+        wrote += n;
     }
     else {
         s->state = bst_wr;
@@ -331,6 +357,13 @@ size_t ios_write(ios_t *s, char *data, size_t n)
 off_t ios_seek(ios_t *s, off_t pos)
 {
     s->_eof = 0;
+    if (s->bm == bm_mem) {
+        if ((size_t)pos > s->size)
+            return -1;
+        s->bpos = pos;
+        return s->bpos;
+    }
+    // TODO
 }
 
 off_t ios_seek_end(ios_t *s)
@@ -548,21 +581,155 @@ int ios_copyall(ios_t *to, ios_t *from)
     return ios_copy_(to, from, 0, 1);
 }
 
+static void _ios_init(ios_t *s)
+{
+    // put all fields in a sane initial state
+    s->bm = bm_block;
+    s->state = bst_none;
+    s->errcode = 0;
+    s->buf = NULL;
+    s->maxsize = 0;
+    s->size = 0;
+    s->bpos = 0;
+    s->ndirty = 0;
+    s->tally = 0;
+    s->fd = -1;
+    s->byteswap = 0;
+    s->ownbuf = 0;
+    s->ownfd = 0;
+    s->_eof = 0;
+    s->rereadable = 0;
+}
 
 /* stream object initializers. we do no allocation. */
 
 ios_t *ios_file(ios_t *s, char *fname, int create, int rewrite)
 {
+    int fd;
+    int flags = O_RDWR;
+    if (create) flags |= O_CREAT;
+    if (rewrite) flags |= O_TRUNC;
+    fd = open(fname, flags, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH/*644*/);
+    if (fd == -1) {
+        s->fd = -1;
+        return NULL;
+    }
+    s = ios_fd(s, fd, 1);
+    s->ownfd = 1;
+    return s;
 }
 
 ios_t *ios_mem(ios_t *s, size_t initsize)
 {
+    _ios_init(s);
+    s->bm = bm_mem;
+    _buf_realloc(s, initsize);
+    return s;
 }
 
-ios_t *ios_fd(ios_t *s, long fd)
+ios_t *ios_str(ios_t *s, char *str)
 {
+    size_t n = strlen(str);
+    if (ios_mem(s, n+1)==NULL) return NULL;
+    ios_write(s, str, n+1);
+    ios_seek(s, 0);
+    return s;
 }
 
+ios_t *ios_fd(ios_t *s, long fd, int isfile)
+{
+    _ios_init(s);
+    s->fd = fd;
+    if (isfile) s->rereadable = 1;
+    _buf_init(s, bm_block);
+    s->ownfd = 0;
+    return s;
+}
+
+ios_t *ios_stdin()
+{
+    static ios_t *_ios_stdin = NULL;
+    if (_ios_stdin == NULL) {
+        _ios_stdin = malloc(sizeof(ios_t));
+        ios_fd(_ios_stdin, STDIN_FILENO, 0);
+    }
+    return _ios_stdin;
+}
+
+ios_t *ios_stdout()
+{
+    static ios_t *_ios_stdout = NULL;
+    if (_ios_stdout == NULL) {
+        _ios_stdout = malloc(sizeof(ios_t));
+        ios_fd(_ios_stdout, STDOUT_FILENO, 0);
+        _ios_stdout->bm = bm_line;
+    }
+    return _ios_stdout;
+}
+
+ios_t *ios_stderr()
+{
+    static ios_t *_ios_stderr = NULL;
+    if (_ios_stderr == NULL) {
+        _ios_stderr = malloc(sizeof(ios_t));
+        ios_fd(_ios_stderr, STDERR_FILENO, 0);
+        _ios_stderr->bm = bm_none;
+    }
+    return _ios_stderr;
+}
 
 /* higher level interface */
 
+int ios_putc(int c, ios_t *s)
+{
+    char ch = (char)c;
+
+    return (int)ios_write(s, &ch, 1);
+}
+
+int ios_getc(ios_t *s)
+{
+    if (s->_eof) return IOS_EOF;
+    char ch;
+    size_t n = ios_read(s, &ch, 1);
+    if (n < 1)
+        return IOS_EOF;
+    return (int)ch;
+}
+
+int ios_ungetc(int c, ios_t *s)
+{
+    if (s->state == bst_wr)
+        return IOS_EOF;
+    if (s->bpos > 0) {
+        s->bpos--;
+        s->buf[s->bpos] = (char)c;
+        return c;
+    }
+    if (s->size == s->maxsize) {
+        if (_buf_realloc(s, s->maxsize*2) == NULL)
+            return IOS_EOF;
+    }
+    memmove(s->buf + 1, s->buf, s->size);
+    s->buf[0] = (char)c;
+    s->size++;
+    return c;
+}
+
+int ios_printf(ios_t *s, char *format, ...)
+{
+    char *str;
+    va_list args;
+
+    va_start(args, format);
+    // TODO: avoid copy
+    int c = vasprintf(&str, format, args);
+    va_end(args);
+
+    if (c == -1) return c;
+
+    ios_write(s, str, c);
+
+    free(str);
+    return c;
+}

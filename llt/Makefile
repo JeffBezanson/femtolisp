@@ -31,7 +31,7 @@ release: $(OBJS)
 
 test:
 	make clean
-	make release CFLAGS=-DENABLE_LLT_TEST
+	make debug CFLAGS=-DENABLE_LLT_TEST
 	gcc $(TESTSRC) $(TARGET) -o $(TESTER) -lm
 	./$(TESTER)
 

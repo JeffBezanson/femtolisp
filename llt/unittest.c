@@ -43,6 +43,8 @@ int main()
     printf("u8 took %.4f sec (%d)\n\n", clock_now()-t0, j);
     */
 
+    test_ios();
+
     return 0;
 }
 
@@ -110,4 +112,33 @@ void test_dblprint()
     prettyreal(-0.0/0);
 
     prettyreal(DBL_EPSILON);
+}
+
+void test_ios()
+{
+    ios_t *out = ios_stdout();
+    ios_t *in = ios_stdin();
+
+    ios_putc('a', out);
+    ios_putc('b', out);
+    ios_putc('\n', out);
+
+    char c[80];
+    size_t i=0;
+    ios_t sts;
+    ios_str(&sts, "Test string.");
+    c[i++] = ios_getc(&sts);
+    c[i++] = ios_getc(&sts);
+    c[i++] = ios_getc(&sts);
+    c[i++] = '\0';
+    printf("got: \"%s\"\n", c);
+
+    ios_t ms;
+    ios_mem(&ms, 10);
+    int j;
+    for(j=0; j < 16; j++)
+        ios_puts("passersby were amazed by the ", &ms);
+    size_t bs;
+    char *bigstr = ios_takebuf(&ms, &bs);
+    printf("got: \"%s\" (size %d)\n", bigstr, bs);
 }

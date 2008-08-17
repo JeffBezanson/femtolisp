@@ -46,14 +46,14 @@ void snprint_cplx(char *s, size_t cnt, double re, double im,
     if (!fzi) {
         len = sl = strlen(s);
         if (dbl_equals(im, -1)) {
-            while (len-sl < (size_t)width-2 && len < (space-3))
+            while ((long)(len-sl) < (long)(width-2) && len < (space-3))
                 s[len++] = ' ';
             s[len] =   '-';
             s[len+1] = 'i';
             s[len+2] = '\0';
         }
         else if (dbl_equals(im, 1)) {
-            while (len-sl < (size_t)width-1 && len < (space-2))
+            while ((long)(len-sl) < (long)(width-1) && len < (space-2))
                 s[len++] = ' ';
             s[len] =   'i';
             s[len+1] = '\0';
