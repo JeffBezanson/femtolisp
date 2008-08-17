@@ -121,8 +121,4 @@ int u8_isvalid(const char *str, int length);
    be allocated to at least len+1 bytes. returns 1 for error, 0 otherwise */
 int u8_reverse(char *dest, char *src, size_t len);
 
-#include <stdio.h>  // temporary, until u8_fgetc is gone
-/* read a UTF-8 sequence from a stream and return a wide character or UEOF */
-u_int32_t u8_fgetc(FILE *f);
-
 #endif

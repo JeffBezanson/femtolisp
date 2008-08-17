@@ -32,7 +32,7 @@ value_t autoreleasesym, typeofsym, sizeofsym;
 
 static void cvalue_init(value_t type, value_t *vs, u_int32_t nv, void *dest);
 
-void cvalue_print(FILE *f, value_t v, int princ);
+void cvalue_print(ios_t *f, value_t v, int princ);
 // exported guest functions
 value_t cvalue_new(value_t *args, u_int32_t nargs);
 value_t cvalue_sizeof(value_t *args, u_int32_t nargs);

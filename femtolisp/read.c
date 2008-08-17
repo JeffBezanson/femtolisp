@@ -55,21 +55,21 @@ static u_int32_t toktype = TOK_NONE;
 static value_t tokval;
 static char buf[256];
 
-static char nextchar(FILE *f)
+static char nextchar(ios_t *f)
 {
     int ch;
     char c;
 
     do {
-        ch = fgetc(f);
-        if (ch == EOF)
+        ch = ios_getc(f);
+        if (ch == IOS_EOF)
             return 0;
         c = (char)ch;
         if (c == ';') {
             // single-line comment
             do {
-                ch = fgetc(f);
-                if (ch == EOF)
+                ch = ios_getc(f);
+                if (ch == IOS_EOF)
                     return 0;
             } while ((char)ch != '\n');
             c = (char)ch;
@@ -91,14 +91,14 @@ static void accumchar(char c, int *pi)
 }
 
 // return: 1 if escaped (forced to be symbol)
-static int read_token(FILE *f, char c, int digits)
+static int read_token(ios_t *f, char c, int digits)
 {
     int i=0, ch, escaped=0, issym=0, first=1;
 
     while (1) {
         if (!first) {
-            ch = fgetc(f);
-            if (ch == EOF)
+            ch = ios_getc(f);
+            if (ch == IOS_EOF)
                 goto terminate;
             c = (char)ch;
         }
@@ -109,8 +109,8 @@ static int read_token(FILE *f, char c, int digits)
         }
         else if (c == '\\') {
             issym = 1;
-            ch = fgetc(f);
-            if (ch == EOF)
+            ch = ios_getc(f);
+            if (ch == IOS_EOF)
                 goto terminate;
             accumchar((char)ch, &i);
         }
@@ -121,13 +121,13 @@ static int read_token(FILE *f, char c, int digits)
             accumchar(c, &i);
         }
     }
-    ungetc(c, f);
+    ios_ungetc(c, f);
  terminate:
     buf[i++] = '\0';
     return issym;
 }
 
-static u_int32_t peek(FILE *f)
+static u_int32_t peek(ios_t *f)
 {
     char c, *end;
     fixnum_t x;
@@ -136,7 +136,7 @@ static u_int32_t peek(FILE *f)
     if (toktype != TOK_NONE)
         return toktype;
     c = nextchar(f);
-    if (feof(f)) return TOK_NONE;
+    if (ios_eof(f)) return TOK_NONE;
     if (c == '(') {
         toktype = TOK_OPEN;
     }
@@ -159,8 +159,8 @@ static u_int32_t peek(FILE *f)
         toktype = TOK_DOUBLEQUOTE;
     }
     else if (c == '#') {
-        ch = fgetc(f);
-        if (ch == EOF)
+        ch = ios_getc(f);
+        if (ch == IOS_EOF)
             lerror(ParseError, "read: invalid read macro");
         if ((char)ch == '.') {
             toktype = TOK_SHARPDOT;
@@ -169,8 +169,8 @@ static u_int32_t peek(FILE *f)
             toktype = TOK_SHARPQUOTE;
         }
         else if ((char)ch == '\\') {
-            u_int32_t cval = u8_fgetc(f);
-            if (cval == UEOF)
+            uint32_t cval;
+            if (ios_getutf8(f, &cval) == IOS_EOF)
                 lerror(ParseError, "read: end of input in character constant");
             toktype = TOK_NUM;
             tokval = fixnum(cval);
@@ -189,7 +189,7 @@ static u_int32_t peek(FILE *f)
         }
         else if (isdigit((char)ch)) {
             read_token(f, (char)ch, 1);
-            c = (char)fgetc(f);
+            c = (char)ios_getc(f);
             if (c == '#')
                 toktype = TOK_BACKREF;
             else if (c == '=')
@@ -205,19 +205,19 @@ static u_int32_t peek(FILE *f)
         else if ((char)ch == '!') {
             // #! single line comment for shbang script support
             do {
-                ch = fgetc(f);
-            } while (ch != EOF && (char)ch != '\n');
+                ch = ios_getc(f);
+            } while (ch != IOS_EOF && (char)ch != '\n');
             return peek(f);
         }
         else if ((char)ch == '|') {
             // multiline comment
             while (1) {
-                ch = fgetc(f);
+                ch = ios_getc(f);
             hashpipe_got:
-                if (ch == EOF)
+                if (ch == IOS_EOF)
                     lerror(ParseError, "read: eof within comment");
                 if ((char)ch == '|') {
-                    ch = fgetc(f);
+                    ch = ios_getc(f);
                     if ((char)ch == '#')
                         break;
                     goto hashpipe_got;
@@ -228,9 +228,9 @@ static u_int32_t peek(FILE *f)
         }
         else if ((char)ch == ':') {
             // gensym
-            ch = fgetc(f);
+            ch = ios_getc(f);
             if ((char)ch == 'g')
-                ch = fgetc(f);
+                ch = ios_getc(f);
             read_token(f, (char)ch, 0);
             errno = 0;
             x = strtol(buf, &end, 10);
@@ -256,15 +256,15 @@ static u_int32_t peek(FILE *f)
     }
     else if (c == ',') {
         toktype = TOK_COMMA;
-        ch = fgetc(f);
-        if (ch == EOF)
+        ch = ios_getc(f);
+        if (ch == IOS_EOF)
             return toktype;
         if ((char)ch == '@')
             toktype = TOK_COMMAAT;
         else if ((char)ch == '.')
             toktype = TOK_COMMADOT;
         else
-            ungetc((char)ch, f);
+            ios_ungetc((char)ch, f);
     }
     else {
         if (!read_token(f, c, 0)) {
@@ -286,9 +286,9 @@ static u_int32_t peek(FILE *f)
     return toktype;
 }
 
-static value_t do_read_sexpr(FILE *f, value_t label);
+static value_t do_read_sexpr(ios_t *f, value_t label);
 
-static value_t read_vector(FILE *f, value_t label, u_int32_t closer)
+static value_t read_vector(ios_t *f, value_t label, u_int32_t closer)
 {
     value_t v=alloc_vector(4, 1), elt;
     u_int32_t i=0;
@@ -296,7 +296,7 @@ static value_t read_vector(FILE *f, value_t label, u_int32_t closer)
     if (label != UNBOUND)
         ptrhash_put(&readstate->backrefs, (void*)label, (void*)v);
     while (peek(f) != closer) {
-        if (feof(f))
+        if (ios_eof(f))
             lerror(ParseError, "read: unexpected end of input");
         if (i >= vector_size(v))
             Stack[SP-1] = vector_grow(v);
@@ -310,7 +310,7 @@ static value_t read_vector(FILE *f, value_t label, u_int32_t closer)
     return POP();
 }
 
-static value_t read_string(FILE *f)
+static value_t read_string(ios_t *f)
 {
     char *buf, *temp;
     char eseq[10];
@@ -330,16 +330,16 @@ static value_t read_string(FILE *f)
             }
             buf = temp;
         }
-        c = fgetc(f);
-        if (c == EOF) {
+        c = ios_getc(f);
+        if (c == IOS_EOF) {
             free(buf);
             lerror(ParseError, "read: unexpected end of input in string");
         }
         if (c == '"')
             break;
         else if (c == '\\') {
-            c = fgetc(f);
-            if (c == EOF) {
+            c = ios_getc(f);
+            if (c == IOS_EOF) {
                 free(buf);
                 lerror(ParseError, "read: end of input in escape sequence");
             }
@@ -347,9 +347,9 @@ static value_t read_string(FILE *f)
             if (octal_digit(c)) {
                 do {
                     eseq[j++] = c;
-                    c = fgetc(f);
-                } while (octal_digit(c) && j<3 && (c!=EOF));
-                if (c!=EOF) ungetc(c, f);
+                    c = ios_getc(f);
+                } while (octal_digit(c) && j<3 && (c!=IOS_EOF));
+                if (c!=IOS_EOF) ios_ungetc(c, f);
                 eseq[j] = '\0';
                 wc = strtol(eseq, NULL, 8);
                 i += u8_wc_toutf8(&buf[i], wc);
@@ -358,12 +358,12 @@ static value_t read_string(FILE *f)
                      (c=='u' && (ndig=4)) ||
                      (c=='U' && (ndig=8))) {
                 wc = c;
-                c = fgetc(f);
-                while (hex_digit(c) && j<ndig && (c!=EOF)) {
+                c = ios_getc(f);
+                while (hex_digit(c) && j<ndig && (c!=IOS_EOF)) {
                     eseq[j++] = c;
-                    c = fgetc(f);
+                    c = ios_getc(f);
                 }
-                if (c!=EOF) ungetc(c, f);
+                if (c!=IOS_EOF) ios_ungetc(c, f);
                 eseq[j] = '\0';
                 if (j) wc = strtol(eseq, NULL, 16);
                 i += u8_wc_toutf8(&buf[i], wc);
@@ -398,7 +398,7 @@ static value_t read_string(FILE *f)
 // build a list of conses. this is complicated by the fact that all conses
 // can move whenever a new cons is allocated. we have to refer to every cons
 // through a handle to a relocatable pointer (i.e. a pointer on the stack).
-static void read_list(FILE *f, value_t *pval, value_t label)
+static void read_list(ios_t *f, value_t *pval, value_t label)
 {
     value_t c, *pc;
     u_int32_t t;
@@ -407,7 +407,7 @@ static void read_list(FILE *f, value_t *pval, value_t label)
     pc = &Stack[SP-1];  // to keep track of current cons cell
     t = peek(f);
     while (t != TOK_CLOSE) {
-        if (feof(f))
+        if (ios_eof(f))
             lerror(ParseError, "read: unexpected end of input");
         c = mk_cons(); car_(c) = cdr_(c) = NIL;
         if (iscons(*pc)) {
@@ -428,7 +428,7 @@ static void read_list(FILE *f, value_t *pval, value_t label)
             c = do_read_sexpr(f,UNBOUND);
             cdr_(*pc) = c;
             t = peek(f);
-            if (feof(f))
+            if (ios_eof(f))
                 lerror(ParseError, "read: unexpected end of input");
             if (t != TOK_CLOSE)
                 lerror(ParseError, "read: expected ')'");
@@ -439,7 +439,7 @@ static void read_list(FILE *f, value_t *pval, value_t label)
 }
 
 // label is the backreference we'd like to fix up with this read
-static value_t do_read_sexpr(FILE *f, value_t label)
+static value_t do_read_sexpr(ios_t *f, value_t label)
 {
     value_t v, sym, oldtokval, *head;
     value_t *pv;
@@ -529,7 +529,7 @@ static value_t do_read_sexpr(FILE *f, value_t label)
     return NIL;
 }
 
-value_t read_sexpr(FILE *f)
+value_t read_sexpr(ios_t *f)
 {
     value_t v;
     readstate_t state;

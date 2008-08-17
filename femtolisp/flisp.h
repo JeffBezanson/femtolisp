@@ -105,8 +105,8 @@ enum {
 extern value_t NIL, T;
 
 /* read, eval, print main entry points */
-value_t read_sexpr(FILE *f);
-void print(FILE *f, value_t v, int princ);
+value_t read_sexpr(ios_t *f);
+void print(ios_t *f, value_t v, int princ);
 value_t toplevel_eval(value_t expr);
 value_t apply(value_t f, value_t l);
 value_t load_file(char *fname);

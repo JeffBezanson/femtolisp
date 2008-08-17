@@ -84,7 +84,7 @@ value_t defunsym, defmacrosym, forsym, labelsym, printprettysym;
 static value_t eval_sexpr(value_t e, uint32_t penv, int tail);
 static value_t *alloc_words(int n);
 static value_t relocate(value_t v);
-static void do_print(FILE *f, value_t v, int princ);
+static void do_print(ios_t *f, value_t v, int princ);
 
 typedef struct _readstate_t {
     ptrhash_t backrefs;
@@ -1389,62 +1389,64 @@ static void print_toplevel_exception()
 {
     if (iscons(lasterror) && car_(lasterror) == TypeError &&
         llength(lasterror) == 4) {
-        fprintf(stderr, "type-error: ");
-        print(stderr, car_(cdr_(lasterror)), 1);
-        fprintf(stderr, ": expected ");
-        print(stderr, car_(cdr_(cdr_(lasterror))), 1);
-        fprintf(stderr, ", got ");
-        print(stderr, car_(cdr_(cdr_(cdr_(lasterror)))), 0);
+        ios_printf(ios_stderr, "type-error: ");
+        print(ios_stderr, car_(cdr_(lasterror)), 1);
+        ios_printf(ios_stderr, ": expected ");
+        print(ios_stderr, car_(cdr_(cdr_(lasterror))), 1);
+        ios_printf(ios_stderr, ", got ");
+        print(ios_stderr, car_(cdr_(cdr_(cdr_(lasterror)))), 0);
     }
     else if (iscons(lasterror) && car_(lasterror) == UnboundError &&
              iscons(cdr_(lasterror))) {
-        fprintf(stderr, "unbound-error: eval: variable %s has no value",
-                (symbol_name(car_(cdr_(lasterror)))));
+        ios_printf(ios_stderr, "unbound-error: eval: variable %s has no value",
+                   (symbol_name(car_(cdr_(lasterror)))));
     }
     else if (iscons(lasterror) && car_(lasterror) == Error) {
         value_t v = cdr_(lasterror);
-        fprintf(stderr, "error: ");
+        ios_printf(ios_stderr, "error: ");
         while (iscons(v)) {
-            print(stderr, car_(v), 1);
+            print(ios_stderr, car_(v), 1);
             v = cdr_(v);
         }
     }
     else {
         if (lasterror != NIL) {
             if (!lerrorbuf[0])
-                fprintf(stderr, "*** Unhandled exception: ");
-            print(stderr, lasterror, 0);
+                ios_printf(ios_stderr, "*** Unhandled exception: ");
+            print(ios_stderr, lasterror, 0);
             if (lerrorbuf[0])
-                fprintf(stderr, ": ");
+                ios_printf(ios_stderr, ": ");
         }
     }
 
     if (lerrorbuf[0])
-        fprintf(stderr, "%s", lerrorbuf);
+        ios_printf(ios_stderr, "%s", lerrorbuf);
 }
 
 value_t load_file(char *fname)
 {
     value_t volatile e, v=NIL;
-    FILE * volatile f = fopen(fname, "r");
+    ios_t fi;
+    ios_t * volatile f;
+    f = &fi; f = ios_file(f, fname, 0, 0);
     if (f == NULL) lerror(IOError, "file \"%s\" not found", fname);
     FL_TRY {
         while (1) {
             e = read_sexpr(f);
-            //print(stdout,e,0); printf("\n");
-            if (feof(f)) break;
+            //print(ios_stdout,e,0); ios_puts("\n", ios_stdout);
+            if (ios_eof(f)) break;
             v = toplevel_eval(e);
         }
     }
     FL_CATCH {
-        fclose(f);
+        ios_close(f);
         size_t msglen = strlen(lerrorbuf);
         snprintf(&lerrorbuf[msglen], sizeof(lerrorbuf)-msglen,
                  "\nin file \"%s\"", fname);
         lerrorbuf[sizeof(lerrorbuf)-1] = '\0';
         raise(lasterror);
     }
-    fclose(f);
+    ios_close(f);
     return v;
 }
 
@@ -1477,7 +1479,7 @@ int main(int argc, char *argv[])
 
         lerrorbuf[0] = '\0';
         lasterror = NIL;
-        fprintf(stderr, "\n\n");
+        ios_puts("\n\n", ios_stderr);
         goto repl;
     }
     load_file("system.lsp");
@@ -1488,13 +1490,13 @@ int main(int argc, char *argv[])
     printf(";-------------------|----------------------------------------------------------\n\n");
  repl:
     while (1) {
-        printf("> ");
-        v = read_sexpr(stdin);
-        if (feof(stdin)) break;
-        print(stdout, v=toplevel_eval(v), 0);
+        ios_puts("> ", ios_stdout); ios_flush(ios_stdout);
+        v = read_sexpr(ios_stdin);
+        if (ios_eof(ios_stdin)) break;
+        print(ios_stdout, v=toplevel_eval(v), 0);
         set(symbol("that"), v);
-        printf("\n\n");
+        ios_puts("\n\n", ios_stdout);
     }
-    printf("\n");
+    ios_puts("\n", ios_stdout);
     return 0;
 }

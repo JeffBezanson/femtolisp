@@ -9,7 +9,7 @@ typedef enum { bm_none, bm_line, bm_block, bm_mem } bufmode_t;
 typedef enum { bst_none, bst_rd, bst_wr } bufstate_t;
 
 #define IOS_INLSIZE 54
-#define IOS_BUFSIZE 4095
+#define IOS_BUFSIZE 8191
 
 typedef struct {
     bufmode_t bm;
@@ -79,8 +79,8 @@ int ios_bufmode(ios_t *s, bufmode_t mode);
 void ios_bswap(ios_t *s, int bswap);
 int ios_copy(ios_t *to, ios_t *from, size_t nbytes);
 int ios_copyall(ios_t *to, ios_t *from);
-// ensure at least n bytes are buffered if possible. returns actual #.
-//size_t ios_ensure(ios_t *from, size_t n);
+// ensure at least n bytes are buffered if possible. returns # available.
+size_t ios_readprep(ios_t *from, size_t n);
 //void ios_lock(ios_t *s);
 //int ios_trylock(ios_t *s);
 //int ios_unlock(ios_t *s);
@@ -91,9 +91,10 @@ ios_t *ios_mem(ios_t *s, size_t initsize);
 ios_t *ios_str(ios_t *s, char *str);
 ios_t *ios_fd(ios_t *s, long fd, int isfile);
 // todo: ios_socket
-ios_t *ios_stdin();
-ios_t *ios_stdout();
-ios_t *ios_stderr();
+extern ios_t *ios_stdin;
+extern ios_t *ios_stdout;
+extern ios_t *ios_stderr;
+void ios_init_stdstreams();
 
 /* high-level functions - output */
 int ios_putnum(ios_t *s, char *data, uint32_t type);

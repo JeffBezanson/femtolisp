@@ -80,7 +80,7 @@ size_t u8_codingsize(u_int32_t *wcstr, size_t n)
    sz = dest size in # of wide characters
 
    returns # characters converted
-   if sz = srcsz+1 (i.e. 4*srcsz+4 bytes), there will always be enough space.
+   if sz == srcsz+1 (i.e. 4*srcsz+4 bytes), there will always be enough space.
 */
 size_t u8_toucs(u_int32_t *dest, size_t sz, const char *src, size_t srcsz)
 {
@@ -565,23 +565,25 @@ int u8_is_locale_utf8(const char *locale)
 
 size_t u8_vprintf(const char *fmt, va_list ap)
 {
-    size_t cnt, sz=0, nc;
+    size_t cnt, sz=0, nc, needfree=0;
     char *buf;
     u_int32_t *wcs;
 
     sz = 512;
     buf = (char*)alloca(sz);
- try_print:
     cnt = vsnprintf(buf, sz, fmt, ap);
+    if ((ssize_t)cnt < 0)
+        return 0;
     if (cnt >= sz) {
-        buf = (char*)alloca(cnt - sz + 1);
-        sz = cnt + 1;
-        goto try_print;
+        buf = (char*)malloc(cnt + 1);
+        needfree = 1;
+        vsnprintf(buf, cnt+1, fmt, ap);
     }
     wcs = (u_int32_t*)alloca((cnt+1) * sizeof(u_int32_t));
     nc = u8_toucs(wcs, cnt+1, buf, cnt);
     wcs[nc] = 0;
     printf("%ls", (wchar_t*)wcs);
+    if (needfree) free(buf);
     return nc;
 }
 
@@ -701,28 +703,4 @@ int u8_reverse(char *dest, char * src, size_t len)
         }
     }
     return 0;
-}
-
-u_int32_t u8_fgetc(FILE *f)
-{
-    int amt=0, sz, c;
-    u_int32_t ch=0;
-    char c0;
-
-    c = fgetc(f);
-    if (c == EOF)
-        return UEOF;
-    ch = (u_int32_t)c;
-    c0 = (char)ch;
-    amt = sz = u8_seqlen(&c0);
-    while (--amt) {
-        ch <<= 6;
-        c = fgetc(f);
-        if (c == EOF)
-            return UEOF;
-        ch += (u_int32_t)c;
-    }
-    ch -= offsetsFromUTF8[sz-1];
-
-    return ch;
 }

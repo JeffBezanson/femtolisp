@@ -129,4 +129,6 @@ void llt_init()
     flt_tolerance(5e-6);
 
     randomize();
+
+    ios_init_stdstreams();
 }

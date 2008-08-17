@@ -39,8 +39,8 @@ value_t fl_print(value_t *args, u_int32_t nargs)
 {
     unsigned i;
     for (i=0; i < nargs; i++)
-        print(stdout, args[i], 0);
-    fputc('\n', stdout);
+        print(ios_stdout, args[i], 0);
+    ios_putc('\n', ios_stdout);
     return nargs ? args[nargs-1] : NIL;
 }
 
@@ -48,7 +48,7 @@ value_t fl_princ(value_t *args, u_int32_t nargs)
 {
     unsigned i;
     for (i=0; i < nargs; i++)
-        print(stdout, args[i], 1);
+        print(ios_stdout, args[i], 1);
     return nargs ? args[nargs-1] : NIL;
 }
 
@@ -56,7 +56,7 @@ value_t fl_read(value_t *args, u_int32_t nargs)
 {
     (void)args;
     argcount("read", nargs, 0);
-    return read_sexpr(stdin);
+    return read_sexpr(ios_stdin);
 }
 
 value_t fl_load(value_t *args, u_int32_t nargs)
