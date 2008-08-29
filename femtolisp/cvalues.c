@@ -16,7 +16,7 @@ static int struct_aligns[8] = {
     sizeof(struct { char a; int64_t i; }) };
 static int ALIGN2, ALIGN4, ALIGN8, ALIGNPTR;
 
-typedef void (*cvinitfunc_t)(value_t*, u_int32_t, void*, void*);
+typedef void (*cvinitfunc_t)(value_t, value_t, void*, void*);
 
 value_t int8sym, uint8sym, int16sym, uint16sym, int32sym, uint32sym;
 value_t int64sym, uint64sym;
@@ -30,7 +30,7 @@ value_t unionsym;
 
 value_t autoreleasesym, typeofsym, sizeofsym;
 
-static void cvalue_init(value_t type, value_t *vs, u_int32_t nv, void *dest);
+static void cvalue_init(value_t type, value_t v, void *dest);
 
 void cvalue_print(ios_t *f, value_t v, int princ);
 // exported guest functions
@@ -239,39 +239,45 @@ static double strtodouble(char *str, char *fname)
 }
 
 #define num_ctor(typenam, cnvt, tag, fromstr)                           \
-static void cvalue_##typenam##_init(value_t *args, u_int32_t nargs,     \
+static void cvalue_##typenam##_init(value_t type, value_t arg,          \
                                     void *dest, void *data)             \
 {                                                                       \
     typenam##_t n=0;                                                    \
-    (void)data;                                                         \
-    if (nargs) {                                                        \
-        if (iscvalue(args[0])) {                                        \
-            cvalue_t *cv = (cvalue_t*)ptr(args[0]);                     \
-            void *p = cv_data(cv);                                      \
-            if (valid_numtype(cv_numtype(cv))) {                        \
-                n = (typenam##_t)conv_to_##cnvt(p, cv_numtype(cv));     \
-            }                                                           \
-            else if (cv->flags.cstring) {                               \
-                n = fromstr(p, #typenam);                               \
-            }                                                           \
-            else if (cv_len(cv) == sizeof(typenam##_t)) {               \
-                n = *(typenam##_t*)p;                                   \
-            }                                                           \
-            else {                                                      \
-                type_error(#typenam, "number", args[0]);                \
-            }                                                           \
+    (void)data; (void)type;                                             \
+    if (isfixnum(arg)) {                                                \
+        n = numval(arg);                                                \
+    }                                                                   \
+    else if (iscvalue(arg)) {                                           \
+        cvalue_t *cv = (cvalue_t*)ptr(arg);                             \
+        void *p = cv_data(cv);                                          \
+        if (valid_numtype(cv_numtype(cv))) {                            \
+            n = (typenam##_t)conv_to_##cnvt(p, cv_numtype(cv));         \
+        }                                                               \
+        else if (cv->flags.cstring) {                                   \
+            n = fromstr(p, #typenam);                                   \
+        }                                                               \
+        else if (cv_len(cv) == sizeof(typenam##_t)) {                   \
+            n = *(typenam##_t*)p;                                       \
         }                                                               \
         else {                                                          \
-            n = tofixnum(args[0], #typenam);                            \
+            goto cnvt_error;                                            \
         }                                                               \
     }                                                                   \
+    else {                                                              \
+        goto cnvt_error;                                                \
+    }                                                                   \
     *((typenam##_t*)dest) = n;                                          \
+    return;                                                             \
+ cnvt_error:                                                            \
+    type_error(#typenam, "number", arg);                                \
 }                                                                       \
 value_t cvalue_##typenam(value_t *args, u_int32_t nargs)                \
 {                                                                       \
+    if (nargs==0) { PUSH(fixnum(0)); args = &Stack[SP-1]; }             \
     value_t cv = cvalue(typenam##sym, sizeof(typenam##_t));             \
     ((cprim_t*)ptr(cv))->flags.numtype = tag;                           \
-    cvalue_##typenam##_init(args, nargs, &((cprim_t*)ptr(cv))->data, 0); \
+    cvalue_##typenam##_init(typenam##sym,                               \
+                            args[0], &((cprim_t*)ptr(cv))->data, 0);    \
     return cv;                                                          \
 }                                                                       \
 value_t mk_##typenam(typenam##_t n)                                     \
@@ -332,20 +338,18 @@ value_t char_from_code(uint32_t code)
     return cvalue_char(&ccode, 1);
 }
 
-static void cvalue_enum_init(value_t *args, u_int32_t nargs, void *dest,
-                             void *data)
+static void cvalue_enum_init(value_t type, value_t arg, void *dest, void *data)
 {
     int n=0;
     value_t syms;
 
     (void)data;
-    argcount("enum", nargs, 2);
-    syms = args[0];
+    syms = car(cdr(type));
     if (!iscons(syms))
         type_error("enum", "cons", syms);
-    if (issymbol(args[1])) {
+    if (issymbol(arg)) {
         while (iscons(syms)) {
-            if (car_(syms) == args[1]) {
+            if (car_(syms) == arg) {
                 *(int*)dest = n;
                 return;
             }
@@ -354,13 +358,13 @@ static void cvalue_enum_init(value_t *args, u_int32_t nargs, void *dest,
         }
         lerror(ArgError, "enum: invalid enum value");
     }
-    if (isfixnum(args[1])) {
-        n = (int)numval(args[1]);
+    if (isfixnum(arg)) {
+        n = (int)numval(arg);
     }
-    else if (iscvalue(args[1])) {
-        cvalue_t *cv = (cvalue_t*)ptr(args[1]);
+    else if (iscvalue(arg)) {
+        cvalue_t *cv = (cvalue_t*)ptr(arg);
         if (!valid_numtype(cv_numtype(cv)))
-            type_error("enum", "number", args[1]);
+            type_error("enum", "number", arg);
         n = conv_to_int32(cv_data(cv), cv_numtype(cv));
     }
     if ((unsigned)n >= llength(syms))
@@ -373,105 +377,112 @@ value_t cvalue_enum(value_t *args, u_int32_t nargs)
     argcount("enum", nargs, 2);
     value_t cv = cvalue(list2(enumsym, args[0]), 4);
     ((cvalue_t*)ptr(cv))->flags.numtype = T_INT32;
-    cvalue_enum_init(args, nargs, cv_data((cvalue_t*)ptr(cv)), NULL);
+    cvalue_enum_init(cv_type((cvalue_t*)ptr(cv)),
+                     args[1], cv_data((cvalue_t*)ptr(cv)), NULL);
     return cv;
 }
 
-static void cvalue_array_init(value_t *args, u_int32_t nargs, void *dest,
-                              void *data)
+static void array_init_fromargs(char *dest, value_t *vals, size_t cnt,
+                                value_t eltype, size_t elsize)
 {
-    size_t cnt=0, elsize, i;
-    value_t *init = NULL;
+    size_t i;
+    for(i=0; i < cnt; i++) {
+        cvalue_init(eltype, vals[i], dest);
+        dest += elsize;
+    }
+}
+
+static int isarray(value_t v)
+{
+    if (!iscvalue(v)) return 0;
+    value_t type = cv_type((cvalue_t*)ptr(v));
+    return (iscons(type) && car_(type)==arraysym);
+}
+
+static size_t predict_arraylen(value_t arg)
+{
+    if (isvector(arg))
+        return vector_size(arg);
+    else if (iscons(arg))
+        return llength(arg);
+    else if (arg == NIL)
+        return 0;
+    if (isarray(arg))
+        return cvalue_arraylen(arg);
+    return 1;
+}
+
+static void cvalue_array_init(value_t type, value_t arg, void *dest, void *data)
+{
+    size_t elsize, i, cnt, sz;
     int junk;
+    value_t eltype = car(cdr(type));
 
     if (data != 0)
         elsize = (size_t)data;  // already computed by constructor
     else
-        elsize = ctype_sizeof(args[0], &junk);
-    char *out = (char*)dest;
+        elsize = ctype_sizeof(eltype, &junk);
 
-    if (nargs == 2) {
-        if (isvector(args[1]) || iscons(args[1]) || args[1]==NIL)
-            init = &args[1];
-        else
-            cnt = toulong(args[1], "array");
+    cnt = predict_arraylen(arg);
+
+    if (iscons(cdr_(cdr_(type)))) {
+        size_t tc = toulong(car_(cdr_(cdr_(type))), "array");
+        if (tc != cnt)
+            lerror(ArgError, "array: size mismatch");
     }
-    else if (nargs == 3) {
-        cnt = toulong(args[1], "array");
-        init = &args[2];
+
+    sz = elsize * cnt;
+
+    if (isvector(arg)) {
+        array_init_fromargs((char*)dest, &vector_elt(arg,0), cnt,
+                            eltype, elsize);
+        return;
     }
-    else {
-        argcount("array", nargs, 2);
-    }
-    if (init) {
-        if (isvector(*init)) {
-            if (cnt && vector_size(*init) != cnt)
-                lerror(ArgError, "array: size mismatch");
-            cnt = vector_size(*init);
-            for(i=0; i < cnt; i++) {
-                cvalue_init(args[0], &vector_elt(*init, i), 1, out);
-                out += elsize;
-            }
-            return;
+    else if (iscons(arg) || arg==NIL) {
+        i = 0;
+        while (iscons(arg)) {
+            if (SP >= N_STACK)
+                break;
+            PUSH(car_(arg));
+            i++;
+            arg = cdr_(arg);
         }
-        else if (iscons(*init) || *init==NIL) {
-            for(i=0; i < cnt || cnt==0; i++) {
-                if (!iscons(*init)) {
-                    if (cnt != 0)
-                        lerror(ArgError, "array: size mismatch");
-                    else
-                        break;
-                }
-                cvalue_init(args[0], &car_(*init), 1, out);
-                out += elsize;
-                *init = cdr_(*init);
-            }
-            return;
-        }
-        else if (iscvalue(*init)) {
-            cvalue_t *cv = (cvalue_t*)ptr(*init);
-            size_t tot = cnt*elsize;
-            if (tot == cv_len(cv)) {
-                if (tot) memcpy(out, cv_data(cv), tot);
+        if (i != cnt)
+            lerror(ArgError, "array: size mismatch");
+        array_init_fromargs((char*)dest, &Stack[SP-i], i, eltype, elsize);
+        POPN(i);
+        return;
+    }
+    else if (iscvalue(arg)) {
+        cvalue_t *cv = (cvalue_t*)ptr(arg);
+        if (isarray(arg)) {
+            value_t aet = car(cdr(cv_type(cv)));
+            if (aet == eltype) {
+                if (cv_len(cv) == sz)
+                    memcpy(dest, cv_data(cv), sz);
+                else
+                    lerror(ArgError, "array: size mismatch");
                 return;
             }
+            else {
+                // TODO: initialize array from different type elements
+                lerror(ArgError, "array: element type mismatch");
+            }
         }
-        else {
-            type_error("array", "cons", *init);
-        }
-        lerror(ArgError, "array: invalid size");
     }
-}
-
-static size_t predict_arraylen(value_t *args, u_int32_t nargs, size_t *elsz)
-{
-    int junk;
-    size_t cnt;
-
-    if (nargs < 2)
-        argcount("array", nargs, 2);
-    *elsz = ctype_sizeof(args[0], &junk);
-    if (isvector(args[1])) {
-        cnt = vector_size(args[1]);
-    }
-    else if (iscons(args[1])) {
-        cnt = llength(args[1]);
-    }
-    else if (args[1] == NIL) {
-        cnt = 0;
-    }
-    else {
-        cnt = toulong(args[1], "array");
-    }
-    return cnt;
+    if (cnt == 1)
+        cvalue_init(eltype, arg, dest);
+    else
+        type_error("array", "sequence", arg);
 }
 
 static value_t alloc_array(value_t type, size_t sz)
 {
     value_t cv;
     if (car_(cdr_(type)) == charsym) {
+        PUSH(type);
         cv = cvalue_string(sz);
-        ((cvalue_t*)ptr(cv))->type = type;
+        ((cvalue_t*)ptr(cv))->type = POP();
     }
     else {
         cv = cvalue(type, sz);
@@ -482,12 +493,18 @@ static value_t alloc_array(value_t type, size_t sz)
 value_t cvalue_array(value_t *args, u_int32_t nargs)
 {
     size_t elsize, cnt, sz;
+    int junk;
 
-    cnt = predict_arraylen(args, nargs, &elsize);
+    if (nargs < 1)
+        argcount("array", nargs, 1);
+
+    cnt = nargs - 1;
+    elsize = ctype_sizeof(args[0], &junk);
     sz = elsize * cnt;
 
     value_t cv = alloc_array(listn(3, arraysym, args[0], size_wrap(cnt)), sz);
-    cvalue_array_init(args, nargs, cv_data((cvalue_t*)ptr(cv)), (void*)elsize);
+    array_init_fromargs(cv_data((cvalue_t*)ptr(cv)), &args[1], cnt,
+                        args[0], elsize);
     return cv;
 }
 
@@ -683,33 +700,24 @@ value_t cvalue_copy(value_t v)
     return tagptr(pnv, TAG_CVALUE);
 }
 
-static void cvalue_init(value_t type, value_t *vs, u_int32_t nv, void *dest)
+static void cvalue_init(value_t type, value_t v, void *dest)
 {
     cvinitfunc_t f;
-    unsigned int i, na=0;
 
     if (issymbol(type)) {
         f = ((symbol_t*)ptr(type))->dlcache;
     }
-    else if (!iscons(type)) {
-        f = NULL;
-        lerror(ArgError, "c-value: invalid c type");
-    }
-    else {
+    else if (iscons(type)) {
         value_t head = car_(type);
         f = ((symbol_t*)ptr(head))->dlcache;
-        type = cdr_(type);
-        while (iscons(type)) {
-            PUSH(car_(type));
-            na++;
-            type = cdr_(type);
-        }
     }
-    for(i=0; i < nv; i++)
-        PUSH(vs[i]);
-    na += nv;
-    f(&Stack[SP-na], na, dest, NULL);
-    POPN(na);
+    else {
+        f = NULL;
+    }
+    if (f == NULL)
+        lerror(ArgError, "c-value: invalid c type");
+
+    f(type, v, dest, NULL);
 }
 
 static numerictype_t sym_to_numtype(value_t type)
@@ -756,29 +764,26 @@ static numerictype_t sym_to_numtype(value_t type)
 // type, including user-defined.
 value_t cvalue_new(value_t *args, u_int32_t nargs)
 {
-    if (nargs < 1)
-        argcount("c-value", nargs, 1);
+    if (nargs < 1 || nargs > 2)
+        argcount("c-value", nargs, 2);
     value_t type = args[0];
     value_t cv;
     if (iscons(type) && car_(type) == arraysym) {
         // special case to handle incomplete array types bla[]
-        size_t elsz;
-        value_t c = cdr_(type);
-        int na=0;
-        while (iscons(c)) {
-            PUSH(car_(c));
-            c = cdr_(c);
-            na++;
-        }
-        if (nargs > 1) {
-            PUSH(args[1]);
-            na++;
-        }
-        size_t cnt = predict_arraylen(&Stack[SP-na], na, &elsz);
+        value_t eltype = car(cdr_(type));
+        int junk;
+        size_t elsz = ctype_sizeof(eltype, &junk);
+        size_t cnt;
+        if (iscons(cdr_(cdr_(type))))
+            cnt = toulong(car_(cdr_(cdr_(type))), "array");
+        else if (nargs == 2)
+            cnt = predict_arraylen(args[1]);
+        else
+            cnt = 0;
         cv = alloc_array(type, elsz * cnt);
-        cvalue_array_init(&Stack[SP-na], na, cv_data((cvalue_t*)ptr(cv)),
-                          (void*)elsz);
-        POPN(na);
+        if (nargs == 2)
+            cvalue_array_init(type, args[1], cv_data((cvalue_t*)ptr(cv)),
+                              (void*)elsz);
     }
     else {
         int junk;
@@ -786,7 +791,8 @@ value_t cvalue_new(value_t *args, u_int32_t nargs)
         if (issymbol(type)) {
             ((cvalue_t*)ptr(cv))->flags.numtype = sym_to_numtype(type);
         }
-        cvalue_init(type, &args[1], nargs-1, cv_data((cvalue_t*)ptr(cv)));
+        if (nargs == 2)
+            cvalue_init(type, args[1], cv_data((cvalue_t*)ptr(cv)));
     }
     return cv;
 }

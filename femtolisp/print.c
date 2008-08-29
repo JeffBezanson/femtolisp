@@ -530,18 +530,22 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             if (!weak) {
                 outs("#array(", f);
                 do_print(f, eltype, princ);
-                outc(' ', f);
-            }
-            outc('[', f);
-            for(i=0; i < cnt; i++) {
-                cvalue_printdata(f, data, elsize, eltype, princ, 1);
-                if (i < cnt-1)
+                if (cnt > 0)
                     outc(' ', f);
+            }
+            else {
+                outc('[', f);
+            }
+            for(i=0; i < cnt; i++) {
+                if (i > 0)
+                    outc(' ', f);
+                cvalue_printdata(f, data, elsize, eltype, princ, 1);
                 data += elsize;
             }
-            outc(']', f);
             if (!weak)
                 outc(')', f);
+            else
+                outc(']', f);
         }
         else if (car_(type) == enumsym) {
             value_t sym = list_nth(car(cdr_(type)), *(size_t*)data);

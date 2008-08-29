@@ -189,7 +189,7 @@ static char *_buf_realloc(ios_t *s, size_t sz)
 
 // write a block of data into the buffer at the current position, resizing
 // if necessary. returns # written.
-static size_t _writebuf_force(ios_t *s, char *data, size_t n)
+static size_t _write_grow(ios_t *s, char *data, size_t n)
 {
     size_t amt;
     size_t newsize;
@@ -249,15 +249,14 @@ static size_t _ios_read(ios_t *s, char *dest, size_t n, int all)
             s->bpos += avail;
             return avail;
         }
-        else {
-            dest += avail;
-            n -= avail;
-            tot += avail;
-
-            ios_flush(s);
-            s->bpos = s->size = 0;
-            s->state = bst_rd;
-        }
+        
+        dest += avail;
+        n -= avail;
+        tot += avail;
+        
+        ios_flush(s);
+        s->bpos = s->size = 0;
+        s->state = bst_rd;
         
         if (n > MOST_OF(s->maxsize)) {
             // doesn't fit comfortably in buffer; go direct
@@ -321,6 +320,12 @@ size_t ios_readprep(ios_t *s, size_t n)
     return s->size - s->bpos;
 }
 
+static void _write_update_pos(ios_t *s)
+{
+    if (s->bpos > s->ndirty) s->ndirty = s->bpos;
+    if (s->bpos > s->size)   s->size = s->bpos;
+}
+
 size_t ios_write(ios_t *s, char *data, size_t n)
 {
     if (n == 0) return 0;
@@ -334,7 +339,7 @@ size_t ios_write(ios_t *s, char *data, size_t n)
         space = s->size - s->bpos;
 
     if (s->bm == bm_mem) {
-        wrote = _writebuf_force(s, data, n);
+        wrote = _write_grow(s, data, n);
     }
     else if (s->bm == bm_none) {
         int result = _os_write_all(s->fd, data, n, &wrote);
@@ -366,10 +371,7 @@ size_t ios_write(ios_t *s, char *data, size_t n)
         }
         return ios_write(s, data, n);
     }
-    if (s->bpos > s->ndirty)
-        s->ndirty = s->bpos;
-    if (s->bpos > s->size)
-        s->size = s->bpos;
+    _write_update_pos(s);
     return wrote;
 }
 
@@ -617,7 +619,7 @@ static void _ios_init(ios_t *s)
     s->tally = 0;
     s->fd = -1;
     s->byteswap = 0;
-    s->ownbuf = 0;
+    s->ownbuf = 1;
     s->ownfd = 0;
     s->_eof = 0;
     s->rereadable = 0;
@@ -692,6 +694,13 @@ int ios_putc(int c, ios_t *s)
 {
     char ch = (char)c;
 
+    if (s->state == bst_wr && s->bpos < s->maxsize && s->bm != bm_none) {
+        s->buf[s->bpos++] = ch;
+        _write_update_pos(s);
+        if (s->bm == bm_line && ch == '\n')
+            ios_flush(s);
+        return 1;
+    }
     return (int)ios_write(s, &ch, 1);
 }
 
@@ -754,17 +763,31 @@ int ios_getutf8(ios_t *s, uint32_t *pwc)
 
 int ios_printf(ios_t *s, char *format, ...)
 {
-    char buf[512];
-    char *str=&buf[0];
+    char *str=NULL;
     va_list args;
     int c;
 
     va_start(args, format);
 
-    // TODO: avoid copy
-    c = vsnprintf(buf, sizeof(buf), format, args);
-    if ((size_t)c >= sizeof(buf))
-        c = vasprintf(&str, format, args);
+    if (s->state == bst_wr && s->bpos < s->maxsize && s->bm != bm_none) {
+        size_t avail = s->maxsize - s->bpos;
+        char *start = s->buf + s->bpos;
+        c = vsnprintf(start, avail, format, args);
+        if (c < 0) {
+            va_end(args);
+            return c;
+        }
+        if (c < avail) {
+            va_end(args);
+            s->bpos += (size_t)c;
+            _write_update_pos(s);
+            // TODO: only works right if newline is at end
+            if (s->bm == bm_line && memrchr(start, '\n', (size_t)c))
+                ios_flush(s);
+            return c;
+        }
+    }
+    c = vasprintf(&str, format, args);
 
     va_end(args);
 
@@ -772,6 +795,6 @@ int ios_printf(ios_t *s, char *format, ...)
 
     ios_write(s, str, c);
 
-    if (str != &buf[0]) free(str);
+    free(str);
     return c;
 }

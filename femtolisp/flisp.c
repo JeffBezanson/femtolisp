@@ -1433,7 +1433,7 @@ value_t load_file(char *fname)
     FL_TRY {
         while (1) {
             e = read_sexpr(f);
-            //print(ios_stdout,e,0); ios_puts("\n", ios_stdout);
+            //print(ios_stdout,e,0); ios_putc('\n', ios_stdout);
             if (ios_eof(f)) break;
             v = toplevel_eval(e);
         }
@@ -1497,6 +1497,6 @@ int main(int argc, char *argv[])
         set(symbol("that"), v);
         ios_puts("\n\n", ios_stdout);
     }
-    ios_puts("\n", ios_stdout);
+    ios_putc('\n', ios_stdout);
     return 0;
 }

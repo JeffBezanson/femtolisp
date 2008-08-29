@@ -149,15 +149,14 @@ typedef struct _cvtable_t {
 	void (*print)(struct _cvalue_t *, FILE *);
 } cvtable_t;
 
-; remember: variable-length data preferred over variable-length arglists
-
 c type representations:
 symbols void, [u]int[8,16,32,64], float, double, [u]char, [u]short,
 [u]int, [u]long, lispvalue
 (c-function ret-type (argtype ...))
-(array type N)
+(array type[ N])
 (struct ((name type) (name type) ...))
 (union ((name type) (name type) ...))
+(mlayout ((name type offset) (name type offset) ...))
 (enum (name1 name2 ...))
 (pointer type)
 
@@ -167,8 +166,8 @@ constructors:
 ([u]int64 b3 b2 b1 b0)
 (float hi lo) or (float "3.14")
 (double b3 b2 b1 b0) or (double "3.14")
-(array ctype (val ...))
-(struct ((name type) ...) (val ...))
+(array ctype val ...)
+(struct ((name type) ...) val ...)
 (pointer ctype)      ; null pointer
 (pointer cvalue)     ; constructs pointer to the given value
                      ; same as (pointer (typeof x) x)
@@ -243,11 +242,27 @@ should be related formally:
   (if (symbolp type) (apply (eval type) ())
     (apply (eval (car type)) (cdr type))))
 
+NOTE: this relationship is no longer true. we don't want to have to
+construct 1 cvalue from 1 lisp value every time, since that could
+require allocating a totally redundant list or vector. it should be
+possible to make a cvalue from a series of lisp arguments. for
+example there are now 2 different ways to make an array:
+
+1) from series of arguments: (array type val0 val1 ...)
+2) from 1 (optional) value: (c-value '(array int8[ size])[ V])
+
+constructors will internally use the second form to initialize elements
+of aggregates. e.g. 'array' in the first case will conceptually call
+  (c-value type val0)
+  (c-value type val1)
+  ...
+
+
 for aggregate types, you can keep a variable referring to the relevant
 piece:
 
 (setq point '((x int) (y int)))
-(struct point [2 3])   ; looks like c declaration 'struct point x;'
+(struct point 2 3)   ; looks like c declaration 'struct point x;'
 
 a type is a function, so something similar to typedef is achieved by:
 
@@ -373,10 +388,10 @@ then we can write the vector clause in backquote as e.g.
 
 
 setup plan:
-- create source directory and svn repository, move llt sources into it
+* create source directory and svn repository, move llt sources into it
 * write femtolisp.h, definitions for extensions to #include
 - add fl_ prefix to all exported functions
-- port read and print to jclib's iostreams
+* port read and print to llt iostreams
 * get rid of flutils; use ptrhash instead
 * builtinp needs to be a builtin ;) to distinguish lisp builtins from cvalues
 * allocation and gc for cvalues
@@ -585,6 +600,10 @@ cvalues todo:
 - anonymous unions
 * fix princ for cvalues
 - make header size for primitives 8 bytes, even on 64-bit arch
+- more efficient read for #array(), so it doesn't need to build a pairlist
+- make sure shared pieces of types, like lists of enum values, can be
+  printed as shared structure to avoid duplication.
+- share more types, allocate less
 
 - string constructor/concatenator:
 (string 'sym #char(65) #wchar(945) "blah" 23)
@@ -797,23 +816,30 @@ String API
 
 IOStream API
 
- read
+ read             - (read[ stream]) ; get next sexpr from stream
  print, sprint
  princ, sprinc
- stream           - (stream cvalue-as-bytestream)
+ iostream         - (stream[ cvalue-as-bytestream])
  file
  fifo
  socket
  stream.eof
- stream.write     - (stream.write cvalue)
- stream.read      - (stream.read ctype)
+ stream.write     - (stream.write s cvalue)
+ stream.read      - (stream.read s ctype)
  stream.copy      - (stream.copy to from [nbytes])
  stream.copyuntil - (stream.copy to from byte)
  stream.flush
  stream.pos       - (stream.pos s [set-pos])
  stream.seek      - (stream.seek s offset)
+ stream.seekend   - move to end of stream
  stream.trunc
  stream.getc      - get utf8 character(s)
+ stream.tostring! - destructively convert stringstream to string
+ stream.readline
+ stream.readlines
+ stream.readall
+ print-to-string
+ princ-to-string
 
 
  path.combine
@@ -840,9 +866,11 @@ IOStream API
 
 
 *rand
+*randn
 *rand.uint32
 *rand.uint64
 *rand.double
+*rand.float
 
 -----------------------------------------------------------------------------
 
@@ -880,3 +908,5 @@ switch to miser mode, otherwise default is ok, for example:
 * *print-pretty* to control it
 
 - if indent gets too large, dedent back to left edge
+
+-----------------------------------------------------------------------------

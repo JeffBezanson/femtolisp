@@ -332,7 +332,6 @@ value_t fl_rand32(value_t *args, u_int32_t nargs)
 #ifdef BITS64
     return fixnum(r);
 #else
-    if (fits_fixnum(r)) return fixnum(r);
     return mk_uint32(r);
 #endif
 }
@@ -340,9 +339,6 @@ value_t fl_rand64(value_t *args, u_int32_t nargs)
 {
     (void)args; (void)nargs;
     ulong r = (((uint64_t)random())<<32) | random();
-#ifdef BITS64
-    if (fits_fixnum(r)) return fixnum(r);
-#endif
     return mk_uint64(r);
 }
 value_t fl_randd(value_t *args, u_int32_t nargs)
