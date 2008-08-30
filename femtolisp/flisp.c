@@ -559,8 +559,6 @@ static value_t vector_grow(value_t v)
     return POP();
 }
 
-extern value_t compare(value_t a, value_t b);
-
 int isnumber(value_t v)
 {
     return (isfixnum(v) ||
@@ -900,7 +898,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                     break;
                 }
                 else if (v == wcharsym) {
-                    v = fixnum(u8_charlen(*(wchar_t*)cv_data(cv)));
+                    v = fixnum(u8_charlen(*(uint32_t*)cv_data(cv)));
                     break;
                 }
             }
@@ -1099,7 +1097,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                 v = (Stack[SP-2] == Stack[SP-1]) ? T : NIL;
             }
             else {
-                v = (compare(Stack[SP-2], Stack[SP-1])==0) ? T : NIL;
+                v = (numval(compare(Stack[SP-2], Stack[SP-1]))==0) ? T : NIL;
             }
             break;
         case F_EVAL:
@@ -1301,6 +1299,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
 // initialization -------------------------------------------------------------
 
 extern void builtins_init();
+extern void comparehash_init();
 
 void lisp_init(void)
 {
@@ -1314,6 +1313,7 @@ void lisp_init(void)
     lim = curheap+heapsize-sizeof(cons_t);
     consflags = bitvector_new(heapsize/sizeof(cons_t), 1);
     ptrhash_new(&printconses, 32);
+    comparehash_init();
 
     NIL = symbol("nil"); setc(NIL, NIL);
     T   = symbol("T");   setc(T,   T);

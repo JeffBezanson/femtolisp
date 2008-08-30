@@ -99,7 +99,7 @@ value_t fl_string(value_t *args, u_int32_t nargs)
     size_t len, sz = 0;
     cvalue_t *temp;
     char *data;
-    wchar_t wc;
+    uint32_t wc;
 
     for(i=0; i < nargs; i++) {
         if (issymbol(args[i])) {
@@ -114,7 +114,7 @@ value_t fl_string(value_t *args, u_int32_t nargs)
                 continue;
             }
             else if (t == wcharsym) {
-                wc = *(wchar_t*)cv_data(temp);
+                wc = *(uint32_t*)cv_data(temp);
                 sz += u8_charlen(wc);
                 continue;
             }
@@ -140,7 +140,7 @@ value_t fl_string(value_t *args, u_int32_t nargs)
                 *ptr++ = *(char*)data;
             }
             else if (t == wcharsym) {
-                ptr += u8_wc_toutf8(ptr, *(wchar_t*)data);
+                ptr += u8_wc_toutf8(ptr, *(uint32_t*)data);
             }
             else {
                 len = cv_len(temp);

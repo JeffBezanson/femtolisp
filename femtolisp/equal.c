@@ -30,8 +30,10 @@ static void eq_union(ptrhash_t *table, value_t a, value_t b,
     ptrhash_put(table, (void*)b, (void*)ca);
 }
 
+// ordered comparison
+
 // a is a fixnum, b is a cvalue
-static int compare_num_cvalue(value_t a, value_t b)
+static value_t compare_num_cvalue(value_t a, value_t b)
 {
     cvalue_t *bcv = (cvalue_t*)ptr(b);
     numerictype_t bt;
@@ -39,14 +41,14 @@ static int compare_num_cvalue(value_t a, value_t b)
         fixnum_t ia = numval(a);
         void *bptr = cv_data(bcv);
         if (cmp_eq(&ia, T_FIXNUM, bptr, bt))
-            return 0;
+            return fixnum(0);
         if (cmp_lt(&ia, T_FIXNUM, bptr, bt))
-            return -1;
+            return fixnum(-1);
     }
     else {
-        return -1;
+        return fixnum(-1);
     }
-    return 1;
+    return fixnum(1);
 }
 
 static value_t bounded_compare(value_t a, value_t b, int bound);
@@ -86,7 +88,7 @@ static value_t bounded_compare(value_t a, value_t b, int bound)
             return (numval(a) < numval(b)) ? fixnum(-1) : fixnum(1);
         }
         if (iscvalue(b)) {
-            return fixnum(compare_num_cvalue(a, b));
+            return compare_num_cvalue(a, b);
         }
         return fixnum(-1);
     case TAG_SYM:
@@ -114,7 +116,7 @@ static value_t bounded_compare(value_t a, value_t b, int bound)
             return cvalue_compare(a, b);
         }
         else if (isfixnum(b)) {
-            return fixnum(-compare_num_cvalue(b, a));
+            return fixnum(-numval(compare_num_cvalue(b, a)));
         }
         break;
     case TAG_BUILTIN:
@@ -125,7 +127,7 @@ static value_t bounded_compare(value_t a, value_t b, int bound)
     case TAG_CONS:
         if (tagb < TAG_CONS) return fixnum(1);
         d = bounded_compare(car_(a), car_(b), bound-1);
-        if (numval(d) != 0) return d;
+        if (d==NIL || numval(d) != 0) return d;
         a = cdr_(a); b = cdr_(b);
         bound--;
         goto compare_top;
@@ -227,24 +229,31 @@ static value_t cyc_compare(value_t a, value_t b, ptrhash_t *table)
     return bounded_compare(a, b, 1);
 }
 
+static ptrhash_t equal_eq_hashtable;
+void comparehash_init()
+{
+    ptrhash_new(&equal_eq_hashtable, 512);
+}
+
 value_t compare(value_t a, value_t b)
 {
-    ptrhash_t h;
     value_t guess = bounded_compare(a, b, 2048);
-    if (guess != NIL)
-        return guess;
-
-    ptrhash_new(&h, 512);
-    guess = cyc_compare(a, b, &h);
-    ptrhash_free(&h);
+    if (guess == NIL) {
+        guess = cyc_compare(a, b, &equal_eq_hashtable);
+        ptrhash_reset(&equal_eq_hashtable, 512);
+    }
     return guess;
+}
+
+value_t equal(value_t a, value_t b)
+{
+    return (numval(compare(a,b))==0 ? T : NIL);
 }
 
 /*
   optimizations:
   - use hash updates instead of calling lookup then insert. i.e. get the
     bp once and use it twice.
-  - preallocate hash table and call reset() instead of new/free
-  - specialized version for equal (unordered comparison)
+  * preallocate hash table and call reset() instead of new/free
   * less redundant tag checking, 3-bit tags
 */

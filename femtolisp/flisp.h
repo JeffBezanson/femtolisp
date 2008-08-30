@@ -121,7 +121,8 @@ char *symbol_name(value_t v);
 value_t alloc_vector(size_t n, int init);
 size_t llength(value_t v);
 value_t list_nth(value_t l, size_t n);
-value_t compare(value_t a, value_t b);
+value_t compare(value_t a, value_t b);  // -1, 0, or 1
+value_t equal(value_t a, value_t b);    // T or nil
 
 /* safe casts */
 cons_t *tocons(value_t v, char *fname);

@@ -580,7 +580,7 @@ just a convenient coincidence that lets you do e.g. (int32 0)
 
 cvalues todo:
 
-- use uint32_t instead of wchar_t in C code
+* use uint32_t instead of wchar_t in C code
 - make sure empty arrays and 0-byte types really work
 * allow int constructors to accept other int cvalues
 * array constructor should accept any cvalue of the right size
@@ -910,3 +910,14 @@ switch to miser mode, otherwise default is ok, for example:
 - if indent gets too large, dedent back to left edge
 
 -----------------------------------------------------------------------------
+
+consolidated todo list as of 8/30:
+- implement support for defining new opaque values
+- finalizers in gc
+- expose io stream object
+- hashtable
+- enable print-shared for cvalues' types
+- remaining c types
+- remaining cvalues functions
+- special efficient reader for #array
+- finish ios
