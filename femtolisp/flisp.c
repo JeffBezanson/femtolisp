@@ -38,7 +38,7 @@
   - hash tables
 
   by Jeff Bezanson (C) 2008
-  Distributed under the Common Public License v1.0
+  Distributed under the BSD License
 */
 
 #include <stdlib.h>
