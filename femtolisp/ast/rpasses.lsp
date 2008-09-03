@@ -110,7 +110,7 @@
 ;)
 (define (main)
   (progn
-    (define *input* (load "starpR.lsp"))
+    (define *input* (load "???.lsp"))
     ;(define t0 ((java.util.Date:new):getTime))
     (time (compile-ish *input*))
     ;(define t1 ((java.util.Date:new):getTime))
