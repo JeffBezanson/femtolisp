@@ -58,9 +58,10 @@ typedef struct _symbol_t {
 #define isbuiltinish(x) (tag(x) == TAG_BUILTIN)
 #define isvector(x) (tag(x) == TAG_VECTOR)
 #define iscvalue(x) (tag(x) == TAG_CVALUE)
-#define selfevaluating(x) (tag(x)<0x6)
+#define selfevaluating(x) (tag(x)<6)
 // comparable with ==
-#define eq_comparable(a,b) (!(((a)|(b))&0x1))
+#define eq_comparable(a,b) (!(((a)|(b))&1))
+#define eq_comparablep(a) (!((a)&1))
 // doesn't lead to other values
 #define leafp(a) (((a)&3) != 3)
 
@@ -80,6 +81,7 @@ typedef struct _symbol_t {
 #define symbol_value(s) (((symbol_t*)ptr(s))->binding)
 #define ismanaged(v) ((((unsigned char*)ptr(v)) >= fromspace) && \
                       (((unsigned char*)ptr(v)) < fromspace+heapsize))
+#define isgensym(x)  (issymbol(x) && ismanaged(x))
 
 extern value_t Stack[];
 extern u_int32_t SP;
@@ -90,12 +92,12 @@ extern u_int32_t SP;
 enum {
     // special forms
     F_QUOTE=0, F_COND, F_IF, F_AND, F_OR, F_WHILE, F_LAMBDA,
-    F_TRYCATCH, F_SPECIAL_APPLY, F_PROGN,
+    F_TRYCATCH, F_SPECIAL_APPLY, F_SETQ, F_PROGN,
     // functions
     F_EQ, F_ATOM, F_NOT, F_SYMBOLP, F_NUMBERP, F_BOUNDP, F_CONSP,
     F_BUILTINP, F_VECTORP, F_FIXNUMP, F_EQUAL,
     F_CONS, F_CAR, F_CDR, F_RPLACA, F_RPLACD,
-    F_EVAL, F_APPLY, F_SET, F_PROG1, F_RAISE,
+    F_EVAL, F_EVALSTAR, F_APPLY, F_PROG1, F_RAISE,
     F_ADD, F_SUB, F_MUL, F_DIV, F_LT, F_BNOT, F_BAND, F_BOR, F_BXOR,
     F_VECTOR, F_AREF, F_ASET, F_LENGTH, F_ASSOC, F_COMPARE, F_FOR,
     N_BUILTINS
@@ -176,17 +178,27 @@ typedef struct {
 #endif
 
 typedef struct {
+    void (*print)(ios_t *f, value_t v, int princ);
+    void (*relocate)(value_t old, value_t new);
+    void (*finalize)(value_t self);
+    void (*print_traverse)(value_t self);
+} cvtable_t;
+
+typedef struct {
     union {
         cvflags_t flags;
         unsigned long flagbits;
     };
     value_t type;
     value_t deps;
+    //cvtable_t *vtable;
     // fields below are absent in inline-allocated values
     void *data;
     size_t len;      // length of *data in bytes
-    //cvtable_t *vtable;
 } cvalue_t;
+
+#define CVALUE_NWORDS 5
+#define CVALUE_NWORDS_INL 3
 
 typedef struct {
     union {
@@ -196,6 +208,9 @@ typedef struct {
     value_t type;
     void *data;
 } cprim_t;
+
+#define CPRIM_NWORDS 3
+#define CPRIM_NWORDS_INL 2
 
 #define cv_len(c)  ((c)->flags.inlined ? (c)->flags.inllen : (c)->len)
 #define cv_type(c) ((c)->type)

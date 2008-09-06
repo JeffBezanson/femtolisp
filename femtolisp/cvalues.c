@@ -43,14 +43,15 @@ static size_t cv_nwords(cvalue_t *cv)
 {
     if (cv->flags.prim) {
         if (cv->flags.inlined)
-            return 2 + NWORDS(cv->flags.inllen);
-        return 3;
+            return CPRIM_NWORDS_INL + NWORDS(cv->flags.inllen);
+        return CPRIM_NWORDS;
     }
     if (cv->flags.inlined) {
-        size_t s = 3 + NWORDS(cv->flags.inllen + cv->flags.cstring);
-        return (s < 5) ? 5 : s;
+        size_t s = CVALUE_NWORDS_INL +
+            NWORDS(cv->flags.inllen + cv->flags.cstring);
+        return (s < CVALUE_NWORDS) ? CVALUE_NWORDS : s;
     }
-    return 5;
+    return CVALUE_NWORDS;
 }
 
 void *cv_data(cvalue_t *cv)
@@ -84,7 +85,7 @@ value_t cvalue(value_t type, size_t sz)
 
     if (issymbol(type)) {
         cprim_t *pcp;
-        pcp = (cprim_t*)alloc_words(2 + NWORDS(sz));
+        pcp = (cprim_t*)alloc_words(CPRIM_NWORDS_INL + NWORDS(sz));
         pcp->flagbits = INITIAL_FLAGS;
         pcp->flags.inllen = sz;
         pcp->flags.inlined = 1;
@@ -94,14 +95,14 @@ value_t cvalue(value_t type, size_t sz)
     }
     PUSH(type);
     if (sz <= MAX_INL_SIZE) {
-        size_t nw = 3 + NWORDS(sz);
-        pcv = (cvalue_t*)alloc_words((nw < 5) ? 5 : nw);
+        size_t nw = CVALUE_NWORDS_INL + NWORDS(sz);
+        pcv = (cvalue_t*)alloc_words((nw < CVALUE_NWORDS) ? CVALUE_NWORDS : nw);
         pcv->flagbits = INITIAL_FLAGS;
         pcv->flags.inllen = sz;
         pcv->flags.inlined = 1;
     }
     else {
-        pcv = (cvalue_t*)alloc_words(5);
+        pcv = (cvalue_t*)alloc_words(CVALUE_NWORDS);
         pcv->flagbits = INITIAL_FLAGS;
         pcv->flags.inlined = 0;
         pcv->data = malloc(sz);
@@ -138,7 +139,7 @@ value_t cvalue_from_ref(value_t type, void *ptr, size_t sz, value_t parent)
 
     PUSH(parent);
     PUSH(type);
-    pcv = (cvalue_t*)alloc_words(5);
+    pcv = (cvalue_t*)alloc_words(CVALUE_NWORDS);
     pcv->flagbits = INITIAL_FLAGS;
     pcv->flags.inlined = 0;
     pcv->data = ptr;

@@ -247,6 +247,8 @@ value_t compare(value_t a, value_t b)
 
 value_t equal(value_t a, value_t b)
 {
+    if (eq_comparable(a, b))
+        return (a == b) ? T : NIL;
     return (numval(compare(a,b))==0 ? T : NIL);
 }
 

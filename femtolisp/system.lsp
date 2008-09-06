@@ -2,10 +2,7 @@
 ; by Jeff Bezanson (C) 2008
 ; Distributed under the BSD License
 
-(set 'list (lambda args args))
-
-(set-syntax 'setq (lambda (name val)
-                    (list set (list 'quote name) val)))
+(setq list (lambda args args))
 
 ; convert a sequence of body statements to a single expression.
 ; this allows define, defun, defmacro, let, etc. to contain multiple
@@ -32,6 +29,8 @@
       (list 'setq name (car body))
     (cons 'defun (cons (car name) (cons (cdr name) body)))))
 
+(defun set (s v) (eval (list 'setq s (list 'quote v))))
+
 (defun identity (x) x)
 (setq null not)
 
@@ -50,7 +49,7 @@
         ((null (cdr lsts)) (car lsts))
         (T ((lambda (l d) (if (null l) d
                             (prog1 l
-                              (while (consp (cdr l)) (set 'l (cdr l)))
+                              (while (consp (cdr l)) (setq l (cdr l)))
                               (rplacd l d))))
             (car lsts) (apply nconc (cdr lsts))))))
 
@@ -98,8 +97,8 @@
             (progn
               (while (and (consp e)
                           (not (member (car e) env))
-                          (set 'f (macrocallp e)))
-                (set 'e (apply f (cdr e))))
+                          (setq f (macrocallp e)))
+                (setq e (apply f (cdr e))))
               (cond ((and (consp e)
                           (not (eq (car e) 'quote)))
                      (let ((newenv
@@ -199,7 +198,7 @@
   (prog1 lst
     (while (consp lst)
       (rplaca lst (f (car lst)))
-      (set 'lst (cdr lst)))))
+      (setq lst (cdr lst)))))
 
 (defun mapcar (f . lsts)
   ((label mapcar-
@@ -243,9 +242,9 @@
 (define (nreverse l)
   (let ((prev nil))
     (while (consp l)
-      (set 'l (prog1 (cdr l)
+      (setq l (prog1 (cdr l)
                 (rplacd l (prog1 prev
-                            (set 'prev l))))))
+                            (setq prev l))))))
     prev))
 
 (defmacro let* (binds . body)

@@ -58,12 +58,12 @@
 
 static char *builtin_names[] =
     { "quote", "cond", "if", "and", "or", "while", "lambda",
-      "trycatch", "%apply", "progn",
+      "trycatch", "%apply", "setq", "progn",
 
       "eq", "atom", "not", "symbolp", "numberp", "boundp", "consp",
       "builtinp", "vectorp", "fixnump", "equal",
       "cons", "car", "cdr", "rplaca", "rplacd",
-      "eval", "apply", "set", "prog1", "raise",
+      "eval", "eval*", "apply", "prog1", "raise",
       "+", "-", "*", "/", "<", "~", "&", "!", "$",
       "vector", "aref", "aset", "length", "assoc", "compare",
       "for" };
@@ -700,6 +700,33 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                 lerror(ArgError, "quote: expected argument");
             v = car_(Stack[saveSP]);
             break;
+        case F_SETQ:
+            e = car(Stack[saveSP]);
+            v = eval(car(cdr_(Stack[saveSP])));
+            pv = &Stack[penv];
+            while (1) {
+                f = *pv++;
+                while (iscons(f)) {
+                    if (car_(f)==e) {
+                        *pv = v;
+                        SP = saveSP;
+                        return v;
+                    }
+                    f = cdr_(f); pv++;
+                }
+                if (f == e) {
+                    *pv = v;
+                    SP = saveSP;
+                    return v;
+                }
+                if (f != NIL) pv++;
+                if (*pv == NIL) break;
+                pv = &vector_elt(*pv, 0);
+            }
+            sym = tosymbol(e, "setq");
+            if (sym->syntax != TAG_CONST)
+                sym->binding = v;
+            break;
         case F_LAMBDA:
             // build a closure (lambda args body . env)
             if (Stack[penv] != NIL) {
@@ -813,34 +840,6 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             break;
 
         // ordinary functions
-        case F_SET:
-            argcount("set", nargs, 2);
-            e = Stack[SP-2];
-            pv = &Stack[penv];
-            while (1) {
-                v = *pv++;
-                while (iscons(v)) {
-                    if (car_(v)==e) {
-                        *pv = Stack[SP-1];
-                        SP=saveSP;
-                        return *pv;
-                    }
-                    v = cdr_(v); pv++;
-                }
-                if (v == e) {
-                    *pv = Stack[SP-1];
-                    SP=saveSP;
-                    return *pv;
-                }
-                if (v != NIL) pv++;
-                if (*pv == NIL) break;
-                pv = &vector_elt(*pv, 0);
-            }
-            sym = tosymbol(e, "set");
-            v = Stack[SP-1];
-            if (sym->syntax != TAG_CONST)
-                sym->binding = v;
-            break;
         case F_BOUNDP:
             argcount("boundp", nargs, 1);
             sym = tosymbol(Stack[SP-1], "boundp");
@@ -1118,6 +1117,13 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                 PUSH(NIL);
                 v = eval_sexpr(v, SP-2, 1);
             }
+            break;
+        case F_EVALSTAR:
+            argcount("eval*", nargs, 1);
+            e = Stack[SP-1];
+            if (selfevaluating(e)) { SP=saveSP; return e; }
+            SP = penv+2;
+            goto eval_top;
             break;
         case F_RAISE:
             argcount("raise", nargs, 1);

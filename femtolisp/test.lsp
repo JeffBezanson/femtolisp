@@ -3,7 +3,7 @@
 ;  (list list ''labl (list 'quote name) f))
 
 (defmacro labl (name f)
-  `(let (,name) (set ',name ,f)))
+  `(let (,name) (setq ,name ,f)))
 
 ;(define (reverse lst)
 ;  ((label rev-help (lambda (lst result)
@@ -204,3 +204,28 @@
 ;(tt)
 ;(tt)
 ;(tt)
+
+(defmacro delay (expr)
+  (let ((g (gensym)))
+    `(let ((,g ',g))
+       (lambda () (if (eq ,g ',g) (setq ,g ,expr) ,g)))))
+
+(defmacro accumulate-while (cnd what . body)
+  (let ((first (gensym))
+        (acc (gensym))
+        (forms (f-body body)))
+    `(let ((,first (prog1 (cons ,what nil) ,forms))
+           (,acc nil))
+       (setq ,acc ,first)
+       (while ,cnd
+         (progn (rplacd ,acc (cons ,what nil))
+                (setq ,acc (cdr ,acc))
+                ,forms))
+       ,first)))
+
+(defun map-indexed (f lst)
+  (if (atom lst) lst
+    (let ((i 0))
+      (accumulate-while (consp lst) (f (car lst) i)
+                        (setq lst (cdr lst))
+                        (setq i (1+ i))))))

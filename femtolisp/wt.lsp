@@ -5,4 +5,4 @@
                         (progn ,@forms
                                (-loop-))
                       nil)))))
-(while (< i 10000000) (set 'i (+ i 1)))
+(while (< i 10000000) (setq i (+ i 1)))
