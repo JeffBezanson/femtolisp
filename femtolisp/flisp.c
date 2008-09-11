@@ -80,6 +80,7 @@ value_t IOError, ParseError, TypeError, ArgError, UnboundError, MemoryError;
 value_t DivideError, BoundsError, Error;
 value_t conssym, symbolsym, fixnumsym, vectorsym, builtinsym;
 value_t defunsym, defmacrosym, forsym, labelsym, printprettysym;
+value_t printwidthsym;
 
 static value_t eval_sexpr(value_t e, uint32_t penv, int tail);
 static value_t *alloc_words(int n);
@@ -826,14 +827,15 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             break;
         case F_PROGN:
             // return last arg
-            pv = &Stack[saveSP]; v = NIL;
+            pv = &Stack[saveSP];
             if (iscons(*pv)) {
                 while (iscons(cdr_(*pv))) {
-                    v = eval(car_(*pv));
+                    (void)eval(car_(*pv));
                     *pv = cdr_(*pv);
                 }
                 tail_eval(car_(*pv));
             }
+            v = NIL;
             break;
         case F_TRYCATCH:
             v = do_trycatch(car(Stack[saveSP]), penv);
@@ -1124,7 +1126,6 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             if (selfevaluating(e)) { SP=saveSP; return e; }
             SP = penv+2;
             goto eval_top;
-            break;
         case F_RAISE:
             argcount("raise", nargs, 1);
             raise(Stack[SP-1]);
@@ -1307,6 +1308,8 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
 extern void builtins_init();
 extern void comparehash_init();
 
+static char *EXEDIR;
+
 void lisp_init(void)
 {
     int i;
@@ -1349,6 +1352,7 @@ void lisp_init(void)
     forsym = symbol("for");
     labelsym = symbol("label");
     set(printprettysym=symbol("*print-pretty*"), T);
+    set(printwidthsym=symbol("*print-width*"), fixnum(SCR_WIDTH));
     lasterror = NIL;
     lerrorbuf[0] = '\0';
     special_apply_form = fl_cons(builtin(F_SPECIAL_APPLY), NIL);
@@ -1374,6 +1378,15 @@ void lisp_init(void)
 
     cvalues_init();
     set(symbol("gensym"), guestfunc(gensym));
+
+    char buf[1024];
+    char *exename = get_exename(buf, sizeof(buf));
+    if (exename != NULL) {
+        path_to_dirname(exename);
+        EXEDIR = strdup(exename);
+        setc(symbol("*install-dir*"), cvalue_static_cstring(EXEDIR));
+    }
+
     builtins_init();
 }
 
@@ -1462,7 +1475,7 @@ static value_t argv_list(int argc, char *argv[])
     PUSH(NIL);
     if (argc > 1) { argc--; argv++; }
     for(i=argc-1; i >= 0; i--)
-        Stack[SP-1] = fl_cons(cvalue_pinned_cstring(argv[i]), Stack[SP-1]);
+        Stack[SP-1] = fl_cons(cvalue_static_cstring(argv[i]), Stack[SP-1]);
     return POP();
 }
 
@@ -1482,11 +1495,11 @@ int main(int argc, char *argv[])
     }
     FL_CATCH {
         print_toplevel_exception();
-
         lerrorbuf[0] = '\0';
         lasterror = NIL;
         ios_puts("\n\n", ios_stderr);
-        goto repl;
+        if (argc > 1) return 1;
+        else goto repl;
     }
     load_file("system.lsp");
     if (argc > 1) { load_file(argv[1]); return 0; }

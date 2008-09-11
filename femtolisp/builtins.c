@@ -254,21 +254,13 @@ static double value_to_double(value_t a, char *fname)
     type_error(fname, "number", a);
 }
 
-static value_t return_from_cstr(char *str)
-{
-    size_t n = strlen(str);
-    value_t v = cvalue_string(n);
-    memcpy(cvalue_data(v), str, n);
-    return v;
-}
-
 value_t fl_time_string(value_t *args, uint32_t nargs)
 {
     argcount("time.string", nargs, 1);
     double t = value_to_double(args[0], "time.string");
     char buf[64];
     timestring(t, buf, sizeof(buf));
-    return return_from_cstr(buf);
+    return string_from_cstr(buf);
 }
 
 value_t fl_path_cwd(value_t *args, uint32_t nargs)
@@ -278,7 +270,7 @@ value_t fl_path_cwd(value_t *args, uint32_t nargs)
     if (nargs == 0) {
         char buf[1024];
         get_cwd(buf, sizeof(buf));
-        return return_from_cstr(buf);
+        return string_from_cstr(buf);
     }
     char *ptr = tostring(args[0], "path.cwd");
     if (set_cwd(ptr))
@@ -294,7 +286,7 @@ value_t fl_os_getenv(value_t *args, uint32_t nargs)
     if (val == NULL) return NIL;
     if (*val == 0)
         return symbol_value(emptystringsym);
-    return cvalue_pinned_cstring(val);
+    return cvalue_static_cstring(val);
 }
 
 value_t fl_os_setenv(value_t *args, uint32_t nargs)

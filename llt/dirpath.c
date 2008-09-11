@@ -24,6 +24,7 @@
 #endif
 
 #include "dtypes.h"
+#include "dirpath.h"
 
 void get_cwd(char *buf, size_t size)
 {
@@ -44,6 +45,18 @@ int set_cwd(char *buf)
         return 1;
 #endif
     return 0;
+}
+
+// destructively convert path to directory part
+void path_to_dirname(char *path)
+{
+    char *sep = strrchr(path, PATHSEP);
+    if (sep != NULL) {
+        *sep = '\0';
+    }
+    else {
+        path[0] = '\0';
+    }
 }
 
 #ifdef LINUX

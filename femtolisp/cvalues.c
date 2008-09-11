@@ -176,11 +176,19 @@ value_t cvalue_string(size_t sz)
     return cv;
 }
 
-value_t cvalue_pinned_cstring(char *str)
+value_t cvalue_static_cstring(char *str)
 {
     value_t v = cvalue_from_ref(symbol_value(stringtypesym), str, strlen(str),
                                 NIL);
     ((cvalue_t*)ptr(v))->flags.cstring = 1;
+    return v;
+}
+
+value_t string_from_cstr(char *str)
+{
+    size_t n = strlen(str);
+    value_t v = cvalue_string(n);
+    memcpy(cvalue_data(v), str, n);
     return v;
 }
 
@@ -956,7 +964,7 @@ void cvalues_init()
     setc(wcstringtypesym, list2(arraysym, wcharsym));
 
     emptystringsym = symbol("*empty-string*");
-    setc(emptystringsym, cvalue_pinned_cstring(""));
+    setc(emptystringsym, cvalue_static_cstring(""));
 }
 
 #define RETURN_NUM_AS(var, type) return(mk_##type((type##_t)var))

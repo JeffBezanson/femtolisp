@@ -778,11 +778,12 @@ identical to
 
 design of new toplevel
 
-system.lsp is compiled into the executable, and contains definitions of
-(load) and (repl).
+system.lsp contains definitions of (load) and (toplevel) and is loaded
+from *install-dir* by a bootstrap loader in C. at the end of system.lsp,
+we check whether (load) is builtin. if it is, we redefine it and reload
+system.lsp with the new loader. the C code then invokes (toplevel).
 
-start with load bound to bootstrap_load (in C)
-on startup we call load on system, then call it again afterwards
+(toplevel) either runs a script or a repl using (while T (trycatch ...))
 
 (load) reads and evaluates every form, keeping track of defined functions
 and macros (at the top level), and grabs a (main ...) form if it sees

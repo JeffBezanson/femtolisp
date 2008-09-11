@@ -1,6 +1,8 @@
 static ptrhash_t printconses;
 static u_int32_t printlabel;
 static int print_pretty;
+static int SCR_WIDTH = 80;
+static int R_MARGIN, C_MARGIN, R_EDGE, L_PAD, R_PAD;
 
 static int HPOS, VPOS;
 static void outc(char c, ios_t *f)
@@ -250,15 +252,15 @@ static void print_pair(ios_t *f, value_t v, int princ)
             est = lengthestimate(car_(cd));
             nextsmall = smallp(car_(cd));
             ind = (((n > 0) &&
-                    ((!nextsmall && HPOS>28) || (VPOS > lastv))) ||
+                    ((!nextsmall && HPOS>L_PAD) || (VPOS > lastv))) ||
                    
                    ((VPOS > lastv) && (!nextsmall || n==0)) ||
                    
-                   (HPOS > 50 && !nextsmall) ||
+                   (HPOS > R_PAD && !nextsmall) ||
                    
-                   (HPOS > 74) ||
+                   (HPOS > R_MARGIN) ||
                    
-                   (est!=-1 && (HPOS+est > 78)) ||
+                   (est!=-1 && (HPOS+est > R_EDGE)) ||
                    
                    ((head == LAMBDA || head == labelsym) && !nextsmall) ||
                    
@@ -341,8 +343,9 @@ static void do_print(ios_t *f, value_t v, int princ)
                     }
                     else {
                         est = lengthestimate(vector_elt(v,i+1));
-                        if (HPOS > 74 || (est!=-1 && (HPOS+est > 78)) ||
-                            (HPOS > 40 && !smallp(vector_elt(v,i+1))))
+                        if (HPOS > R_MARGIN ||
+                            (est!=-1 && (HPOS+est > R_EDGE)) ||
+                            (HPOS > C_MARGIN && !smallp(vector_elt(v,i+1))))
                             outindent(newindent, f);
                         else
                             outc(' ', f);
@@ -580,12 +583,28 @@ void cvalue_print(ios_t *f, value_t v, int princ)
     cvalue_printdata(f, data, cv_len(cv), cv_type(cv), princ, 0);
 }
 
+static void set_print_width()
+{
+    value_t pw = symbol_value(printwidthsym);
+    if (!isfixnum(pw)) return;
+    SCR_WIDTH = numval(pw);
+    R_MARGIN = SCR_WIDTH-6;
+    R_EDGE = SCR_WIDTH-2;
+    C_MARGIN = SCR_WIDTH/2;
+    L_PAD = (SCR_WIDTH*7)/20;
+    R_PAD = L_PAD*2;
+}
+
 void print(ios_t *f, value_t v, int princ)
 {
     print_pretty = (symbol_value(printprettysym) != NIL);
-    ptrhash_reset(&printconses, 32);
+    if (print_pretty)
+        set_print_width();
     printlabel = 0;
     print_traverse(v);
     HPOS = VPOS = 0;
+
     do_print(f, v, princ);
+
+    ptrhash_reset(&printconses, 32);
 }

@@ -205,27 +205,41 @@
 ;(tt)
 ;(tt)
 
-(defmacro delay (expr)
-  (let ((g (gensym)))
+(let ((g (gensym)))
+  (defmacro delay (expr)
     `(let ((,g ',g))
        (lambda () (if (eq ,g ',g) (setq ,g ,expr) ,g)))))
 
+(defun force (p) (p))
+
 (defmacro accumulate-while (cnd what . body)
   (let ((first (gensym))
-        (acc (gensym))
-        (forms (f-body body)))
-    `(let ((,first (prog1 (cons ,what nil) ,forms))
-           (,acc nil))
-       (setq ,acc ,first)
+        (acc   (gensym)))
+    `(let ((,first nil)
+           (,acc (list nil)))
+       (setq ,first ,acc)
        (while ,cnd
-         (progn (rplacd ,acc (cons ,what nil))
-                (setq ,acc (cdr ,acc))
-                ,forms))
-       ,first)))
+         (progn (setq ,acc
+                      (cdr (rplacd ,acc (cons ,what nil))))
+                ,@body))
+       (cdr ,first))))
+
+(defmacro accumulate-for (var lo hi what . body)
+  (let ((first (gensym))
+        (acc   (gensym)))
+    `(let ((,first nil)
+           (,acc (list nil)))
+       (setq ,first ,acc)
+       (for ,lo ,hi
+            (lambda (,var)
+              (progn (setq ,acc
+                           (cdr (rplacd ,acc (cons ,what nil))))
+                     ,@body)))
+       (cdr ,first))))
 
 (defun map-indexed (f lst)
   (if (atom lst) lst
     (let ((i 0))
       (accumulate-while (consp lst) (f (car lst) i)
-                        (setq lst (cdr lst))
-                        (setq i (1+ i))))))
+                        (progn (setq lst (cdr lst))
+                               (setq i (1+ i)))))))
