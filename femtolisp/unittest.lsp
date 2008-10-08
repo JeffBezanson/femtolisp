@@ -62,6 +62,8 @@
 (assert (equal (* 2 #int64(0x4000000000000000))
                #uint64(0x8000000000000000)))
 
+(assert (equal (uint64 (double -123)) #uint64(0xffffffffffffff85)))
+
 (assert (equal (string 'sym #char(65) #wchar(945) "blah") "symA\u03B1blah"))
 
 

@@ -546,6 +546,8 @@ char *u8_memrchr(const char *s, u_int32_t ch, size_t sz)
 
 int u8_is_locale_utf8(const char *locale)
 {
+    if (locale == NULL) return 0;
+
     /* this code based on libutf8 */
     const char* cp = locale;
 

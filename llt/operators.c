@@ -89,7 +89,7 @@ void conv_from_double(void *dest, double d, numerictype_t tag)
         if (d > 0 && *(int64_t*)dest < 0)  // 0x8000000000000000 is a bitch
             *(int64_t*)dest = S64_MAX;
         break;
-    case T_UINT64: *(uint64_t*)dest = d; break;
+    case T_UINT64: *(uint64_t*)dest = (int64_t)d; break;
     case T_FLOAT:  *(float*)dest = d; break;
     case T_DOUBLE: *(double*)dest = d; break;
     }
@@ -115,9 +115,29 @@ type##_t conv_to_##type(void *data, numerictype_t tag)      \
 }
 
 CONV_TO_INTTYPE(int64)
-CONV_TO_INTTYPE(uint64)
 CONV_TO_INTTYPE(int32)
 CONV_TO_INTTYPE(uint32)
+
+// this is needed to work around a possible compiler bug
+// casting negative floats and doubles to uint64. you need
+// to cast to int64 first.
+uint64_t conv_to_uint64(void *data, numerictype_t tag)
+{
+    uint64_t i=0;
+    switch (tag) {
+    case T_INT8:   i = (uint64_t)*(int8_t*)data; break;
+    case T_UINT8:  i = (uint64_t)*(uint8_t*)data; break;
+    case T_INT16:  i = (uint64_t)*(int16_t*)data; break;
+    case T_UINT16: i = (uint64_t)*(uint16_t*)data; break;
+    case T_INT32:  i = (uint64_t)*(int32_t*)data; break;
+    case T_UINT32: i = (uint64_t)*(uint32_t*)data; break;
+    case T_INT64:  i = (uint64_t)*(int64_t*)data; break;
+    case T_UINT64: i = (uint64_t)*(uint64_t*)data; break;
+    case T_FLOAT:  i = (uint64_t)(int64_t)*(float*)data; break;
+    case T_DOUBLE: i = (uint64_t)(int64_t)*(double*)data; break;
+    }
+    return i;
+}
 
 int cmp_same_lt(void *a, void *b, numerictype_t tag)
 {
@@ -226,7 +246,7 @@ int cmp_eq(void *a, numerictype_t atag, void *b, numerictype_t btag)
             return ((int64_t)*(uint64_t*)a == *(int64_t*)b);
         }
         else if (btag == T_DOUBLE) {
-            return (*(uint64_t*)a == (uint64_t)*(double*)b);
+            return (*(uint64_t*)a == (uint64_t)(int64_t)*(double*)b);
         }
     }
     else if (atag == T_INT64) {
@@ -242,7 +262,7 @@ int cmp_eq(void *a, numerictype_t atag, void *b, numerictype_t btag)
             return ((int64_t)*(uint64_t*)b == *(int64_t*)a);
         }
         else if (atag == T_DOUBLE) {
-            return (*(uint64_t*)b == (uint64_t)*(double*)a);
+            return (*(uint64_t*)b == (uint64_t)(int64_t)*(double*)a);
         }
     }
     else if (btag == T_INT64) {
