@@ -14,26 +14,19 @@
     expressions. this is due to the closure representation
     (lambda args body . env)
 
-  This is a fork of femtoLisp with advanced reading and printing facilities:
+  This is a fully fleshed-out lisp built up from femtoLisp. It has all the
+  remaining features needed to be taken seriously:
   * circular structure can be printed and read
   * #. read macro for eval-when-read and correctly printing builtins
   * read macros for backquote
   * symbol character-escaping printer
-
-  The value of this extra complexity, and what makes this fork worthy of
-  the femtoLisp brand, is that the interpreter is fully "closed" in the
-  sense that all representable values can be read and printed.
-
-  This is a fully fleshed-out lisp built up from femtoLisp. It has all the
-  remaining features needed to be taken seriously:
   * vectors
   * exceptions
   * gensyms (can be usefully read back in, too)
   * #| multiline comments |#
-  * generic compare function
+  * generic compare function, cyclic equal
   * cvalues system providing C data types and a C FFI
   * constructor notation for nicely printing arbitrary values
-  * cyclic equal
   * strings
   - hash tables
 
@@ -199,8 +192,14 @@ static symbol_t *mk_symbol(char *str)
                                         strlen(str)+1,
                                     8);
     sym->left = sym->right = NULL;
-    sym->binding = UNBOUND;
-    sym->syntax = 0;
+    if (str[0] == ':') {
+        value_t s = tagptr(sym, TAG_SYM);
+        setc(s, s);
+    }
+    else {
+        sym->binding = UNBOUND;
+        sym->syntax = 0;
+    }
     strcpy(&sym->name[0], str);
     return sym;
 }
@@ -232,9 +231,9 @@ value_t symbol(char *str)
 }
 
 typedef struct {
-    value_t binding;   // global value binding
     value_t syntax;    // syntax environment entry
-    void *dlcache;     // dlsym address
+    value_t binding;   // global value binding
+    void *dlcache;     // dlsym address (not used here)
     u_int32_t id;
 } gensym_t;
 
@@ -352,39 +351,37 @@ static value_t relocate(value_t v)
 {
     value_t a, d, nc, first, *pcdr;
 
-    if (isfixnum(v))
-        return(v);
-    else if (iscons(v)) {
+    if (iscons(v)) {
         // iterative implementation allows arbitrarily long cons chains
         pcdr = &first;
         do {
-            if ((a=car_(v)) == UNBOUND) {
+            if ((a=car_(v)) == TAG_FWD) {
                 *pcdr = cdr_(v);
                 return first;
             }
             *pcdr = nc = mk_cons();
             d = cdr_(v);
-            car_(v) = UNBOUND; cdr_(v) = nc;
+            car_(v) = TAG_FWD; cdr_(v) = nc;
             car_(nc) = relocate(a);
             pcdr = &cdr_(nc);
             v = d;
         } while (iscons(v));
         *pcdr = (d==NIL) ? NIL : relocate(d);
-
         return first;
     }
-    else if (isvector(v)) {
-        // 0-length vectors secretly have space for a first element
-        if (vector_elt(v,0) == UNBOUND)
-            return vector_elt(v,-1);
+    uptrint_t t = tag(v);
+    if ((t&(t-1)) == 0) return v;  // tags 0,1,2,4
+    if (isforwarded(v))
+        return forwardloc(v);
+    if (isvector(v)) {
+        // N.B.: 0-length vectors secretly have space for a first element
         size_t i, newsz, sz = vector_size(v);
         newsz = sz;
         if (vector_elt(v,-1) & 0x1)
             newsz += vector_grow_amt(sz);
         nc = alloc_vector(newsz, 0);
         a = vector_elt(v,0);
-        vector_elt(v,0) = UNBOUND;
-        vector_elt(v,-1) = nc;
+        forward(v, nc);
         i = 0;
         if (sz > 0) {
             vector_elt(nc,0) = relocate(a); i++;
@@ -401,15 +398,16 @@ static value_t relocate(value_t v)
     else if (ismanaged(v)) {
         assert(issymbol(v));
         gensym_t *gs = (gensym_t*)ptr(v);
-        if (gs->id == 0xffffffff)
-            return gs->binding;
         gensym_t *ng = (gensym_t*)alloc_words(sizeof(gensym_t)/sizeof(void*));
-        *ng = *gs;
-        gs->id = 0xffffffff;
+        ng->id = gs->id;
+        ng->binding = gs->binding;
+        ng->syntax = gs->syntax;
         nc = tagptr(ng, TAG_SYM);
-        gs->binding = nc;
+        forward(v, nc);
         if (ng->binding != UNBOUND)
             ng->binding = relocate(ng->binding);
+        if (iscons(ng->syntax))
+            ng->syntax = relocate(ng->syntax);
         return nc;
     }
     return v;
@@ -418,7 +416,8 @@ static value_t relocate(value_t v)
 static void trace_globals(symbol_t *root)
 {
     while (root != NULL) {
-        root->binding = relocate(root->binding);
+        if (root->binding != UNBOUND)
+            root->binding = relocate(root->binding);
         if (iscons(root->syntax))
             root->syntax = relocate(root->syntax);
         trace_globals(root->left);

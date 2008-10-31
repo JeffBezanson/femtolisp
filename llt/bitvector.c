@@ -44,7 +44,7 @@
 // greater than this # of words we use malloc instead of alloca
 #define MALLOC_CUTOFF 2000
 
-u_int32_t *bitvector_resize(u_int32_t *b, size_t n, int initzero)
+u_int32_t *bitvector_resize(u_int32_t *b, u_int64_t n, int initzero)
 {
     u_int32_t *p;
     size_t sz = ((n+31)>>5) * 4;
@@ -54,12 +54,17 @@ u_int32_t *bitvector_resize(u_int32_t *b, size_t n, int initzero)
     return p;
 }
 
-u_int32_t *bitvector_new(size_t n, int initzero)
+u_int32_t *bitvector_new(u_int64_t n, int initzero)
 {
     return bitvector_resize(NULL, n, initzero);
 }
 
-void bitvector_set(u_int32_t *b, u_int32_t n, u_int32_t c)
+size_t bitvector_nwords(u_int64_t nbits)
+{
+    return ((nbits+31)>>5) * 4;
+}
+
+void bitvector_set(u_int32_t *b, u_int64_t n, u_int32_t c)
 {
     if (c)
         b[n>>5] |= (1<<(n&31));
@@ -67,7 +72,7 @@ void bitvector_set(u_int32_t *b, u_int32_t n, u_int32_t c)
         b[n>>5] &= ~(1<<(n&31));
 }
 
-u_int32_t bitvector_get(u_int32_t *b, u_int32_t n)
+u_int32_t bitvector_get(u_int32_t *b, u_int64_t n)
 {
     return b[n>>5] & (1<<(n&31));
 }
@@ -399,14 +404,14 @@ void bitvector_reverse(u_int32_t *b, u_int32_t offs, u_int32_t nbits)
     if (nw > MALLOC_CUTOFF) free(temp);
 }
 
-u_int32_t bitvector_count(u_int32_t *b, u_int32_t offs, u_int32_t nbits)
+u_int64_t bitvector_count(u_int32_t *b, u_int32_t offs, u_int64_t nbits)
 {
-    index_t i;
-    u_int32_t nw, tail;
-    u_int32_t ans;
+    size_t i, nw;
+    u_int32_t ntail;
+    u_int64_t ans;
 
     if (nbits == 0) return 0;
-    nw = (offs+nbits+31)>>5;
+    nw = ((u_int64_t)offs+nbits+31)>>5;
 
     if (nw == 1) {
         return count_bits(b[0] & (lomask(nbits)<<offs));
@@ -428,8 +433,8 @@ u_int32_t bitvector_count(u_int32_t *b, u_int32_t offs, u_int32_t nbits)
         ans += count_bits(b[i]);
     }
 
-    tail = (offs+nbits)&31;
-    ans += count_bits(b[i]&(tail>0?lomask(tail):ONES32));  // last end cap
+    ntail = (offs+(u_int32_t)nbits)&31;
+    ans += count_bits(b[i]&(ntail>0?lomask(ntail):ONES32));  // last end cap
 
     return ans;
 }

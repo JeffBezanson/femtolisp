@@ -31,10 +31,10 @@ static inline u_int32_t count_bits(u_int32_t b)
 
 u_int32_t bitreverse(u_int32_t x);
 
-u_int32_t *bitvector_new(size_t n, int initzero);
-u_int32_t *bitvector_resize(u_int32_t *b, size_t n, int initzero);
-void bitvector_set(u_int32_t *b, u_int32_t n, u_int32_t c);
-u_int32_t bitvector_get(u_int32_t *b, u_int32_t n);
+u_int32_t *bitvector_new(u_int64_t n, int initzero);
+u_int32_t *bitvector_resize(u_int32_t *b, u_int64_t n, int initzero);
+void bitvector_set(u_int32_t *b, u_int64_t n, u_int32_t c);
+u_int32_t bitvector_get(u_int32_t *b, u_int64_t n);
 
 void bitvector_shr(u_int32_t *b, size_t n, u_int32_t s);
 void bitvector_shr_to(u_int32_t *dest, u_int32_t *b, size_t n, u_int32_t s);
@@ -59,7 +59,7 @@ void bitvector_or_to(u_int32_t *dest, u_int32_t doffs,
 void bitvector_xor_to(u_int32_t *dest, u_int32_t doffs,
                       u_int32_t *a, u_int32_t aoffs,
                       u_int32_t *b, u_int32_t boffs, u_int32_t nbits);
-u_int32_t bitvector_count(u_int32_t *b, u_int32_t offs, u_int32_t nbits);
+u_int64_t bitvector_count(u_int32_t *b, u_int32_t offs, u_int64_t nbits);
 u_int32_t bitvector_any0(u_int32_t *b, u_int32_t offs, u_int32_t nbits);
 u_int32_t bitvector_any1(u_int32_t *b, u_int32_t offs, u_int32_t nbits);
 

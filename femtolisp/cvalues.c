@@ -540,15 +540,12 @@ value_t cvalue_relocate(value_t v)
     cvalue_t *nv;
     value_t ncv;
 
-    if (cv->flags.moved)
-        return cv->type;
-    nw = cv_nwords(cv);
     if (!cv->flags.islispfunction) {
+        nw = cv_nwords(cv);
         nv = (cvalue_t*)alloc_words(nw);
         memcpy(nv, cv, nw*sizeof(value_t));
         ncv = tagptr(nv, TAG_CVALUE);
-        cv->type = ncv;
-        cv->flags.moved = 1;
+        forward(v, ncv);
     }
     else {
         // guestfunctions are permanent objects, unmanaged

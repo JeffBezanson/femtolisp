@@ -15,8 +15,8 @@ typedef struct {
 } cons_t;
 
 typedef struct _symbol_t {
-    value_t binding;   // global value binding
     value_t syntax;    // syntax environment entry
+    value_t binding;   // global value binding
     void *dlcache;     // dlsym address
     // below fields are private
     struct _symbol_t *left;
@@ -36,6 +36,7 @@ typedef struct _symbol_t {
 #define TAG_SYM      0x6
 #define TAG_CONS     0x7
 #define UNBOUND      ((value_t)0x1) // an invalid value
+#define TAG_FWD      UNBOUND
 #define TAG_CONST    ((value_t)-2)  // in sym->syntax for constants
 #define tag(x) ((x)&0x7)
 #define ptr(x) ((void*)((x)&(~(value_t)0x7)))
@@ -65,6 +66,11 @@ typedef struct _symbol_t {
 // doesn't lead to other values
 #define leafp(a) (((a)&3) != 3)
 
+#define isforwarded(v) (((value_t*)ptr(v))[0] == TAG_FWD)
+#define forwardloc(v)  (((value_t*)ptr(v))[1])
+#define forward(v,to) do { (((value_t*)ptr(v))[0] = TAG_FWD); \
+                           (((value_t*)ptr(v))[1] = to); } while (0)
+
 #define vector_size(v) (((size_t*)ptr(v))[0]>>2)
 #define vector_setsize(v,n) (((size_t*)ptr(v))[0] = ((n)<<2))
 #define vector_elt(v,i) (((value_t*)ptr(v))[1+(i)])
@@ -74,6 +80,7 @@ typedef struct _symbol_t {
 #define cdr_(v) (((cons_t*)ptr(v))->cdr)
 #define car(v)  (tocons((v),"car")->car)
 #define cdr(v)  (tocons((v),"cdr")->cdr)
+
 #define set(s, v)  (((symbol_t*)ptr(s))->binding = (v))
 #define setc(s, v) do { ((symbol_t*)ptr(s))->syntax = TAG_CONST; \
                         ((symbol_t*)ptr(s))->binding = (v); } while (0)
@@ -148,11 +155,11 @@ static inline void argcount(char *fname, int nargs, int c)
 #define INL_SIZE_NBITS 16
 typedef struct {
     unsigned two:2;
-    unsigned moved:1;
+    unsigned unused0:1;
     unsigned numtype:4;
     unsigned inllen:INL_SIZE_NBITS;
     unsigned cstring:1;
-    unsigned unused:4;
+    unsigned unused1:4;
     unsigned prim:1;
     unsigned inlined:1;
     unsigned islispfunction:1;
@@ -178,7 +185,7 @@ typedef struct {
 #endif
 
 typedef struct {
-    void (*print)(ios_t *f, value_t v, int princ);
+    void (*print)(value_t self, ios_t *f, int princ);
     void (*relocate)(value_t old, value_t new);
     void (*finalize)(value_t self);
     void (*print_traverse)(value_t self);

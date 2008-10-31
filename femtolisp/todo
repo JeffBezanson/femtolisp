@@ -100,6 +100,8 @@ possible optimizations:
   that follow calls to cons_reserve.
 - case of lambda expression in head (as produced by let), can just modify
   env in-place in tail position
+- allocate memory by mmap'ing a large uncommitted block that we cut
+  in half. then each half heap can be grown without moving addresses.
 * represent lambda environment as a vector (in lispv)
 x setq builtin (didn't help)
 (- list builtin, to use cons_reserve)
@@ -112,6 +114,8 @@ for internal use:
 * a special version of apply that takes arguments on the stack, to avoid
   consing when implementing "call-with" style primitives like trycatch,
   hashtable-foreach, or the fl_apply API
+- partial_apply, reapply interface so other iterators can use the same
+  fast mechanism as for
 * try this environment representation:
  for all kinds of functions (except maybe builtin special forms) push
  all arguments on the stack, either evaluated or not.
@@ -136,6 +140,8 @@ bugs:
 - (setf (car x) y) doesn't return y
 * reader needs to check errno in isnumtok
 * prettyprint size measuring is not utf-8 correct
+- stack is too limited. possibly allocate user frames with alloca so the
+  only limit is the process stack size.
 
 
 femtoLisp3...with symbolic C interface

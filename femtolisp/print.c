@@ -252,7 +252,7 @@ static void print_pair(ios_t *f, value_t v, int princ)
             est = lengthestimate(car_(cd));
             nextsmall = smallp(car_(cd));
             ind = (((n > 0) &&
-                    ((!nextsmall && HPOS>L_PAD) || (VPOS > lastv))) ||
+                    ((!nextsmall && HPOS>C_MARGIN) || (VPOS > lastv))) ||
                    
                    ((VPOS > lastv) && (!nextsmall || n==0)) ||
                    
@@ -266,7 +266,9 @@ static void print_pair(ios_t *f, value_t v, int princ)
                    
                    (n > 0 && always) ||
                    
-                   (n == 2 && after3));
+                   (n == 2 && after3) ||
+
+                   (n == 0 && !smallp(head)));
         }
 
         if (ind) {
