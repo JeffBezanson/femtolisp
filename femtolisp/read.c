@@ -357,7 +357,6 @@ static value_t read_string(ios_t *f)
             else if ((c=='x' && (ndig=2)) ||
                      (c=='u' && (ndig=4)) ||
                      (c=='U' && (ndig=8))) {
-                wc = c;
                 c = ios_getc(f);
                 while (hex_digit(c) && j<ndig && (c!=IOS_EOF)) {
                     eseq[j++] = c;
@@ -366,24 +365,15 @@ static value_t read_string(ios_t *f)
                 if (c!=IOS_EOF) ios_ungetc(c, f);
                 eseq[j] = '\0';
                 if (j) wc = strtol(eseq, NULL, 16);
+                else {
+                    free(buf);
+                    lerror(ParseError, "read: invalid escape sequence");
+                }
                 i += u8_wc_toutf8(&buf[i], wc);
             }
-            else if (c == 'n')
-                buf[i++] = '\n';
-            else if (c == 't')
-                buf[i++] = '\t';
-            else if (c == 'r')
-                buf[i++] = '\r';
-            else if (c == 'b')
-                buf[i++] = '\b';
-            else if (c == 'f')
-                buf[i++] = '\f';
-            else if (c == 'v')
-                buf[i++] = '\v';
-            else if (c == 'a')
-                buf[i++] = '\a';
-            else
-                buf[i++] = c;
+            else {
+                buf[i++] = read_escape_control_char((char)c);
+            }
         }
         else {
             buf[i++] = c;

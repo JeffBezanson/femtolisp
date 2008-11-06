@@ -43,10 +43,11 @@
 
 (defun sort (l)
   (if (or (null l) (null (cdr l))) l
-    (let ((piv (car l)))
-      (nconc (sort (filter (lambda (x) (<= x piv)) (cdr l)))
+    (let* ((piv (car l))
+           (halves (separate (lambda (x) (< x piv)) (cdr l))))
+      (nconc (sort (car halves))
              (list piv)
-             (sort (filter (lambda (x) (>  x piv)) (cdr l)))))))
+             (sort (cdr halves))))))
 
 (defmacro dotimes (var . body)
   (let ((v   (car var))

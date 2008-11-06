@@ -1509,7 +1509,13 @@ int main(int argc, char *argv[])
  repl:
     while (1) {
         ios_puts("> ", ios_stdout); ios_flush(ios_stdout);
-        v = read_sexpr(ios_stdin);
+        FL_TRY {
+            v = read_sexpr(ios_stdin);
+        }
+        FL_CATCH {
+            ios_purge(ios_stdin);
+            raise(lasterror);
+        }
         if (ios_eof(ios_stdin)) break;
         print(ios_stdout, v=toplevel_eval(v), 0);
         set(symbol("that"), v);

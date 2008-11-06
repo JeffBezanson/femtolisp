@@ -55,10 +55,12 @@ size_t u8_charlen(u_int32_t ch);
 /* computes the # of bytes needed to encode a WC string as UTF-8 */
 size_t u8_codingsize(u_int32_t *wcstr, size_t n);
 
+char read_escape_control_char(char c);
+
 /* assuming src points to the character after a backslash, read an
    escape sequence, storing the result in dest and returning the number of
    input characters processed */
-int u8_read_escape_sequence(const char *src, u_int32_t *dest);
+size_t u8_read_escape_sequence(const char *src, size_t ssz, u_int32_t *dest);
 
 /* given a wide character, convert it to an ASCII escape sequence stored in
    buf, where buf is "sz" bytes. returns the number of characters output.

@@ -47,11 +47,10 @@
 (defun nconc lsts
   (cond ((null lsts) ())
         ((null (cdr lsts)) (car lsts))
-        (T ((lambda (l d) (if (null l) d
-                            (prog1 l
-                              (while (consp (cdr l)) (setq l (cdr l)))
-                              (rplacd l d))))
-            (car lsts) (apply nconc (cdr lsts))))))
+        ((null (car lsts)) (apply nconc (cdr lsts)))
+        (T (prog1 (car lsts)
+             (rplacd (last (car lsts))
+                     (apply nconc (cdr lsts)))))))
 
 (defun append lsts
   (cond ((null lsts) ())
@@ -211,10 +210,21 @@
 
 (defun transpose (M) (apply mapcar (cons list M)))
 
-(defun filter (pred lst)
-  (cond ((null lst) ())
-        ((pred (car lst)) (cons (car lst) (filter pred (cdr lst))))
-        (T (filter pred (cdr lst)))))
+(defun filter (pred lst) (filter- pred lst nil))
+(defun filter- (pred lst accum)
+  (cond ((null lst) accum)
+        ((pred (car lst))
+         (filter- pred (cdr lst) (cons (car lst) accum)))
+        (T
+         (filter- pred (cdr lst) accum))))
+
+(defun separate (pred lst) (separate- pred lst nil nil))
+(defun separate- (pred lst yes no)
+  (cond ((null lst) (cons yes no))
+        ((pred (car lst))
+         (separate- pred (cdr lst) (cons (car lst) yes) no))
+        (T
+         (separate- pred (cdr lst) yes (cons (car lst) no)))))
 
 (define (foldr f zero lst)
   (if (null lst) zero

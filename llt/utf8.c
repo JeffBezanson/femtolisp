@@ -313,56 +313,56 @@ int hex_digit(char c)
             (c >= 'a' && c <= 'f'));
 }
 
-/* assumes that src points to the character after a backslash
-   returns number of input characters processed */
-int u8_read_escape_sequence(const char *str, u_int32_t *dest)
+char read_escape_control_char(char c)
 {
-    u_int32_t ch;
-    char digs[9]="\0\0\0\0\0\0\0\0\0";
-    int dno=0, i=1;
+    if (c == 'n')
+        return '\n';
+    else if (c == 't')
+        return '\t';
+    else if (c == 'r')
+        return '\r';
+    else if (c == 'b')
+        return '\b';
+    else if (c == 'f')
+        return '\f';
+    else if (c == 'v')
+        return '\v';
+    else if (c == 'a')
+        return '\a';
+    return c;
+}
 
-    ch = (u_int32_t)str[0];    /* take literal character */
-    if (str[0] == 'n')
-        ch = L'\n';
-    else if (str[0] == 't')
-        ch = L'\t';
-    else if (str[0] == 'r')
-        ch = L'\r';
-    else if (str[0] == 'b')
-        ch = L'\b';
-    else if (str[0] == 'f')
-        ch = L'\f';
-    else if (str[0] == 'v')
-        ch = L'\v';
-    else if (str[0] == 'a')
-        ch = L'\a';
-    else if (octal_digit(str[0])) {
+/* assumes that src points to the character after a backslash
+   returns number of input characters processed, 0 if error */
+size_t u8_read_escape_sequence(const char *str, size_t ssz, u_int32_t *dest)
+{
+    assert(ssz > 0);
+    u_int32_t ch;
+    char digs[10];
+    int dno=0, ndig;
+    size_t i=1;
+    char c0 = str[0];
+
+    if (octal_digit(c0)) {
         i = 0;
         do {
             digs[dno++] = str[i++];
-        } while (octal_digit(str[i]) && dno < 3);
+        } while (i<ssz && octal_digit(str[i]) && dno<3);
+        digs[dno] = '\0';
         ch = strtol(digs, NULL, 8);
     }
-    else if (str[0] == 'x') {
-        while (hex_digit(str[i]) && dno < 2) {
+    else if ((c0=='x' && (ndig=2)) ||
+             (c0=='u' && (ndig=4)) ||
+             (c0=='U' && (ndig=8))) {
+        while (i<ssz && hex_digit(str[i]) && dno<ndig) {
             digs[dno++] = str[i++];
         }
-        if (dno > 0)
-            ch = strtol(digs, NULL, 16);
+        if (dno == 0) return 0;
+        digs[dno] = '\0';
+        ch = strtol(digs, NULL, 16);
     }
-    else if (str[0] == 'u') {
-        while (hex_digit(str[i]) && dno < 4) {
-            digs[dno++] = str[i++];
-        }
-        if (dno > 0)
-            ch = strtol(digs, NULL, 16);
-    }
-    else if (str[0] == 'U') {
-        while (hex_digit(str[i]) && dno < 8) {
-            digs[dno++] = str[i++];
-        }
-        if (dno > 0)
-            ch = strtol(digs, NULL, 16);
+    else {
+        ch = (u_int32_t)read_escape_control_char(c0);
     }
     *dest = ch;
 
@@ -381,7 +381,7 @@ size_t u8_unescape(char *buf, size_t sz, const char *src)
     while (*src && c < sz) {
         if (*src == '\\') {
             src++;
-            amt = u8_read_escape_sequence(src, &ch);
+            amt = u8_read_escape_sequence(src, 1000, &ch);
         }
         else {
             ch = (u_int32_t)*src;

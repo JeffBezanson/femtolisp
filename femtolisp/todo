@@ -928,3 +928,35 @@ consolidated todo list as of 8/30:
 - remaining cvalues functions
 - special efficient reader for #array
 - finish ios
+
+-----------------------------------------------------------------------------
+
+cvalues redesign
+
+goals:
+. allow custom types with vtables
+. use less space, share types more
+. simplify access to important metadata like length
+. unify vectors and arrays
+
+typedef struct {
+    fltype_t *type;
+    void *data;
+    size_t len;      // length of *data in bytes
+
+    value_t parent;  // optional
+    char data[1];    // variable size
+} cvalue_t;
+
+typedef struct {
+    fltype_t *type;
+    void *data;
+} cprim_t;
+
+typedef struct _fltype_t {
+    value_t type;
+    int numtype;
+    size_t sz;
+    cvtable_t *vtable;
+    struct _fltype_t *eltype;  // for arrays
+} fltype_t;

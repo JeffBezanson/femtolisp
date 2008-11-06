@@ -70,7 +70,7 @@ static void **ptrhash_lookup_bp(ptrhash_t *h, void *key)
     orig = index;
 
     do {
-        if (tab[index] == PH_NOTFOUND) {
+        if (tab[index+1] == PH_NOTFOUND) {
             tab[index] = key;
             return &tab[index+1];
         }

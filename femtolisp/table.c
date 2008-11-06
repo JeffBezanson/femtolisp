@@ -79,22 +79,30 @@ value_t fl_hashtablep(value_t *args, u_int32_t nargs)
     return NIL;
 }
 
+// (put table key value)
 value_t fl_hash_put(value_t *args, u_int32_t nargs)
 {
+    argcount("put", nargs, 3);
     return NIL;
 }
 
+// (get table key)
 value_t fl_hash_get(value_t *args, u_int32_t nargs)
 {
+    argcount("get", nargs, 2);
     return NIL;
 }
 
+// (has table key)
 value_t fl_hash_has(value_t *args, u_int32_t nargs)
 {
+    argcount("has", nargs, 2);
     return NIL;
 }
 
+// (del table key)
 value_t fl_hash_delete(value_t *args, u_int32_t nargs)
 {
+    argcount("del", nargs, 2);
     return NIL;
 }

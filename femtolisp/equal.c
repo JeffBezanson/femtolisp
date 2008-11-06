@@ -30,10 +30,8 @@ static void eq_union(ptrhash_t *table, value_t a, value_t b,
     ptrhash_put(table, (void*)b, (void*)ca);
 }
 
-// ordered comparison
-
 // a is a fixnum, b is a cvalue
-static value_t compare_num_cvalue(value_t a, value_t b)
+static value_t compare_num_cvalue(value_t a, value_t b, int eq)
 {
     cvalue_t *bcv = (cvalue_t*)ptr(b);
     numerictype_t bt;
@@ -42,6 +40,7 @@ static value_t compare_num_cvalue(value_t a, value_t b)
         void *bptr = cv_data(bcv);
         if (cmp_eq(&ia, T_FIXNUM, bptr, bt))
             return fixnum(0);
+        if (eq) return fixnum(1);
         if (cmp_lt(&ia, T_FIXNUM, bptr, bt))
             return fixnum(-1);
     }
@@ -51,17 +50,19 @@ static value_t compare_num_cvalue(value_t a, value_t b)
     return fixnum(1);
 }
 
-static value_t bounded_compare(value_t a, value_t b, int bound);
-static value_t cyc_compare(value_t a, value_t b, ptrhash_t *table);
+static value_t bounded_compare(value_t a, value_t b, int bound, int eq);
+static value_t cyc_compare(value_t a, value_t b, ptrhash_t *table, int eq);
 
-static value_t bounded_vector_compare(value_t a, value_t b, int bound)
+static value_t bounded_vector_compare(value_t a, value_t b, int bound, int eq)
 {
     size_t la = vector_size(a);
     size_t lb = vector_size(b);
     size_t m, i;
+    if (eq && (la!=lb)) return fixnum(1);
     m = la < lb ? la : lb;
     for (i = 0; i < m; i++) {
-        value_t d = bounded_compare(vector_elt(a,i), vector_elt(b,i), bound-1);
+        value_t d = bounded_compare(vector_elt(a,i), vector_elt(b,i),
+                                    bound-1, eq);
         if (d==NIL || numval(d)!=0) return d;
     }
     if (la < lb) return fixnum(-1);
@@ -71,7 +72,7 @@ static value_t bounded_vector_compare(value_t a, value_t b, int bound)
 
 // strange comparisons are resolved arbitrarily but consistently.
 // ordering: number < builtin < cvalue < vector < symbol < cons
-static value_t bounded_compare(value_t a, value_t b, int bound)
+static value_t bounded_compare(value_t a, value_t b, int bound, int eq)
 {
     value_t d;
 
@@ -88,16 +89,17 @@ static value_t bounded_compare(value_t a, value_t b, int bound)
             return (numval(a) < numval(b)) ? fixnum(-1) : fixnum(1);
         }
         if (iscvalue(b)) {
-            return compare_num_cvalue(a, b);
+            return compare_num_cvalue(a, b, eq);
         }
         return fixnum(-1);
     case TAG_SYM:
+        if (eq) return fixnum(1);
         if (tagb < TAG_SYM) return fixnum(1);
         if (tagb > TAG_SYM) return fixnum(-1);
         return fixnum(strcmp(symbol_name(a), symbol_name(b)));
     case TAG_VECTOR:
         if (isvector(b))
-            return bounded_vector_compare(a, b, bound);
+            return bounded_vector_compare(a, b, bound, eq);
         break;
     case TAG_CVALUE:
         if (iscvalue(b)) {
@@ -109,6 +111,7 @@ static value_t bounded_compare(value_t a, value_t b, int bound)
                 void *bptr = cv_data(bcv);
                 if (cmp_eq(aptr, at, bptr, bt))
                     return fixnum(0);
+                if (eq) return fixnum(1);
                 if (cmp_lt(aptr, at, bptr, bt))
                     return fixnum(-1);
                 return fixnum(1);
@@ -116,7 +119,7 @@ static value_t bounded_compare(value_t a, value_t b, int bound)
             return cvalue_compare(a, b);
         }
         else if (isfixnum(b)) {
-            return fixnum(-numval(compare_num_cvalue(b, a)));
+            return fixnum(-numval(compare_num_cvalue(b, a, eq)));
         }
         break;
     case TAG_BUILTIN:
@@ -126,7 +129,7 @@ static value_t bounded_compare(value_t a, value_t b, int bound)
         break;
     case TAG_CONS:
         if (tagb < TAG_CONS) return fixnum(1);
-        d = bounded_compare(car_(a), car_(b), bound-1);
+        d = bounded_compare(car_(a), car_(b), bound-1, eq);
         if (d==NIL || numval(d) != 0) return d;
         a = cdr_(a); b = cdr_(b);
         bound--;
@@ -135,7 +138,8 @@ static value_t bounded_compare(value_t a, value_t b, int bound)
     return (taga < tagb) ? fixnum(-1) : fixnum(1);
 }
 
-static value_t cyc_vector_compare(value_t a, value_t b, ptrhash_t *table)
+static value_t cyc_vector_compare(value_t a, value_t b, ptrhash_t *table,
+                                  int eq)
 {
     size_t la = vector_size(a);
     size_t lb = vector_size(b);
@@ -143,12 +147,13 @@ static value_t cyc_vector_compare(value_t a, value_t b, ptrhash_t *table)
     value_t d, xa, xb, ca, cb;
 
     // first try to prove them different with no recursion
+    if (eq && (la!=lb)) return fixnum(1);
     m = la < lb ? la : lb;
     for (i = 0; i < m; i++) {
         xa = vector_elt(a,i);
         xb = vector_elt(b,i);
         if (leafp(xa) || leafp(xb)) {
-            d = bounded_compare(xa, xb, 1);
+            d = bounded_compare(xa, xb, 1, eq);
             if (numval(d)!=0) return d;
         }
         else if (cmptag(xa) < cmptag(xb)) {
@@ -170,7 +175,7 @@ static value_t cyc_vector_compare(value_t a, value_t b, ptrhash_t *table)
         xa = vector_elt(a,i);
         xb = vector_elt(b,i);
         if (!leafp(xa) && !leafp(xb)) {
-            d = cyc_compare(xa, xb, table);
+            d = cyc_compare(xa, xb, table, eq);
             if (numval(d)!=0)
                 return d;
         }
@@ -181,7 +186,7 @@ static value_t cyc_vector_compare(value_t a, value_t b, ptrhash_t *table)
     return fixnum(0);
 }
 
-static value_t cyc_compare(value_t a, value_t b, ptrhash_t *table)
+static value_t cyc_compare(value_t a, value_t b, ptrhash_t *table, int eq)
 {
     if (a==b)
         return fixnum(0);
@@ -193,7 +198,7 @@ static value_t cyc_compare(value_t a, value_t b, ptrhash_t *table)
             int tagab = cmptag(ab); int tagdb = cmptag(db);
             value_t d, ca, cb;
             if (leafp(aa) || leafp(ab)) {
-                d = bounded_compare(aa, ab, 1);
+                d = bounded_compare(aa, ab, 1, eq);
                 if (numval(d)!=0) return d;
             }
             else if (tagaa < tagab)
@@ -201,7 +206,7 @@ static value_t cyc_compare(value_t a, value_t b, ptrhash_t *table)
             else if (tagaa > tagab)
                 return fixnum(1);
             if (leafp(da) || leafp(db)) {
-                d = bounded_compare(da, db, 1);
+                d = bounded_compare(da, db, 1, eq);
                 if (numval(d)!=0) return d;
             }
             else if (tagda < tagdb)
@@ -215,18 +220,18 @@ static value_t cyc_compare(value_t a, value_t b, ptrhash_t *table)
                 return fixnum(0);
 
             eq_union(table, a, b, ca, cb);
-            d = cyc_compare(aa, ab, table);
+            d = cyc_compare(aa, ab, table, eq);
             if (numval(d)!=0) return d;
-            return cyc_compare(da, db, table);
+            return cyc_compare(da, db, table, eq);
         }
         else {
             return fixnum(1);
         }
     }
     else if (isvector(a) && isvector(b)) {
-        return cyc_vector_compare(a, b, table);
+        return cyc_vector_compare(a, b, table, eq);
     }
-    return bounded_compare(a, b, 1);
+    return bounded_compare(a, b, 1, eq);
 }
 
 static ptrhash_t equal_eq_hashtable;
@@ -235,21 +240,27 @@ void comparehash_init()
     ptrhash_new(&equal_eq_hashtable, 512);
 }
 
-value_t compare(value_t a, value_t b)
+// 'eq' means unordered comparison is sufficient
+static value_t compare_(value_t a, value_t b, int eq)
 {
-    value_t guess = bounded_compare(a, b, 2048);
+    value_t guess = bounded_compare(a, b, 2048, eq);
     if (guess == NIL) {
-        guess = cyc_compare(a, b, &equal_eq_hashtable);
+        guess = cyc_compare(a, b, &equal_eq_hashtable, eq);
         ptrhash_reset(&equal_eq_hashtable, 512);
     }
     return guess;
+}
+
+value_t compare(value_t a, value_t b)
+{
+    return compare_(a, b, 0);
 }
 
 value_t equal(value_t a, value_t b)
 {
     if (eq_comparable(a, b))
         return (a == b) ? T : NIL;
-    return (numval(compare(a,b))==0 ? T : NIL);
+    return (numval(compare_(a,b,1))==0 ? T : NIL);
 }
 
 /*
