@@ -11,6 +11,7 @@ u_int32_t int64to32hash(u_int64_t key);
 #define inthash int32hash
 #endif
 u_int64_t memhash(char* buf, size_t n);
+u_int32_t memhash32(char* buf, size_t n);
 #define random() genrand_int32()
 #define srandom(n) init_genrand(n)
 double rand_double();

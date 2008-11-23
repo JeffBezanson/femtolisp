@@ -919,15 +919,18 @@ switch to miser mode, otherwise default is ok, for example:
 -----------------------------------------------------------------------------
 
 consolidated todo list as of 8/30:
+- new cvalues, types representation
 - implement support for defining new opaque values
-- finalizers in gc
-- expose io stream object
 - hashtable
+- finalizers in gc
+- unify vectors and arrays
+- expose io stream object
+
 - enable print-shared for cvalues' types
 - remaining c types
 - remaining cvalues functions
-- special efficient reader for #array
 - finish ios
+- special efficient reader for #array
 
 -----------------------------------------------------------------------------
 
@@ -943,20 +946,27 @@ typedef struct {
     fltype_t *type;
     void *data;
     size_t len;      // length of *data in bytes
-
-    value_t parent;  // optional
-    char data[1];    // variable size
+    union {
+        value_t parent;    // optional
+        char _space[1];    // variable size
+    };
 } cvalue_t;
 
-typedef struct {
-    fltype_t *type;
-    void *data;
-} cprim_t;
+#define owned(cv)      ((cv)->type & 0x1)
+#define hasparent(cv)  ((cv)->type & 0x2)
+#define isinlined(cv)  ((cv)->data == &(cv)->_space[0])
+#define cv_class(cv)   ((fltype_t*)(((uptrint_t)(cv)->type)&~3))
+#define cv_type(cv)    (cv_class(cv)->type)
+#define cv_len(cv)     ((cv)->len)
+#define cv_data(cv)    ((cv)->data)
+#define cv_numtype(cv) (cv_class(cv)->numtype)
 
 typedef struct _fltype_t {
     value_t type;
     int numtype;
     size_t sz;
     cvtable_t *vtable;
+    int marked;
     struct _fltype_t *eltype;  // for arrays
+    struct _fltype_t *artype;  // (array this)
 } fltype_t;

@@ -351,38 +351,42 @@ value_t fl_randn(value_t *args, u_int32_t nargs)
 
 extern void stringfuncs_init();
 
+static builtinspec_t builtin_info[] = {
+    { "set-syntax", fl_setsyntax },
+    { "symbol-syntax", fl_symbolsyntax },
+    { "syntax-environment", fl_syntax_env },
+    { "environment", fl_global_env },
+    { "constantp", fl_constantp },
+
+    { "print", fl_print },
+    { "princ", fl_princ },
+    { "read", fl_read },
+    { "load", fl_load },
+    { "exit", fl_exit },
+    { "fixnum", fl_fixnum },
+    { "truncate", fl_truncate },
+
+    { "vector.alloc", fl_vector_alloc },
+
+    { "time.now", fl_time_now },
+    { "time.string", fl_time_string },
+
+    { "rand", fl_rand },
+    { "rand.uint32", fl_rand32 },
+    { "rand.uint64", fl_rand64 },
+    { "rand.double", fl_randd },
+    { "rand.float", fl_randf },
+    { "randn", fl_randn },
+
+    { "path.cwd", fl_path_cwd },
+
+    { "os.getenv", fl_os_getenv },
+    { "os.setenv", fl_os_setenv },
+    { NULL, NULL }
+};
+
 void builtins_init()
 {
-    set(symbol("set-syntax"), guestfunc(fl_setsyntax));
-    set(symbol("symbol-syntax"), guestfunc(fl_symbolsyntax));
-    set(symbol("syntax-environment"), guestfunc(fl_syntax_env));
-    set(symbol("environment"), guestfunc(fl_global_env));
-    set(symbol("constantp"), guestfunc(fl_constantp));
-
-    set(symbol("print"), guestfunc(fl_print));
-    set(symbol("princ"), guestfunc(fl_princ));
-    set(symbol("read"), guestfunc(fl_read));
-    set(symbol("load"), guestfunc(fl_load));
-    set(symbol("exit"), guestfunc(fl_exit));
-    set(symbol("fixnum"), guestfunc(fl_fixnum));
-    set(symbol("truncate"), guestfunc(fl_truncate));
-
-    set(symbol("vector.alloc"), guestfunc(fl_vector_alloc));
-
-    set(symbol("time.now"), guestfunc(fl_time_now));
-    set(symbol("time.string"), guestfunc(fl_time_string));
-
-    set(symbol("rand"), guestfunc(fl_rand));
-    set(symbol("rand.uint32"), guestfunc(fl_rand32));
-    set(symbol("rand.uint64"), guestfunc(fl_rand64));
-    set(symbol("rand.double"), guestfunc(fl_randd));
-    set(symbol("rand.float"), guestfunc(fl_randf));
-    set(symbol("randn"), guestfunc(fl_randn));
-
-    set(symbol("path.cwd"), guestfunc(fl_path_cwd));
-
-    set(symbol("os.getenv"), guestfunc(fl_os_getenv));
-    set(symbol("os.setenv"), guestfunc(fl_os_setenv));
-
+    assign_global_builtins(builtin_info);
     stringfuncs_init();
 }

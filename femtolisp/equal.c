@@ -7,20 +7,23 @@
 #include "llt.h"
 #include "flisp.h"
 
+#define BOUNDED_COMPARE_BOUND 2048
+#define BOUNDED_HASH_BOUND    4096
+
 // comparable tag
 #define cmptag(v) (isfixnum(v) ? TAG_NUM : tag(v))
 
-static value_t eq_class(ptrhash_t *table, value_t key)
+static value_t eq_class(htable_t *table, value_t key)
 {
     value_t c = (value_t)ptrhash_get(table, (void*)key);
-    if (c == (value_t)PH_NOTFOUND)
+    if (c == (value_t)HT_NOTFOUND)
         return NIL;
     if (c == key)
         return c;
     return eq_class(table, c);
 }
 
-static void eq_union(ptrhash_t *table, value_t a, value_t b,
+static void eq_union(htable_t *table, value_t a, value_t b,
                      value_t c, value_t cb)
 {
     value_t ca = (c==NIL ? a : c);
@@ -51,7 +54,7 @@ static value_t compare_num_cvalue(value_t a, value_t b, int eq)
 }
 
 static value_t bounded_compare(value_t a, value_t b, int bound, int eq);
-static value_t cyc_compare(value_t a, value_t b, ptrhash_t *table, int eq);
+static value_t cyc_compare(value_t a, value_t b, htable_t *table, int eq);
 
 static value_t bounded_vector_compare(value_t a, value_t b, int bound, int eq)
 {
@@ -138,7 +141,7 @@ static value_t bounded_compare(value_t a, value_t b, int bound, int eq)
     return (taga < tagb) ? fixnum(-1) : fixnum(1);
 }
 
-static value_t cyc_vector_compare(value_t a, value_t b, ptrhash_t *table,
+static value_t cyc_vector_compare(value_t a, value_t b, htable_t *table,
                                   int eq)
 {
     size_t la = vector_size(a);
@@ -186,7 +189,7 @@ static value_t cyc_vector_compare(value_t a, value_t b, ptrhash_t *table,
     return fixnum(0);
 }
 
-static value_t cyc_compare(value_t a, value_t b, ptrhash_t *table, int eq)
+static value_t cyc_compare(value_t a, value_t b, htable_t *table, int eq)
 {
     if (a==b)
         return fixnum(0);
@@ -234,19 +237,19 @@ static value_t cyc_compare(value_t a, value_t b, ptrhash_t *table, int eq)
     return bounded_compare(a, b, 1, eq);
 }
 
-static ptrhash_t equal_eq_hashtable;
+static htable_t equal_eq_hashtable;
 void comparehash_init()
 {
-    ptrhash_new(&equal_eq_hashtable, 512);
+    htable_new(&equal_eq_hashtable, 512);
 }
 
 // 'eq' means unordered comparison is sufficient
 static value_t compare_(value_t a, value_t b, int eq)
 {
-    value_t guess = bounded_compare(a, b, 2048, eq);
+    value_t guess = bounded_compare(a, b, BOUNDED_COMPARE_BOUND, eq);
     if (guess == NIL) {
         guess = cyc_compare(a, b, &equal_eq_hashtable, eq);
-        ptrhash_reset(&equal_eq_hashtable, 512);
+        htable_reset(&equal_eq_hashtable, 512);
     }
     return guess;
 }
@@ -270,3 +273,71 @@ value_t equal(value_t a, value_t b)
   * preallocate hash table and call reset() instead of new/free
   * less redundant tag checking, 3-bit tags
 */
+
+#ifdef BITS64
+#define MIX(a, b) int64hash((int64_t)(a) ^ (int64_t)(b));
+#define doublehash(a) int64hash(a)
+#else
+#define MIX(a, b) int64to32hash(((int64_t)(a))<<32 | ((int64_t)(b)))
+#define doublehash(a) int64to32hash(a)
+#endif
+
+static uptrint_t bounded_hash(value_t a, int bound)
+{
+    double d;
+    numerictype_t nt;
+    size_t i, len;
+    cvalue_t *cv;
+    void *data;
+    if (bound <= 0) return 0;
+    uptrint_t h = 0;
+    int bb, tg = tag(a);
+    switch(tg) {
+    case TAG_NUM :
+    case TAG_NUM1:
+        d = numval(a);
+        return doublehash(*(int64_t*)&d);
+    case TAG_BUILTIN:
+        return inthash(a);
+    case TAG_SYM:
+        return ((symbol_t*)ptr(a))->hash;
+    case TAG_CVALUE:
+        cv = (cvalue_t*)ptr(a);
+        data = cv_data(cv);
+        if (valid_numtype(nt=cv_numtype(cv))) {
+            d = conv_to_double(data, nt);
+            if (d==0) d = 0.0;  // normalize -0
+            return doublehash(*(int64_t*)&d);
+        }
+        else {
+            return memhash(data, cv_len(cv));
+        }
+    case TAG_VECTOR:
+        len = vector_size(a);
+        for(i=0; i < len; i++) {
+            h = MIX(h, bounded_hash(vector_elt(a,i), bound-1));
+        }
+        return h;
+    case TAG_CONS:
+        bb = BOUNDED_HASH_BOUND;
+        do {
+            h = MIX(h, bounded_hash(car_(a), bound-1)+1);
+            bb--;
+            if (bb <= 0) return h;
+            a = cdr_(a);
+        } while (iscons(a));
+        return MIX(h, bounded_hash(a, bound-1)+1);
+    }
+    return 0;
+}
+
+uptrint_t hash(value_t a)
+{
+    return bounded_hash(a, BOUNDED_HASH_BOUND);
+}
+
+value_t fl_hash(value_t *args, u_int32_t nargs)
+{
+    argcount("hash", nargs, 1);
+    return fixnum(hash(args[0]));
+}

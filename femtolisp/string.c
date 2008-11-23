@@ -267,19 +267,23 @@ value_t fl_string_dec(value_t *args, u_int32_t nargs)
     return size_wrap(i);
 }
 
+static builtinspec_t stringfunc_info[] = {
+    { "intern", fl_intern },
+    { "string", fl_string },
+    { "stringp", fl_stringp },
+    { "string.length", fl_string_length },
+    { "string.split", fl_string_split },
+    { "string.sub", fl_string_sub },
+    { "string.char", fl_string_char },
+    { "string.inc", fl_string_inc },
+    { "string.dec", fl_string_dec },
+    { "string.reverse", fl_string_reverse },
+    { "string.encode", fl_string_encode },
+    { "string.decode", fl_string_decode },
+    { NULL, NULL }
+};
+
 void stringfuncs_init()
 {
-    set(symbol("intern"), guestfunc(fl_intern));
-
-    set(symbol("string"), guestfunc(fl_string));
-    set(symbol("stringp"), guestfunc(fl_stringp));
-    set(symbol("string.length"), guestfunc(fl_string_length));
-    set(symbol("string.split"), guestfunc(fl_string_split));
-    set(symbol("string.sub"), guestfunc(fl_string_sub));
-    set(symbol("string.char"), guestfunc(fl_string_char));
-    set(symbol("string.inc"), guestfunc(fl_string_inc));
-    set(symbol("string.dec"), guestfunc(fl_string_dec));
-    set(symbol("string.reverse"), guestfunc(fl_string_reverse));
-    set(symbol("string.encode"), guestfunc(fl_string_encode));
-    set(symbol("string.decode"), guestfunc(fl_string_decode));
+    assign_global_builtins(stringfunc_info);
 }

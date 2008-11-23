@@ -219,34 +219,6 @@ static void cv_pin(cvalue_t *cv)
 }
 */
 
-static int64_t strtoi64(char *str, char *fname)
-{
-    char *pend;
-    int64_t i;
-    errno = 0;
-    i = strtoll(str, &pend, 0);
-    if (*pend != '\0' || errno) lerror(ArgError, "%s: invalid string", fname);
-    return i;
-}
-static uint64_t strtoui64(char *str, char *fname)
-{
-    char *pend;
-    uint64_t i;
-    errno = 0;
-    i = strtoull(str, &pend, 0);
-    if (*pend != '\0' || errno) lerror(ArgError, "%s: invalid string", fname);
-    return i;
-}
-static double strtodouble(char *str, char *fname)
-{
-    char *pend;
-    double d;
-    errno = 0;
-    d = strtod(str, &pend);
-    if (*pend != '\0' || errno) lerror(ArgError, "%s: invalid string", fname);
-    return d;
-}
-
 #define num_ctor(typenam, cnvt, tag, fromstr)                           \
 static void cvalue_##typenam##_init(value_t type, value_t arg,          \
                                     void *dest, void *data)             \
@@ -259,18 +231,10 @@ static void cvalue_##typenam##_init(value_t type, value_t arg,          \
     else if (iscvalue(arg)) {                                           \
         cvalue_t *cv = (cvalue_t*)ptr(arg);                             \
         void *p = cv_data(cv);                                          \
-        if (valid_numtype(cv_numtype(cv))) {                            \
+        if (valid_numtype(cv_numtype(cv)))                              \
             n = (typenam##_t)conv_to_##cnvt(p, cv_numtype(cv));         \
-        }                                                               \
-        else if (cv->flags.cstring) {                                   \
-            n = fromstr(p, #typenam);                                   \
-        }                                                               \
-        else if (cv_len(cv) == sizeof(typenam##_t)) {                   \
-            n = *(typenam##_t*)p;                                       \
-        }                                                               \
-        else {                                                          \
+        else                                                            \
             goto cnvt_error;                                            \
-        }                                                               \
     }                                                                   \
     else {                                                              \
         goto cnvt_error;                                                \

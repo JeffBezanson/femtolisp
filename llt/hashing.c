@@ -9,6 +9,7 @@
 #include "utils.h"
 #include "hashing.h"
 #include "timefuncs.h"
+#include "ios.h"
 
 uint_t nextipow2(uint_t i)
 {
@@ -67,6 +68,14 @@ u_int64_t memhash(char* buf, size_t n)
     return (u_int64_t)c | (((u_int64_t)b)<<32);
 }
 
+u_int32_t memhash32(char* buf, size_t n)
+{
+    u_int32_t c=0xcafe8881, b=0x4d6a087c;
+
+    hashlittle2(buf, n, &c, &b);
+    return c;
+}
+
 #include "mt19937ar.c"
 
 double rand_double()
@@ -118,6 +127,15 @@ void randomize()
     init_by_array((unsigned long*)&tm, 2);
 }
 
+double D_PNAN;
+double D_NNAN;
+double D_PINF;
+double D_NINF;
+float  F_PNAN;
+float  F_NNAN;
+float  F_PINF;
+float  F_NINF;
+
 void llt_init()
 {
     /*
@@ -131,4 +149,13 @@ void llt_init()
     randomize();
 
     ios_init_stdstreams();
+
+    D_PNAN = strtod("+NaN",NULL);
+    D_NNAN = strtod("-NaN",NULL);
+    D_PINF = strtod("+Inf",NULL);
+    D_NINF = strtod("-Inf",NULL);
+    F_PNAN = strtof("+NaN",NULL);
+    F_NNAN = strtof("-NaN",NULL);
+    F_PINF = strtof("+Inf",NULL);
+    F_NINF = strtof("-Inf",NULL);
 }

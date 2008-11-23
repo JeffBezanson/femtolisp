@@ -46,6 +46,7 @@
 #include <locale.h>
 #include <limits.h>
 #include <errno.h>
+#include <math.h>
 #include "llt.h"
 #include "flisp.h"
 
@@ -61,11 +62,9 @@ static char *builtin_names[] =
       "vector", "aref", "aset", "length", "assoc", "compare",
       "for" };
 
-static char *stack_bottom;
-#define PROCESS_STACK_SIZE (2*1024*1024)
 #define N_STACK 98304
 value_t Stack[N_STACK];
-u_int32_t SP = 0;
+uint32_t SP = 0;
 
 value_t NIL, T, LAMBDA, QUOTE, IF, TRYCATCH;
 value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT;
@@ -81,31 +80,31 @@ static value_t relocate(value_t v);
 static void do_print(ios_t *f, value_t v, int princ);
 
 typedef struct _readstate_t {
-    ptrhash_t backrefs;
-    ptrhash_t gensyms;
+    htable_t backrefs;
+    htable_t gensyms;
     struct _readstate_t *prev;
 } readstate_t;
 static readstate_t *readstate = NULL;
 
 static void free_readstate(readstate_t *rs)
 {
-    ptrhash_free(&rs->backrefs);
-    ptrhash_free(&rs->gensyms);
+    htable_free(&rs->backrefs);
+    htable_free(&rs->gensyms);
 }
 
 static unsigned char *fromspace;
 static unsigned char *tospace;
 static unsigned char *curheap;
 static unsigned char *lim;
-static u_int32_t heapsize = 256*1024;//bytes
-static u_int32_t *consflags;
+static uint32_t heapsize = 256*1024;//bytes
+static uint32_t *consflags;
 
 // error utilities ------------------------------------------------------------
 
 // saved execution state for an unwind target
 typedef struct _ectx_t {
     jmp_buf buf;
-    u_int32_t sp;
+    uint32_t sp;
     readstate_t *rdst;
     struct _ectx_t *prev;
 } exception_context_t;
@@ -187,9 +186,9 @@ symbol_t *symtab = NULL;
 static symbol_t *mk_symbol(char *str)
 {
     symbol_t *sym;
+    size_t len = strlen(str);
 
-    sym = (symbol_t*)malloc_aligned(sizeof(symbol_t)-sizeof(void*) +
-                                        strlen(str)+1,
+    sym = (symbol_t*)malloc_aligned(sizeof(symbol_t)-sizeof(void*) + len + 1,
                                     8);
     sym->left = sym->right = NULL;
     if (str[0] == ':') {
@@ -200,6 +199,7 @@ static symbol_t *mk_symbol(char *str)
         sym->binding = UNBOUND;
         sym->syntax = 0;
     }
+    sym->hash = memhash32(str, len)^0xAAAAAAAA;
     strcpy(&sym->name[0], str);
     return sym;
 }
@@ -234,15 +234,15 @@ typedef struct {
     value_t syntax;    // syntax environment entry
     value_t binding;   // global value binding
     void *dlcache;     // dlsym address (not used here)
-    u_int32_t id;
+    uint32_t id;
 } gensym_t;
 
-static u_int32_t _gensym_ctr=0;
+static uint32_t _gensym_ctr=0;
 // two static buffers for gensym printing so there can be two
 // gensym names available at a time, mostly for compare()
 static char gsname[2][16];
 static int gsnameno=0;
-value_t gensym(value_t *args, u_int32_t nargs)
+value_t gensym(value_t *args, uint32_t nargs)
 {
     (void)args;
     (void)nargs;
@@ -258,7 +258,7 @@ value_t fl_gensym()
     return gensym(NULL, 0);
 }
 
-static char *snprintf_gensym_id(char *nbuf, size_t n, u_int32_t g)
+static char *snprintf_gensym_id(char *nbuf, size_t n, uint32_t g)
 {
     size_t i=n-1;
 
@@ -431,7 +431,7 @@ void gc(int mustgrow)
 {
     static int grew = 0;
     void *temp;
-    u_int32_t i;
+    uint32_t i;
     readstate_t *rs;
 
     curheap = tospace;
@@ -473,7 +473,7 @@ void gc(int mustgrow)
             temp = bitvector_resize(consflags, heapsize/sizeof(cons_t), 1);
             if (temp == NULL)
                 lerror(MemoryError, "out of memory");
-            consflags = (u_int32_t*)temp;
+            consflags = (uint32_t*)temp;
         }
         grew = !grew;
     }
@@ -496,7 +496,7 @@ value_t listn(size_t n, ...)
 {
     va_list ap;
     va_start(ap, n);
-    u_int32_t si = SP;
+    uint32_t si = SP;
     size_t i;
 
     for(i=0; i < n; i++) {
@@ -665,7 +665,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             raise(list2(UnboundError, e));
         return v;
     }
-    if ((unsigned)(char*)&nargs < (unsigned)stack_bottom || SP>=(N_STACK-100))
+    if (SP >= (N_STACK-64))
         lerror(MemoryError, "eval: stack overflow");
     saveSP = SP;
     v = car_(e);
@@ -1309,6 +1309,14 @@ extern void comparehash_init();
 
 static char *EXEDIR;
 
+void assign_global_builtins(builtinspec_t *b)
+{
+    while (b->name != NULL) {
+        set(symbol(b->name), guestfunc(b->fptr));
+        b++;
+    }
+}
+
 void lisp_init(void)
 {
     int i;
@@ -1320,7 +1328,7 @@ void lisp_init(void)
     curheap = fromspace;
     lim = curheap+heapsize-sizeof(cons_t);
     consflags = bitvector_new(heapsize/sizeof(cons_t), 1);
-    ptrhash_new(&printconses, 32);
+    htable_new(&printconses, 32);
     comparehash_init();
 
     NIL = symbol("nil"); setc(NIL, NIL);
@@ -1377,6 +1385,7 @@ void lisp_init(void)
 
     cvalues_init();
     set(symbol("gensym"), guestfunc(gensym));
+    set(symbol("hash"), guestfunc(fl_hash));
 
     char buf[1024];
     char *exename = get_exename(buf, sizeof(buf));
@@ -1394,7 +1403,7 @@ void lisp_init(void)
 value_t toplevel_eval(value_t expr)
 {
     value_t v;
-    u_int32_t saveSP = SP;
+    uint32_t saveSP = SP;
     PUSH(fixnum(2));
     PUSH(NIL);
     PUSH(NIL);
@@ -1486,7 +1495,6 @@ int main(int argc, char *argv[])
 
     locale_is_utf8 = u8_is_locale_utf8(setlocale(LC_ALL, ""));
 
-    stack_bottom = ((char*)&v) - PROCESS_STACK_SIZE;
     lisp_init();
     set(symbol("argv"), argv_list(argc, argv));
     FL_TRY {

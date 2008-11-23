@@ -33,7 +33,7 @@ typedef struct {
 typedef struct {
     table_interface_t *ti;
     ulong_t nkeys;
-    ptrhash_t ht;
+    htable_t ht;
 } fltable_t;
 
 void print_htable(ios_t *f, value_t h, int princ)
@@ -43,16 +43,16 @@ void print_htable(ios_t *f, value_t h, int princ)
 void free_htable(value_t self)
 {
     fltable_t *pt = (fltable_t*)cv_data((cvalue_t*)ptr(self));
-    ptrhash_free(&pt->ht);
+    htable_free(&pt->ht);
 }
 
 void relocate_htable(value_t old, value_t new)
 {
     fltable_t *pt = (fltable_t*)cv_data((cvalue_t*)ptr(self));
-    ptrhash_t *h = &pt->ht;
+    htable_t *h = &pt->ht;
     size_t i;
     for(i=0; i < h->size; i++) {
-        if (h->table[i] != PH_NOTFOUND)
+        if (h->table[i] != HT_NOTFOUND)
             h->table[i] = (void*)relocate((value_t)h->table[i]);
     }
 }

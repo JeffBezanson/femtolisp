@@ -1,4 +1,4 @@
-static ptrhash_t printconses;
+static htable_t printconses;
 static u_int32_t printlabel;
 static int print_pretty;
 static int SCR_WIDTH = 80;
@@ -36,7 +36,7 @@ static void print_traverse(value_t v)
     while (iscons(v)) {
         if (ismarked(v)) {
             bp = (value_t*)ptrhash_bp(&printconses, (void*)v);
-            if (*bp == (value_t)PH_NOTFOUND)
+            if (*bp == (value_t)HT_NOTFOUND)
                 *bp = fixnum(printlabel++);
             return;
         }
@@ -48,7 +48,7 @@ static void print_traverse(value_t v)
         return;
     if (ismarked(v)) {
         bp = (value_t*)ptrhash_bp(&printconses, (void*)v);
-        if (*bp == (value_t)PH_NOTFOUND)
+        if (*bp == (value_t)HT_NOTFOUND)
             *bp = fixnum(printlabel++);
         return;
     }
@@ -325,7 +325,7 @@ static void do_print(ios_t *f, value_t v, int princ)
     case TAG_VECTOR:
     case TAG_CONS:
         if ((label=(value_t)ptrhash_get(&printconses, (void*)v)) !=
-            (value_t)PH_NOTFOUND) {
+            (value_t)HT_NOTFOUND) {
             if (!ismarked(v)) {
                 HPOS+=ios_printf(f, "#%ld#", numval(label));
                 return;
@@ -477,16 +477,26 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
         int ndec;
         if (type == floatsym) { d = (double)*(float*)data; ndec = 8; }
         else { d = *(double*)data; ndec = 16; }
-        snprint_real(buf, sizeof(buf), d, 0, ndec, 3, 10);
-        if (weak || princ || strpbrk(buf, ".eE")) {
-            outs(buf, f);
-            if (type == floatsym) outc('f', f);
+        if (!DFINITE(d)) {
+            char *rep;
+            if (isnan(d))
+                rep = sign_bit(d) ? "-NaN" : "+NaN";
+            else
+                rep = sign_bit(d) ? "-Inf" : "+Inf";
+            if (type == floatsym)
+                HPOS+=ios_printf(f, "#%s(%s)", symbol_name(type), rep);
+            else
+                HPOS+=ios_printf(f, "%s", rep);
         }
         else {
-            if (!DFINITE(d))
-                HPOS+=ios_printf(f, "#%s(\"%s\")", symbol_name(type), buf);
-            else
+            snprint_real(buf, sizeof(buf), d, 0, ndec, 3, 10);
+            if (weak || princ || strpbrk(buf, ".eE")) {
+                outs(buf, f);
+                if (type == floatsym) outc('f', f);
+            }
+            else {
                 HPOS+=ios_printf(f, "#%s(%s)", symbol_name(type), buf);
+            }
         }
     }
     else if (issymbol(type)) {
@@ -608,5 +618,5 @@ void print(ios_t *f, value_t v, int princ)
 
     do_print(f, v, princ);
 
-    ptrhash_reset(&printconses, 32);
+    htable_reset(&printconses, 32);
 }

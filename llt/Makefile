@@ -1,7 +1,7 @@
 CC = gcc
 
 SRCS = bitvector.c hashing.c socket.c timefuncs.c utils.c dblprint.c ptrhash.c \
-	utf8.c ios.c operators.c cplxprint.c dirpath.c
+	utf8.c ios.c operators.c cplxprint.c dirpath.c htable.c bitvector-ops.c
 OBJS = $(SRCS:%.c=%.o)
 DOBJS = $(SRCS:%.c=%.do)
 TARGET = libllt.a

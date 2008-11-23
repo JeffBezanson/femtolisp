@@ -108,6 +108,15 @@ typedef u_ptrint_t uptrint_t;
 #define NBABS(n,nb) (((n)^((n)>>((nb)-1))) - ((n)>>((nb)-1)))
 #define DFINITE(d) (((*(int64_t*)&(d))&0x7ff0000000000000LL)!=0x7ff0000000000000LL)
 
+extern double D_PNAN;
+extern double D_NNAN;
+extern double D_PINF;
+extern double D_NINF;
+extern float  F_PNAN;
+extern float  F_NNAN;
+extern float  F_PINF;
+extern float  F_NINF;
+
 typedef enum { T_INT8, T_UINT8, T_INT16, T_UINT16, T_INT32, T_UINT32,
                T_INT64, T_UINT64, T_FLOAT, T_DOUBLE } numerictype_t;
 

@@ -18,6 +18,7 @@ typedef struct _symbol_t {
     value_t syntax;    // syntax environment entry
     value_t binding;   // global value binding
     void *dlcache;     // dlsym address
+    uint32_t hash;
     // below fields are private
     struct _symbol_t *left;
     struct _symbol_t *right;
@@ -91,7 +92,7 @@ typedef struct _symbol_t {
 #define isgensym(x)  (issymbol(x) && ismanaged(x))
 
 extern value_t Stack[];
-extern u_int32_t SP;
+extern uint32_t SP;
 #define PUSH(v) (Stack[SP++] = (v))
 #define POP()   (Stack[--SP])
 #define POPN(n) (SP-=(n))
@@ -132,6 +133,8 @@ size_t llength(value_t v);
 value_t list_nth(value_t l, size_t n);
 value_t compare(value_t a, value_t b);  // -1, 0, or 1
 value_t equal(value_t a, value_t b);    // T or nil
+uptrint_t hash(value_t a);
+value_t fl_hash(value_t *args, u_int32_t nargs);
 
 /* safe casts */
 cons_t *tocons(value_t v, char *fname);
@@ -235,7 +238,7 @@ typedef unsigned long ulong_t;
 typedef double double_t;
 typedef float float_t;
 
-typedef value_t (*guestfunc_t)(value_t*, u_int32_t);
+typedef value_t (*guestfunc_t)(value_t*, uint32_t);
 
 extern value_t int8sym, uint8sym, int16sym, uint16sym, int32sym, uint32sym;
 extern value_t int64sym, uint64sym, shortsym, ushortsym;
@@ -271,5 +274,12 @@ value_t mk_uint64(uint64_t n);
 value_t return_from_uint64(uint64_t Uaccum);
 value_t return_from_int64(int64_t Saccum);
 value_t char_from_code(uint32_t code);
+
+typedef struct {
+    char *name;
+    guestfunc_t fptr;
+} builtinspec_t;
+
+void assign_global_builtins(builtinspec_t *b);
 
 #endif

@@ -23,32 +23,48 @@ static int isnumtok(char *tok, value_t *pval)
     double d;
     if (*tok == '\0')
         return 0;
-    if (!((tok[0]=='0' && tok[1]=='x') ||  // these formats are always integer
-          (tok[0]=='0' && isdigit(tok[1]))) &&
-        strpbrk(tok, ".eE")) {
+    if (!(tok[0]=='0' && isdigit(tok[1])) &&
+        strpbrk(tok, ".eEpP")) {
         d = strtod(tok, &end);
         if (*end == '\0') {
             if (pval) *pval = mk_double(d);
             return 1;
         }
-        if (end > tok && *end == 'f' && end[1] == '\0') {
+        if (end > tok && end[0] == 'f' && end[1] == '\0') {
             if (pval) *pval = mk_float((float)d);
             return 1;
         }
     }
-    if (isdigit(tok[0]) || tok[0]=='-' || tok[0]=='+') {
-        if (tok[0]=='-') {
-            i64 = strtoll(tok, &end, 0);
-            if (pval) *pval = return_from_int64(i64);
-        }
-        else {
-            ui64 = strtoull(tok, &end, 0);
-            if (pval) *pval = return_from_uint64(ui64);
-        }
-        if (*end == '\0')
+
+    if (tok[0] == '+') {
+        if (!strcmp(tok,"+NaN")) {
+            if (pval) *pval = mk_double(D_PNAN);
             return 1;
+        }
+        if (!strcmp(tok,"+Inf")) {
+            if (pval) *pval = mk_double(D_PINF);
+            return 1;
+        }
     }
-    return 0;
+    else if (tok[0] == '-') {
+        if (!strcmp(tok,"-NaN")) {
+            if (pval) *pval = mk_double(D_NNAN);
+            return 1;
+        }
+        if (!strcmp(tok,"-Inf")) {
+            if (pval) *pval = mk_double(D_NINF);
+            return 1;
+        }
+        i64 = strtoll(tok, &end, 0);
+        if (pval) *pval = return_from_int64(i64);
+        return (*end == '\0');
+    }
+    else if (!isdigit(tok[0])) {
+        return 0;
+    }
+    ui64 = strtoull(tok, &end, 0);
+    if (pval) *pval = return_from_uint64(ui64);
+    return (*end == '\0');
 }
 
 static u_int32_t toktype = TOK_NONE;
@@ -505,12 +521,12 @@ static value_t do_read_sexpr(ios_t *f, value_t label)
     case TOK_BACKREF:
         // look up backreference
         v = (value_t)ptrhash_get(&readstate->backrefs, (void*)tokval);
-        if (v == (value_t)PH_NOTFOUND)
+        if (v == (value_t)HT_NOTFOUND)
             lerror(ParseError, "read: undefined label %ld", numval(tokval));
         return v;
     case TOK_GENSYM:
         pv = (value_t*)ptrhash_bp(&readstate->gensyms, (void*)tokval);
-        if (*pv == (value_t)PH_NOTFOUND)
+        if (*pv == (value_t)HT_NOTFOUND)
             *pv = gensym(NULL, 0);
         return *pv;
     case TOK_DOUBLEQUOTE:
@@ -524,8 +540,8 @@ value_t read_sexpr(ios_t *f)
     value_t v;
     readstate_t state;
     state.prev = readstate;
-    ptrhash_new(&state.backrefs, 16);
-    ptrhash_new(&state.gensyms, 16);
+    htable_new(&state.backrefs, 16);
+    htable_new(&state.gensyms, 16);
     readstate = &state;
 
     v = do_read_sexpr(f, UNBOUND);
