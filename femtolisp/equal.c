@@ -331,7 +331,14 @@ static uptrint_t bounded_hash(value_t a, int bound)
     return 0;
 }
 
-uptrint_t hash(value_t a)
+int equal_lispvalue(value_t a, value_t b)
+{
+    if (eq_comparable(a, b))
+        return (a==b);
+    return (numval(compare_(a,b,1))==0);
+}
+
+uptrint_t hash_lispvalue(value_t a)
 {
     return bounded_hash(a, BOUNDED_HASH_BOUND);
 }
@@ -339,5 +346,5 @@ uptrint_t hash(value_t a)
 value_t fl_hash(value_t *args, u_int32_t nargs)
 {
     argcount("hash", nargs, 1);
-    return fixnum(hash(args[0]));
+    return fixnum(hash_lispvalue(args[0]));
 }

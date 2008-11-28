@@ -965,8 +965,9 @@ typedef struct _fltype_t {
     value_t type;
     int numtype;
     size_t sz;
+    size_t elsz;
     cvtable_t *vtable;
-    int marked;
     struct _fltype_t *eltype;  // for arrays
     struct _fltype_t *artype;  // (array this)
+    int marked;
 } fltype_t;

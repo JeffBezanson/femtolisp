@@ -60,7 +60,7 @@ static void **HTNAME##_lookup_bp(htable_t *h, void *key)                \
     h->table = tab;                                                     \
     h->size = newsz;                                                    \
     for(i=0; i < sz; i+=2) {                                            \
-        if (ol[i] != HT_NOTFOUND && ol[i+1] != HT_NOTFOUND) {           \
+        if (ol[i+1] != HT_NOTFOUND) {                                   \
             (*HTNAME##_lookup_bp(h, ol[i])) = ol[i+1];                  \
         }                                                               \
     }                                                                   \
@@ -87,6 +87,7 @@ void **HTNAME##_bp(htable_t *h, void *key)                              \
 }                                                                       \
                                                                         \
 /* returns bp if key is in hash, otherwise NULL */                      \
+/* if return is non-NULL and *bp == HT_NOTFOUND then key was deleted */ \
 static void **HTNAME##_peek_bp(htable_t *h, void *key)                  \
 {                                                                       \
     size_t sz = hash_size(h);                                           \
@@ -100,7 +101,7 @@ static void **HTNAME##_peek_bp(htable_t *h, void *key)                  \
     do {                                                                \
         if (tab[index] == HT_NOTFOUND)                                  \
             return NULL;                                                \
-        if (EQFUNC(key, tab[index]) && tab[index+1] != HT_NOTFOUND)     \
+        if (EQFUNC(key, tab[index]))                                    \
             return &tab[index+1];                                       \
                                                                         \
         index = (index+2) & (sz-1);                                     \

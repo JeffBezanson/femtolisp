@@ -109,7 +109,6 @@ value_t cvalue(value_t type, size_t sz)
         pcv->len = sz;
         autorelease(pcv);
     }
-    pcv->deps = NIL;
     pcv->type = POP();
     return tagptr(pcv, TAG_CVALUE);
 }
@@ -144,7 +143,6 @@ value_t cvalue_from_ref(value_t type, void *ptr, size_t sz, value_t parent)
     pcv->flags.inlined = 0;
     pcv->data = ptr;
     pcv->len = sz;
-    pcv->deps = NIL;
     pcv->type = POP();
     parent = POP();
     if (parent != NIL) {
@@ -672,7 +670,7 @@ value_t cvalue_copy(value_t v)
 
 static void cvalue_init(value_t type, value_t v, void *dest)
 {
-    cvinitfunc_t f;
+    cvinitfunc_t f=NULL;
 
     if (issymbol(type)) {
         f = ((symbol_t*)ptr(type))->dlcache;
@@ -680,9 +678,6 @@ static void cvalue_init(value_t type, value_t v, void *dest)
     else if (iscons(type)) {
         value_t head = car_(type);
         f = ((symbol_t*)ptr(head))->dlcache;
-    }
-    else {
-        f = NULL;
     }
     if (f == NULL)
         lerror(ArgError, "c-value: invalid c type");

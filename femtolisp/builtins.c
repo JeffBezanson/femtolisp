@@ -343,11 +343,6 @@ value_t fl_randf(value_t *args, u_int32_t nargs)
     (void)args; (void)nargs;
     return mk_float(rand_float());
 }
-value_t fl_randn(value_t *args, u_int32_t nargs)
-{
-    (void)args; (void)nargs;
-    return mk_double(randn());
-}
 
 extern void stringfuncs_init();
 
@@ -376,7 +371,6 @@ static builtinspec_t builtin_info[] = {
     { "rand.uint64", fl_rand64 },
     { "rand.double", fl_randd },
     { "rand.float", fl_randf },
-    { "randn", fl_randn },
 
     { "path.cwd", fl_path_cwd },
 

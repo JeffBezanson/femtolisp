@@ -30,7 +30,7 @@ static void outindent(int n, ios_t *f)
     }
 }
 
-static void print_traverse(value_t v)
+void print_traverse(value_t v)
 {
     value_t *bp;
     while (iscons(v)) {

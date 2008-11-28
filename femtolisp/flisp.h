@@ -133,7 +133,10 @@ size_t llength(value_t v);
 value_t list_nth(value_t l, size_t n);
 value_t compare(value_t a, value_t b);  // -1, 0, or 1
 value_t equal(value_t a, value_t b);    // T or nil
-uptrint_t hash(value_t a);
+int equal_lispvalue(value_t a, value_t b);
+uptrint_t hash_lispvalue(value_t a);
+value_t relocate_lispvalue(value_t v);
+void print_traverse(value_t v);
 value_t fl_hash(value_t *args, u_int32_t nargs);
 
 /* safe casts */
@@ -189,7 +192,7 @@ typedef struct {
 
 typedef struct {
     void (*print)(value_t self, ios_t *f, int princ);
-    void (*relocate)(value_t old, value_t new);
+    void (*relocate)(value_t oldv, value_t newv);
     void (*finalize)(value_t self);
     void (*print_traverse)(value_t self);
 } cvtable_t;
@@ -200,7 +203,6 @@ typedef struct {
         unsigned long flagbits;
     };
     value_t type;
-    value_t deps;
     //cvtable_t *vtable;
     // fields below are absent in inline-allocated values
     void *data;

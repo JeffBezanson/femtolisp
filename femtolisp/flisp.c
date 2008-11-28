@@ -413,6 +413,11 @@ static value_t relocate(value_t v)
     return v;
 }
 
+value_t relocate_lispvalue(value_t v)
+{
+    return relocate(v);
+}
+
 static void trace_globals(symbol_t *root)
 {
     while (root != NULL) {

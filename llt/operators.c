@@ -167,8 +167,8 @@ int cmp_same_eq(void *a, void *b, numerictype_t tag)
     case T_UINT32: return *(uint32_t*)a == *(uint32_t*)b;
     case T_INT64:  return *(int64_t*)a == *(int64_t*)b;
     case T_UINT64: return *(uint64_t*)a == *(uint64_t*)b;
-    case T_FLOAT:  return flt_equals(*(float*)a, *(float*)b);
-    case T_DOUBLE: return dbl_equals(*(double*)a, *(double*)b);
+    case T_FLOAT:  return *(float*)a == *(float*)b;
+    case T_DOUBLE: return *(double*)a == *(double*)b;
     }
     return 0;
 }
@@ -234,7 +234,7 @@ int cmp_eq(void *a, numerictype_t atag, void *b, numerictype_t btag)
     double db = conv_to_double(b, btag);
 
     if ((int)atag >= T_FLOAT && (int)btag >= T_FLOAT)
-        return dbl_equals(da, db);
+        return (da == db);
 
     if (da != db)
         return 0;

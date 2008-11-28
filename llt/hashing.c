@@ -99,28 +99,6 @@ float rand_float()
     return f.f - 1.0;
 }
 
-double randn()
-{
-    double s, vre, vim, ure, uim;
-    static double next = -42;
-
-    if (next != -42) {
-        s = next;
-        next = -42;
-        return s;
-    }
-    do {
-        ure = rand_double();
-        uim = rand_double();
-        vre = 2*ure - 1;
-        vim = 2*uim - 1;
-        s = vre*vre + vim*vim;
-    } while (s >= 1);
-    s = sqrt(-2*log(s)/s);
-    next = s * vre;
-    return s * vim;
-}
-
 void randomize()
 {
     u_int64_t tm = i64time();
@@ -138,14 +116,6 @@ float  F_NINF;
 
 void llt_init()
 {
-    /*
-      I used this function to guess good values based on epsilon:
-      tol(eps) = exp(ln(eps)*-.2334012088721472)*eps
-      I derived the constant by hallucinating freely.
-    */
-    dbl_tolerance(1e-12);
-    flt_tolerance(5e-6);
-
     randomize();
 
     ios_init_stdstreams();

@@ -46,24 +46,24 @@ void free_htable(value_t self)
     htable_free(&pt->ht);
 }
 
-void relocate_htable(value_t old, value_t new)
+void relocate_htable(value_t oldv, value_t newv)
 {
-    fltable_t *pt = (fltable_t*)cv_data((cvalue_t*)ptr(self));
+    fltable_t *pt = (fltable_t*)cv_data((cvalue_t*)ptr(newv));
     htable_t *h = &pt->ht;
     size_t i;
     for(i=0; i < h->size; i++) {
         if (h->table[i] != HT_NOTFOUND)
-            h->table[i] = (void*)relocate((value_t)h->table[i]);
+            h->table[i] = (void*)relocate_lispvalue((value_t)h->table[i]);
     }
 }
 
-void rehash_htable(value_t old, value_t new)
+void rehash_htable(value_t oldv, value_t newv)
 {
 }
 
-cvtable_t h_r1_vtable = { print_htable, NULL, free_htable };
-cvtable_t h_r2_vtable = { print_htable, relocate_htable, free_htable };
-cvtable_t h_r3_vtable = { print_htable, rehash_htable, free_htable };
+cvtable_t h_r1_vtable = { print_htable, NULL, free_htable, NULL };
+cvtable_t h_r2_vtable = { print_htable, relocate_htable, free_htable, NULL };
+cvtable_t h_r3_vtable = { print_htable, rehash_htable, free_htable, NULL };
 
 int ishashtable(value_t v)
 {
@@ -72,6 +72,7 @@ int ishashtable(value_t v)
 
 value_t fl_table(value_t *args, u_int32_t nargs)
 {
+    return NIL;
 }
 
 value_t fl_hashtablep(value_t *args, u_int32_t nargs)
