@@ -36,7 +36,7 @@ typedef struct {
     htable_t ht;
 } fltable_t;
 
-void print_htable(ios_t *f, value_t h, int princ)
+void print_htable(value_t h, ios_t *f, int princ)
 {
 }
 

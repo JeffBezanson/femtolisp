@@ -171,7 +171,7 @@ value_t fl_fixnum(value_t *args, u_int32_t nargs)
     if (iscvalue(args[0])) {
         cvalue_t *cv = (cvalue_t*)ptr(args[0]);
         long i;
-        if (cv->flags.cstring) {
+        if (cv_isstr(cv)) {
             char *pend;
             errno = 0;
             i = strtol(cv_data(cv), &pend, 0);

@@ -62,7 +62,7 @@ void print_traverse(value_t v)
         assert(iscvalue(v));
         cvalue_t *cv = (cvalue_t*)ptr(v);
         // don't consider shared references to ""
-        if (!cv->flags.cstring || cv_len(cv)!=0)
+        if (!cv_isstr(cv) || cv_len(cv)!=0)
             mark_cons(v);
     }
 }
@@ -468,9 +468,6 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
                              (uint32_t)(ui64>>32),
                              (uint32_t)(ui64));
     }
-    else if (type == lispvaluesym) {
-        // TODO
-    }
     else if (type == floatsym || type == doublesym) {
         char buf[64];
         double d;
@@ -586,9 +583,9 @@ void cvalue_print(ios_t *f, value_t v, int princ)
     cvalue_t *cv = (cvalue_t*)ptr(v);
     void *data = cv_data(cv);
 
-    if (cv->flags.islispfunction) {
-        HPOS+=ios_printf(f, "#<guestfunction @0x%08lx>",
-                         (unsigned long)*(guestfunc_t*)data);
+    if (isbuiltinish(v)) {
+        HPOS+=ios_printf(f, "#<builtin @0x%08lx>",
+                         (unsigned long)(builtin_t)data);
         return;
     }
 

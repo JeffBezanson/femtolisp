@@ -17,8 +17,9 @@ typedef struct {
 typedef struct _symbol_t {
     value_t syntax;    // syntax environment entry
     value_t binding;   // global value binding
-    void *dlcache;     // dlsym address
+    struct _fltype_t *type;
     uint32_t hash;
+    void *dlcache;     // dlsym address
     // below fields are private
     struct _symbol_t *left;
     struct _symbol_t *right;
@@ -157,39 +158,6 @@ static inline void argcount(char *fname, int nargs, int c)
         lerror(ArgError,"%s: too %s arguments", fname, nargs<c ? "few":"many");
 }
 
-/* c interface */
-#define INL_SIZE_NBITS 16
-typedef struct {
-    unsigned two:2;
-    unsigned unused0:1;
-    unsigned numtype:4;
-    unsigned inllen:INL_SIZE_NBITS;
-    unsigned cstring:1;
-    unsigned unused1:4;
-    unsigned prim:1;
-    unsigned inlined:1;
-    unsigned islispfunction:1;
-    unsigned autorelease:1;
-#ifdef BITS64
-    unsigned pad:32;
-#endif
-} cvflags_t;
-
-// initial flags have two==0x2 (type tag) and numtype==0xf
-#ifdef BITFIELD_BIG_ENDIAN
-# ifdef BITS64
-#  define INITIAL_FLAGS 0x9e00000000000000UL
-# else
-#  define INITIAL_FLAGS 0x9e000000
-# endif
-#else
-# ifdef BITS64
-#  define INITIAL_FLAGS 0x000000000000007aUL
-# else
-#  define INITIAL_FLAGS 0x0000007a
-# endif
-#endif
-
 typedef struct {
     void (*print)(value_t self, ios_t *f, int princ);
     void (*relocate)(value_t oldv, value_t newv);
@@ -197,36 +165,52 @@ typedef struct {
     void (*print_traverse)(value_t self);
 } cvtable_t;
 
-typedef struct {
-    union {
-        cvflags_t flags;
-        unsigned long flagbits;
-    };
+typedef void (*cvinitfunc_t)(struct _fltype_t*, value_t, void*);
+
+typedef struct _fltype_t {
     value_t type;
-    //cvtable_t *vtable;
-    // fields below are absent in inline-allocated values
+    numerictype_t numtype;
+    size_t size;
+    size_t elsz;
+    cvtable_t *vtable;
+    struct _fltype_t *eltype;  // for arrays
+    struct _fltype_t *artype;  // (array this)
+    int marked;
+    cvinitfunc_t init;
+} fltype_t;
+
+typedef struct {
+    fltype_t *type;
     void *data;
-    size_t len;      // length of *data in bytes
+    size_t len;            // length of *data in bytes
+    union {
+        value_t parent;    // optional
+        char _space[1];    // variable size
+    };
 } cvalue_t;
 
-#define CVALUE_NWORDS 5
-#define CVALUE_NWORDS_INL 3
+#define CVALUE_NWORDS 4
 
 typedef struct {
-    union {
-        cvflags_t flags;
-        unsigned long flagbits;
-    };
-    value_t type;
-    void *data;
+    fltype_t *type;
+    char _space[1];
 } cprim_t;
 
-#define CPRIM_NWORDS 3
-#define CPRIM_NWORDS_INL 2
+#define CPRIM_NWORDS 2
 
-#define cv_len(c)  ((c)->flags.inlined ? (c)->flags.inllen : (c)->len)
-#define cv_type(c) ((c)->type)
-#define cv_numtype(c) ((c)->flags.numtype)
+#define CV_OWNED_BIT  0x1
+#define CV_PARENT_BIT 0x2
+#define owned(cv)      ((cv)->type & CV_OWNED_BIT)
+#define hasparent(cv)  ((cv)->type & CV_PARENT_BIT)
+#define isinlined(cv)  ((cv)->data == &(cv)->_space[0])
+#define cv_class(cv)   ((fltype_t*)(((uptrint_t)(cv)->type)&~3))
+#define cv_len(cv)     ((cv)->len)
+#define cv_type(cv)    (cv_class(cv)->type)
+#define cv_data(cv)    ((cv)->data)
+#define cv_numtype(cv) (cv_class(cv)->numtype)
+#define cv_isstr(cv)   (cv_class(cv)->eltype == chartype)
+
+#define cvalue_data(v) cv_data((cvalue_t*)ptr(v))
 
 #define valid_numtype(v) ((v) < N_NUMTYPES)
 
@@ -240,23 +224,23 @@ typedef unsigned long ulong_t;
 typedef double double_t;
 typedef float float_t;
 
-typedef value_t (*guestfunc_t)(value_t*, uint32_t);
+typedef value_t (*builtin_t)(value_t*, uint32_t);
 
 extern value_t int8sym, uint8sym, int16sym, uint16sym, int32sym, uint32sym;
-extern value_t int64sym, uint64sym, shortsym, ushortsym;
-extern value_t intsym, uintsym, longsym, ulongsym, charsym, ucharsym, wcharsym;
+extern value_t int64sym, uint64sym;
+extern value_t longsym, ulongsym, charsym, ucharsym, wcharsym;
 extern value_t structsym, arraysym, enumsym, cfunctionsym, voidsym, pointersym;
 extern value_t stringtypesym, wcstringtypesym, emptystringsym;
-extern value_t unionsym, floatsym, doublesym, lispvaluesym;
+extern value_t unionsym, floatsym, doublesym, builtinsym;
+extern fltype_t *chartype, *wchartype;
+extern fltype_t *stringtype, *wcstringtype;
 
-value_t cvalue(value_t type, size_t sz);
+value_t cvalue(fltype_t *type, size_t sz);
 size_t ctype_sizeof(value_t type, int *palign);
-void *cvalue_data(value_t v);
-void *cv_data(cvalue_t *cv);
 value_t cvalue_copy(value_t v);
-value_t cvalue_from_data(value_t type, void *data, size_t sz);
-value_t cvalue_from_ref(value_t type, void *ptr, size_t sz, value_t parent);
-value_t guestfunc(guestfunc_t f);
+value_t cvalue_from_data(fltype_t *type, void *data, size_t sz);
+value_t cvalue_from_ref(fltype_t *type, void *ptr, size_t sz, value_t parent);
+value_t cbuiltin(builtin_t f);
 size_t cvalue_arraylen(value_t v);
 value_t size_wrap(size_t sz);
 size_t toulong(value_t n, char *fname);
@@ -269,6 +253,11 @@ value_t cvalue_compare(value_t a, value_t b);
 value_t cvalue_char(value_t *args, uint32_t nargs);
 value_t cvalue_wchar(value_t *args, uint32_t nargs);
 
+fltype_t *get_type(value_t t);
+fltype_t *get_array_type(value_t eltype);
+fltype_t *define_opaque_type(value_t sym, size_t sz, cvtable_t *vtab,
+                             cvinitfunc_t init);
+
 value_t mk_double(double_t n);
 value_t mk_float(float_t n);
 value_t mk_uint32(uint32_t n);
@@ -279,7 +268,7 @@ value_t char_from_code(uint32_t code);
 
 typedef struct {
     char *name;
-    guestfunc_t fptr;
+    builtin_t fptr;
 } builtinspec_t;
 
 void assign_global_builtins(builtinspec_t *b);

@@ -84,7 +84,7 @@ value_t fl_string_decode(value_t *args, u_int32_t nargs)
     size_t nc = u8_charnum(ptr, nb);
     size_t newsz = nc*sizeof(uint32_t);
     if (term) newsz += sizeof(uint32_t);
-    value_t wcstr = cvalue(symbol_value(wcstringtypesym), newsz);
+    value_t wcstr = cvalue(wcstringtype, newsz);
     ptr = cv_data((cvalue_t*)ptr(args[0]));  // relocatable pointer
     uint32_t *pwc = cvalue_data(wcstr);
     u8_toucs(pwc, nc, ptr, nb);
@@ -118,7 +118,7 @@ value_t fl_string(value_t *args, u_int32_t nargs)
                 sz += u8_charlen(wc);
                 continue;
             }
-            else if (temp->flags.cstring) {
+            else if (cv_isstr(temp)) {
                 sz += cv_len(temp);
                 continue;
             }

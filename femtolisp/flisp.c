@@ -199,6 +199,7 @@ static symbol_t *mk_symbol(char *str)
         sym->binding = UNBOUND;
         sym->syntax = 0;
     }
+    sym->type = NULL;
     sym->hash = memhash32(str, len)^0xAAAAAAAA;
     strcpy(&sym->name[0], str);
     return sym;
@@ -233,7 +234,7 @@ value_t symbol(char *str)
 typedef struct {
     value_t syntax;    // syntax environment entry
     value_t binding;   // global value binding
-    void *dlcache;     // dlsym address (not used here)
+    fltype_t *type;
     uint32_t id;
 } gensym_t;
 
@@ -250,6 +251,7 @@ value_t gensym(value_t *args, uint32_t nargs)
     gs->id = _gensym_ctr++;
     gs->binding = UNBOUND;
     gs->syntax = 0;
+    gs->type = NULL;
     return tagptr(gs, TAG_SYM);
 }
 
@@ -344,6 +346,7 @@ static int symchar(char c);
 // cvalues --------------------------------------------------------------------
 
 #include "cvalues.c"
+#include "types.c"
 
 // collector ------------------------------------------------------------------
 
@@ -445,6 +448,7 @@ void gc(int mustgrow)
     for (i=0; i < SP; i++)
         Stack[i] = relocate(Stack[i]);
     trace_globals(symtab);
+    relocate_typetable();
     rs = readstate;
     while (rs) {
         for(i=0; i < rs->backrefs.size; i++)
@@ -645,7 +649,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
     cons_t *c;
     symbol_t *sym;
     uint32_t saveSP, envsz, lenv;
-    int i, nargs, noeval=0;
+    int i, nargs=0, noeval=0;
     fixnum_t s, lo, hi;
     cvalue_t *cv;
     int64_t accum;
@@ -963,13 +967,11 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             break;
         case F_FIXNUMP:
             argcount("fixnump", nargs, 1);
-            v = ((isfixnum(Stack[SP-1])) ? T : NIL);
+            v = (isfixnum(Stack[SP-1]) ? T : NIL);
             break;
         case F_BUILTINP:
             argcount("builtinp", nargs, 1);
-            v = (isbuiltinish(Stack[SP-1]) ||
-                 (iscvalue(Stack[SP-1]) &&
-                  ((cvalue_t*)ptr(Stack[SP-1]))->flags.islispfunction))? T:NIL;
+            v = (isbuiltinish(Stack[SP-1]) ? T : NIL);
             break;
         case F_VECTORP:
             argcount("vectorp", nargs, 1);
@@ -1190,12 +1192,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
         default:
             // a guest function is a cvalue tagged as a builtin
             cv = (cvalue_t*)ptr(f);
-            if (cv->flags.islispfunction) {
-                v = ((guestfunc_t)cv->data)(&Stack[saveSP+1], nargs);
-            }
-            else {
-                goto apply_lambda;  // trigger type error
-            }
+            v = ((builtin_t)cv->data)(&Stack[saveSP+1], nargs);
         }
         SP = saveSP;
         return v;
@@ -1317,7 +1314,7 @@ static char *EXEDIR;
 void assign_global_builtins(builtinspec_t *b)
 {
     while (b->name != NULL) {
-        set(symbol(b->name), guestfunc(b->fptr));
+        set(symbol(b->name), cbuiltin(b->fptr));
         b++;
     }
 }
@@ -1389,8 +1386,8 @@ void lisp_init(void)
 #endif
 
     cvalues_init();
-    set(symbol("gensym"), guestfunc(gensym));
-    set(symbol("hash"), guestfunc(fl_hash));
+    set(symbol("gensym"), cbuiltin(gensym));
+    set(symbol("hash"), cbuiltin(fl_hash));
 
     char buf[1024];
     char *exename = get_exename(buf, sizeof(buf));

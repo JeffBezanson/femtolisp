@@ -920,10 +920,10 @@ switch to miser mode, otherwise default is ok, for example:
 
 consolidated todo list as of 8/30:
 - new cvalues, types representation
+- use the unused tag for TAG_PRIM, add smaller prim representation
 - implement support for defining new opaque values
-- hashtable
 - finalizers in gc
-- unify vectors and arrays
+- hashtable
 - expose io stream object
 
 - enable print-shared for cvalues' types
@@ -931,6 +931,8 @@ consolidated todo list as of 8/30:
 - remaining cvalues functions
 - finish ios
 - special efficient reader for #array
+- reimplement vectors as (array lispvalue)
+- implement fast subvectors and subarrays
 
 -----------------------------------------------------------------------------
 

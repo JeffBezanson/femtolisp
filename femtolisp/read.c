@@ -368,7 +368,8 @@ static value_t read_string(ios_t *f)
                 if (c!=IOS_EOF) ios_ungetc(c, f);
                 eseq[j] = '\0';
                 wc = strtol(eseq, NULL, 8);
-                i += u8_wc_toutf8(&buf[i], wc);
+                // \DDD and \xXX read bytes, not characters
+                buf[i++] = ((char)wc);
             }
             else if ((c=='x' && (ndig=2)) ||
                      (c=='u' && (ndig=4)) ||
@@ -385,7 +386,10 @@ static value_t read_string(ios_t *f)
                     free(buf);
                     lerror(ParseError, "read: invalid escape sequence");
                 }
-                i += u8_wc_toutf8(&buf[i], wc);
+                if (ndig == 2)
+                    buf[i++] = ((char)wc);
+                else
+                    i += u8_wc_toutf8(&buf[i], wc);
             }
             else {
                 buf[i++] = read_escape_control_char((char)c);

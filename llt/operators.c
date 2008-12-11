@@ -133,8 +133,18 @@ uint64_t conv_to_uint64(void *data, numerictype_t tag)
     case T_UINT32: i = (uint64_t)*(uint32_t*)data; break;
     case T_INT64:  i = (uint64_t)*(int64_t*)data; break;
     case T_UINT64: i = (uint64_t)*(uint64_t*)data; break;
-    case T_FLOAT:  i = (uint64_t)(int64_t)*(float*)data; break;
-    case T_DOUBLE: i = (uint64_t)(int64_t)*(double*)data; break;
+    case T_FLOAT:
+        if (*(float*)data >= 0)
+            i = (uint64_t)*(float*)data;
+        else
+            i = (uint64_t)(int64_t)*(float*)data;
+        break;
+    case T_DOUBLE:
+        if (*(double*)data >= 0)
+            i = (uint64_t)*(double*)data;
+        else
+            i = (uint64_t)(int64_t)*(double*)data;
+        break;
     }
     return i;
 }

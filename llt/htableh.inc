@@ -10,7 +10,7 @@ int HTNAME##_has(htable_t *h, void *key);                       \
 void HTNAME##_remove(htable_t *h, void *key);                   \
 void **HTNAME##_bp(htable_t *h, void *key);
 
-// return value, or PH_NOTFOUND if key not found
+// return value, or HT_NOTFOUND if key not found
 
 // add key/value binding
 

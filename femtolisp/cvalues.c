@@ -5,35 +5,33 @@
 #define NWORDS(sz) (((sz)+3)>>2)
 #endif
 
-static int struct_aligns[8] = {
-    sizeof(struct { char a; int8_t i; }),
-    sizeof(struct { char a; int16_t i; }),
-    sizeof(struct { char a; char i[3]; }),
-    sizeof(struct { char a; int32_t i; }),
-    sizeof(struct { char a; char i[5]; }),
-    sizeof(struct { char a; char i[6]; }),
-    sizeof(struct { char a; char i[7]; }),
-    sizeof(struct { char a; int64_t i; }) };
 static int ALIGN2, ALIGN4, ALIGN8, ALIGNPTR;
-
-typedef void (*cvinitfunc_t)(value_t, value_t, void*, void*);
 
 value_t int8sym, uint8sym, int16sym, uint16sym, int32sym, uint32sym;
 value_t int64sym, uint64sym;
 value_t longsym, ulongsym, charsym, wcharsym;
 value_t floatsym, doublesym;
-value_t gftypesym, lispvaluesym, stringtypesym, wcstringtypesym;
+value_t gftypesym, stringtypesym, wcstringtypesym;
 value_t emptystringsym;
 
 value_t structsym, arraysym, enumsym, cfunctionsym, voidsym, pointersym;
 value_t unionsym;
 
-value_t autoreleasesym, typeofsym, sizeofsym;
+static htable_t TypeTable;
+static fltype_t *builtintype;
+static fltype_t *int8type, *uint8type;
+static fltype_t *int16type, *uint16type;
+static fltype_t *int32type, *uint32type;
+static fltype_t *int64type, *uint64type;
+static fltype_t *longtype, *ulongtype;
+       fltype_t *chartype, *wchartype;
+       fltype_t *stringtype, *wcstringtype;
+static fltype_t *floattype, *doubletype;
 
-static void cvalue_init(value_t type, value_t v, void *dest);
+static void cvalue_init(fltype_t *type, value_t v, void *dest);
 
 void cvalue_print(ios_t *f, value_t v, int princ);
-// exported guest functions
+// cvalues-specific builtins
 value_t cvalue_new(value_t *args, u_int32_t nargs);
 value_t cvalue_sizeof(value_t *args, u_int32_t nargs);
 value_t cvalue_typeof(value_t *args, u_int32_t nargs);
@@ -41,79 +39,41 @@ value_t cvalue_typeof(value_t *args, u_int32_t nargs);
 // compute the size of the metadata object for a cvalue
 static size_t cv_nwords(cvalue_t *cv)
 {
-    if (cv->flags.prim) {
-        if (cv->flags.inlined)
-            return CPRIM_NWORDS_INL + NWORDS(cv->flags.inllen);
-        return CPRIM_NWORDS;
-    }
-    if (cv->flags.inlined) {
-        size_t s = CVALUE_NWORDS_INL +
-            NWORDS(cv->flags.inllen + cv->flags.cstring);
-        return (s < CVALUE_NWORDS) ? CVALUE_NWORDS : s;
+    if (isinlined(cv)) {
+        size_t n = cv_len(cv);
+        if (n==0 || cv_isstr(cv))
+            n++;
+        return CVALUE_NWORDS - 1 + NWORDS(n);
     }
     return CVALUE_NWORDS;
 }
 
-void *cv_data(cvalue_t *cv)
-{
-    if (cv->flags.prim) {
-        if (cv->flags.inlined) {
-            return &((cprim_t*)cv)->data;
-        }
-        return ((cprim_t*)cv)->data;
-    }
-    else if (cv->flags.inlined) {
-        return &cv->data;
-    }
-    return cv->data;
-}
-
-void *cvalue_data(value_t v)
-{
-    return cv_data((cvalue_t*)ptr(v));
-}
-
 static void autorelease(cvalue_t *cv)
 {
-    cv->flags.autorelease = 1;
+    cv->type = (fltype_t*)(((uptrint_t)cv->type) | CV_OWNED_BIT);
     // TODO: add to finalizer list
 }
 
-value_t cvalue(value_t type, size_t sz)
+value_t cvalue(fltype_t *type, size_t sz)
 {
     cvalue_t *pcv;
 
-    if (issymbol(type)) {
-        cprim_t *pcp;
-        pcp = (cprim_t*)alloc_words(CPRIM_NWORDS_INL + NWORDS(sz));
-        pcp->flagbits = INITIAL_FLAGS;
-        pcp->flags.inllen = sz;
-        pcp->flags.inlined = 1;
-        pcp->flags.prim = 1;
-        pcp->type = type;
-        return tagptr(pcp, TAG_CVALUE);
-    }
-    PUSH(type);
     if (sz <= MAX_INL_SIZE) {
-        size_t nw = CVALUE_NWORDS_INL + NWORDS(sz);
-        pcv = (cvalue_t*)alloc_words((nw < CVALUE_NWORDS) ? CVALUE_NWORDS : nw);
-        pcv->flagbits = INITIAL_FLAGS;
-        pcv->flags.inllen = sz;
-        pcv->flags.inlined = 1;
+        size_t nw = CVALUE_NWORDS - 1 + NWORDS(sz) + (sz==0 ? 1 : 0);
+        pcv = (cvalue_t*)alloc_words(nw);
+        pcv->data = &pcv->_space[0];
     }
     else {
         pcv = (cvalue_t*)alloc_words(CVALUE_NWORDS);
-        pcv->flagbits = INITIAL_FLAGS;
-        pcv->flags.inlined = 0;
         pcv->data = malloc(sz);
-        pcv->len = sz;
         autorelease(pcv);
     }
-    pcv->type = POP();
+    pcv->len = sz;
+    pcv->type = type;
     return tagptr(pcv, TAG_CVALUE);
 }
 
-value_t cvalue_from_data(value_t type, void *data, size_t sz)
+value_t cvalue_from_data(fltype_t *type, void *data, size_t sz)
 {
     cvalue_t *pcv;
     value_t cv;
@@ -131,22 +91,18 @@ value_t cvalue_from_data(value_t type, void *data, size_t sz)
 // user explicitly calls (autorelease ) on the result of this function.
 // 'parent' is an optional cvalue that this pointer is known to point
 // into; NIL if none.
-value_t cvalue_from_ref(value_t type, void *ptr, size_t sz, value_t parent)
+value_t cvalue_from_ref(fltype_t *type, void *ptr, size_t sz, value_t parent)
 {
     cvalue_t *pcv;
     value_t cv;
 
-    PUSH(parent);
-    PUSH(type);
     pcv = (cvalue_t*)alloc_words(CVALUE_NWORDS);
-    pcv->flagbits = INITIAL_FLAGS;
-    pcv->flags.inlined = 0;
     pcv->data = ptr;
     pcv->len = sz;
-    pcv->type = POP();
-    parent = POP();
+    pcv->type = type;
     if (parent != NIL) {
-        // TODO: add dependency
+        pcv->type = (fltype_t*)(((uptrint_t)pcv->type) | CV_PARENT_BIT);
+        pcv->parent = parent;
     }
     cv = tagptr(pcv, TAG_CVALUE);
     return cv;
@@ -162,24 +118,17 @@ value_t cvalue_string(size_t sz)
         return symbol_value(emptystringsym);
     // secretly allocate space for 1 more byte, hide a NUL there so
     // any string will always be NUL terminated.
-    cv = cvalue(symbol_value(stringtypesym), sz+1);
+    cv = cvalue(stringtype, sz+1);
     pcv = (cvalue_t*)ptr(cv);
     data = cv_data(pcv);
     data[sz] = '\0';
-    if (pcv->flags.inlined)
-        pcv->flags.inllen = sz;
-    else
-        pcv->len = sz;
-    pcv->flags.cstring = 1;
+    pcv->len = sz;
     return cv;
 }
 
 value_t cvalue_static_cstring(char *str)
 {
-    value_t v = cvalue_from_ref(symbol_value(stringtypesym), str, strlen(str),
-                                NIL);
-    ((cvalue_t*)ptr(v))->flags.cstring = 1;
-    return v;
+    return cvalue_from_ref(stringtype, str, strlen(str), NIL);
 }
 
 value_t string_from_cstr(char *str)
@@ -192,7 +141,7 @@ value_t string_from_cstr(char *str)
 
 int isstring(value_t v)
 {
-    return (iscvalue(v) && ((cvalue_t*)ptr(v))->flags.cstring);
+    return (iscvalue(v) && cv_isstr((cvalue_t*)ptr(v)));
 }
 
 // convert to malloc representation (fixed address)
@@ -217,12 +166,12 @@ static void cv_pin(cvalue_t *cv)
 }
 */
 
-#define num_ctor(typenam, cnvt, tag, fromstr)                           \
-static void cvalue_##typenam##_init(value_t type, value_t arg,          \
-                                    void *dest, void *data)             \
+#define num_ctor(typenam, cnvt, tag)                                    \
+static void cvalue_##typenam##_init(fltype_t *type, value_t arg,        \
+                                    void *dest)                         \
 {                                                                       \
     typenam##_t n=0;                                                    \
-    (void)data; (void)type;                                             \
+    (void)type;                                                         \
     if (isfixnum(arg)) {                                                \
         n = numval(arg);                                                \
     }                                                                   \
@@ -245,39 +194,37 @@ static void cvalue_##typenam##_init(value_t type, value_t arg,          \
 value_t cvalue_##typenam(value_t *args, u_int32_t nargs)                \
 {                                                                       \
     if (nargs==0) { PUSH(fixnum(0)); args = &Stack[SP-1]; }             \
-    value_t cv = cvalue(typenam##sym, sizeof(typenam##_t));             \
-    ((cprim_t*)ptr(cv))->flags.numtype = tag;                           \
-    cvalue_##typenam##_init(typenam##sym,                               \
-                            args[0], &((cprim_t*)ptr(cv))->data, 0);    \
+    value_t cv = cvalue(typenam##type, sizeof(typenam##_t));            \
+    cvalue_##typenam##_init(typenam##type,                              \
+                            args[0], &((cvalue_t*)ptr(cv))->_space[0]); \
     return cv;                                                          \
 }                                                                       \
 value_t mk_##typenam(typenam##_t n)                                     \
 {                                                                       \
-    value_t cv = cvalue(typenam##sym, sizeof(typenam##_t));             \
-    ((cprim_t*)ptr(cv))->flags.numtype = tag;                           \
-    *(typenam##_t*)&((cprim_t*)ptr(cv))->data = n;                      \
+    value_t cv = cvalue(typenam##type, sizeof(typenam##_t));            \
+    *(typenam##_t*)&((cvalue_t*)ptr(cv))->_space[0] = n;                \
     return cv;                                                          \
 }
 
-num_ctor(int8, int32, T_INT8, strtoi64)
-num_ctor(uint8, uint32, T_UINT8, strtoui64)
-num_ctor(int16, int32, T_INT16, strtoi64)
-num_ctor(uint16, uint32, T_UINT16, strtoui64)
-num_ctor(int32, int32, T_INT32, strtoi64)
-num_ctor(uint32, uint32, T_UINT32, strtoui64)
-num_ctor(int64, int64, T_INT64, strtoi64)
-num_ctor(uint64, uint64, T_UINT64, strtoui64)
-num_ctor(char, uint32, T_UINT8, strtoui64)
-num_ctor(wchar, int32, T_INT32, strtoi64)
+num_ctor(int8, int32, T_INT8)
+num_ctor(uint8, uint32, T_UINT8)
+num_ctor(int16, int32, T_INT16)
+num_ctor(uint16, uint32, T_UINT16)
+num_ctor(int32, int32, T_INT32)
+num_ctor(uint32, uint32, T_UINT32)
+num_ctor(int64, int64, T_INT64)
+num_ctor(uint64, uint64, T_UINT64)
+num_ctor(char, uint32, T_UINT8)
+num_ctor(wchar, int32, T_INT32)
 #ifdef BITS64
-num_ctor(long, int64, T_INT64, strtoi64)
-num_ctor(ulong, uint64, T_UINT64, strtoui64)
+num_ctor(long, int64, T_INT64)
+num_ctor(ulong, uint64, T_UINT64)
 #else
-num_ctor(long, int32, T_INT32, strtoi64)
-num_ctor(ulong, uint32, T_UINT32, strtoui64)
+num_ctor(long, int32, T_INT32)
+num_ctor(ulong, uint32, T_UINT32)
 #endif
-num_ctor(float, double, T_FLOAT, strtodouble)
-num_ctor(double, double, T_DOUBLE, strtodouble)
+num_ctor(float, double, T_FLOAT)
+num_ctor(double, double, T_DOUBLE)
 
 value_t size_wrap(size_t sz)
 {
@@ -309,12 +256,12 @@ value_t char_from_code(uint32_t code)
     return cvalue_char(&ccode, 1);
 }
 
-static void cvalue_enum_init(value_t type, value_t arg, void *dest, void *data)
+static void cvalue_enum_init(fltype_t *ft, value_t arg, void *dest)
 {
     int n=0;
     value_t syms;
+    value_t type = ft->type;
 
-    (void)data;
     syms = car(cdr(type));
     if (!iscons(syms))
         type_error("enum", "cons", syms);
@@ -346,15 +293,15 @@ static void cvalue_enum_init(value_t type, value_t arg, void *dest, void *data)
 value_t cvalue_enum(value_t *args, u_int32_t nargs)
 {
     argcount("enum", nargs, 2);
-    value_t cv = cvalue(list2(enumsym, args[0]), 4);
-    ((cvalue_t*)ptr(cv))->flags.numtype = T_INT32;
-    cvalue_enum_init(cv_type((cvalue_t*)ptr(cv)),
-                     args[1], cv_data((cvalue_t*)ptr(cv)), NULL);
+    value_t type = list2(enumsym, args[0]);
+    fltype_t *ft = get_type(type);
+    value_t cv = cvalue(ft, 4);
+    cvalue_enum_init(ft, args[1], cv_data((cvalue_t*)ptr(cv)));
     return cv;
 }
 
 static void array_init_fromargs(char *dest, value_t *vals, size_t cnt,
-                                value_t eltype, size_t elsize)
+                                fltype_t *eltype, size_t elsize)
 {
     size_t i;
     for(i=0; i < cnt; i++) {
@@ -366,8 +313,7 @@ static void array_init_fromargs(char *dest, value_t *vals, size_t cnt,
 static int isarray(value_t v)
 {
     if (!iscvalue(v)) return 0;
-    value_t type = cv_type((cvalue_t*)ptr(v));
-    return (iscons(type) && car_(type)==arraysym);
+    return cv_class((cvalue_t*)ptr(v))->eltype != NULL;
 }
 
 static size_t predict_arraylen(value_t arg)
@@ -383,17 +329,13 @@ static size_t predict_arraylen(value_t arg)
     return 1;
 }
 
-static void cvalue_array_init(value_t type, value_t arg, void *dest, void *data)
+static void cvalue_array_init(fltype_t *ft, value_t arg, void *dest)
 {
+    value_t type = ft->type;
     size_t elsize, i, cnt, sz;
-    int junk;
-    value_t eltype = car(cdr(type));
+    fltype_t *eltype = ft->eltype;
 
-    if (data != 0)
-        elsize = (size_t)data;  // already computed by constructor
-    else
-        elsize = ctype_sizeof(eltype, &junk);
-
+    elsize = ft->elsz;
     cnt = predict_arraylen(arg);
 
     if (iscons(cdr_(cdr_(type)))) {
@@ -427,7 +369,7 @@ static void cvalue_array_init(value_t type, value_t arg, void *dest, void *data)
     else if (iscvalue(arg)) {
         cvalue_t *cv = (cvalue_t*)ptr(arg);
         if (isarray(arg)) {
-            value_t aet = car(cdr(cv_type(cv)));
+            fltype_t *aet = cv_class(cv)->eltype;
             if (aet == eltype) {
                 if (cv_len(cv) == sz)
                     memcpy(dest, cv_data(cv), sz);
@@ -447,13 +389,11 @@ static void cvalue_array_init(value_t type, value_t arg, void *dest, void *data)
         type_error("array", "sequence", arg);
 }
 
-static value_t alloc_array(value_t type, size_t sz)
+static value_t alloc_array(fltype_t *type, size_t sz)
 {
     value_t cv;
-    if (car_(cdr_(type)) == charsym) {
-        PUSH(type);
+    if (type->eltype == chartype) {
         cv = cvalue_string(sz);
-        ((cvalue_t*)ptr(cv))->type = POP();
     }
     else {
         cv = cvalue(type, sz);
@@ -464,18 +404,18 @@ static value_t alloc_array(value_t type, size_t sz)
 value_t cvalue_array(value_t *args, u_int32_t nargs)
 {
     size_t elsize, cnt, sz;
-    int junk;
 
     if (nargs < 1)
         argcount("array", nargs, 1);
 
     cnt = nargs - 1;
-    elsize = ctype_sizeof(args[0], &junk);
+    fltype_t *type = get_array_type(args[0]);
+    elsize = type->elsz;
     sz = elsize * cnt;
 
-    value_t cv = alloc_array(listn(3, arraysym, args[0], size_wrap(cnt)), sz);
+    value_t cv = alloc_array(type, sz);
     array_init_fromargs(cv_data((cvalue_t*)ptr(cv)), &args[1], cnt,
-                        args[0], elsize);
+                        type->eltype, elsize);
     return cv;
 }
 
@@ -483,16 +423,7 @@ value_t cvalue_array(value_t *args, u_int32_t nargs)
 size_t cvalue_arraylen(value_t v)
 {
     cvalue_t *cv = (cvalue_t*)ptr(v);
-    value_t type = cv_type(cv);
-
-    if (iscons(cdr_(cdr_(type)))) {
-        return toulong(car_(cdr_(cdr_(type))), "length");
-    }
-    // incomplete array type
-    int junk;
-    value_t eltype = car_(cdr_(type));
-    size_t elsize = ctype_sizeof(eltype, &junk);
-    return elsize ? cv_len(cv)/elsize : 0;
+    return cv_len(cv)/(cv_class(cv)->elsz);
 }
 
 value_t cvalue_relocate(value_t v)
@@ -502,19 +433,13 @@ value_t cvalue_relocate(value_t v)
     cvalue_t *nv;
     value_t ncv;
 
-    if (!cv->flags.islispfunction) {
-        nw = cv_nwords(cv);
-        nv = (cvalue_t*)alloc_words(nw);
-        memcpy(nv, cv, nw*sizeof(value_t));
-        ncv = tagptr(nv, TAG_CVALUE);
-        forward(v, ncv);
-    }
-    else {
-        // guestfunctions are permanent objects, unmanaged
-        nv = cv;
-        ncv = v;
-    }
-    nv->type = relocate(nv->type);
+    nw = cv_nwords(cv);
+    nv = (cvalue_t*)alloc_words(nw);
+    memcpy(nv, cv, nw*sizeof(value_t));
+    if (isinlined(cv))
+        nv->data = &nv->_space[0];
+    ncv = tagptr(nv, TAG_CVALUE);
+    forward(v, ncv);
     return ncv;
 }
 
@@ -591,7 +516,7 @@ size_t ctype_sizeof(value_t type, int *palign)
     }
     if (iscons(type)) {
         value_t hed = car_(type);
-        if (hed == pointersym || hed == cfunctionsym || hed == lispvaluesym) {
+        if (hed == pointersym || hed == cfunctionsym) {
             *palign = ALIGNPTR;
             return sizeof(void*);
         }
@@ -653,36 +578,26 @@ value_t cvalue_copy(value_t v)
     value_t *pnv = alloc_words(nw);
     v = POP(); cv = (cvalue_t*)ptr(v);
     memcpy(pnv, cv, nw * sizeof(value_t));
-    if (!cv->flags.inlined) {
+    if (!isinlined(cv)) {
         size_t len = cv_len(cv);
-        if (cv->flags.cstring) len++;
+        if (cv_isstr(cv)) len++;
         void *data = malloc(len);
         memcpy(data, cv_data(cv), len);
-        if (cv->flags.prim)
-            ((cprim_t*)pnv)->data = data;
-        else
-            ((cvalue_t*)pnv)->data = data;
+        ((cvalue_t*)pnv)->data = data;
         autorelease((cvalue_t*)pnv);
     }
 
     return tagptr(pnv, TAG_CVALUE);
 }
 
-static void cvalue_init(value_t type, value_t v, void *dest)
+static void cvalue_init(fltype_t *type, value_t v, void *dest)
 {
-    cvinitfunc_t f=NULL;
+    cvinitfunc_t f=type->init;
 
-    if (issymbol(type)) {
-        f = ((symbol_t*)ptr(type))->dlcache;
-    }
-    else if (iscons(type)) {
-        value_t head = car_(type);
-        f = ((symbol_t*)ptr(head))->dlcache;
-    }
     if (f == NULL)
         lerror(ArgError, "c-value: invalid c type");
 
-    f(type, v, dest, NULL);
+    f(type, v, dest);
 }
 
 static numerictype_t sym_to_numtype(value_t type)
@@ -719,6 +634,10 @@ static numerictype_t sym_to_numtype(value_t type)
     else if (type == uint64sym)
 #endif
         return T_UINT64;
+    else if (type == floatsym)
+        return T_FLOAT;
+    else if (type == doublesym)
+        return T_DOUBLE;
     assert(false);
     return N_NUMTYPES;
 }
@@ -732,32 +651,27 @@ value_t cvalue_new(value_t *args, u_int32_t nargs)
     if (nargs < 1 || nargs > 2)
         argcount("c-value", nargs, 2);
     value_t type = args[0];
+    fltype_t *ft = get_type(type);
     value_t cv;
-    if (iscons(type) && car_(type) == arraysym) {
+    if (ft->eltype != NULL) {
         // special case to handle incomplete array types bla[]
-        value_t eltype = car(cdr_(type));
-        int junk;
-        size_t elsz = ctype_sizeof(eltype, &junk);
+        size_t elsz = ft->elsz;
         size_t cnt;
+
         if (iscons(cdr_(cdr_(type))))
             cnt = toulong(car_(cdr_(cdr_(type))), "array");
         else if (nargs == 2)
             cnt = predict_arraylen(args[1]);
         else
             cnt = 0;
-        cv = alloc_array(type, elsz * cnt);
+        cv = alloc_array(ft, elsz * cnt);
         if (nargs == 2)
-            cvalue_array_init(type, args[1], cv_data((cvalue_t*)ptr(cv)),
-                              (void*)elsz);
+            cvalue_array_init(ft, args[1], cv_data((cvalue_t*)ptr(cv)));
     }
     else {
-        int junk;
-        cv = cvalue(type, ctype_sizeof(type, &junk));
-        if (issymbol(type)) {
-            ((cvalue_t*)ptr(cv))->flags.numtype = sym_to_numtype(type);
-        }
+        cv = cvalue(ft, ft->size);
         if (nargs == 2)
-            cvalue_init(type, args[1], cv_data((cvalue_t*)ptr(cv)));
+            cvalue_init(ft, args[1], cv_data((cvalue_t*)ptr(cv)));
     }
     return cv;
 }
@@ -825,14 +739,13 @@ value_t cvalue_set_int8(value_t *args, u_int32_t nargs)
     return args[2];
 }
 
-value_t guestfunc(guestfunc_t f)
+value_t cbuiltin(builtin_t f)
 {
-    value_t gf = cvalue(symbol_value(gftypesym), sizeof(void*));
+    value_t gf = cvalue(builtintype, sizeof(void*));
     ((cvalue_t*)ptr(gf))->data = f;
-    ((cvalue_t*)ptr(gf))->flags.islispfunction = 1;
     size_t nw = cv_nwords((cvalue_t*)ptr(gf));
     // directly-callable values are assumed not to move for
-    // evaluator performance, so put guestfunction metadata on the
+    // evaluator performance, so put builtin func metadata on the
     // unmanaged heap
     cvalue_t *buf = malloc_aligned(nw * sizeof(value_t), 8);
     memcpy(buf, ptr(gf), nw*sizeof(value_t));
@@ -840,36 +753,32 @@ value_t guestfunc(guestfunc_t f)
 }
 
 #define cv_intern(tok) tok##sym = symbol(#tok)
-#define ctor_cv_intern(tok) cv_intern(tok); set(tok##sym, guestfunc(cvalue_##tok))
-#define symbol_dlcache(s) (((symbol_t*)ptr(s))->dlcache)
-#define cache_initfunc(tok) symbol_dlcache(tok##sym) = &cvalue_##tok##_init
+#define ctor_cv_intern(tok) cv_intern(tok);set(tok##sym, cbuiltin(cvalue_##tok))
+
+void types_init();
 
 void cvalues_init()
 {
-    int i;
+    htable_new(&TypeTable, 256);
 
-    // compute struct field alignment required for primitives of sizes 1-8
-    for(i=0; i < 8; i++)
-        struct_aligns[i] -= (i+1);
-    ALIGN2 = struct_aligns[1];
-    ALIGN4 = struct_aligns[3];
-    ALIGN8 = struct_aligns[7];
-    ALIGNPTR = struct_aligns[sizeof(void*)-1];
+    // compute struct field alignment required for primitives
+    ALIGN2   = sizeof(struct { char a; int16_t i; }) - 2;
+    ALIGN4   = sizeof(struct { char a; int32_t i; }) - 4;
+    ALIGN8   = sizeof(struct { char a; int64_t i; }) - 8;
+    ALIGNPTR = sizeof(struct { char a; void   *i; }) - sizeof(void*);
 
-    cv_intern(uint32);
     cv_intern(pointer);
     cfunctionsym = symbol("c-function");
-    cv_intern(lispvalue);
-    gftypesym = symbol("*guest-function-type*");
-    setc(gftypesym, listn(3, cfunctionsym, lispvaluesym,
-                          list2(list2(pointersym, lispvaluesym), uint32sym)));
-    set(uint32sym, guestfunc(cvalue_uint32));
+
+    builtintype = define_opaque_type(builtinsym, sizeof(builtin_t), NULL,
+                                     NULL);
 
     ctor_cv_intern(int8);
     ctor_cv_intern(uint8);
     ctor_cv_intern(int16);
     ctor_cv_intern(uint16);
     ctor_cv_intern(int32);
+    ctor_cv_intern(uint32);
     ctor_cv_intern(int64);
     ctor_cv_intern(uint64);
     ctor_cv_intern(char);
@@ -884,40 +793,21 @@ void cvalues_init()
     cv_intern(struct);
     cv_intern(union);
     cv_intern(void);
-    set(symbol("c-value"), guestfunc(cvalue_new));
-    set(symbol("get-int8"), guestfunc(cvalue_get_int8));
-    set(symbol("set-int8"), guestfunc(cvalue_set_int8));
 
-    cv_intern(autorelease);
-    ctor_cv_intern(typeof);
-    ctor_cv_intern(sizeof);
-
-    // set up references to the init functions for each primitive type.
-    // this is used for fast access in constructors for compound types
-    // like arrays that need to initialize (but not allocate) elements.
-    cache_initfunc(int8);
-    cache_initfunc(uint8);
-    cache_initfunc(int16);
-    cache_initfunc(uint16);
-    cache_initfunc(int32);
-    cache_initfunc(uint32);
-    cache_initfunc(int64);
-    cache_initfunc(uint64);
-    cache_initfunc(char);
-    cache_initfunc(wchar);
-    cache_initfunc(long);
-    cache_initfunc(ulong);
-    cache_initfunc(float);
-    cache_initfunc(double);
-
-    cache_initfunc(array);
-    cache_initfunc(enum);
+    set(symbol("c-value"), cbuiltin(cvalue_new));
+    set(symbol("get-int8"), cbuiltin(cvalue_get_int8));
+    set(symbol("set-int8"), cbuiltin(cvalue_set_int8));
+    set(symbol("typeof"), cbuiltin(cvalue_typeof));
+    set(symbol("sizeof"), cbuiltin(cvalue_sizeof));
+    // todo: autorelease
 
     stringtypesym = symbol("*string-type*");
     setc(stringtypesym, list2(arraysym, charsym));
 
     wcstringtypesym = symbol("*wcstring-type*");
     setc(wcstringtypesym, list2(arraysym, wcharsym));
+
+    types_init();
 
     emptystringsym = symbol("*empty-string*");
     setc(emptystringsym, cvalue_static_cstring(""));
