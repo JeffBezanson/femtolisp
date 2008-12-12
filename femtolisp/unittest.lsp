@@ -66,6 +66,8 @@
 
 (assert (equal (string 'sym #char(65) #wchar(945) "blah") "symA\u03B1blah"))
 
+; this crashed once
+(for 1 10 (lambda (i) 0))
 
 ; ok, a couple end-to-end tests as well
 (define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))

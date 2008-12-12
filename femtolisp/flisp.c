@@ -1163,7 +1163,8 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                 f = Stack[SP-5];
                 Stack[SP-3] = car_(f);     // lambda list
                 Stack[SP-2] = fixnum(s);   // argument value
-                v = eval_sexpr(car_(cdr_(f)), SP-3, 0);
+                v = car_(cdr_(f));
+                if (!selfevaluating(v)) v = eval_sexpr(v, SP-3, 0);
             }
             break;
         case F_SPECIAL_APPLY:
