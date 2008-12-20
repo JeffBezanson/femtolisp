@@ -7,6 +7,9 @@
 #include "llt.h"
 #include "flisp.h"
 
+static value_t tablesym;
+static fltype_t *tabletype;
+
 /*
   there are 2 kinds of hash tables (eq and equal), each with some
   optimized special cases. here are the building blocks:
@@ -36,8 +39,23 @@ typedef struct {
     htable_t ht;
 } fltable_t;
 
-void print_htable(value_t h, ios_t *f, int princ)
+void print_htable(value_t v, ios_t *f, int princ)
 {
+    fltable_t *pt = (fltable_t*)cv_data((cvalue_t*)ptr(v));
+    htable_t *h = &pt->ht;
+    size_t i;
+    int first=1;
+    fl_print_str("#table(", f);
+    for(i=0; i < h->size; i+=2) {
+        if (h->table[i+1] != HT_NOTFOUND) {
+            if (!first) fl_print_str("  ", f);
+            fl_print_child(f, (value_t)h->table[i], princ);
+            fl_print_chr(' ', f);
+            fl_print_child(f, (value_t)h->table[i+1], princ);
+            first = 0;
+        }
+    }
+    fl_print_chr(')', f);
 }
 
 void free_htable(value_t self)
@@ -57,27 +75,50 @@ void relocate_htable(value_t oldv, value_t newv)
     }
 }
 
+void print_traverse_htable(value_t self)
+{
+    fltable_t *pt = (fltable_t*)cv_data((cvalue_t*)ptr(self));
+    htable_t *h = &pt->ht;
+    size_t i;
+    for(i=0; i < h->size; i++) {
+        if (h->table[i] != HT_NOTFOUND)
+            print_traverse((value_t)h->table[i]);
+    }
+}
+
 void rehash_htable(value_t oldv, value_t newv)
 {
 }
 
-cvtable_t h_r1_vtable = { print_htable, NULL, free_htable, NULL };
-cvtable_t h_r2_vtable = { print_htable, relocate_htable, free_htable, NULL };
-cvtable_t h_r3_vtable = { print_htable, rehash_htable, free_htable, NULL };
+cvtable_t h_r1_vtable = { print_htable, NULL, free_htable,
+                          print_traverse_htable };
+cvtable_t h_r2_vtable = { print_htable, relocate_htable, free_htable,
+                          print_traverse_htable };
+cvtable_t h_r3_vtable = { print_htable, rehash_htable, free_htable,
+                          print_traverse_htable };
 
 int ishashtable(value_t v)
 {
-    return 0;
-}
-
-value_t fl_table(value_t *args, u_int32_t nargs)
-{
-    return NIL;
+    return iscvalue(v) && cv_class((cvalue_t*)ptr(v)) == tabletype;
 }
 
 value_t fl_hashtablep(value_t *args, u_int32_t nargs)
 {
-    return NIL;
+    argcount("hashtablep", nargs, 1);
+    return ishashtable(args[0]) ? T : NIL;
+}
+
+value_t fl_table(value_t *args, u_int32_t nargs)
+{
+    if (nargs & 1)
+        lerror(ArgError, "table: arguments must come in pairs");
+    value_t nt = cvalue(tabletype, sizeof(fltable_t));
+    fltable_t *h = (fltable_t*)cv_data((cvalue_t*)ptr(nt));
+    htable_new(&h->ht, 8);
+    int i;
+    for(i=0; i < nargs; i+=2)
+        equalhash_put(&h->ht, args[i], args[i+1]);
+    return nt;
 }
 
 // (put table key value)
@@ -87,7 +128,7 @@ value_t fl_hash_put(value_t *args, u_int32_t nargs)
     return NIL;
 }
 
-// (get table key)
+// (get table key [default])
 value_t fl_hash_get(value_t *args, u_int32_t nargs)
 {
     argcount("get", nargs, 2);
@@ -106,4 +147,17 @@ value_t fl_hash_delete(value_t *args, u_int32_t nargs)
 {
     argcount("del", nargs, 2);
     return NIL;
+}
+
+static builtinspec_t tablefunc_info[] = {
+    { "table", fl_table },
+    { NULL, NULL }
+};
+
+void table_init()
+{
+    tablesym = symbol("table");
+    tabletype = define_opaque_type(tablesym, sizeof(fltable_t),
+                                   &h_r2_vtable, NULL);
+    assign_global_builtins(tablefunc_info);
 }

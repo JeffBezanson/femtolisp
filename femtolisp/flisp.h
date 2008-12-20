@@ -136,9 +136,6 @@ value_t compare(value_t a, value_t b);  // -1, 0, or 1
 value_t equal(value_t a, value_t b);    // T or nil
 int equal_lispvalue(value_t a, value_t b);
 uptrint_t hash_lispvalue(value_t a);
-value_t relocate_lispvalue(value_t v);
-void print_traverse(value_t v);
-value_t fl_hash(value_t *args, u_int32_t nargs);
 
 /* safe casts */
 cons_t *tocons(value_t v, char *fname);
@@ -164,6 +161,13 @@ typedef struct {
     void (*finalize)(value_t self);
     void (*print_traverse)(value_t self);
 } cvtable_t;
+
+/* functions needed to implement the value interface (cvtable_t) */
+value_t relocate_lispvalue(value_t v);
+void print_traverse(value_t v);
+void fl_print_chr(char c, ios_t *f);
+void fl_print_str(char *s, ios_t *f);
+void fl_print_child(ios_t *f, value_t v, int princ);
 
 typedef void (*cvinitfunc_t)(struct _fltype_t*, value_t, void*);
 
@@ -200,8 +204,8 @@ typedef struct {
 
 #define CV_OWNED_BIT  0x1
 #define CV_PARENT_BIT 0x2
-#define owned(cv)      ((cv)->type & CV_OWNED_BIT)
-#define hasparent(cv)  ((cv)->type & CV_PARENT_BIT)
+#define owned(cv)      ((uptrint_t)(cv)->type & CV_OWNED_BIT)
+#define hasparent(cv)  ((uptrint_t)(cv)->type & CV_PARENT_BIT)
 #define isinlined(cv)  ((cv)->data == &(cv)->_space[0])
 #define cv_class(cv)   ((fltype_t*)(((uptrint_t)(cv)->type)&~3))
 #define cv_len(cv)     ((cv)->len)
@@ -234,6 +238,7 @@ extern value_t stringtypesym, wcstringtypesym, emptystringsym;
 extern value_t unionsym, floatsym, doublesym, builtinsym;
 extern fltype_t *chartype, *wchartype;
 extern fltype_t *stringtype, *wcstringtype;
+extern fltype_t *builtintype;
 
 value_t cvalue(fltype_t *type, size_t sz);
 size_t ctype_sizeof(value_t type, int *palign);
@@ -250,8 +255,6 @@ value_t string_from_cstr(char *str);
 int isstring(value_t v);
 int isnumber(value_t v);
 value_t cvalue_compare(value_t a, value_t b);
-value_t cvalue_char(value_t *args, uint32_t nargs);
-value_t cvalue_wchar(value_t *args, uint32_t nargs);
 
 fltype_t *get_type(value_t t);
 fltype_t *get_array_type(value_t eltype);
@@ -272,5 +275,10 @@ typedef struct {
 } builtinspec_t;
 
 void assign_global_builtins(builtinspec_t *b);
+
+/* builtins */
+value_t fl_hash(value_t *args, u_int32_t nargs);
+value_t cvalue_char(value_t *args, uint32_t nargs);
+value_t cvalue_wchar(value_t *args, uint32_t nargs);
 
 #endif

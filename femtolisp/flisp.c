@@ -77,7 +77,6 @@ value_t printwidthsym;
 static value_t eval_sexpr(value_t e, uint32_t penv, int tail);
 static value_t *alloc_words(int n);
 static value_t relocate(value_t v);
-static void do_print(ios_t *f, value_t v, int princ);
 
 typedef struct _readstate_t {
     htable_t backrefs;
@@ -459,6 +458,9 @@ void gc(int mustgrow)
     }
     lasterror = relocate(lasterror);
     special_apply_form = relocate(special_apply_form);
+
+    sweep_finalizers();
+
 #ifdef VERBOSEGC
     printf("gc found %d/%d live conses\n",
            (curheap-tospace)/sizeof(cons_t), heapsize/sizeof(cons_t));

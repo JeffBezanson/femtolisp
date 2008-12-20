@@ -18,15 +18,15 @@ value_t structsym, arraysym, enumsym, cfunctionsym, voidsym, pointersym;
 value_t unionsym;
 
 static htable_t TypeTable;
-static fltype_t *builtintype;
 static fltype_t *int8type, *uint8type;
 static fltype_t *int16type, *uint16type;
 static fltype_t *int32type, *uint32type;
 static fltype_t *int64type, *uint64type;
 static fltype_t *longtype, *ulongtype;
+static fltype_t *floattype, *doubletype;
        fltype_t *chartype, *wchartype;
        fltype_t *stringtype, *wcstringtype;
-static fltype_t *floattype, *doubletype;
+       fltype_t *builtintype;
 
 static void cvalue_init(fltype_t *type, value_t v, void *dest);
 
@@ -35,6 +35,60 @@ void cvalue_print(ios_t *f, value_t v, int princ);
 value_t cvalue_new(value_t *args, u_int32_t nargs);
 value_t cvalue_sizeof(value_t *args, u_int32_t nargs);
 value_t cvalue_typeof(value_t *args, u_int32_t nargs);
+
+// trigger unconditional GC after this many bytes are allocated
+#define ALLOC_LIMIT_TRIGGER 67108864
+
+static cvalue_t **Finalizers = NULL;
+static size_t nfinalizers=0;
+static size_t maxfinalizers=0;
+static size_t malloc_pressure = 0;
+
+static void add_finalizer(cvalue_t *cv)
+{
+    if (nfinalizers == maxfinalizers) {
+        size_t nn = (maxfinalizers==0 ? 256 : maxfinalizers*2);
+        cvalue_t **temp = (cvalue_t**)realloc(Finalizers, nn*sizeof(value_t));
+        if (temp == NULL)
+            lerror(MemoryError, "out of memory");
+        Finalizers = temp;
+        maxfinalizers = nn;
+    }
+    Finalizers[nfinalizers++] = cv;
+}
+
+// remove dead objects from finalization list in-place
+static void sweep_finalizers()
+{
+    cvalue_t **lst = Finalizers;
+    size_t n=0, ndel=0, l=nfinalizers;
+    cvalue_t *tmp;
+#define SWAP_sf(a,b) (tmp=a,a=b,b=tmp,1)
+    if (l == 0)
+        return;
+    do {
+        tmp = lst[n];
+        if (isforwarded((value_t)tmp)) {
+            // object is alive
+            lst[n] = (cvalue_t*)ptr(forwardloc((value_t)tmp));
+            n++;
+        }
+        else {
+            fltype_t *t = cv_class(tmp);
+            if (t->vtable != NULL && t->vtable->finalize != NULL) {
+                t->vtable->finalize(tagptr(tmp, TAG_CVALUE));
+            }
+            if (!isinlined(tmp) && owned(tmp)) {
+                free(cv_data(tmp));
+            }
+            ndel++;
+        }
+    } while ((n < l-ndel) && SWAP_sf(lst[n],lst[n+ndel]));
+
+    nfinalizers -= ndel;
+
+    malloc_pressure = 0;
+}
 
 // compute the size of the metadata object for a cvalue
 static size_t cv_nwords(cvalue_t *cv)
@@ -51,7 +105,7 @@ static size_t cv_nwords(cvalue_t *cv)
 static void autorelease(cvalue_t *cv)
 {
     cv->type = (fltype_t*)(((uptrint_t)cv->type) | CV_OWNED_BIT);
-    // TODO: add to finalizer list
+    add_finalizer(cv);
 }
 
 value_t cvalue(fltype_t *type, size_t sz)
@@ -61,15 +115,21 @@ value_t cvalue(fltype_t *type, size_t sz)
     if (sz <= MAX_INL_SIZE) {
         size_t nw = CVALUE_NWORDS - 1 + NWORDS(sz) + (sz==0 ? 1 : 0);
         pcv = (cvalue_t*)alloc_words(nw);
+        pcv->type = type;
         pcv->data = &pcv->_space[0];
+        if (type->vtable != NULL && type->vtable->finalize != NULL)
+            add_finalizer(pcv);
     }
     else {
+        if (malloc_pressure > ALLOC_LIMIT_TRIGGER)
+            gc(0);
         pcv = (cvalue_t*)alloc_words(CVALUE_NWORDS);
+        pcv->type = type;
         pcv->data = malloc(sz);
         autorelease(pcv);
+        malloc_pressure += sz;
     }
     pcv->len = sz;
-    pcv->type = type;
     return tagptr(pcv, TAG_CVALUE);
 }
 
@@ -439,6 +499,9 @@ value_t cvalue_relocate(value_t v)
     if (isinlined(cv))
         nv->data = &nv->_space[0];
     ncv = tagptr(nv, TAG_CVALUE);
+    fltype_t *t = cv_class(cv);
+    if (t->vtable != NULL && t->vtable->relocate != NULL)
+        t->vtable->relocate(v, ncv);
     forward(v, ncv);
     return ncv;
 }

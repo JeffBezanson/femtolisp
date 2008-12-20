@@ -30,6 +30,16 @@ static void outindent(int n, ios_t *f)
     }
 }
 
+void fl_print_chr(char c, ios_t *f)
+{
+    outc(c, f);
+}
+
+void fl_print_str(char *s, ios_t *f)
+{
+    outs(s, f);
+}
+
 void print_traverse(value_t v)
 {
     value_t *bp;
@@ -64,6 +74,9 @@ void print_traverse(value_t v)
         // don't consider shared references to ""
         if (!cv_isstr(cv) || cv_len(cv)!=0)
             mark_cons(v);
+        fltype_t *t = cv_class(cv);
+        if (t->vtable != NULL && t->vtable->print_traverse != NULL)
+            t->vtable->print_traverse(v);
     }
 }
 
@@ -219,7 +232,7 @@ static void print_pair(ios_t *f, value_t v, int princ)
         unmark_cons(v);
         unmark_cons(cdr_(v));
         outs(op, f);
-        do_print(f, car_(cdr_(v)), princ);
+        fl_print_child(f, car_(cdr_(v)), princ);
         return;
     }
     int startpos = HPOS;
@@ -232,12 +245,12 @@ static void print_pair(ios_t *f, value_t v, int princ)
     while (1) {
         lastv = VPOS;
         unmark_cons(v);
-        do_print(f, car_(v), princ);
+        fl_print_child(f, car_(v), princ);
         cd = cdr_(v);
         if (!iscons(cd) || ptrhash_has(&printconses, (void*)cd)) {
             if (cd != NIL) {
                 outs(" . ", f);
-                do_print(f, cd, princ);
+                fl_print_child(f, cd, princ);
             }
             outc(')', f);
             break;
@@ -292,7 +305,7 @@ static void print_pair(ios_t *f, value_t v, int princ)
 
 void cvalue_print(ios_t *f, value_t v, int princ);
 
-static void do_print(ios_t *f, value_t v, int princ)
+void fl_print_child(ios_t *f, value_t v, int princ)
 {
     value_t label;
     char *name;
@@ -338,7 +351,7 @@ static void do_print(ios_t *f, value_t v, int princ)
             unmark_cons(v);
             int i, sz = vector_size(v);
             for(i=0; i < sz; i++) {
-                do_print(f, vector_elt(v,i), princ);
+                fl_print_child(f, vector_elt(v,i), princ);
                 if (i < sz-1) {
                     if (princ) {
                         outc(' ', f);
@@ -541,7 +554,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             size_t i;
             if (!weak) {
                 outs("#array(", f);
-                do_print(f, eltype, princ);
+                fl_print_child(f, eltype, princ);
                 if (cnt > 0)
                     outc(' ', f);
             }
@@ -563,14 +576,14 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             value_t sym = list_nth(car(cdr_(type)), *(size_t*)data);
             if (!weak) {
                 outs("#enum(", f);
-                do_print(f, car(cdr_(type)), princ);
+                fl_print_child(f, car(cdr_(type)), princ);
                 outc(' ', f);
             }
             if (sym == NIL) {
                 cvalue_printdata(f, data, len, int32sym, princ, 1);
             }
             else {
-                do_print(f, sym, princ);
+                fl_print_child(f, sym, princ);
             }
             if (!weak)
                 outc(')', f);
@@ -583,13 +596,17 @@ void cvalue_print(ios_t *f, value_t v, int princ)
     cvalue_t *cv = (cvalue_t*)ptr(v);
     void *data = cv_data(cv);
 
-    if (isbuiltinish(v)) {
+    if (cv_class(cv) == builtintype) {
         HPOS+=ios_printf(f, "#<builtin @0x%08lx>",
                          (unsigned long)(builtin_t)data);
-        return;
     }
-
-    cvalue_printdata(f, data, cv_len(cv), cv_type(cv), princ, 0);
+    else if (cv_class(cv)->vtable != NULL &&
+             cv_class(cv)->vtable->print != NULL) {
+        cv_class(cv)->vtable->print(v, f, princ);
+    }
+    else {
+        cvalue_printdata(f, data, cv_len(cv), cv_type(cv), princ, 0);
+    }
 }
 
 static void set_print_width()
@@ -613,7 +630,7 @@ void print(ios_t *f, value_t v, int princ)
     print_traverse(v);
     HPOS = VPOS = 0;
 
-    do_print(f, v, princ);
+    fl_print_child(f, v, princ);
 
     htable_reset(&printconses, 32);
 }

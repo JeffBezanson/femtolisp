@@ -102,6 +102,9 @@ possible optimizations:
   env in-place in tail position
 - allocate memory by mmap'ing a large uncommitted block that we cut
   in half. then each half heap can be grown without moving addresses.
+- try making (list ...) a builtin by moving the list-building code to
+  a static function, see if vararg call performance is affected.
+- try making foldl a builtin, implement table iterator as table.foldl
 * represent lambda environment as a vector (in lispv)
 x setq builtin (didn't help)
 (- list builtin, to use cons_reserve)
@@ -547,7 +550,7 @@ lisp variant ideas
 cvalues reserves the following global symbols:
 
 int8, uint8, int16, uint16, int32, uint32, int64, uint64
-char, uchar, short, ushort, int, uint, long, ulong
+char, uchar, wchar, short, ushort, int, uint, long, ulong
 float, double
 struct, array, enum, union, function, void, pointer, lispvalue
 
@@ -919,10 +922,9 @@ switch to miser mode, otherwise default is ok, for example:
 -----------------------------------------------------------------------------
 
 consolidated todo list as of 8/30:
-- new cvalues, types representation
+* new cvalues, types representation
 - use the unused tag for TAG_PRIM, add smaller prim representation
-- implement support for defining new opaque values
-- finalizers in gc
+* finalizers in gc
 - hashtable
 - expose io stream object
 
