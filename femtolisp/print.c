@@ -332,7 +332,14 @@ void fl_print_child(ios_t *f, value_t v, int princ)
             outs(builtin_names[uintval(v)], f);
             break;
         }
-        cvalue_print(f, v, princ);
+        label = (value_t)ptrhash_get(&reverse_dlsym_lookup_table, ptr(v));
+        if (label == (value_t)HT_NOTFOUND) {
+            HPOS += ios_printf(f, "#<builtin @0x%08lx>",
+                               (unsigned long)(builtin_t)ptr(v));
+        }
+        else {
+            HPOS += ios_printf(f, "#builtin(%s)", symbol_name(label));
+        }
         break;
     case TAG_CVALUE:
     case TAG_VECTOR:

@@ -69,7 +69,7 @@ uint32_t SP = 0;
 value_t NIL, T, LAMBDA, QUOTE, IF, TRYCATCH;
 value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT;
 value_t IOError, ParseError, TypeError, ArgError, UnboundError, MemoryError;
-value_t DivideError, BoundsError, Error;
+value_t DivideError, BoundsError, Error, KeyError;
 value_t conssym, symbolsym, fixnumsym, vectorsym, builtinsym;
 value_t defunsym, defmacrosym, forsym, labelsym, printprettysym;
 value_t printwidthsym;
@@ -335,17 +335,17 @@ value_t alloc_vector(size_t n, int init)
     return v;
 }
 
+// cvalues --------------------------------------------------------------------
+
+#include "cvalues.c"
+#include "types.c"
+
 // print ----------------------------------------------------------------------
 
 static int isnumtok(char *tok, value_t *pval);
 static int symchar(char c);
 
 #include "print.c"
-
-// cvalues --------------------------------------------------------------------
-
-#include "cvalues.c"
-#include "types.c"
 
 // collector ------------------------------------------------------------------
 
@@ -1193,9 +1193,8 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             noeval = 1;
             goto apply_lambda;
         default:
-            // a guest function is a cvalue tagged as a builtin
-            cv = (cvalue_t*)ptr(f);
-            v = ((builtin_t)cv->data)(&Stack[saveSP+1], nargs);
+            // function pointer tagged as a builtin
+            v = ((builtin_t)ptr(f))(&Stack[saveSP+1], nargs);
         }
         SP = saveSP;
         return v;
@@ -1317,7 +1316,7 @@ static char *EXEDIR;
 void assign_global_builtins(builtinspec_t *b)
 {
     while (b->name != NULL) {
-        set(symbol(b->name), cbuiltin(b->fptr));
+        set(symbol(b->name), cbuiltin(b->name, b->fptr));
         b++;
     }
 }
@@ -1350,6 +1349,7 @@ void lisp_init(void)
     TypeError = symbol("type-error");
     ArgError = symbol("arg-error");
     UnboundError = symbol("unbound-error");
+    KeyError = symbol("key-error");
     MemoryError = symbol("memory-error");
     BoundsError = symbol("bounds-error");
     DivideError = symbol("divide-error");
@@ -1389,8 +1389,8 @@ void lisp_init(void)
 #endif
 
     cvalues_init();
-    set(symbol("gensym"), cbuiltin(gensym));
-    set(symbol("hash"), cbuiltin(fl_hash));
+    set(symbol("gensym"), cbuiltin("gensym", gensym));
+    set(symbol("hash"), cbuiltin("hash", fl_hash));
 
     char buf[1024];
     char *exename = get_exename(buf, sizeof(buf));

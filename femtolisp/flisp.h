@@ -148,7 +148,7 @@ void lerror(value_t e, char *format, ...) __attribute__ ((__noreturn__));
 void raise(value_t e) __attribute__ ((__noreturn__));
 void type_error(char *fname, char *expected, value_t got) __attribute__ ((__noreturn__));
 void bounds_error(char *fname, value_t arr, value_t ind) __attribute__ ((__noreturn__));
-extern value_t ArgError, IOError;
+extern value_t ArgError, IOError, KeyError;
 static inline void argcount(char *fname, int nargs, int c)
 {
     if (nargs != c)
@@ -245,7 +245,7 @@ size_t ctype_sizeof(value_t type, int *palign);
 value_t cvalue_copy(value_t v);
 value_t cvalue_from_data(fltype_t *type, void *data, size_t sz);
 value_t cvalue_from_ref(fltype_t *type, void *ptr, size_t sz, value_t parent);
-value_t cbuiltin(builtin_t f);
+value_t cbuiltin(char *name, builtin_t f);
 size_t cvalue_arraylen(value_t v);
 value_t size_wrap(size_t sz);
 size_t toulong(value_t n, char *fname);

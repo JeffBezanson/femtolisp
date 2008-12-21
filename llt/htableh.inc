@@ -7,7 +7,7 @@ void *HTNAME##_get(htable_t *h, void *key);                     \
 void HTNAME##_put(htable_t *h, void *key, void *val);           \
 void HTNAME##_adjoin(htable_t *h, void *key, void *val);        \
 int HTNAME##_has(htable_t *h, void *key);                       \
-void HTNAME##_remove(htable_t *h, void *key);                   \
+int HTNAME##_remove(htable_t *h, void *key);                    \
 void **HTNAME##_bp(htable_t *h, void *key);
 
 // return value, or HT_NOTFOUND if key not found

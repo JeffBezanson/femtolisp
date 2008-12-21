@@ -18,6 +18,7 @@ value_t structsym, arraysym, enumsym, cfunctionsym, voidsym, pointersym;
 value_t unionsym;
 
 static htable_t TypeTable;
+static htable_t reverse_dlsym_lookup_table;
 static fltype_t *int8type, *uint8type;
 static fltype_t *int16type, *uint16type;
 static fltype_t *int32type, *uint32type;
@@ -802,8 +803,24 @@ value_t cvalue_set_int8(value_t *args, u_int32_t nargs)
     return args[2];
 }
 
-value_t cbuiltin(builtin_t f)
+value_t fl_builtin(value_t *args, u_int32_t nargs)
 {
+    argcount("builtin", nargs, 1);
+    symbol_t *name = tosymbol(args[0], "builtin");
+    builtin_t f = (builtin_t)name->dlcache;
+    if (f == NULL) {
+        lerror(ArgError, "builtin: function not found");
+    }
+    return tagptr(f, TAG_BUILTIN);
+}
+
+value_t cbuiltin(char *name, builtin_t f)
+{
+    value_t sym = symbol(name);
+    ((symbol_t*)ptr(sym))->dlcache = f;
+    ptrhash_put(&reverse_dlsym_lookup_table, f, (void*)sym);
+    return tagptr(f, TAG_BUILTIN);
+    /*
     value_t gf = cvalue(builtintype, sizeof(void*));
     ((cvalue_t*)ptr(gf))->data = f;
     size_t nw = cv_nwords((cvalue_t*)ptr(gf));
@@ -813,16 +830,19 @@ value_t cbuiltin(builtin_t f)
     cvalue_t *buf = malloc_aligned(nw * sizeof(value_t), 8);
     memcpy(buf, ptr(gf), nw*sizeof(value_t));
     return tagptr(buf, TAG_BUILTIN);
+    */
 }
 
 #define cv_intern(tok) tok##sym = symbol(#tok)
-#define ctor_cv_intern(tok) cv_intern(tok);set(tok##sym, cbuiltin(cvalue_##tok))
+#define ctor_cv_intern(tok) \
+    cv_intern(tok);set(tok##sym, cbuiltin(#tok, cvalue_##tok))
 
 void types_init();
 
 void cvalues_init()
 {
     htable_new(&TypeTable, 256);
+    htable_new(&reverse_dlsym_lookup_table, 256);
 
     // compute struct field alignment required for primitives
     ALIGN2   = sizeof(struct { char a; int16_t i; }) - 2;
@@ -857,11 +877,12 @@ void cvalues_init()
     cv_intern(union);
     cv_intern(void);
 
-    set(symbol("c-value"), cbuiltin(cvalue_new));
-    set(symbol("get-int8"), cbuiltin(cvalue_get_int8));
-    set(symbol("set-int8"), cbuiltin(cvalue_set_int8));
-    set(symbol("typeof"), cbuiltin(cvalue_typeof));
-    set(symbol("sizeof"), cbuiltin(cvalue_sizeof));
+    set(symbol("c-value"), cbuiltin("c-value", cvalue_new));
+    set(symbol("get-int8"), cbuiltin("get-int8", cvalue_get_int8));
+    set(symbol("set-int8"), cbuiltin("set-int8", cvalue_set_int8));
+    set(symbol("typeof"), cbuiltin("typeof", cvalue_typeof));
+    set(symbol("sizeof"), cbuiltin("sizeof", cvalue_sizeof));
+    set(symbol("builtin"), cbuiltin("builtin", fl_builtin));
     // todo: autorelease
 
     stringtypesym = symbol("*string-type*");

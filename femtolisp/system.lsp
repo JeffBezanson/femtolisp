@@ -87,8 +87,8 @@
 
 (define (cadr x) (car (cdr x)))
 
-(setq *special-forms* '(quote cond if and or while lambda label trycatch
-                        %top progn))
+;(setq *special-forms* '(quote cond if and or while lambda label trycatch
+;                        %top progn))
 
 (defun macroexpand (e)
   ((label mexpand
@@ -420,14 +420,6 @@
            (setq l (cons (aref v (- n i)) l))))
     l))
 
-(defun vector.map (f v)
-  (let* ((n (length v))
-         (nv (vector.alloc n)))
-    (for 0 (- n 1)
-         (lambda (i)
-           (aset nv i (f (aref v i)))))
-    nv))
-
 (defun self-evaluating-p (x)
   (or (eq x nil)
       (eq x T)
@@ -493,3 +485,21 @@
        (prog1
            ,expr
          (princ "Elapsed time: " (- (time.now) ,t0) " seconds\n")))))
+
+(defun vector.map (f v)
+  (let* ((n (length v))
+         (nv (vector.alloc n)))
+    (for 0 (- n 1)
+         (lambda (i)
+           (aset nv i (f (aref v i)))))
+    nv))
+
+(defun table.pairs (t)
+  (table.foldl (lambda (k v z) (cons (cons k v) z))
+               () t))
+(defun table.keys (t)
+  (table.foldl (lambda (k v z) (cons k z))
+               () t))
+(defun table.values (t)
+  (table.foldl (lambda (k v z) (cons v z))
+               () t))

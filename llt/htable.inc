@@ -126,11 +126,14 @@ int HTNAME##_has(htable_t *h, void *key)                                \
     return (HTNAME##_get(h,key) != HT_NOTFOUND);                        \
 }                                                                       \
                                                                         \
-void HTNAME##_remove(htable_t *h, void *key)                            \
+int HTNAME##_remove(htable_t *h, void *key)                             \
 {                                                                       \
     void **bp = HTNAME##_peek_bp(h, key);                               \
-    if (bp != NULL)                                                     \
+    if (bp != NULL) {                                                   \
         *bp = HT_NOTFOUND;                                              \
+        return 1;                                                       \
+    }                                                                   \
+    return 0;                                                           \
 }                                                                       \
                                                                         \
 void HTNAME##_adjoin(htable_t *h, void *key, void *val)                 \
