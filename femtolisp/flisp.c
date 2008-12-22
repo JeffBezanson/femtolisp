@@ -462,7 +462,7 @@ void gc(int mustgrow)
     sweep_finalizers();
 
 #ifdef VERBOSEGC
-    printf("gc found %d/%d live conses\n",
+    printf("GC: found %d/%d live conses\n",
            (curheap-tospace)/sizeof(cons_t), heapsize/sizeof(cons_t));
 #endif
     temp = tospace;
@@ -1460,6 +1460,7 @@ value_t load_file(char *fname)
     value_t volatile e, v=NIL;
     ios_t fi;
     ios_t * volatile f;
+    fname = strdup(fname);
     f = &fi; f = ios_file(f, fname, 0, 0);
     if (f == NULL) lerror(IOError, "file \"%s\" not found", fname);
     FL_TRY {
@@ -1476,8 +1477,10 @@ value_t load_file(char *fname)
         snprintf(&lerrorbuf[msglen], sizeof(lerrorbuf)-msglen,
                  "\nin file \"%s\"", fname);
         lerrorbuf[sizeof(lerrorbuf)-1] = '\0';
+        free(fname);
         raise(lasterror);
     }
+    free(fname);
     ios_close(f);
     return v;
 }

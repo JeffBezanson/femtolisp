@@ -11,22 +11,9 @@
 static value_t tablesym;
 static fltype_t *tabletype;
 
-typedef struct {
-    void *(*get)(void *t, void *key);
-    void (*remove)(void *t, void *key);
-    void **(*bp)(void *t, void *key);
-} table_interface_t;
-
-typedef struct {
-    table_interface_t *ti;
-    ulong_t nkeys;
-    htable_t ht;
-} fltable_t;
-
 void print_htable(value_t v, ios_t *f, int princ)
 {
-    fltable_t *pt = (fltable_t*)cv_data((cvalue_t*)ptr(v));
-    htable_t *h = &pt->ht;
+    htable_t *h = (htable_t*)cv_data((cvalue_t*)ptr(v));
     size_t i;
     int first=1;
     fl_print_str("#table(", f);
@@ -44,8 +31,7 @@ void print_htable(value_t v, ios_t *f, int princ)
 
 void print_traverse_htable(value_t self)
 {
-    fltable_t *pt = (fltable_t*)cv_data((cvalue_t*)ptr(self));
-    htable_t *h = &pt->ht;
+    htable_t *h = (htable_t*)cv_data((cvalue_t*)ptr(self));
     size_t i;
     for(i=0; i < h->size; i+=2) {
         if (h->table[i+1] != HT_NOTFOUND) {
@@ -57,15 +43,16 @@ void print_traverse_htable(value_t self)
 
 void free_htable(value_t self)
 {
-    fltable_t *pt = (fltable_t*)cv_data((cvalue_t*)ptr(self));
-    htable_free(&pt->ht);
+    htable_t *h = (htable_t*)cv_data((cvalue_t*)ptr(self));
+    htable_free(h);
 }
 
 void relocate_htable(value_t oldv, value_t newv)
 {
-    (void)oldv;
-    fltable_t *pt = (fltable_t*)cv_data((cvalue_t*)ptr(newv));
-    htable_t *h = &pt->ht;
+    htable_t *oldh = (htable_t*)cv_data((cvalue_t*)ptr(oldv));
+    htable_t *h = (htable_t*)cv_data((cvalue_t*)ptr(newv));
+    if (oldh->table == &oldh->_space[0])
+        h->table = &h->_space[0];
     size_t i;
     for(i=0; i < h->size; i++) {
         if (h->table[i] != HT_NOTFOUND)
@@ -81,16 +68,16 @@ int ishashtable(value_t v)
     return iscvalue(v) && cv_class((cvalue_t*)ptr(v)) == tabletype;
 }
 
-value_t fl_hashtablep(value_t *args, uint32_t nargs)
+value_t fl_tablep(value_t *args, uint32_t nargs)
 {
-    argcount("hashtablep", nargs, 1);
+    argcount("tablep", nargs, 1);
     return ishashtable(args[0]) ? T : NIL;
 }
 
-static fltable_t *totable(value_t v, char *fname)
+static htable_t *totable(value_t v, char *fname)
 {
     if (ishashtable(v))
-        return (fltable_t*)cv_data((cvalue_t*)ptr(v));
+        return (htable_t*)cv_data((cvalue_t*)ptr(v));
     type_error(fname, "table", v);
     return NULL;
 }
@@ -99,12 +86,21 @@ value_t fl_table(value_t *args, uint32_t nargs)
 {
     if (nargs & 1)
         lerror(ArgError, "table: arguments must come in pairs");
-    value_t nt = cvalue(tabletype, sizeof(fltable_t));
-    fltable_t *h = (fltable_t*)cv_data((cvalue_t*)ptr(nt));
-    htable_new(&h->ht, 8);
+    value_t nt;
+    // prevent small tables from being added to finalizer list
+    if (nargs <= HT_N_INLINE) {
+        tabletype->vtable->finalize = NULL;
+        nt = cvalue(tabletype, sizeof(htable_t));
+        tabletype->vtable->finalize = free_htable;
+    }
+    else {
+        nt = cvalue(tabletype, 2*sizeof(void*));
+    }
+    htable_t *h = (htable_t*)cv_data((cvalue_t*)ptr(nt));
+    htable_new(h, nargs/2);
     uint32_t i;
     for(i=0; i < nargs; i+=2)
-        equalhash_put(&h->ht, (void*)args[i], (void*)args[i+1]);
+        equalhash_put(h, (void*)args[i], (void*)args[i+1]);
     return nt;
 }
 
@@ -112,8 +108,15 @@ value_t fl_table(value_t *args, uint32_t nargs)
 value_t fl_table_put(value_t *args, uint32_t nargs)
 {
     argcount("put", nargs, 3);
-    fltable_t *pt = totable(args[0], "put");
-    equalhash_put(&pt->ht, (void*)args[1], (void*)args[2]);
+    htable_t *h = totable(args[0], "put");
+    void **table0 = h->table;
+    equalhash_put(h, (void*)args[1], (void*)args[2]);
+    // register finalizer if we outgrew inline space
+    if (table0 == &h->_space[0] && h->table != &h->_space[0]) {
+        cvalue_t *cv = (cvalue_t*)ptr(args[0]);
+        add_finalizer(cv);
+        cv->len = 2*sizeof(void*);
+    }
     return args[0];
 }
 
@@ -122,8 +125,8 @@ value_t fl_table_get(value_t *args, uint32_t nargs)
 {
     if (nargs != 3)
         argcount("get", nargs, 2);
-    fltable_t *pt = totable(args[0], "get");
-    value_t v = (value_t)equalhash_get(&pt->ht, (void*)args[1]);
+    htable_t *h = totable(args[0], "get");
+    value_t v = (value_t)equalhash_get(h, (void*)args[1]);
     if (v == (value_t)HT_NOTFOUND) {
         if (nargs == 3)
             return args[2];
@@ -136,16 +139,16 @@ value_t fl_table_get(value_t *args, uint32_t nargs)
 value_t fl_table_has(value_t *args, uint32_t nargs)
 {
     argcount("has", nargs, 2);
-    fltable_t *pt = totable(args[0], "has");
-    return equalhash_has(&pt->ht, (void*)args[1]) ? T : NIL;
+    htable_t *h = totable(args[0], "has");
+    return equalhash_has(h, (void*)args[1]) ? T : NIL;
 }
 
 // (del table key)
 value_t fl_table_del(value_t *args, uint32_t nargs)
 {
     argcount("del", nargs, 2);
-    fltable_t *pt = totable(args[0], "del");
-    if (!equalhash_remove(&pt->ht, (void*)args[1]))
+    htable_t *h = totable(args[0], "del");
+    if (!equalhash_remove(h, (void*)args[1]))
         lerror(KeyError, "del: key not found");
     return args[0];
 }
@@ -154,9 +157,9 @@ value_t fl_table_foldl(value_t *args, uint32_t nargs)
 {
     argcount("table.foldl", nargs, 3);
     PUSH(listn(3, NIL, NIL, NIL));
-    fltable_t *pt = totable(args[2], "table.foldl");
-    size_t i, n = pt->ht.size;
-    void **table = pt->ht.table;
+    htable_t *h = totable(args[2], "table.foldl");
+    size_t i, n = h->size;
+    void **table = h->table;
     value_t c;
     for(i=0; i < n; i+=2) {
         if (table[i+1] != HT_NOTFOUND) {
@@ -166,7 +169,7 @@ value_t fl_table_foldl(value_t *args, uint32_t nargs)
             car_(cdr_(cdr_(c))) = args[1];
             args[1] = apply(args[0], c);
             // reload pointer
-            table = ((fltable_t*)cv_data((cvalue_t*)ptr(args[2])))->ht.table;
+            table = ((htable_t*)cv_data((cvalue_t*)ptr(args[2])))->table;
         }
     }
     (void)POP();
@@ -175,6 +178,7 @@ value_t fl_table_foldl(value_t *args, uint32_t nargs)
 
 static builtinspec_t tablefunc_info[] = {
     { "table", fl_table },
+    { "tablep", fl_tablep },
     { "put", fl_table_put },
     { "get", fl_table_get },
     { "has", fl_table_has },
@@ -186,7 +190,7 @@ static builtinspec_t tablefunc_info[] = {
 void table_init()
 {
     tablesym = symbol("table");
-    tabletype = define_opaque_type(tablesym, sizeof(fltable_t),
+    tabletype = define_opaque_type(tablesym, sizeof(htable_t),
                                    &table_vtable, NULL);
     assign_global_builtins(tablefunc_info);
 }

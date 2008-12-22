@@ -1,9 +1,12 @@
 #ifndef __HTABLE_H_
 #define __HTABLE_H_
 
+#define HT_N_INLINE 16
+
 typedef struct {
     size_t size;
     void **table;
+    void *_space[HT_N_INLINE];
 } htable_t;
 
 // define this to be an invalid key/value

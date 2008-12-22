@@ -278,11 +278,9 @@
 
 (defmacro dotimes (var . body)
   (let ((v (car var))
-        (cnt (cadr var))
-        (lim (gensym)))
-    `(let ((,lim (- ,cnt 1)))
-       (for 0 ,lim
-            (lambda (,v) ,(f-body body))))))
+        (cnt (cadr var)))
+    `(for 0 (- ,cnt 1)
+          (lambda (,v) ,(f-body body)))))
 
 (defun map-int (f n)
   (if (<= n 0)
@@ -421,10 +419,10 @@
     l))
 
 (defun self-evaluating-p (x)
-  (or (eq x nil)
-      (eq x T)
-      (and (atom x)
-           (not (symbolp x)))))
+  (or (and (atom x)
+           (not (symbolp x)))
+      (and (constantp x)
+           (eq x (eval x)))))
 
 ; backquote
 (defmacro backquote (x) (bq-process x))
@@ -503,3 +501,8 @@
 (defun table.values (t)
   (table.foldl (lambda (k v z) (cons v z))
                () t))
+(defun table.clone (t)
+  (let ((nt (table)))
+    (table.foldl (lambda (k v z) (put nt k v))
+                 () t)
+    nt))

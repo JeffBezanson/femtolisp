@@ -241,6 +241,7 @@ extern fltype_t *stringtype, *wcstringtype;
 extern fltype_t *builtintype;
 
 value_t cvalue(fltype_t *type, size_t sz);
+void add_finalizer(cvalue_t *cv);
 size_t ctype_sizeof(value_t type, int *palign);
 value_t cvalue_copy(value_t v);
 value_t cvalue_from_data(fltype_t *type, void *data, size_t sz);

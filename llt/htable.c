@@ -14,11 +14,17 @@
 
 htable_t *htable_new(htable_t *h, size_t size)
 {
-    size = nextipow2(size);
-    size *= 2;  // 2 pointers per key/value pair
-    size *= 2;  // aim for 50% occupancy
-    h->size = size;
-    h->table = (void**)malloc(size*sizeof(void*));
+    if (size <= HT_N_INLINE/2) {
+        h->size = size = HT_N_INLINE;
+        h->table = &h->_space[0];
+    }
+    else {
+        size = nextipow2(size);
+        size *= 2;  // 2 pointers per key/value pair
+        size *= 2;  // aim for 50% occupancy
+        h->size = size;
+        h->table = (void**)malloc(size*sizeof(void*));
+    }
     if (h->table == NULL) return NULL;
     size_t i;
     for(i=0; i < size; i++)
@@ -28,13 +34,15 @@ htable_t *htable_new(htable_t *h, size_t size)
 
 void htable_free(htable_t *h)
 {
-    free(h->table);
+    if (h->table != &h->_space[0])
+        free(h->table);
 }
 
 // empty and reduce size
 void htable_reset(htable_t *h, size_t sz)
 {
-    if (h->size > sz*4) {
+    sz = nextipow2(sz);
+    if (h->size > sz*4 && h->size > HT_N_INLINE) {
         size_t newsz = sz*4;
         void **newtab = (void**)realloc(h->table, newsz*sizeof(void*));
         if (newtab == NULL)

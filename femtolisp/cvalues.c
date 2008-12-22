@@ -45,7 +45,7 @@ static size_t nfinalizers=0;
 static size_t maxfinalizers=0;
 static size_t malloc_pressure = 0;
 
-static void add_finalizer(cvalue_t *cv)
+void add_finalizer(cvalue_t *cv)
 {
     if (nfinalizers == maxfinalizers) {
         size_t nn = (maxfinalizers==0 ? 256 : maxfinalizers*2);
@@ -87,6 +87,10 @@ static void sweep_finalizers()
     } while ((n < l-ndel) && SWAP_sf(lst[n],lst[n+ndel]));
 
     nfinalizers -= ndel;
+#ifdef VERBOSEGC
+    if (ndel > 0)
+        printf("GC: finalized %d objects\n", ndel);
+#endif
 
     malloc_pressure = 0;
 }

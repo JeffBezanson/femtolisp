@@ -925,8 +925,7 @@ consolidated todo list as of 8/30:
 * new cvalues, types representation
 - use the unused tag for TAG_PRIM, add smaller prim representation
 * finalizers in gc
-- hashtable
-  - special representation for small tables w/o finalizer
+* hashtable
 - expose io stream object
 
 - enable print-shared for cvalues' types

@@ -7,7 +7,7 @@
 #define hash_size(h) ((h)->size/2)
 
 // compute empirical max-probe for a given size
-#define max_probe(size) ((size)>>5)
+#define max_probe(size) ((size)<=HT_N_INLINE/2 ? HT_N_INLINE/2 : (size)>>5)
 
 #define HTIMPL(HTNAME, HFUNC, EQFUNC)                                   \
 static void **HTNAME##_lookup_bp(htable_t *h, void *key)                \
@@ -49,6 +49,8 @@ static void **HTNAME##_lookup_bp(htable_t *h, void *key)                \
     ol = h->table;                                                      \
     if (sz >= (1<<19))                                                  \
         newsz = sz<<1;                                                  \
+    else if (sz <= HT_N_INLINE)                                         \
+        newsz = 32;                                                     \
     else                                                                \
         newsz = sz<<2;                                                  \
     /*printf("trying to allocate %d words.\n", newsz); fflush(stdout);*/ \
@@ -64,7 +66,8 @@ static void **HTNAME##_lookup_bp(htable_t *h, void *key)                \
             (*HTNAME##_lookup_bp(h, ol[i])) = ol[i+1];                  \
         }                                                               \
     }                                                                   \
-    free(ol);                                                           \
+    if (ol != &h->_space[0])                                            \
+        free(ol);                                                       \
                                                                         \
     sz = hash_size(h);                                                  \
     maxprobe = max_probe(sz);                                           \
