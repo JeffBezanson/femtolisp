@@ -411,44 +411,27 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
 {
     int64_t tmp=0;
 
-    if (type == charsym) {
-        // print chars as characters when possible
+    if (type == bytesym) {
         unsigned char ch = *(unsigned char*)data;
         if (princ)
             outc(ch, f);
         else if (weak)
-            HPOS+=ios_printf(f, "%hhu", ch);
-        else if (isprint(ch))
-            HPOS+=ios_printf(f, "#\\%c", ch);
+            HPOS+=ios_printf(f, "0x%hhx", ch);
         else
-            HPOS+=ios_printf(f, "#char(%hhu)", ch);
+            HPOS+=ios_printf(f, "#byte(0x%hhx)", ch);
     }
-    /*
-    else if (type == ucharsym) {
-        uchar ch = *(uchar*)data;
-        if (princ)
-            outc(ch, f);
-        else {
-            if (!weak)
-                ios_printf(f, "#uchar(");
-            ios_printf(f, "%hhu", ch);
-            if (!weak)
-                outs(")", f);
-        }
-    }
-    */
     else if (type == wcharsym) {
         uint32_t wc = *(uint32_t*)data;
         char seq[8];
-        if (weak)
-            HPOS+=ios_printf(f, "%d", (int)wc);
-        else if (princ || (iswprint(wc) && wc>0x7f)) {
-            // reader only reads #\c syntax as wchar if the code is >0x7f
+        if (princ || iswprint(wc)) {
             size_t nb = u8_toutf8(seq, sizeof(seq), &wc, 1);
             seq[nb] = '\0';
             // TODO: better multibyte handling
             if (!princ) outs("#\\", f);
             outs(seq, f);
+        }
+        else if (weak) {
+            HPOS+=ios_printf(f, "%d", (int)wc);
         }
         else {
             HPOS+=ios_printf(f, "#%s(%d)", symbol_name(type), (int)wc);
@@ -544,7 +527,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
                 elsize = ctype_sizeof(eltype, &junk);
                 cnt = elsize ? len/elsize : 0;
             }
-            if (eltype == charsym) {
+            if (eltype == bytesym) {
                 if (princ) {
                     ios_write(f, data, len);
                 }

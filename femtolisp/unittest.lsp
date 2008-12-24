@@ -64,7 +64,7 @@
 
 (assert (equal (uint64 (double -123)) #uint64(0xffffffffffffff85)))
 
-(assert (equal (string 'sym #char(65) #wchar(945) "blah") "symA\u03B1blah"))
+(assert (equal (string 'sym #byte(65) #wchar(945) "blah") "symA\u03B1blah"))
 
 ; this crashed once
 (for 1 10 (lambda (i) 0))

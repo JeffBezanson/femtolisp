@@ -189,13 +189,7 @@ static u_int32_t peek(ios_t *f)
             if (ios_getutf8(f, &cval) == IOS_EOF)
                 lerror(ParseError, "read: end of input in character constant");
             toktype = TOK_NUM;
-            tokval = fixnum(cval);
-            if (cval > 0x7f) {
-                tokval = cvalue_wchar(&tokval, 1);
-            }
-            else {
-                tokval = cvalue_char(&tokval, 1);
-            }
+            tokval = mk_wchar(cval);
         }
         else if ((char)ch == '(') {
             toktype = TOK_SHARPOPEN;
@@ -501,7 +495,7 @@ static value_t do_read_sexpr(ios_t *f, value_t label)
         PUSH(NIL);
         read_list(f, &Stack[SP-1], UNBOUND);
         v = POP();
-        return apply(symbol_value(sym), v);
+        return apply(toplevel_eval(sym), v);
     case TOK_OPENB:
         return read_vector(f, label, TOK_CLOSEB);
     case TOK_SHARPOPEN:

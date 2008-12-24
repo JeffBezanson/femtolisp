@@ -9,7 +9,7 @@ static int ALIGN2, ALIGN4, ALIGN8, ALIGNPTR;
 
 value_t int8sym, uint8sym, int16sym, uint16sym, int32sym, uint32sym;
 value_t int64sym, uint64sym;
-value_t longsym, ulongsym, charsym, wcharsym;
+value_t longsym, ulongsym, bytesym, wcharsym;
 value_t floatsym, doublesym;
 value_t gftypesym, stringtypesym, wcstringtypesym;
 value_t emptystringsym;
@@ -25,7 +25,7 @@ static fltype_t *int32type, *uint32type;
 static fltype_t *int64type, *uint64type;
 static fltype_t *longtype, *ulongtype;
 static fltype_t *floattype, *doubletype;
-       fltype_t *chartype, *wchartype;
+       fltype_t *bytetype, *wchartype;
        fltype_t *stringtype, *wcstringtype;
        fltype_t *builtintype;
 
@@ -231,11 +231,11 @@ static void cv_pin(cvalue_t *cv)
 }
 */
 
-#define num_ctor(typenam, cnvt, tag)                                    \
+#define num_ctor(typenam, ctype, cnvt, tag)                             \
 static void cvalue_##typenam##_init(fltype_t *type, value_t arg,        \
                                     void *dest)                         \
 {                                                                       \
-    typenam##_t n=0;                                                    \
+    ctype##_t n=0;                                                      \
     (void)type;                                                         \
     if (isfixnum(arg)) {                                                \
         n = numval(arg);                                                \
@@ -244,14 +244,14 @@ static void cvalue_##typenam##_init(fltype_t *type, value_t arg,        \
         cvalue_t *cv = (cvalue_t*)ptr(arg);                             \
         void *p = cv_data(cv);                                          \
         if (valid_numtype(cv_numtype(cv)))                              \
-            n = (typenam##_t)conv_to_##cnvt(p, cv_numtype(cv));         \
+            n = (ctype##_t)conv_to_##cnvt(p, cv_numtype(cv));           \
         else                                                            \
             goto cnvt_error;                                            \
     }                                                                   \
     else {                                                              \
         goto cnvt_error;                                                \
     }                                                                   \
-    *((typenam##_t*)dest) = n;                                          \
+    *((ctype##_t*)dest) = n;                                            \
     return;                                                             \
  cnvt_error:                                                            \
     type_error(#typenam, "number", arg);                                \
@@ -259,37 +259,37 @@ static void cvalue_##typenam##_init(fltype_t *type, value_t arg,        \
 value_t cvalue_##typenam(value_t *args, u_int32_t nargs)                \
 {                                                                       \
     if (nargs==0) { PUSH(fixnum(0)); args = &Stack[SP-1]; }             \
-    value_t cv = cvalue(typenam##type, sizeof(typenam##_t));            \
+    value_t cv = cvalue(typenam##type, sizeof(ctype##_t));              \
     cvalue_##typenam##_init(typenam##type,                              \
                             args[0], &((cvalue_t*)ptr(cv))->_space[0]); \
     return cv;                                                          \
 }                                                                       \
-value_t mk_##typenam(typenam##_t n)                                     \
+value_t mk_##typenam(ctype##_t n)                                       \
 {                                                                       \
-    value_t cv = cvalue(typenam##type, sizeof(typenam##_t));            \
-    *(typenam##_t*)&((cvalue_t*)ptr(cv))->_space[0] = n;                \
+    value_t cv = cvalue(typenam##type, sizeof(ctype##_t));              \
+    *(ctype##_t*)&((cvalue_t*)ptr(cv))->_space[0] = n;                  \
     return cv;                                                          \
 }
 
-num_ctor(int8, int32, T_INT8)
-num_ctor(uint8, uint32, T_UINT8)
-num_ctor(int16, int32, T_INT16)
-num_ctor(uint16, uint32, T_UINT16)
-num_ctor(int32, int32, T_INT32)
-num_ctor(uint32, uint32, T_UINT32)
-num_ctor(int64, int64, T_INT64)
-num_ctor(uint64, uint64, T_UINT64)
-num_ctor(char, uint32, T_UINT8)
-num_ctor(wchar, int32, T_INT32)
+num_ctor(int8, int8, int32, T_INT8)
+num_ctor(uint8, uint8, uint32, T_UINT8)
+num_ctor(int16, int16, int32, T_INT16)
+num_ctor(uint16, uint16, uint32, T_UINT16)
+num_ctor(int32, int32, int32, T_INT32)
+num_ctor(uint32, uint32, uint32, T_UINT32)
+num_ctor(int64, int64, int64, T_INT64)
+num_ctor(uint64, uint64, uint64, T_UINT64)
+num_ctor(byte,  uint8, uint32, T_UINT8)
+num_ctor(wchar, int32, int32, T_INT32)
 #ifdef BITS64
-num_ctor(long, int64, T_INT64)
-num_ctor(ulong, uint64, T_UINT64)
+num_ctor(long, long, int64, T_INT64)
+num_ctor(ulong, ulong, uint64, T_UINT64)
 #else
-num_ctor(long, int32, T_INT32)
-num_ctor(ulong, uint32, T_UINT32)
+num_ctor(long, long, int32, T_INT32)
+num_ctor(ulong, ulong, uint32, T_UINT32)
 #endif
-num_ctor(float, double, T_FLOAT)
-num_ctor(double, double, T_DOUBLE)
+num_ctor(float, float, double, T_FLOAT)
+num_ctor(double, double, double, T_DOUBLE)
 
 value_t size_wrap(size_t sz)
 {
@@ -311,14 +311,6 @@ size_t toulong(value_t n, char *fname)
     }
     type_error(fname, "number", n);
     return 0;
-}
-
-value_t char_from_code(uint32_t code)
-{
-    value_t ccode = fixnum(code);
-    if (code > 0x7f)
-        return cvalue_wchar(&ccode, 1);
-    return cvalue_char(&ccode, 1);
 }
 
 static void cvalue_enum_init(fltype_t *ft, value_t arg, void *dest)
@@ -457,7 +449,7 @@ static void cvalue_array_init(fltype_t *ft, value_t arg, void *dest)
 static value_t alloc_array(fltype_t *type, size_t sz)
 {
     value_t cv;
-    if (type->eltype == chartype) {
+    if (type->eltype == bytetype) {
         cv = cvalue_string(sz);
     }
     else {
@@ -556,7 +548,7 @@ static size_t cvalue_union_size(value_t type, int *palign)
 // *palign is an output argument giving the alignment required by type
 size_t ctype_sizeof(value_t type, int *palign)
 {
-    if (type == int8sym || type == uint8sym || type == charsym) {
+    if (type == int8sym || type == uint8sym || type == bytesym) {
         *palign = 1;
         return 1;
     }
@@ -672,7 +664,7 @@ static numerictype_t sym_to_numtype(value_t type)
 {
     if (type == int8sym)
         return T_INT8;
-    else if (type == uint8sym || type == charsym)
+    else if (type == uint8sym || type == bytesym)
         return T_UINT8;
     else if (type == int16sym)
         return T_INT16;
@@ -868,7 +860,7 @@ void cvalues_init()
     ctor_cv_intern(uint32);
     ctor_cv_intern(int64);
     ctor_cv_intern(uint64);
-    ctor_cv_intern(char);
+    ctor_cv_intern(byte);
     ctor_cv_intern(wchar);
     ctor_cv_intern(long);
     ctor_cv_intern(ulong);
@@ -890,7 +882,7 @@ void cvalues_init()
     // todo: autorelease
 
     stringtypesym = symbol("*string-type*");
-    setc(stringtypesym, list2(arraysym, charsym));
+    setc(stringtypesym, list2(arraysym, bytesym));
 
     wcstringtypesym = symbol("*wcstring-type*");
     setc(wcstringtypesym, list2(arraysym, wcharsym));

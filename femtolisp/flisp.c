@@ -904,7 +904,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                     v = size_wrap(cvalue_arraylen(Stack[SP-1]));
                     break;
                 }
-                else if (v == charsym) {
+                else if (v == bytesym) {
                     v = fixnum(1);
                     break;
                 }

@@ -212,7 +212,7 @@ typedef struct {
 #define cv_type(cv)    (cv_class(cv)->type)
 #define cv_data(cv)    ((cv)->data)
 #define cv_numtype(cv) (cv_class(cv)->numtype)
-#define cv_isstr(cv)   (cv_class(cv)->eltype == chartype)
+#define cv_isstr(cv)   (cv_class(cv)->eltype == bytetype)
 
 #define cvalue_data(v) cv_data((cvalue_t*)ptr(v))
 
@@ -232,11 +232,11 @@ typedef value_t (*builtin_t)(value_t*, uint32_t);
 
 extern value_t int8sym, uint8sym, int16sym, uint16sym, int32sym, uint32sym;
 extern value_t int64sym, uint64sym;
-extern value_t longsym, ulongsym, charsym, ucharsym, wcharsym;
+extern value_t longsym, ulongsym, bytesym, wcharsym;
 extern value_t structsym, arraysym, enumsym, cfunctionsym, voidsym, pointersym;
 extern value_t stringtypesym, wcstringtypesym, emptystringsym;
 extern value_t unionsym, floatsym, doublesym, builtinsym;
-extern fltype_t *chartype, *wchartype;
+extern fltype_t *bytetype, *wchartype;
 extern fltype_t *stringtype, *wcstringtype;
 extern fltype_t *builtintype;
 
@@ -266,9 +266,9 @@ value_t mk_double(double_t n);
 value_t mk_float(float_t n);
 value_t mk_uint32(uint32_t n);
 value_t mk_uint64(uint64_t n);
+value_t mk_wchar(int32_t n);
 value_t return_from_uint64(uint64_t Uaccum);
 value_t return_from_int64(int64_t Saccum);
-value_t char_from_code(uint32_t code);
 
 typedef struct {
     char *name;
@@ -279,7 +279,7 @@ void assign_global_builtins(builtinspec_t *b);
 
 /* builtins */
 value_t fl_hash(value_t *args, u_int32_t nargs);
-value_t cvalue_char(value_t *args, uint32_t nargs);
+value_t cvalue_byte(value_t *args, uint32_t nargs);
 value_t cvalue_wchar(value_t *args, uint32_t nargs);
 
 #endif

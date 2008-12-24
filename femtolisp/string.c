@@ -109,7 +109,7 @@ value_t fl_string(value_t *args, u_int32_t nargs)
         else if (iscvalue(args[i])) {
             temp = (cvalue_t*)ptr(args[i]);
             t = cv_type(temp);
-            if (t == charsym) {
+            if (t == bytesym) {
                 sz++;
                 continue;
             }
@@ -136,7 +136,7 @@ value_t fl_string(value_t *args, u_int32_t nargs)
             temp = (cvalue_t*)ptr(args[i]);
             t = cv_type(temp);
             data = cvalue_data(args[i]);
-            if (t == charsym) {
+            if (t == bytesym) {
                 *ptr++ = *(char*)data;
             }
             else if (t == wcharsym) {
@@ -225,7 +225,59 @@ value_t fl_string_char(value_t *args, u_int32_t nargs)
     size_t sl = u8_seqlen(&s[i]);
     if (sl > len || i > len-sl)
         bounds_error("string.char", args[0], args[1]);
-    return char_from_code(u8_nextchar(s, &i));
+    return mk_wchar(u8_nextchar(s, &i));
+}
+
+static value_t mem_find_byte(char *s, char c, size_t start, size_t len)
+{
+    char *p = memchr(s+start, c, len-start);
+    if (p == NULL)
+        return NIL;
+    return size_wrap((size_t)(p - s));
+}
+
+value_t fl_string_find(value_t *args, u_int32_t nargs)
+{
+    char cbuf[8];
+    size_t start = 0;
+    if (nargs == 3)
+        start = toulong(args[2], "string.find");
+    else
+        argcount("string.find", nargs, 2);
+    char *s = tostring(args[0], "string.find");
+    size_t len = cv_len((cvalue_t*)ptr(args[0]));
+    if (start > len)
+        bounds_error("string.find", args[0], args[2]);
+    char *needle=NULL; size_t needlesz=0;
+    if (!iscvalue(args[1]))
+        type_error("string.find", "string", args[1]);
+    cvalue_t *cv = (cvalue_t*)ptr(args[1]);
+    if (isstring(args[1])) {
+        needlesz = cv_len(cv);
+        needle = (char*)cv_data(cv);
+    }
+    else if (cv_class(cv) == wchartype) {
+        uint32_t c = *(uint32_t*)cv_data(cv);
+        if (c <= 0x7f)
+            return mem_find_byte(s, (char)c, start, len);
+        needlesz = u8_toutf8(cbuf, sizeof(cbuf), &c, 1);
+        needle = cbuf;
+    }
+    else if (cv_class(cv) == bytetype) {
+        return mem_find_byte(s, *(char*)cv_data(cv), start, len);
+    }
+    if (needlesz == 0)
+        return fixnum(start);
+    if (needlesz > len-start)
+        return NIL;
+    size_t i;
+    for(i=start; i < len; i++) {
+        if (s[i] == needle[0]) {
+            if (!memcmp(&s[i], needle, needlesz))
+                return size_wrap(i);
+        }
+    }
+    return NIL;
 }
 
 value_t fl_string_inc(value_t *args, u_int32_t nargs)
@@ -274,6 +326,7 @@ static builtinspec_t stringfunc_info[] = {
     { "string.length", fl_string_length },
     { "string.split", fl_string_split },
     { "string.sub", fl_string_sub },
+    { "string.find", fl_string_find },
     { "string.char", fl_string_char },
     { "string.inc", fl_string_inc },
     { "string.dec", fl_string_dec },

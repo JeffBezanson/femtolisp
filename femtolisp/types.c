@@ -114,7 +114,7 @@ void types_init()
     mk_primtype(uint64);
     mk_primtype(long);
     mk_primtype(ulong);
-    mk_primtype(char);
+    mk_primtype(byte);
     mk_primtype(wchar);
     mk_primtype(float);
     mk_primtype(double);

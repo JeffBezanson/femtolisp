@@ -818,7 +818,8 @@ String API
 *string.split   - (string.split s sep-chars)
  string.trim    - (string.trim s chars-at-start chars-at-end)
 *string.reverse
- string.find    - (string.find s str|char), or nil if not found
+*string.find    - (string.find s str|char [offs]), or nil if not found
+ string.rfind
  string.map     - (string.map f s)
 *string.encode  - to utf8
 *string.decode  - from utf8 to UCS

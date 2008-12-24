@@ -87,8 +87,8 @@
 
 (define (cadr x) (car (cdr x)))
 
-;(setq *special-forms* '(quote cond if and or while lambda label trycatch
-;                        %top progn))
+;(setq *special-forms* '(quote cond if and or while lambda trycatch
+;                        setq progn))
 
 (defun macroexpand (e)
   ((label mexpand
@@ -101,8 +101,7 @@
               (cond ((and (consp e)
                           (not (eq (car e) 'quote)))
                      (let ((newenv
-                            (if (and (or (eq (car e) 'lambda)
-                                         (eq (car e) 'label))
+                            (if (and (eq (car e) 'lambda)
                                      (consp (cdr e)))
                                 (append.2 (cadr e) env)
                               env)))
