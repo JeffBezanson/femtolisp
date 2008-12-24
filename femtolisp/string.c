@@ -248,15 +248,11 @@ value_t fl_string_find(value_t *args, u_int32_t nargs)
     size_t len = cv_len((cvalue_t*)ptr(args[0]));
     if (start > len)
         bounds_error("string.find", args[0], args[2]);
-    char *needle=NULL; size_t needlesz=0;
+    char *needle; size_t needlesz;
     if (!iscvalue(args[1]))
         type_error("string.find", "string", args[1]);
     cvalue_t *cv = (cvalue_t*)ptr(args[1]);
-    if (isstring(args[1])) {
-        needlesz = cv_len(cv);
-        needle = (char*)cv_data(cv);
-    }
-    else if (cv_class(cv) == wchartype) {
+    if (cv_class(cv) == wchartype) {
         uint32_t c = *(uint32_t*)cv_data(cv);
         if (c <= 0x7f)
             return mem_find_byte(s, (char)c, start, len);
@@ -266,14 +262,23 @@ value_t fl_string_find(value_t *args, u_int32_t nargs)
     else if (cv_class(cv) == bytetype) {
         return mem_find_byte(s, *(char*)cv_data(cv), start, len);
     }
-    if (needlesz == 0)
-        return fixnum(start);
+    else if (isstring(args[1])) {
+        needlesz = cv_len(cv);
+        needle = (char*)cv_data(cv);
+    }
+    else {
+        type_error("string.find", "string", args[1]);
+    }
     if (needlesz > len-start)
         return NIL;
+    else if (needlesz == 1)
+        return mem_find_byte(s, needle[0], start, len);
+    else if (needlesz == 0)
+        return size_wrap(start);
     size_t i;
-    for(i=start; i < len; i++) {
+    for(i=start; i < len-needlesz+1; i++) {
         if (s[i] == needle[0]) {
-            if (!memcmp(&s[i], needle, needlesz))
+            if (!memcmp(&s[i+1], needle+1, needlesz-1))
                 return size_wrap(i);
         }
     }
