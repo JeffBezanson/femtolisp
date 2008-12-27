@@ -924,11 +924,14 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
         case F_AREF:
             argcount("aref", nargs, 2);
             v = Stack[SP-2];
-            i = tofixnum(Stack[SP-1], "aref");
             if (isvector(v)) {
+                i = tofixnum(Stack[SP-1], "aref");
                 if ((unsigned)i >= vector_size(v))
                     bounds_error("aref", v, Stack[SP-1]);
                 v = vector_elt(v, i);
+            }
+            else if (isarray(v)) {
+                v = cvalue_array_aref(&Stack[SP-2]);
             }
             else {
                 // TODO other sequence types?
@@ -938,11 +941,14 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
         case F_ASET:
             argcount("aset", nargs, 3);
             e = Stack[SP-3];
-            i = tofixnum(Stack[SP-2], "aset");
             if (isvector(e)) {
+                i = tofixnum(Stack[SP-2], "aset");
                 if ((unsigned)i >= vector_size(e))
                     bounds_error("aref", v, Stack[SP-1]);
                 vector_elt(e, i) = (v=Stack[SP-1]);
+            }
+            else if (isarray(e)) {
+                v = cvalue_array_aset(&Stack[SP-3]);
             }
             else {
                 type_error("aset", "sequence", e);

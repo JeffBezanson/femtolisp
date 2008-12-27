@@ -154,9 +154,6 @@ static char *_buf_realloc(ios_t *s, size_t sz)
 {
     char *temp;
 
-    if (sz <= s->maxsize)
-        return s->buf;
-
     if ((s->buf==NULL || s->buf==&s->local[0]) && (sz <= IOS_INLSIZE)) {
         /* TODO: if we want to allow shrinking, see if the buffer shrank
            down to this size, in which case we need to copy. */
@@ -165,7 +162,10 @@ static char *_buf_realloc(ios_t *s, size_t sz)
         s->ownbuf = 1;
         return s->buf;
     }
-    else if (s->ownbuf && s->buf != &s->local[0]) {
+
+    if (sz <= s->maxsize) return s->buf;
+
+    if (s->ownbuf && s->buf != &s->local[0]) {
         // if we own the buffer we're free to resize it
         // always allocate 1 bigger in case user wants to add a NUL
         // terminator after taking over the buffer
@@ -201,7 +201,7 @@ static size_t _write_grow(ios_t *s, char *data, size_t n)
         if (s->bpos + n > s->maxsize) {
             /* TODO: here you might want to add a mechanism for limiting
                the growth of the stream. */
-            newsize = s->maxsize * 2;
+            newsize = s->maxsize ? s->maxsize * 2 : 8;
             while (s->bpos + n > newsize)
                 newsize *= 2;
             if (_buf_realloc(s, newsize) == NULL) {
@@ -514,6 +514,8 @@ void ios_close(ios_t *s)
     if (s->fd != -1 && s->ownfd)
         close(s->fd);
     s->fd = -1;
+    if (s->buf!=NULL && s->ownbuf && s->buf!=&s->local[0])
+        free(s->buf);
 }
 
 static void _buf_init(ios_t *s, bufmode_t bm)

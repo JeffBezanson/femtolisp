@@ -538,8 +538,8 @@ value_t read_sexpr(ios_t *f)
     value_t v;
     readstate_t state;
     state.prev = readstate;
-    htable_new(&state.backrefs, 16);
-    htable_new(&state.gensyms, 16);
+    htable_new(&state.backrefs, 8);
+    htable_new(&state.gensyms, 8);
     readstate = &state;
 
     v = do_read_sexpr(f, UNBOUND);

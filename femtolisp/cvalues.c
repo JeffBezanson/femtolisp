@@ -1,4 +1,3 @@
-#define MAX_INL_SIZE 96
 #ifdef BITS64
 #define NWORDS(sz) (((sz)+7)>>3)
 #else
@@ -111,6 +110,11 @@ static void autorelease(cvalue_t *cv)
 {
     cv->type = (fltype_t*)(((uptrint_t)cv->type) | CV_OWNED_BIT);
     add_finalizer(cv);
+}
+
+void cv_autorelease(cvalue_t *cv)
+{
+    autorelease(cv);
 }
 
 value_t cvalue(fltype_t *type, size_t sz)
@@ -369,8 +373,7 @@ static void array_init_fromargs(char *dest, value_t *vals, size_t cnt,
 
 static int isarray(value_t v)
 {
-    if (!iscvalue(v)) return 0;
-    return cv_class((cvalue_t*)ptr(v))->eltype != NULL;
+    return iscvalue(v) && cv_class((cvalue_t*)ptr(v))->eltype != NULL;
 }
 
 static size_t predict_arraylen(value_t arg)
@@ -756,46 +759,53 @@ value_t cvalue_compare(value_t a, value_t b)
     return fixnum(diff);
 }
 
-static void check_addr_args(char *fname, size_t typesize, value_t *args,
-                            void **data, ulong_t *index)
+static void check_addr_args(char *fname, value_t arr, value_t ind,
+                            char **data, ulong_t *index)
 {
-    size_t sz;
-    if (!iscvalue(args[0]))
-        type_error(fname, "cvalue", args[0]);
-    *data = cv_data((cvalue_t*)ptr(args[0]));
-    sz = cv_len((cvalue_t*)ptr(args[0]));
-    cvalue_t *cv = (cvalue_t*)ptr(args[1]);
-    if (isfixnum(args[1]))
-        *index = numval(args[1]);
-    else if (!iscvalue(args[1]) || !valid_numtype(cv_numtype(cv)))
-        type_error(fname, "number", args[1]);
-    else
-        *index = conv_to_ulong(cv_data(cv), cv_numtype(cv));
-    if (*index > sz - typesize)
-        bounds_error(fname, args[0], args[1]);
+    size_t numel;
+    cvalue_t *cv = (cvalue_t*)ptr(arr);
+    *data = cv_data(cv);
+    numel = cv_len(cv)/(cv_class(cv)->elsz);
+    *index = toulong(ind, fname);
+    if (*index >= numel)
+        bounds_error(fname, arr, ind);
 }
 
-value_t cvalue_get_int8(value_t *args, u_int32_t nargs)
+static value_t make_uninitialized_instance(fltype_t *t)
 {
-    void *data; ulong_t index;
-    argcount("get-int8", nargs, 2);
-    check_addr_args("get-int8", sizeof(int8_t), args, &data, &index);
-    return fixnum(((int8_t*)data)[index]);
+    if (t->eltype != NULL)
+        return alloc_array(t, t->size);
+    return cvalue(t, t->size);
 }
 
-value_t cvalue_set_int8(value_t *args, u_int32_t nargs)
+static value_t cvalue_array_aref(value_t *args)
 {
-    void *data; ulong_t index; int32_t val=0;
-    argcount("set-int8", nargs, 3);
-    check_addr_args("set-int8", sizeof(int8_t), args, &data, &index);
-    cvalue_t *cv = (cvalue_t*)ptr(args[2]);
-    if (isfixnum(args[2]))
-        val = numval(args[2]);
-    else if (!iscvalue(args[2]) || !valid_numtype(cv_numtype(cv)))
-        type_error("set-int8", "number", args[2]);
+    char *data; ulong_t index;
+    fltype_t *eltype = cv_class((cvalue_t*)ptr(args[0]))->eltype;
+    value_t el = make_uninitialized_instance(eltype);
+    check_addr_args("aref", args[0], args[1], &data, &index);
+    char *dest = cv_data((cvalue_t*)ptr(el));
+    size_t sz = eltype->size;
+    if (sz == 1)
+        *dest = data[index];
+    else if (sz == 2)
+        *(int16_t*)dest = ((int16_t*)data)[index];
+    else if (sz == 4)
+        *(int32_t*)dest = ((int32_t*)data)[index];
+    else if (sz == 8)
+        *(int64_t*)dest = ((int64_t*)data)[index];
     else
-        val = conv_to_int32(cv_data(cv), cv_numtype(cv));
-    ((int8_t*)data)[index] = val;
+        memcpy(dest, data + index*sz, sz);
+    return el;
+}
+
+static value_t cvalue_array_aset(value_t *args)
+{
+    char *data; ulong_t index;
+    fltype_t *eltype = cv_class((cvalue_t*)ptr(args[0]))->eltype;
+    check_addr_args("aset", args[0], args[1], &data, &index);
+    char *dest = data + index*eltype->size;
+    cvalue_init(eltype, args[2], dest);
     return args[2];
 }
 
@@ -812,6 +822,7 @@ value_t fl_builtin(value_t *args, u_int32_t nargs)
 
 value_t cbuiltin(char *name, builtin_t f)
 {
+    assert(((uptrint_t)f & 0x7) == 0);
     value_t sym = symbol(name);
     ((symbol_t*)ptr(sym))->dlcache = f;
     ptrhash_put(&reverse_dlsym_lookup_table, f, (void*)sym);
@@ -874,8 +885,6 @@ void cvalues_init()
     cv_intern(void);
 
     set(symbol("c-value"), cbuiltin("c-value", cvalue_new));
-    set(symbol("get-int8"), cbuiltin("get-int8", cvalue_get_int8));
-    set(symbol("set-int8"), cbuiltin("set-int8", cvalue_set_int8));
     set(symbol("typeof"), cbuiltin("typeof", cvalue_typeof));
     set(symbol("sizeof"), cbuiltin("sizeof", cvalue_sizeof));
     set(symbol("builtin"), cbuiltin("builtin", fl_builtin));

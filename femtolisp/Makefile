@@ -8,7 +8,7 @@ EXENAME = $(NAME)
 LLTDIR = ../llt
 LLT = $(LLTDIR)/libllt.a
 
-FLAGS = -Wall -Wextra -Wno-strict-aliasing -I$(LLTDIR) $(CFLAGS)
+FLAGS = -falign-functions -Wall -Wextra -Wno-strict-aliasing -I$(LLTDIR) $(CFLAGS)
 LIBS = $(LLT) -lm
 
 DEBUGFLAGS = -g -DDEBUG $(FLAGS)

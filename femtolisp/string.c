@@ -14,6 +14,27 @@
 #include "llt.h"
 #include "flisp.h"
 
+static value_t print_to_string(value_t v, int princ)
+{
+    ios_t str;
+    ios_mem(&str, 0);
+    print(&str, v, princ);
+    value_t outp;
+    if (str.size < MAX_INL_SIZE) {
+        outp = cvalue_string(str.size);
+        memcpy(cv_data((cvalue_t*)ptr(outp)), str.buf, str.size);
+    }
+    else {
+        size_t sz;
+        char *buf = ios_takebuf(&str, &sz);
+        buf[sz] = '\0';
+        outp = cvalue_from_ref(stringtype, buf, sz-1, NIL);
+        cv_autorelease((cvalue_t*)ptr(outp));
+    }
+    ios_close(&str);
+    return outp;
+}
+
 value_t fl_intern(value_t *args, u_int32_t nargs)
 {
     argcount("intern", nargs, 1);
@@ -123,7 +144,11 @@ value_t fl_string(value_t *args, u_int32_t nargs)
                 continue;
             }
         }
-        lerror(ArgError, "string: expected string, symbol or character");
+        args[i] = print_to_string(args[i], 0);
+        if (nargs == 1)  // convert single value to string
+            return args[i];
+        sz += cv_len((cvalue_t*)ptr(args[i]));
+        //lerror(ArgError, "string: expected string, symbol or character");
     }
     cv = cvalue_string(sz);
     char *ptr = cvalue_data(cv);

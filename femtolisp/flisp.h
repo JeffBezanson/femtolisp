@@ -201,6 +201,7 @@ typedef struct {
 } cprim_t;
 
 #define CPRIM_NWORDS 2
+#define MAX_INL_SIZE 96
 
 #define CV_OWNED_BIT  0x1
 #define CV_PARENT_BIT 0x2
@@ -242,6 +243,7 @@ extern fltype_t *builtintype;
 
 value_t cvalue(fltype_t *type, size_t sz);
 void add_finalizer(cvalue_t *cv);
+void cv_autorelease(cvalue_t *cv);
 size_t ctype_sizeof(value_t type, int *palign);
 value_t cvalue_copy(value_t v);
 value_t cvalue_from_data(fltype_t *type, void *data, size_t sz);

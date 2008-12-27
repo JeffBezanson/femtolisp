@@ -130,7 +130,7 @@ for internal use:
  . disadvantage is looking through the lambda list on every lookup. maybe
    improve by making lambda lists vectors somehow?
 * fast builtin bounded iteration construct (for lo hi (lambda (x) ...))
-- represent guest function as a tagged function pointer; allocate nothing
+* represent guest function as a tagged function pointer; allocate nothing
 
 bugs:
 * with the fully recursive (simpler) relocate(), the size of cons chains
@@ -927,7 +927,9 @@ consolidated todo list as of 8/30:
 - use the unused tag for TAG_PRIM, add smaller prim representation
 * finalizers in gc
 * hashtable
+* generic aref/aset
 - expose io stream object
+- new toplevel
 
 - enable print-shared for cvalues' types
 - remaining c types
