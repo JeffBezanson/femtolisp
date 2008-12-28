@@ -167,10 +167,9 @@ void bounds_error(char *fname, value_t arr, value_t ind)
 #define SAFECAST_OP(type,ctype,cnvt)                                          \
 ctype to##type(value_t v, char *fname)                                        \
 {                                                                             \
-    if (is##type(v))                                                          \
+    if (__likely(is##type(v)))                                                \
         return (ctype)cnvt(v);                                                \
     type_error(fname, #type, v);                                              \
-    return (ctype)0;                                                          \
 }
 SAFECAST_OP(cons,  cons_t*,  ptr)
 SAFECAST_OP(symbol,symbol_t*,ptr)
@@ -290,7 +289,7 @@ static value_t mk_cons(void)
 {
     cons_t *c;
 
-    if (curheap > lim)
+    if (__unlikely(curheap > lim))
         gc(0);
     c = (cons_t*)curheap;
     curheap += sizeof(cons_t);
@@ -303,7 +302,7 @@ static value_t *alloc_words(int n)
 
     assert(n > 0);
     n = ALIGN(n, 2);   // only allocate multiples of 2 words
-    if ((value_t*)curheap > ((value_t*)lim)+2-n) {
+    if (__unlikely((value_t*)curheap > ((value_t*)lim)+2-n)) {
         gc(0);
         while ((value_t*)curheap > ((value_t*)lim)+2-n) {
             gc(1);
@@ -672,11 +671,11 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             if (*pv == NIL) break;
             pv = &vector_elt(*pv, 0);
         }
-        if ((v = sym->binding) == UNBOUND)
+        if (__unlikely((v = sym->binding) == UNBOUND))
             raise(list2(UnboundError, e));
         return v;
     }
-    if (SP >= (N_STACK-64))
+    if (__unlikely(SP >= (N_STACK-64)))
         lerror(MemoryError, "eval: stack overflow");
     saveSP = SP;
     v = car_(e);
@@ -707,7 +706,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
         switch (uintval(f)) {
         // special forms
         case F_QUOTE:
-            if (!iscons(Stack[saveSP]))
+            if (__unlikely(!iscons(Stack[saveSP])))
                 lerror(ArgError, "quote: expected argument");
             v = car_(Stack[saveSP]);
             break;
@@ -926,7 +925,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             v = Stack[SP-2];
             if (isvector(v)) {
                 i = tofixnum(Stack[SP-1], "aref");
-                if ((unsigned)i >= vector_size(v))
+                if (__unlikely((unsigned)i >= vector_size(v)))
                     bounds_error("aref", v, Stack[SP-1]);
                 v = vector_elt(v, i);
             }
@@ -943,7 +942,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             e = Stack[SP-3];
             if (isvector(e)) {
                 i = tofixnum(Stack[SP-2], "aset");
-                if ((unsigned)i >= vector_size(e))
+                if (__unlikely((unsigned)i >= vector_size(e)))
                     bounds_error("aref", v, Stack[SP-1]);
                 vector_elt(e, i) = (v=Stack[SP-1]);
             }
@@ -992,9 +991,9 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
         case F_ADD:
             s = 0;
             for (i=saveSP+1; i < (int)SP; i++) {
-                if (isfixnum(Stack[i])) {
+                if (__likely(isfixnum(Stack[i]))) {
                     s += numval(Stack[i]);
-                    if (!fits_fixnum(s)) {
+                    if (__unlikely(!fits_fixnum(s))) {
                         i++;
                         goto add_ovf;
                     }
@@ -1009,19 +1008,19 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             v = fixnum(s);
             break;
         case F_SUB:
-            if (nargs < 1) lerror(ArgError, "-: too few arguments");
+            if (__unlikely(nargs < 1)) lerror(ArgError, "-: too few arguments");
             i = saveSP+1;
             if (nargs == 1) {
-                if (isfixnum(Stack[i]))
+                if (__likely(isfixnum(Stack[i])))
                     v = fixnum(-numval(Stack[i]));
                 else
                     v = fl_neg(Stack[i]);
                 break;
             }
             if (nargs == 2) {
-                if (bothfixnums(Stack[i], Stack[i+1])) {
+                if (__likely(bothfixnums(Stack[i], Stack[i+1]))) {
                     s = numval(Stack[i]) - numval(Stack[i+1]);
-                    if (fits_fixnum(s)) {
+                    if (__likely(fits_fixnum(s))) {
                         v = fixnum(s);
                         break;
                     }
@@ -1039,7 +1038,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
         case F_MUL:
             accum = 1;
             for (i=saveSP+1; i < (int)SP; i++) {
-                if (isfixnum(Stack[i])) {
+                if (__likely(isfixnum(Stack[i]))) {
                     accum *= numval(Stack[i]);
                 }
                 else {
@@ -1048,13 +1047,13 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                     return v;
                 }
             }
-            if (fits_fixnum(accum))
+            if (__likely(fits_fixnum(accum)))
                 v = fixnum(accum);
             else
                 v = return_from_int64(accum);
             break;
         case F_DIV:
-            if (nargs < 1) lerror(ArgError, "/: too few arguments");
+            if (__unlikely(nargs < 1)) lerror(ArgError, "/: too few arguments");
             i = saveSP+1;
             if (nargs == 1) {
                 v = fl_div2(fixnum(1), Stack[i]);
@@ -1146,7 +1145,8 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             break;
         case F_PROG1:
             // return first arg
-            if (nargs < 1) lerror(ArgError, "prog1: too few arguments");
+            if (__unlikely(nargs < 1))
+                lerror(ArgError, "prog1: too few arguments");
             v = Stack[saveSP+1];
             break;
         case F_ASSOC:
@@ -1206,7 +1206,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
         return v;
     }
  apply_lambda:
-    if (iscons(f)) {
+    if (__likely(iscons(f))) {
         // apply lambda expression
         f = cdr_(f);
         PUSH(f);
@@ -1219,7 +1219,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             while (iscons(v)) {
                 // bind args
                 if (!iscons(*argsyms)) {
-                    if (*argsyms == NIL)
+                    if (__unlikely(*argsyms == NIL))
                         lerror(ArgError, "apply: too many arguments");
                     break;
                 }
@@ -1234,7 +1234,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             while (iscons(v)) {
                 // bind args
                 if (!iscons(*argsyms)) {
-                    if (*argsyms == NIL)
+                    if (__unlikely(*argsyms == NIL))
                         lerror(ArgError, "apply: too many arguments");
                     break;
                 }
@@ -1269,7 +1269,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                 }
             }
         }
-        if (iscons(*argsyms)) {
+        if (__unlikely(iscons(*argsyms))) {
             lerror(ArgError, "apply: too few arguments");
         }
         f = cdr_(Stack[saveSP+1]);

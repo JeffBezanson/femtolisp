@@ -120,7 +120,14 @@ void cv_autorelease(cvalue_t *cv)
 value_t cvalue(fltype_t *type, size_t sz)
 {
     cvalue_t *pcv;
+    int str=0;
 
+    if (type->eltype == bytetype) {
+        if (sz == 0)
+            return symbol_value(emptystringsym);
+        sz++;
+        str=1;
+    }
     if (sz <= MAX_INL_SIZE) {
         size_t nw = CVALUE_NWORDS - 1 + NWORDS(sz) + (sz==0 ? 1 : 0);
         pcv = (cvalue_t*)alloc_words(nw);
@@ -137,6 +144,10 @@ value_t cvalue(fltype_t *type, size_t sz)
         pcv->data = malloc(sz);
         autorelease(pcv);
         malloc_pressure += sz;
+    }
+    if (str) {
+        sz--;
+        ((char*)pcv->data)[sz] = '\0';
     }
     pcv->len = sz;
     return tagptr(pcv, TAG_CVALUE);
@@ -179,20 +190,7 @@ value_t cvalue_from_ref(fltype_t *type, void *ptr, size_t sz, value_t parent)
 
 value_t cvalue_string(size_t sz)
 {
-    value_t cv;
-    char *data;
-    cvalue_t *pcv;
-
-    if (sz == 0)
-        return symbol_value(emptystringsym);
-    // secretly allocate space for 1 more byte, hide a NUL there so
-    // any string will always be NUL terminated.
-    cv = cvalue(stringtype, sz+1);
-    pcv = (cvalue_t*)ptr(cv);
-    data = cv_data(pcv);
-    data[sz] = '\0';
-    pcv->len = sz;
-    return cv;
+    return cvalue(stringtype, sz);
 }
 
 value_t cvalue_static_cstring(char *str)
@@ -449,18 +447,6 @@ static void cvalue_array_init(fltype_t *ft, value_t arg, void *dest)
         type_error("array", "sequence", arg);
 }
 
-static value_t alloc_array(fltype_t *type, size_t sz)
-{
-    value_t cv;
-    if (type->eltype == bytetype) {
-        cv = cvalue_string(sz);
-    }
-    else {
-        cv = cvalue(type, sz);
-    }
-    return cv;
-}
-
 value_t cvalue_array(value_t *args, u_int32_t nargs)
 {
     size_t elsize, cnt, sz;
@@ -473,7 +459,7 @@ value_t cvalue_array(value_t *args, u_int32_t nargs)
     elsize = type->elsz;
     sz = elsize * cnt;
 
-    value_t cv = alloc_array(type, sz);
+    value_t cv = cvalue(type, sz);
     array_init_fromargs(cv_data((cvalue_t*)ptr(cv)), &args[1], cnt,
                         type->eltype, elsize);
     return cv;
@@ -727,7 +713,7 @@ value_t cvalue_new(value_t *args, u_int32_t nargs)
             cnt = predict_arraylen(args[1]);
         else
             cnt = 0;
-        cv = alloc_array(ft, elsz * cnt);
+        cv = cvalue(ft, elsz * cnt);
         if (nargs == 2)
             cvalue_array_init(ft, args[1], cv_data((cvalue_t*)ptr(cv)));
     }
@@ -771,18 +757,11 @@ static void check_addr_args(char *fname, value_t arr, value_t ind,
         bounds_error(fname, arr, ind);
 }
 
-static value_t make_uninitialized_instance(fltype_t *t)
-{
-    if (t->eltype != NULL)
-        return alloc_array(t, t->size);
-    return cvalue(t, t->size);
-}
-
 static value_t cvalue_array_aref(value_t *args)
 {
     char *data; ulong_t index;
     fltype_t *eltype = cv_class((cvalue_t*)ptr(args[0]))->eltype;
-    value_t el = make_uninitialized_instance(eltype);
+    value_t el = cvalue(eltype, eltype->size);
     check_addr_args("aref", args[0], args[1], &data, &index);
     char *dest = cv_data((cvalue_t*)ptr(el));
     size_t sz = eltype->size;

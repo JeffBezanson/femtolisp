@@ -151,7 +151,7 @@ void bounds_error(char *fname, value_t arr, value_t ind) __attribute__ ((__noret
 extern value_t ArgError, IOError, KeyError;
 static inline void argcount(char *fname, int nargs, int c)
 {
-    if (nargs != c)
+    if (__unlikely(nargs != c))
         lerror(ArgError,"%s: too %s arguments", fname, nargs<c ? "few":"many");
 }
 

@@ -35,14 +35,6 @@ static value_t print_to_string(value_t v, int princ)
     return outp;
 }
 
-value_t fl_intern(value_t *args, u_int32_t nargs)
-{
-    argcount("intern", nargs, 1);
-    if (!isstring(args[0]))
-        type_error("intern", "string", args[0]);
-    return symbol(cvalue_data(args[0]));
-}
-
 value_t fl_stringp(value_t *args, u_int32_t nargs)
 {
     argcount("stringp", nargs, 1);
@@ -350,7 +342,6 @@ value_t fl_string_dec(value_t *args, u_int32_t nargs)
 }
 
 static builtinspec_t stringfunc_info[] = {
-    { "intern", fl_intern },
     { "string", fl_string },
     { "stringp", fl_stringp },
     { "string.length", fl_string_length },

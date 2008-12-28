@@ -149,6 +149,7 @@
 (define (caadr x) (car (car (cdr x))))
 (define (cadar x) (car (cdr (car x))))
 (define (caddr x) (car (cdr (cdr x))))
+(define (cadddr x) (car (cdr (cdr (cdr x)))))
 (define (cdaar x) (cdr (car (car x))))
 (define (cdadr x) (cdr (car (cdr x))))
 (define (cddar x) (cdr (cdr (car x))))

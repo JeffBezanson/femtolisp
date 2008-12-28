@@ -73,6 +73,14 @@ value_t fl_exit(value_t *args, u_int32_t nargs)
     return NIL;
 }
 
+value_t fl_intern(value_t *args, u_int32_t nargs)
+{
+    argcount("intern", nargs, 1);
+    if (!isstring(args[0]))
+        type_error("intern", "string", args[0]);
+    return symbol(cvalue_data(args[0]));
+}
+
 extern value_t LAMBDA;
 
 value_t fl_setsyntax(value_t *args, u_int32_t nargs)
@@ -241,7 +249,7 @@ value_t fl_time_now(value_t *args, u_int32_t nargs)
     return mk_double(clock_now());
 }
 
-static double value_to_double(value_t a, char *fname)
+static double todouble(value_t a, char *fname)
 {
     if (isfixnum(a))
         return (double)numval(a);
@@ -257,7 +265,7 @@ static double value_to_double(value_t a, char *fname)
 value_t fl_time_string(value_t *args, uint32_t nargs)
 {
     argcount("time.string", nargs, 1);
-    double t = value_to_double(args[0], "time.string");
+    double t = todouble(args[0], "time.string");
     char buf[64];
     timestring(t, buf, sizeof(buf));
     return string_from_cstr(buf);
@@ -359,6 +367,7 @@ static builtinspec_t builtin_info[] = {
     { "read", fl_read },
     { "load", fl_load },
     { "exit", fl_exit },
+    { "intern", fl_intern },
     { "fixnum", fl_fixnum },
     { "truncate", fl_truncate },
 

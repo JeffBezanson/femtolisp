@@ -87,6 +87,15 @@ typedef u_ptrint_t uptrint_t;
 
 #define ALIGN(x, sz) (((x) + (sz-1)) & (-sz))
 
+// branch prediction annotations
+#ifdef __GNUC__
+#define __unlikely(x) __builtin_expect(!!(x), 0)
+#define __likely(x)   __builtin_expect(!!(x), 1)
+#else
+#define __unlikely(x) (x)
+#define __likely(x)   (x)
+#endif
+
 #define DBL_MAXINT 9007199254740992LL
 #define FLT_MAXINT 16777216
 #define U64_MAX    18446744073709551615ULL

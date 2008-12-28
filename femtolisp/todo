@@ -832,21 +832,22 @@ IOStream API
  princ, sprinc
  iostream         - (stream[ cvalue-as-bytestream])
  file
- fifo
- socket
  stream.eof
  stream.write     - (stream.write s cvalue)
  stream.read      - (stream.read s ctype)
- stream.copy      - (stream.copy to from [nbytes])
- stream.copyuntil - (stream.copy to from byte)
  stream.flush
+ stream.close
  stream.pos       - (stream.pos s [set-pos])
  stream.seek      - (stream.seek s offset)
+ stream.getc      - get utf8 character(s)
+ stream.readline
+ stream.copy      - (stream.copy to from [nbytes])
+ stream.copyuntil - (stream.copy to from byte)
+ fifo
+ socket
  stream.seekend   - move to end of stream
  stream.trunc
- stream.getc      - get utf8 character(s)
  stream.tostring! - destructively convert stringstream to string
- stream.readline
  stream.readlines
  stream.readall
  print-to-string
@@ -931,7 +932,6 @@ consolidated todo list as of 8/30:
 - expose io stream object
 - new toplevel
 
-- enable print-shared for cvalues' types
 - remaining c types
 - remaining cvalues functions
 - finish ios
