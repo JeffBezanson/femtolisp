@@ -34,11 +34,14 @@
   (cond ((atom form) `(,k ,(reverse argsyms)))
         (T           (rest->cps prim->cps form k argsyms))))
 
+(define *top-k* (gensym))
+(set *top-k* identity)
+
 (define (cps form)
   (η-reduce
    (β-reduce
     (macroexpand
-     (cps- (macroexpand form) 'identity)))))
+     (cps- (macroexpand form) *top-k*)))))
 (define (cps- form k)
   (let ((g (gensym)))
     (cond ((or (atom form) (constantp form))
@@ -65,19 +68,57 @@
                `(let ((,g ,k))
                   ,(cps- form g)))))
 
+          ((eq (car form) 'and)
+           (cond ((atom (cdr  form)) `(,k T))
+                 ((atom (cddr form)) (cps- (cadr form) k))
+                 (T
+                  (if (atom k)
+                      (cps- (cadr form)
+                            `(lambda (,g)
+                               (if ,g ,(cps- `(and ,@(cddr form)) k)
+                                 (,k ,g))))
+                    `(let ((,g ,k))
+                       ,(cps- form g))))))
+
+          ((eq (car form) 'or)
+           (cond ((atom (cdr  form)) `(,k ()))
+                 ((atom (cddr form)) (cps- (cadr form) k))
+                 (T
+                  (if (atom k)
+                      (cps- (cadr form)
+                            `(lambda (,g)
+                               (if ,g (,k ,g)
+                                 ,(cps- `(or ,@(cddr form)) k))))
+                    `(let ((,g ,k))
+                       ,(cps- form g))))))
+
+          ((eq (car form) 'while)
+           (let ((test (cadr form))
+                 (body (caddr form))
+                 (lastval (gensym)))
+             (cps- (macroexpand
+                    `(let ((,lastval nil))
+                       ((label ,g (lambda ()
+                                    (if ,test
+                                        (progn (setq ,lastval ,body)
+                                               (,g))
+                                      ,lastval))))))
+                   k)))
+
           ((eq (car form) 'setq)
            (let ((var (cadr form))
                  (E   (caddr form)))
              (cps- E `(lambda (,g) (,k (setq ,var ,g))))))
 
           ((eq (car form) 'reset)
-           `(,k ,(cps- (cadr form) 'identity)))
+           `(,k ,(cps- (cadr form) *top-k*)))
 
           ((eq (car form) 'shift)
            (let ((v (cadr form))
-                 (E (caddr form)))
-             `(let ((,v (lambda (ignored-k val) (,k val))))
-                ,(cps- E 'identity))))
+                 (E (caddr form))
+                 (val (gensym)))
+             `(let ((,v (lambda (,g ,val) (,g (,k ,val)))))
+                ,(cps- E *top-k*))))
 
           ((and (constantp (car form))
                 (builtinp (eval (car form))))
@@ -99,34 +140,72 @@
            (app->cps form k ())))))
 
 ; (lambda (args...) (f args...)) => f
+; but only for constant, builtin f
 (define (η-reduce form)
   (cond ((or (atom form) (constantp form)) form)
         ((and (eq (car form) 'lambda)
               (let ((body (caddr form))
-                    (args (cadr form)))
+                    (args (cadr form))
+                    (func (car (caddr form))))
                 (and (consp body)
-                     (equal (cdr body) args))))
+                     (equal (cdr body) args)
+                     (constantp func))))
          (η-reduce (car (caddr form))))
         (T (map η-reduce form))))
 
-; ((lambda (f) (f arg)) X) => (X arg)
+(define (contains x form)
+  (or (eq form x)
+      (any (lambda (p) (contains x p)) form)))
+
 (define (β-reduce form)
   (cond ((or (atom form) (constantp form)) form)
+
+        ; ((lambda (f) (f arg)) X) => (X arg)
         ((and (= (length form) 2)
               (consp (car form))
               (eq (caar form) 'lambda)
               (let ((args (cadr (car form)))
                     (body (caddr (car form))))
-                (and (= (length body) 2)
+                (and (consp body)
+                     (= (length body) 2)
                      (= (length args) 1)
                      (eq (car body) (car args))
                      (not (eq (cadr body) (car args)))
                      (symbolp (cadr body)))))
          `(,(β-reduce (cadr form))
            ,(cadr (caddr (car form)))))
+
+        ; (identity x) => x
+        ((eq (car form) *top-k*)
+         (β-reduce (cadr form)))
+
+        ; uncurry:
+        ; ((lambda (p1) ((lambda (args...) body) exprs...)) s) =>
+        ; ((lambda (p1 args...) body) s exprs...)
+        ; where exprs... doesn't contain p1
+        ((and (= (length form) 2)
+              (consp (car form))
+              (eq (caar form) 'lambda)
+              (or (atom (cadr form)) (constantp (cadr form)))
+              (let ((args (cadr (car form)))
+                    (s (cadr form))
+                    (body (β-reduce (caddr (car form)))))
+                (and (= (length args) 1)
+                     (consp body)
+                     (consp (car body))
+                     (eq (caar body) 'lambda)
+                     (let ((innerargs (cadr (car body)))
+                           (innerbody (caddr (car body)))
+                           (params (cdr body)))
+                       (and (not (contains (car args) params))
+                            `((lambda ,(cons (car args) innerargs)
+                                ,innerbody)
+                              ,s
+                              ,@params)))))))
+
         (T (map β-reduce form))))
 
-(defmacro with-delimited-continuations (exp) (cps exp))
+(defmacro with-delimited-continuations code (cps (f-body code)))
 
 (defmacro defgenerator (name args . body)
   (let ((ko  (gensym))
@@ -155,6 +234,12 @@
                      (loop (+ 1 i))))))
    lo))
 
+; example from Chung-chieh Shan's paper
+(assert (equal
+         (with-delimited-continuations
+          (cons 'a (reset (cons 'b (shift f (cons 1 (f (f (cons 'c ())))))))))
+         '(a 1 b b c)))
+
 T
 
 #|
@@ -163,5 +248,21 @@ todo:
   calls to calls to funcall/cc that does the right thing for both
   cc-lambdas and normal lambdas
 
-- handle while, and, or
+- handle dotted arglists in lambda
+
+ here's an alternate way to transform a while loop:
+
+ (let ((x 0))
+   (while (< x 10)
+     (progn (#.print x) (setq x (+ 1 x)))))
+ =>
+  (let ((x 0))
+    (reset
+     (let ((l nil))
+       (let ((k (shift k (k k))))
+         (if (< x 10)
+             (progn (setq l (progn (#.print x)
+                                   (setq x (+ 1 x))))
+                    (k k))
+           l)))))
 |#
