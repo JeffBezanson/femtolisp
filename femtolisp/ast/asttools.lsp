@@ -30,6 +30,42 @@
     (let ((new-t (map (lambda (e) (maptree-post f e)) tr)))
       (f new-t))))
 
+(define (foldtree-pre f t zero)
+  (if (not (pair? t))
+      (f t zero)
+      (foldl t (lambda (e state) (foldtree-pre f e state)) (f t zero))))
+
+(define (foldtree-post f t zero)
+  (if (not (pair? t))
+      (f t zero)
+      (f t (foldl t (lambda (e state) (foldtree-post f e state)) zero))))
+
+; general tree transformer
+; folds in preorder (foldtree-pre), maps in postorder (maptree-post)
+; therefore state changes occur immediately, just by looking at the current node,
+; while transformation follows evaluation order. this seems to be the most natural
+; approach.
+; (mapper tree state) - should return transformed tree given current state
+; (folder tree state) - should return new state
+(define (map&fold t zero mapper folder)
+  (let ((head (and (pair? t) (car t))))
+    (cond ((eq? head 'quote)
+	   t)
+	  ((or (eq? head 'the) (eq? head 'meta))
+	   (list head
+		 (cadr t)
+		 (map&fold (caddr t) zero mapper folder)))
+	  (else
+	   (let ((new-s (folder t zero)))
+	     (mapper
+	      (if (pair? t)
+		  ; head symbol is a tag; never transform it
+		  (cons (car t)
+			(map (lambda (e) (map&fold e new-s mapper folder))
+			     (cdr t)))
+		  t)
+	      new-s))))))
+
 ; collapse forms like (&& (&& (&& (&& a b) c) d) e) to (&& a b c d e)
 (define (flatten-left-op op e)
   (maptree-post (lambda (node)
@@ -77,6 +113,27 @@
 			,@(map cadr (cadr n)))
                     n))
 		e))
+
+; alpha renaming
+; transl is an assoc list ((old-sym-name . new-sym-name) ...)
+(define (alpha-rename e transl)
+  (map&fold e
+	    ()
+	    ; mapper: replace symbol if unbound
+	    (lambda (t env)
+	      (if (symbol? t)
+		  (let ((found (assq t transl)))
+		    (if (and found
+			     (not (memq t env)))
+			(cdr found)
+			t))
+		  t))
+	    ; folder: add locals to environment if entering a new scope
+	    (lambda (t env)
+	      (if (and (pair? t) (or (eq? (car t) 'let)
+				     (eq? (car t) 'lambda)))
+		  (append (cadr t) env)
+		  env))))
 
 ; flatten op with any associativity
 (defmacro flatten-all-op (op e)
