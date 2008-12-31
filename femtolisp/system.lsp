@@ -2,8 +2,6 @@
 ; by Jeff Bezanson (C) 2008
 ; Distributed under the BSD License
 
-(setq list (lambda args args))
-
 ; convert a sequence of body statements to a single expression.
 ; this allows define, defun, defmacro, let, etc. to contain multiple
 ; body expressions as in Common Lisp.
@@ -18,7 +16,7 @@
                     (list 'lambda args (f-body body)))))
 
 (defmacro label (name fn)
-  (list (list 'lambda (cons name nil) (list 'setq name fn)) nil))
+  (list (list 'lambda (list name) (list 'setq name fn)) nil))
 
 ; support both CL defun and Scheme-style define
 (defmacro defun (name args . body)
@@ -463,11 +461,11 @@
                  (cons 'nconc forms)))))))
 
 (defun bq-bracket (x)
-  (cond ((atom x)                   (list cons (bq-process x) nil))
-        ((eq (car x) '*comma*)      (list cons (cadr x)       nil))
+  (cond ((atom x)                   (list list (bq-process x)))
+        ((eq (car x) '*comma*)      (list list (cadr x)))
         ((eq (car x) '*comma-at*)   (list 'copy-list (cadr x)))
         ((eq (car x) '*comma-dot*)  (cadr x))
-        (T                          (list cons (bq-process x) nil))))
+        (T                          (list list (bq-process x)))))
 
 ; bracket without splicing
 (defun bq-bracket1 (x)

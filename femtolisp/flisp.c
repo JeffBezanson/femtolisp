@@ -56,7 +56,7 @@ static char *builtin_names[] =
 
       "eq", "atom", "not", "symbolp", "numberp", "boundp", "consp",
       "builtinp", "vectorp", "fixnump", "equal",
-      "cons", "car", "cdr", "rplaca", "rplacd",
+      "cons", "list", "car", "cdr", "rplaca", "rplacd",
       "eval", "eval*", "apply", "prog1", "raise",
       "+", "-", "*", "/", "<", "~", "&", "!", "$",
       "vector", "aref", "aset", "length", "assoc", "compare",
@@ -95,7 +95,7 @@ static unsigned char *fromspace;
 static unsigned char *tospace;
 static unsigned char *curheap;
 static unsigned char *lim;
-static uint32_t heapsize = 256*1024;//bytes
+static uint32_t heapsize = 512*1024;//bytes
 static uint32_t *consflags;
 
 // error utilities ------------------------------------------------------------
@@ -596,6 +596,31 @@ static value_t assoc(value_t item, value_t v)
     return NIL;
 }
 
+/*
+  take the final cdr as an argument so the list builtin can give
+  the same result as (lambda x x).
+
+  however, there is still one interesting difference.
+  (eq a (apply list a)) is always false for nonempty a, while
+  (eq a (apply (lambda x x) a)) is always true. the justification for this
+  is that a vararg lambda often needs to recur by applying itself to the
+  tail of its argument list, so copying the list would be unacceptable.
+*/
+static void list(value_t *pv, int nargs, value_t *plastcdr)
+{
+    cons_t *c;
+    int i;
+    *pv = cons_reserve(nargs);
+    c = (cons_t*)ptr(*pv);
+    for(i=SP-nargs; i < (int)SP; i++) {
+        c->car = Stack[i];
+        c->cdr = tagptr(c+1, TAG_CONS);
+        c++;
+    }
+    (c-1)->cdr = *plastcdr;
+    POPN(nargs);
+}
+
 #define eval(e)         (selfevaluating(e) ? (e) : eval_sexpr((e),penv,0))
 #define topeval(e, env) (selfevaluating(e) ? (e) : eval_sexpr((e),env,1))
 #define tail_eval(xpr) do { SP = saveSP;  \
@@ -869,6 +894,13 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             c->car = Stack[SP-2];
             c->cdr = Stack[SP-1];
             v = tagptr(c, TAG_CONS);
+            break;
+        case F_LIST:
+            if (nargs) {
+                Stack[saveSP] = v;
+                list(&v, nargs, &Stack[saveSP]);
+            }
+            // else v is already set to the final cdr, which is the result
             break;
         case F_CAR:
             argcount("car", nargs, 1);
@@ -1255,18 +1287,8 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                     PUSH(v);
                     Stack[saveSP] = cdr_(Stack[saveSP]);
                 }
-                nargs = SP-i;
-                if (nargs) {
-                    Stack[i-1] = cons_reserve(nargs);
-                    c = (cons_t*)ptr(Stack[i-1]);
-                    for(; i < (int)SP; i++) {
-                        c->car = Stack[i];
-                        c->cdr = tagptr(c+1, TAG_CONS);
-                        c++;
-                    }
-                    (c-1)->cdr = Stack[saveSP];
-                    POPN(nargs);
-                }
+                if (SP > (uint32_t)i)
+                    list(&Stack[i-1], SP-i, &Stack[saveSP]);
             }
         }
         if (__unlikely(iscons(*argsyms))) {

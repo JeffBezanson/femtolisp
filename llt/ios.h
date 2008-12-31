@@ -103,6 +103,8 @@ int ios_pututf8(ios_t *s, uint32_t wc);
 int ios_putstringz(ios_t *s, char *str, bool_t do_write_nulterm);
 int ios_printf(ios_t *s, char *format, ...);
 
+void hexdump(ios_t *dest, char *buffer, size_t len, size_t startoffs);
+
 /* high-level stream functions - input */
 int ios_getnum(ios_t *s, char *data, uint32_t type);
 int ios_getutf8(ios_t *s, uint32_t *pwc);

@@ -45,6 +45,8 @@ void snprint_cplx(char *s, size_t cnt, double re, double im,
                   // print spaces around sign in a+bi
                   int spflag);
 
+char *int2str(char *dest, size_t n, long num, uint32_t base);
+
 extern double trunc(double x);
 
 STATIC_INLINE double fpart(double arg)
