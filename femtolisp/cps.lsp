@@ -16,9 +16,12 @@
                                   ,(progn->cps (cdr forms) k)))))))
 
 (define (rest->cps xformer form k argsyms)
-  (let ((g (gensym)))
-    (cps- (car form) `(lambda (,g)
-                        ,(xformer (cdr form) k (cons g argsyms))))))
+  (let ((el (car form)))
+    (if (or (atom el) (constantp el))
+        (xformer (cdr form) k (cons el argsyms))
+      (let ((g (gensym)))
+        (cps- el `(lambda (,g)
+                    ,(xformer (cdr form) k (cons g argsyms))))))))
 
 ; (f x) => (cps- f `(lambda (F) ,(cps- x `(lambda (X) (F ,k X)))))
 (define (app->cps form k argsyms)
@@ -158,10 +161,13 @@
       (any (lambda (p) (contains x p)) form)))
 
 (define (β-reduce form)
-  (cond ((or (atom form) (constantp form)) form)
+  (if (or (atom form) (constantp form))
+      form
+    (β-reduce- (map β-reduce form))))
 
+(define (β-reduce- form)
         ; ((lambda (f) (f arg)) X) => (X arg)
-        ((and (= (length form) 2)
+  (cond ((and (= (length form) 2)
               (consp (car form))
               (eq (caar form) 'lambda)
               (let ((args (cadr (car form)))
@@ -172,12 +178,12 @@
                      (eq (car body) (car args))
                      (not (eq (cadr body) (car args)))
                      (symbolp (cadr body)))))
-         `(,(β-reduce (cadr form))
+         `(,(cadr form)
            ,(cadr (caddr (car form)))))
 
         ; (identity x) => x
         ((eq (car form) *top-k*)
-         (β-reduce (cadr form)))
+         (cadr form))
 
         ; uncurry:
         ; ((lambda (p1) ((lambda (args...) body) exprs...)) s) =>
@@ -189,7 +195,7 @@
               (or (atom (cadr form)) (constantp (cadr form)))
               (let ((args (cadr (car form)))
                     (s (cadr form))
-                    (body (β-reduce (caddr (car form)))))
+                    (body (caddr (car form))))
                 (and (= (length args) 1)
                      (consp body)
                      (consp (car body))
@@ -203,7 +209,7 @@
                               ,s
                               ,@params)))))))
 
-        (T (map β-reduce form))))
+        (T form)))
 
 (defmacro with-delimited-continuations code (cps (f-body code)))
 
@@ -249,6 +255,8 @@ todo:
   cc-lambdas and normal lambdas
 
 - handle dotted arglists in lambda
+
+- use fewer gensyms
 
  here's an alternate way to transform a while loop:
 
