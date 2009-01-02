@@ -66,9 +66,8 @@ value_t fl_string_encode(value_t *args, u_int32_t nargs)
     argcount("string.encode", nargs, 1);
     if (iscvalue(args[0])) {
         cvalue_t *cv = (cvalue_t*)ptr(args[0]);
-        value_t t = cv_type(cv);
-        if (iscons(t) && car_(t) == arraysym &&
-            iscons(cdr_(t)) && car_(cdr_(t)) == wcharsym) {
+        fltype_t *t = cv_class(cv);
+        if (t->eltype == wchartype) {
             size_t nc = cv_len(cv) / sizeof(uint32_t);
             uint32_t *ptr = (uint32_t*)cv_data(cv);
             size_t nbytes = u8_codingsize(ptr, nc);
@@ -111,30 +110,32 @@ value_t fl_string(value_t *args, u_int32_t nargs)
     u_int32_t i;
     size_t len, sz = 0;
     cvalue_t *temp;
+    cprim_t *cp;
     char *data;
     uint32_t wc;
 
     for(i=0; i < nargs; i++) {
-        if (issymbol(args[i])) {
-            sz += strlen(symbol_name(args[i]));
+        cv = args[i];
+        if (issymbol(cv)) {
+            sz += strlen(symbol_name(cv));
             continue;
         }
-        else if (iscvalue(args[i])) {
-            temp = (cvalue_t*)ptr(args[i]);
-            t = cv_type(temp);
+        else if (iscprim(cv)) {
+            cp = (cprim_t*)ptr(cv);
+            t = cp_type(cp);
             if (t == bytesym) {
                 sz++;
                 continue;
             }
             else if (t == wcharsym) {
-                wc = *(uint32_t*)cv_data(temp);
+                wc = *(uint32_t*)cp_data(cp);
                 sz += u8_charlen(wc);
                 continue;
             }
-            else if (cv_isstr(temp)) {
-                sz += cv_len(temp);
-                continue;
-            }
+        }
+        else if (isstring(cv)) {
+            sz += cv_len((cvalue_t*)ptr(cv));
+            continue;
         }
         args[i] = print_to_string(args[i], 0);
         if (nargs == 1)  // convert single value to string
@@ -149,21 +150,25 @@ value_t fl_string(value_t *args, u_int32_t nargs)
             char *name = symbol_name(args[i]);
             while (*name) *ptr++ = *name++;
         }
-        else {
-            temp = (cvalue_t*)ptr(args[i]);
-            t = cv_type(temp);
-            data = cvalue_data(args[i]);
+        else if (iscprim(args[i])) {
+            cp = (cprim_t*)ptr(args[i]);
+            t = cp_type(cp);
+            data = cp_data(cp);
             if (t == bytesym) {
                 *ptr++ = *(char*)data;
             }
-            else if (t == wcharsym) {
+            else {
+                // wchar
                 ptr += u8_wc_toutf8(ptr, *(uint32_t*)data);
             }
-            else {
-                len = cv_len(temp);
-                memcpy(ptr, data, len);
-                ptr += len;
-            }
+        }
+        else {
+            // string
+            temp = (cvalue_t*)ptr(args[i]);
+            data = cv_data(temp);
+            len = cv_len(temp);
+            memcpy(ptr, data, len);
+            ptr += len;
         }
     }
     return cv;
@@ -266,20 +271,21 @@ value_t fl_string_find(value_t *args, u_int32_t nargs)
     if (start > len)
         bounds_error("string.find", args[0], args[2]);
     char *needle; size_t needlesz;
-    if (!iscvalue(args[1]))
-        type_error("string.find", "string", args[1]);
-    cvalue_t *cv = (cvalue_t*)ptr(args[1]);
-    if (cv_class(cv) == wchartype) {
-        uint32_t c = *(uint32_t*)cv_data(cv);
+
+    value_t v = args[1];
+    cprim_t *cp = (cprim_t*)ptr(v);
+    if (iscprim(v) && cp_class(cp) == wchartype) {
+        uint32_t c = *(uint32_t*)cp_data(cp);
         if (c <= 0x7f)
             return mem_find_byte(s, (char)c, start, len);
         needlesz = u8_toutf8(cbuf, sizeof(cbuf), &c, 1);
         needle = cbuf;
     }
-    else if (cv_class(cv) == bytetype) {
-        return mem_find_byte(s, *(char*)cv_data(cv), start, len);
+    else if (iscprim(v) && cp_class(cp) == bytetype) {
+        return mem_find_byte(s, *(char*)cp_data(cp), start, len);
     }
-    else if (isstring(args[1])) {
+    else if (isstring(v)) {
+        cvalue_t *cv = (cvalue_t*)ptr(v);
         needlesz = cv_len(cv);
         needle = (char*)cv_data(cv);
     }

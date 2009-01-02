@@ -33,23 +33,18 @@ static void eq_union(htable_t *table, value_t a, value_t b,
     ptrhash_put(table, (void*)b, (void*)ca);
 }
 
-// a is a fixnum, b is a cvalue
-static value_t compare_num_cvalue(value_t a, value_t b, int eq)
+// a is a fixnum, b is a cprim
+static value_t compare_num_cprim(value_t a, value_t b, int eq)
 {
-    cvalue_t *bcv = (cvalue_t*)ptr(b);
-    numerictype_t bt;
-    if (valid_numtype(bt=cv_numtype(bcv))) {
-        fixnum_t ia = numval(a);
-        void *bptr = cv_data(bcv);
-        if (cmp_eq(&ia, T_FIXNUM, bptr, bt))
-            return fixnum(0);
-        if (eq) return fixnum(1);
-        if (cmp_lt(&ia, T_FIXNUM, bptr, bt))
-            return fixnum(-1);
-    }
-    else {
+    cprim_t *bcp = (cprim_t*)ptr(b);
+    numerictype_t bt = cp_numtype(bcp);
+    fixnum_t ia = numval(a);
+    void *bptr = cp_data(bcp);
+    if (cmp_eq(&ia, T_FIXNUM, bptr, bt))
+        return fixnum(0);
+    if (eq) return fixnum(1);
+    if (cmp_lt(&ia, T_FIXNUM, bptr, bt))
         return fixnum(-1);
-    }
     return fixnum(1);
 }
 
@@ -74,7 +69,7 @@ static value_t bounded_vector_compare(value_t a, value_t b, int bound, int eq)
 }
 
 // strange comparisons are resolved arbitrarily but consistently.
-// ordering: number < builtin < cvalue < vector < symbol < cons
+// ordering: number < cprim < builtin < cvalue < vector < symbol < cons
 static value_t bounded_compare(value_t a, value_t b, int bound, int eq)
 {
     value_t d;
@@ -91,8 +86,8 @@ static value_t bounded_compare(value_t a, value_t b, int bound, int eq)
         if (isfixnum(b)) {
             return (numval(a) < numval(b)) ? fixnum(-1) : fixnum(1);
         }
-        if (iscvalue(b)) {
-            return compare_num_cvalue(a, b, eq);
+        if (iscprim(b)) {
+            return compare_num_cprim(a, b, eq);
         }
         return fixnum(-1);
     case TAG_SYM:
@@ -104,26 +99,25 @@ static value_t bounded_compare(value_t a, value_t b, int bound, int eq)
         if (isvector(b))
             return bounded_vector_compare(a, b, bound, eq);
         break;
-    case TAG_CVALUE:
-        if (iscvalue(b)) {
-            cvalue_t *acv=(cvalue_t*)ptr(a), *bcv=(cvalue_t*)ptr(b);
-            numerictype_t at, bt;
-            if (valid_numtype(at=cv_numtype(acv)) &&
-                valid_numtype(bt=cv_numtype(bcv))) {
-                void *aptr = cv_data(acv);
-                void *bptr = cv_data(bcv);
-                if (cmp_eq(aptr, at, bptr, bt))
-                    return fixnum(0);
-                if (eq) return fixnum(1);
-                if (cmp_lt(aptr, at, bptr, bt))
-                    return fixnum(-1);
-                return fixnum(1);
-            }
-            return cvalue_compare(a, b);
+    case TAG_CPRIM:
+        if (iscprim(b)) {
+            cprim_t *acp=(cprim_t*)ptr(a), *bcp=(cprim_t*)ptr(b);
+            numerictype_t at=cp_numtype(acp), bt=cp_numtype(bcp);
+            void *aptr=cp_data(acp), *bptr=cp_data(bcp);
+            if (cmp_eq(aptr, at, bptr, bt))
+                return fixnum(0);
+            if (eq) return fixnum(1);
+            if (cmp_lt(aptr, at, bptr, bt))
+                return fixnum(-1);
+            return fixnum(1);
         }
         else if (isfixnum(b)) {
-            return fixnum(-numval(compare_num_cvalue(b, a, eq)));
+            return fixnum(-numval(compare_num_cprim(b, a, eq)));
         }
+        break;
+    case TAG_CVALUE:
+        if (iscvalue(b))
+            return cvalue_compare(a, b);
         break;
     case TAG_BUILTIN:
         if (tagb == TAG_BUILTIN) {
@@ -288,6 +282,7 @@ static uptrint_t bounded_hash(value_t a, int bound)
     numerictype_t nt;
     size_t i, len;
     cvalue_t *cv;
+    cprim_t *cp;
     void *data;
     if (bound <= 0) return 0;
     uptrint_t h = 0;
@@ -301,17 +296,17 @@ static uptrint_t bounded_hash(value_t a, int bound)
         return inthash(a);
     case TAG_SYM:
         return ((symbol_t*)ptr(a))->hash;
+    case TAG_CPRIM:
+        cp = (cprim_t*)ptr(a);
+        data = cp_data(cp);
+        nt = cp_numtype(cp);
+        d = conv_to_double(data, nt);
+        if (d==0) d = 0.0;  // normalize -0
+        return doublehash(*(int64_t*)&d);
     case TAG_CVALUE:
         cv = (cvalue_t*)ptr(a);
         data = cv_data(cv);
-        if (valid_numtype(nt=cv_numtype(cv))) {
-            d = conv_to_double(data, nt);
-            if (d==0) d = 0.0;  // normalize -0
-            return doublehash(*(int64_t*)&d);
-        }
-        else {
-            return memhash(data, cv_len(cv));
-        }
+        return memhash(data, cv_len(cv));
     case TAG_VECTOR:
         len = vector_size(a);
         for(i=0; i < len; i++) {

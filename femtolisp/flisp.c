@@ -197,7 +197,7 @@ static symbol_t *mk_symbol(char *str)
         sym->binding = UNBOUND;
         sym->syntax = 0;
     }
-    sym->type = NULL;
+    sym->type = sym->dlcache = NULL;
     sym->hash = memhash32(str, len)^0xAAAAAAAA;
     strcpy(&sym->name[0], str);
     return sym;
@@ -351,8 +351,9 @@ static int symchar(char c);
 static value_t relocate(value_t v)
 {
     value_t a, d, nc, first, *pcdr;
+    uptrint_t t = tag(v);
 
-    if (iscons(v)) {
+    if (t == TAG_CONS) {
         // iterative implementation allows arbitrarily long cons chains
         pcdr = &first;
         do {
@@ -370,11 +371,12 @@ static value_t relocate(value_t v)
         *pcdr = (d==NIL) ? NIL : relocate(d);
         return first;
     }
-    uptrint_t t = tag(v);
-    if ((t&(t-1)) == 0) return v;  // tags 0,1,2,4
-    if (isforwarded(v))
-        return forwardloc(v);
-    if (isvector(v)) {
+
+    if ((t&3) == 0) return v;
+    if (!ismanaged(v)) return v;
+    if (isforwarded(v)) return forwardloc(v);
+
+    if (t == TAG_VECTOR) {
         // N.B.: 0-length vectors secretly have space for a first element
         size_t i, newsz, sz = vector_size(v);
         newsz = sz;
@@ -393,11 +395,20 @@ static value_t relocate(value_t v)
             vector_elt(nc,i) = NIL;
         return nc;
     }
-    else if (iscvalue(v)) {
+    else if (t == TAG_CPRIM) {
+        cprim_t *pcp = (cprim_t*)ptr(v);
+        size_t nw = CPRIM_NWORDS-1+NWORDS(cp_class(pcp)->size);
+        cprim_t *ncp = (cprim_t*)alloc_words(nw);
+        while (nw--)
+            ((value_t*)ncp)[nw] = ((value_t*)pcp)[nw];
+        nc = tagptr(ncp, TAG_CPRIM);
+        forward(v, nc);
+        return nc;
+    }
+    else if (t == TAG_CVALUE) {
         return cvalue_relocate(v);
     }
-    else if (ismanaged(v)) {
-        assert(issymbol(v));
+    else if (t == TAG_SYM) {
         gensym_t *gs = (gensym_t*)ptr(v);
         gensym_t *ng = (gensym_t*)alloc_words(sizeof(gensym_t)/sizeof(void*));
         ng->id = gs->id;
@@ -571,9 +582,7 @@ static value_t vector_grow(value_t v)
 
 int isnumber(value_t v)
 {
-    return (isfixnum(v) ||
-            (iscvalue(v) &&
-             valid_numtype(cv_numtype((cvalue_t*)ptr(v)))));
+    return (isfixnum(v) || iscprim(v));
 }
 
 // read -----------------------------------------------------------------------
@@ -928,19 +937,21 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                 v = fixnum(vector_size(Stack[SP-1]));
                 break;
             }
-            else if (iscvalue(Stack[SP-1])) {
+            else if (iscprim(Stack[SP-1])) {
                 cv = (cvalue_t*)ptr(Stack[SP-1]);
-                v = cv_type(cv);
-                if (iscons(v) && car_(v) == arraysym) {
-                    v = size_wrap(cvalue_arraylen(Stack[SP-1]));
-                    break;
-                }
-                else if (v == bytesym) {
+                if (cp_class(cv) == bytetype) {
                     v = fixnum(1);
                     break;
                 }
-                else if (v == wcharsym) {
-                    v = fixnum(u8_charlen(*(uint32_t*)cv_data(cv)));
+                else if (cp_class(cv) == wchartype) {
+                    v = fixnum(u8_charlen(*(uint32_t*)cp_data((cprim_t*)cv)));
+                    break;
+                }
+            }
+            else if (iscvalue(Stack[SP-1])) {
+                cv = (cvalue_t*)ptr(Stack[SP-1]);
+                if (cv_class(cv)->eltype != NULL) {
+                    v = size_wrap(cvalue_arraylen(Stack[SP-1]));
                     break;
                 }
             }
@@ -999,10 +1010,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             break;
         case F_NUMBERP:
             argcount("numberp", nargs, 1);
-            v = ((isfixnum(Stack[SP-1]) ||
-                  (iscvalue(Stack[SP-1]) &&
-                   valid_numtype(cv_numtype((cvalue_t*)ptr(Stack[SP-1]))) ))
-                 ? T : NIL);
+            v = (isfixnum(Stack[SP-1]) || iscprim(Stack[SP-1]) ? T : NIL);
             break;
         case F_FIXNUMP:
             argcount("fixnump", nargs, 1);

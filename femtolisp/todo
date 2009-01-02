@@ -12,8 +12,9 @@
 * read support for #' for compatibility
 * #\c read character as code (including UTF-8 support!)
 * #| |# block comments
-- here-data for binary serialization. proposed syntax:
+? here-data for binary serialization. proposed syntax:
   #>size:data, e.g. #>6:000000
+? better read syntax for packed arrays, e.g. #double[3 1 4]
 * use syntax environment concept for user-defined macros to plug
   that hole in the semantics
 * make more builtins generic. if typecheck fails, call out to the
@@ -102,9 +103,10 @@ possible optimizations:
   env in-place in tail position
 - allocate memory by mmap'ing a large uncommitted block that we cut
   in half. then each half heap can be grown without moving addresses.
-- try making (list ...) a builtin by moving the list-building code to
+* try making (list ...) a builtin by moving the list-building code to
   a static function, see if vararg call performance is affected.
 - try making foldl a builtin, implement table iterator as table.foldl
+  . not great, since then it can't be CPS converted
 * represent lambda environment as a vector (in lispv)
 x setq builtin (didn't help)
 (- list builtin, to use cons_reserve)
@@ -131,6 +133,10 @@ for internal use:
    improve by making lambda lists vectors somehow?
 * fast builtin bounded iteration construct (for lo hi (lambda (x) ...))
 * represent guest function as a tagged function pointer; allocate nothing
+- when an instance of (array type n) is requested, use (array type)
+  instead, unless the value is part of an aggregate (e.g. struct).
+  . this avoids allocating a new type for every size.
+  . and/or add function array.alloc
 
 bugs:
 * with the fully recursive (simpler) relocate(), the size of cons chains
@@ -925,7 +931,7 @@ switch to miser mode, otherwise default is ok, for example:
 
 consolidated todo list as of 8/30:
 * new cvalues, types representation
-- use the unused tag for TAG_PRIM, add smaller prim representation
+* use the unused tag for TAG_PRIM, add smaller prim representation
 * finalizers in gc
 * hashtable
 * generic aref/aset

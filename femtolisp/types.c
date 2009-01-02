@@ -66,12 +66,8 @@ fltype_t *get_array_type(value_t eltype)
 fltype_t *define_opaque_type(value_t sym, size_t sz, cvtable_t *vtab,
                              cvinitfunc_t init)
 {
-    void **bp = equalhash_bp(&TypeTable, (void*)sym);
-    if (*bp != HT_NOTFOUND)
-        return *bp;
     fltype_t *ft = (fltype_t*)malloc(sizeof(fltype_t));
     ft->type = sym;
-    ((symbol_t*)ptr(sym))->type = ft;
     ft->size = sz;
     ft->numtype = N_NUMTYPES;
     ft->vtable = vtab;
@@ -80,7 +76,6 @@ fltype_t *define_opaque_type(value_t sym, size_t sz, cvtable_t *vtab,
     ft->elsz = 0;
     ft->marked = 1;
     ft->init = init;
-    *bp = ft;
     return ft;
 }
 

@@ -30,7 +30,7 @@ typedef struct _symbol_t {
 } symbol_t;
 
 #define TAG_NUM      0x0
-                   //0x1 unused
+#define TAG_CPRIM    0x1
 #define TAG_BUILTIN  0x2
 #define TAG_VECTOR   0x3
 #define TAG_NUM1     0x4
@@ -61,6 +61,7 @@ typedef struct _symbol_t {
 #define isbuiltinish(x) (tag(x) == TAG_BUILTIN)
 #define isvector(x) (tag(x) == TAG_VECTOR)
 #define iscvalue(x) (tag(x) == TAG_CVALUE)
+#define iscprim(x)  (tag(x) == TAG_CPRIM)
 #define selfevaluating(x) (tag(x)<6)
 // comparable with ==
 #define eq_comparable(a,b) (!(((a)|(b))&1))
@@ -212,12 +213,19 @@ typedef struct {
 #define cv_len(cv)     ((cv)->len)
 #define cv_type(cv)    (cv_class(cv)->type)
 #define cv_data(cv)    ((cv)->data)
-#define cv_numtype(cv) (cv_class(cv)->numtype)
 #define cv_isstr(cv)   (cv_class(cv)->eltype == bytetype)
 
 #define cvalue_data(v) cv_data((cvalue_t*)ptr(v))
 
 #define valid_numtype(v) ((v) < N_NUMTYPES)
+#define cp_class(cp)   ((cp)->type)
+#define cp_type(cp)    (cp_class(cp)->type)
+#define cp_numtype(cp) (cp_class(cp)->numtype)
+#define cp_data(cp)    (&(cp)->_space[0])
+
+// WARNING: multiple evaluation!
+#define cptr(v) \
+    (iscprim(v) ? cp_data((cprim_t*)ptr(v)) : cv_data((cvalue_t*)ptr(v)))
 
 /* C type names corresponding to cvalues type names */
 typedef unsigned long ulong;

@@ -174,23 +174,21 @@ value_t fl_constantp(value_t *args, u_int32_t nargs)
 value_t fl_fixnum(value_t *args, u_int32_t nargs)
 {
     argcount("fixnum", nargs, 1);
-    if (isfixnum(args[0]))
+    if (isfixnum(args[0])) {
         return args[0];
-    if (iscvalue(args[0])) {
+    }
+    else if (iscprim(args[0])) {
+        cprim_t *cp = (cprim_t*)ptr(args[0]);
+        return fixnum(conv_to_long(cp_data(cp), cp_numtype(cp)));
+    }
+    else if (isstring(args[0])) {
         cvalue_t *cv = (cvalue_t*)ptr(args[0]);
-        long i;
-        if (cv_isstr(cv)) {
-            char *pend;
-            errno = 0;
-            i = strtol(cv_data(cv), &pend, 0);
-            if (*pend != '\0' || errno!=0)
-                lerror(ArgError, "fixnum: invalid string");
-            return fixnum(i);
-        }
-        else if (valid_numtype(cv_numtype(cv))) {
-            i = conv_to_long(cv_data(cv), cv_numtype(cv));
-            return fixnum(i);
-        }
+        char *pend;
+        errno = 0;
+        long i = strtol(cv_data(cv), &pend, 0);
+        if (*pend != '\0' || errno!=0)
+            lerror(ArgError, "fixnum: invalid string");
+        return fixnum(i);
     }
     lerror(ArgError, "fixnum: cannot convert argument");
 }
@@ -200,22 +198,20 @@ value_t fl_truncate(value_t *args, u_int32_t nargs)
     argcount("truncate", nargs, 1);
     if (isfixnum(args[0]))
         return args[0];
-    if (iscvalue(args[0])) {
-        cvalue_t *cv = (cvalue_t*)ptr(args[0]);
-        void *data = cv_data(cv);
-        numerictype_t nt = cv_numtype(cv);
-        if (valid_numtype(nt)) {
-            double d;
-            if (nt == T_FLOAT)
-                d = (double)*(float*)data;
-            else if (nt == T_DOUBLE)
-                d = *(double*)data;
-            else
-                return args[0];
-            if (d > 0)
-                return return_from_uint64((uint64_t)d);
-            return return_from_int64((int64_t)d);
-        }
+    if (iscprim(args[0])) {
+        cprim_t *cp = (cprim_t*)ptr(args[0]);
+        void *data = cp_data(cp);
+        numerictype_t nt = cp_numtype(cp);
+        double d;
+        if (nt == T_FLOAT)
+            d = (double)*(float*)data;
+        else if (nt == T_DOUBLE)
+            d = *(double*)data;
+        else
+            return args[0];
+        if (d > 0)
+            return return_from_uint64((uint64_t)d);
+        return return_from_int64((int64_t)d);
     }
     type_error("truncate", "number", args[0]);
 }
@@ -253,11 +249,10 @@ static double todouble(value_t a, char *fname)
 {
     if (isfixnum(a))
         return (double)numval(a);
-    if (iscvalue(a)) {
-        cvalue_t *cv = (cvalue_t*)ptr(a);
-        numerictype_t nt = cv_numtype(cv);
-        if (valid_numtype(nt))
-            return conv_to_double(cv_data(cv), nt);
+    if (iscprim(a)) {
+        cprim_t *cp = (cprim_t*)ptr(a);
+        numerictype_t nt = cp_numtype(cp);
+        return conv_to_double(cp_data(cp), nt);
     }
     type_error(fname, "number", a);
 }

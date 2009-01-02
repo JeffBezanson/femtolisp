@@ -68,6 +68,9 @@ void print_traverse(value_t v)
         for(i=0; i < vector_size(v); i++)
             print_traverse(vector_elt(v,i));
     }
+    else if (iscprim(v)) {
+        mark_cons(v);
+    }
     else {
         assert(iscvalue(v));
         cvalue_t *cv = (cvalue_t*)ptr(v);
@@ -342,6 +345,7 @@ void fl_print_child(ios_t *f, value_t v, int princ)
         }
         break;
     case TAG_CVALUE:
+    case TAG_CPRIM:
     case TAG_VECTOR:
     case TAG_CONS:
         if ((label=(value_t)ptrhash_get(&printconses, (void*)v)) !=
@@ -377,7 +381,7 @@ void fl_print_child(ios_t *f, value_t v, int princ)
             outc(']', f);
             break;
         }
-        if (iscvalue(v)) {
+        if (iscvalue(v) || iscprim(v)) {
             unmark_cons(v);
             cvalue_print(f, v, princ);
             break;
@@ -584,7 +588,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
 void cvalue_print(ios_t *f, value_t v, int princ)
 {
     cvalue_t *cv = (cvalue_t*)ptr(v);
-    void *data = cv_data(cv);
+    void *data = cptr(v);
 
     if (cv_class(cv) == builtintype) {
         HPOS+=ios_printf(f, "#<builtin @0x%08lx>",
@@ -595,7 +599,9 @@ void cvalue_print(ios_t *f, value_t v, int princ)
         cv_class(cv)->vtable->print(v, f, princ);
     }
     else {
-        cvalue_printdata(f, data, cv_len(cv), cv_type(cv), princ, 0);
+        value_t type = cv_type(cv);
+        size_t len = iscprim(v) ? cv_class(cv)->size : cv_len(cv);
+        cvalue_printdata(f, data, len, type, princ, 0);
     }
 }
 

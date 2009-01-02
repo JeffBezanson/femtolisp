@@ -117,11 +117,21 @@ void cv_autorelease(cvalue_t *cv)
     autorelease(cv);
 }
 
+static value_t cprim(fltype_t *type, size_t sz)
+{
+    cprim_t *pcp = (cprim_t*)alloc_words(CPRIM_NWORDS-1+NWORDS(sz));
+    pcp->type = type;
+    return tagptr(pcp, TAG_CPRIM);
+}
+
 value_t cvalue(fltype_t *type, size_t sz)
 {
     cvalue_t *pcv;
     int str=0;
 
+    if (valid_numtype(type->numtype)) {
+        return cprim(type, sz);
+    }
     if (type->eltype == bytetype) {
         if (sz == 0)
             return symbol_value(emptystringsym);
@@ -155,11 +165,9 @@ value_t cvalue(fltype_t *type, size_t sz)
 
 value_t cvalue_from_data(fltype_t *type, void *data, size_t sz)
 {
-    cvalue_t *pcv;
     value_t cv;
     cv = cvalue(type, sz);
-    pcv = (cvalue_t*)ptr(cv);
-    memcpy(cv_data(pcv), data, sz);
+    memcpy(cptr(cv), data, sz);
     return cv;
 }
 
@@ -242,35 +250,29 @@ static void cvalue_##typenam##_init(fltype_t *type, value_t arg,        \
     if (isfixnum(arg)) {                                                \
         n = numval(arg);                                                \
     }                                                                   \
-    else if (iscvalue(arg)) {                                           \
-        cvalue_t *cv = (cvalue_t*)ptr(arg);                             \
-        void *p = cv_data(cv);                                          \
-        if (valid_numtype(cv_numtype(cv)))                              \
-            n = (ctype##_t)conv_to_##cnvt(p, cv_numtype(cv));           \
-        else                                                            \
-            goto cnvt_error;                                            \
+    else if (iscprim(arg)) {                                            \
+        cprim_t *cp = (cprim_t*)ptr(arg);                               \
+        void *p = cp_data(cp);                                          \
+        n = (ctype##_t)conv_to_##cnvt(p, cp_numtype(cp));               \
     }                                                                   \
     else {                                                              \
-        goto cnvt_error;                                                \
+        type_error(#typenam, "number", arg);                            \
     }                                                                   \
     *((ctype##_t*)dest) = n;                                            \
-    return;                                                             \
- cnvt_error:                                                            \
-    type_error(#typenam, "number", arg);                                \
 }                                                                       \
 value_t cvalue_##typenam(value_t *args, u_int32_t nargs)                \
 {                                                                       \
     if (nargs==0) { PUSH(fixnum(0)); args = &Stack[SP-1]; }             \
-    value_t cv = cvalue(typenam##type, sizeof(ctype##_t));              \
+    value_t cp = cprim(typenam##type, sizeof(ctype##_t));               \
     cvalue_##typenam##_init(typenam##type,                              \
-                            args[0], &((cvalue_t*)ptr(cv))->_space[0]); \
-    return cv;                                                          \
+                            args[0], cp_data((cprim_t*)ptr(cp)));       \
+    return cp;                                                          \
 }                                                                       \
 value_t mk_##typenam(ctype##_t n)                                       \
 {                                                                       \
-    value_t cv = cvalue(typenam##type, sizeof(ctype##_t));              \
-    *(ctype##_t*)&((cvalue_t*)ptr(cv))->_space[0] = n;                  \
-    return cv;                                                          \
+    value_t cp = cprim(typenam##type, sizeof(ctype##_t));               \
+    *(ctype##_t*)cp_data((cprim_t*)ptr(cp)) = n;                        \
+    return cp;                                                          \
 }
 
 num_ctor(int8, int8, int32, T_INT8)
@@ -305,11 +307,9 @@ size_t toulong(value_t n, char *fname)
 {
     if (isfixnum(n))
         return numval(n);
-    if (iscvalue(n)) {
-        cvalue_t *cv = (cvalue_t*)ptr(n);
-        if (valid_numtype(cv_numtype(cv))) {
-            return conv_to_ulong(cv_data(cv), cv_numtype(cv));
-        }
+    if (iscprim(n)) {
+        cprim_t *cp = (cprim_t*)ptr(n);
+        return conv_to_ulong(cp_data(cp), cp_numtype(cp));
     }
     type_error(fname, "number", n);
     return 0;
@@ -338,11 +338,12 @@ static void cvalue_enum_init(fltype_t *ft, value_t arg, void *dest)
     if (isfixnum(arg)) {
         n = (int)numval(arg);
     }
-    else if (iscvalue(arg)) {
-        cvalue_t *cv = (cvalue_t*)ptr(arg);
-        if (!valid_numtype(cv_numtype(cv)))
-            type_error("enum", "number", arg);
-        n = conv_to_int32(cv_data(cv), cv_numtype(cv));
+    else if (iscprim(arg)) {
+        cprim_t *cp = (cprim_t*)ptr(arg);
+        n = conv_to_int32(cp_data(cp), cp_numtype(cp));
+    }
+    else {
+        type_error("enum", "number", arg);
     }
     if ((unsigned)n >= llength(syms))
         lerror(ArgError, "enum: value out of range");
@@ -354,8 +355,8 @@ value_t cvalue_enum(value_t *args, u_int32_t nargs)
     argcount("enum", nargs, 2);
     value_t type = list2(enumsym, args[0]);
     fltype_t *ft = get_type(type);
-    value_t cv = cvalue(ft, 4);
-    cvalue_enum_init(ft, args[1], cv_data((cvalue_t*)ptr(cv)));
+    value_t cv = cvalue(ft, sizeof(int32_t));
+    cvalue_enum_init(ft, args[1], cp_data((cprim_t*)ptr(cv)));
     return cv;
 }
 
@@ -594,11 +595,14 @@ size_t ctype_sizeof(value_t type, int *palign)
 
 value_t cvalue_sizeof(value_t *args, u_int32_t nargs)
 {
-    cvalue_t *cv;
     argcount("sizeof", nargs, 1);
     if (iscvalue(args[0])) {
-        cv = (cvalue_t*)ptr(args[0]);
+        cvalue_t *cv = (cvalue_t*)ptr(args[0]);
         return size_wrap(cv_len(cv));
+    }
+    else if (iscprim(args[0])) {
+        cprim_t *cp = (cprim_t*)ptr(args[0]);
+        return fixnum(cp_class(cp)->size);
     }
     int a;
     return size_wrap(ctype_sizeof(args[0], &a));
@@ -720,7 +724,7 @@ value_t cvalue_new(value_t *args, u_int32_t nargs)
     else {
         cv = cvalue(ft, ft->size);
         if (nargs == 2)
-            cvalue_init(ft, args[1], cv_data((cvalue_t*)ptr(cv)));
+            cvalue_init(ft, args[1], cptr(cv));
     }
     return cv;
 }
@@ -763,7 +767,7 @@ static value_t cvalue_array_aref(value_t *args)
     fltype_t *eltype = cv_class((cvalue_t*)ptr(args[0]))->eltype;
     value_t el = cvalue(eltype, eltype->size);
     check_addr_args("aref", args[0], args[1], &data, &index);
-    char *dest = cv_data((cvalue_t*)ptr(el));
+    char *dest = cptr(el);
     size_t sz = eltype->size;
     if (sz == 1)
         *dest = data[index];
@@ -792,8 +796,8 @@ value_t fl_builtin(value_t *args, u_int32_t nargs)
 {
     argcount("builtin", nargs, 1);
     symbol_t *name = tosymbol(args[0], "builtin");
-    builtin_t f = (builtin_t)name->dlcache;
-    if (f == NULL) {
+    builtin_t f;
+    if (ismanaged(args[0]) || (f=(builtin_t)name->dlcache) == NULL) {
         lerror(ArgError, "builtin: function not found");
     }
     return tagptr(f, TAG_BUILTIN);
@@ -926,11 +930,11 @@ value_t fl_add_any(value_t *args, u_int32_t nargs, fixnum_t carryIn)
             Saccum += numval(args[i]);
             continue;
         }
-        else if (iscvalue(args[i])) {
-            cvalue_t *cv = (cvalue_t*)ptr(args[i]);
-            void *a = cv_data(cv);
+        else if (iscprim(args[i])) {
+            cprim_t *cp = (cprim_t*)ptr(args[i]);
+            void *a = cp_data(cp);
             int64_t i64;
-            switch(cv_numtype(cv)) {
+            switch(cp_numtype(cp)) {
             case T_INT8:   Saccum += *(int8_t*)a; break;
             case T_UINT8:  Saccum += *(uint8_t*)a; break;
             case T_INT16:  Saccum += *(int16_t*)a; break;
@@ -987,13 +991,13 @@ value_t fl_neg(value_t n)
     if (isfixnum(n)) {
         return fixnum(-numval(n));
     }
-    else if (iscvalue(n)) {
-        cvalue_t *cv = (cvalue_t*)ptr(n);
-        void *a = cv_data(cv);
+    else if (iscprim(n)) {
+        cprim_t *cp = (cprim_t*)ptr(n);
+        void *a = cp_data(cp);
         uint32_t ui32;
         int32_t i32;
         int64_t i64;
-        switch(cv_numtype(cv)) {
+        switch(cp_numtype(cp)) {
         case T_INT8:   return fixnum(-(int32_t)*(int8_t*)a);
         case T_UINT8:  return fixnum(-(int32_t)*(uint8_t*)a);
         case T_INT16:  return fixnum(-(int32_t)*(int16_t*)a);
@@ -1032,11 +1036,11 @@ value_t fl_mul_any(value_t *args, u_int32_t nargs, int64_t Saccum)
             Saccum *= numval(args[i]);
             continue;
         }
-        else if (iscvalue(args[i])) {
-            cvalue_t *cv = (cvalue_t*)ptr(args[i]);
-            void *a = cv_data(cv);
+        else if (iscprim(args[i])) {
+            cprim_t *cp = (cprim_t*)ptr(args[i]);
+            void *a = cp_data(cp);
             int64_t i64;
-            switch(cv_numtype(cv)) {
+            switch(cp_numtype(cp)) {
             case T_INT8:   Saccum *= *(int8_t*)a; break;
             case T_UINT8:  Saccum *= *(uint8_t*)a; break;
             case T_INT16:  Saccum *= *(int16_t*)a; break;
@@ -1088,18 +1092,18 @@ value_t fl_div2(value_t a, value_t b)
     int_t ai, bi;
     int ta, tb;
     void *aptr=NULL, *bptr=NULL;
-    cvalue_t *cv;
+    cprim_t *cp;
 
     if (isfixnum(a)) {
         ai = numval(a);
         aptr = &ai;
         ta = T_FIXNUM;
     }
-    else if (iscvalue(a)) {
-        cv = (cvalue_t*)ptr(a);
-        ta = cv_numtype(cv);
+    else if (iscprim(a)) {
+        cp = (cprim_t*)ptr(a);
+        ta = cp_numtype(cp);
         if (ta <= T_DOUBLE)
-            aptr = cv_data(cv);
+            aptr = cp_data(cp);
     }
     if (aptr == NULL)
         type_error("/", "number", a);
@@ -1108,11 +1112,11 @@ value_t fl_div2(value_t a, value_t b)
         bptr = &bi;
         tb = T_FIXNUM;
     }
-    else if (iscvalue(b)) {
-        cv = (cvalue_t*)ptr(b);
-        tb = cv_numtype(cv);
+    else if (iscprim(b)) {
+        cp = (cprim_t*)ptr(b);
+        tb = cp_numtype(cp);
         if (tb <= T_DOUBLE)
-            bptr = cv_data(cv);
+            bptr = cp_data(cp);
     }
     if (bptr == NULL)
         type_error("/", "number", b);
@@ -1174,12 +1178,12 @@ value_t fl_div2(value_t a, value_t b)
 
 static void *int_data_ptr(value_t a, int *pnumtype, char *fname)
 {
-    cvalue_t *cv;
-    if (iscvalue(a)) {
-        cv = (cvalue_t*)ptr(a);
-        *pnumtype = cv_numtype(cv);
+    cprim_t *cp;
+    if (iscprim(a)) {
+        cp = (cprim_t*)ptr(a);
+        *pnumtype = cp_numtype(cp);
         if (*pnumtype < T_FLOAT)
-            return cv_data(cv);
+            return cp_data(cp);
     }
     type_error(fname, "integer", a);
     return NULL;
@@ -1187,14 +1191,14 @@ static void *int_data_ptr(value_t a, int *pnumtype, char *fname)
 
 value_t fl_bitwise_not(value_t a)
 {
-    cvalue_t *cv;
+    cprim_t *cp;
     int ta;
     void *aptr;
 
-    if (iscvalue(a)) {
-        cv = (cvalue_t*)ptr(a);
-        ta = cv_numtype(cv);
-        aptr = cv_data(cv);
+    if (iscprim(a)) {
+        cp = (cprim_t*)ptr(a);
+        ta = cp_numtype(cp);
+        aptr = cp_data(cp);
         switch (ta) {
         case T_INT8:   return mk_int8(~*(int8_t *)aptr);
         case T_UINT8:  return mk_uint8(~*(uint8_t *)aptr);
@@ -1213,13 +1217,13 @@ value_t fl_bitwise_not(value_t a)
 #define BITSHIFT_OP(name, op)                                       \
 value_t fl_##name(value_t a, int n)                                 \
 {                                                                   \
-    cvalue_t *cv;                                                   \
+    cprim_t *cp;                                                    \
     int ta;                                                         \
     void *aptr;                                                     \
-    if (iscvalue(a)) {                                              \
-        cv = (cvalue_t*)ptr(a);                                     \
-        ta = cv_numtype(cv);                                        \
-        aptr = cv_data(cv);                                         \
+    if (iscprim(a)) {                                               \
+        cp = (cprim_t*)ptr(a);                                      \
+        ta = cp_numtype(cp);                                        \
+        aptr = cp_data(cp);                                         \
         switch (ta) {                                               \
         case T_INT8:   return mk_int8((*(int8_t *)aptr) op n);      \
         case T_UINT8:  return mk_uint8((*(uint8_t *)aptr) op n);    \
