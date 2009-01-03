@@ -71,7 +71,7 @@ value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT;
 value_t IOError, ParseError, TypeError, ArgError, UnboundError, MemoryError;
 value_t DivideError, BoundsError, Error, KeyError;
 value_t conssym, symbolsym, fixnumsym, vectorsym, builtinsym;
-value_t defunsym, defmacrosym, forsym, labelsym, printprettysym;
+value_t defunsym, defmacrosym, forsym, labelsym, printprettysym, setqsym;
 value_t printwidthsym;
 
 static value_t eval_sexpr(value_t e, uint32_t penv, int tail);
@@ -1399,6 +1399,7 @@ void lisp_init(void)
     defmacrosym = symbol("defmacro");
     forsym = symbol("for");
     labelsym = symbol("label");
+    setqsym = symbol("setq");
     set(printprettysym=symbol("*print-pretty*"), T);
     set(printwidthsym=symbol("*print-width*"), fixnum(SCR_WIDTH));
     lasterror = NIL;

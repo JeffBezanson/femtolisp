@@ -15,6 +15,32 @@
              (cps- (car forms) `(lambda (,_)
                                   ,(progn->cps (cdr forms) k)))))))
 
+(defmacro lambda/cc (args body)
+  `(rplaca (lambda ,args ,body) 'lambda/cc))
+
+; a utility used at run time to dispatch a call with or without
+; the continuation argument, depending on the function
+(define (funcall/cc f k . args)
+  (if (and (consp f) (eq (car f) 'lambda/cc))
+      (apply f (cons k args))
+    (k (apply f args))))
+(define *funcall/cc-names*
+  (list-to-vector
+   (map (lambda (i) (intern (string 'funcall/cc- i)))
+        (iota 6))))
+(defmacro def-funcall/cc-n (args)
+  (let* ((name (aref *funcall/cc-names* (length args))))
+    `(define (,name f k ,@args)
+       (if (and (consp f) (eq (car f) 'lambda/cc))
+           (f k ,@args)
+         (k (f ,@args))))))
+(def-funcall/cc-n ())
+(def-funcall/cc-n (a0))
+(def-funcall/cc-n (a0 a1))
+(def-funcall/cc-n (a0 a1 a2))
+(def-funcall/cc-n (a0 a1 a2 a3))
+(def-funcall/cc-n (a0 a1 a2 a3 a4))
+
 (define (rest->cps xformer form k argsyms)
   (let ((el (car form)))
     (if (or (atom el) (constantp el))
@@ -23,11 +49,17 @@
         (cps- el `(lambda (,g)
                     ,(xformer (cdr form) k (cons g argsyms))))))))
 
+(define (make-funcall/cc head ke args)
+  (let ((n (length args)))
+    (if (< n 6)
+        `(,(aref *funcall/cc-names* n) ,head ,ke ,@args)
+      `(funcall/cc ,head ,ke ,@args))))
+
 ; (f x) => (cps- f `(lambda (F) ,(cps- x `(lambda (X) (F ,k X)))))
 (define (app->cps form k argsyms)
   (cond ((atom form)
          (let ((r (reverse argsyms)))
-           `(,(car r) ,k ,@(cdr r))))
+           (make-funcall/cc (car r) k (cdr r))))
         (T (rest->cps app->cps form k argsyms))))
 
 ; (+ x) => (cps- x `(lambda (X) (,k (+ X))))
@@ -51,7 +83,7 @@
            `(,k ,form))
 
           ((eq (car form) 'lambda)
-           `(,k (lambda ,(cons g (cadr form)) ,(cps- (caddr form) g))))
+           `(,k (lambda/cc ,(cons g (cadr form)) ,(cps- (caddr form) g))))
 
           ((eq (car form) 'progn)
            (progn->cps (cdr form) k))
@@ -120,7 +152,7 @@
            (let ((v (cadr form))
                  (E (caddr form))
                  (val (gensym)))
-             `(let ((,v (lambda (,g ,val) (,g (,k ,val)))))
+             `(let ((,v (lambda/cc (,g ,val) (,g (,k ,val)))))
                 ,(cps- E *top-k*))))
 
           ((and (constantp (car form))
@@ -132,12 +164,15 @@
                 (eq (caar form) 'lambda))
            (let ((largs (cadr (car form)))
                  (lbody (caddr (car form))))
-             (if (null largs)
-                 (cps- lbody k)  ; ((lambda () x))
-               (cps- (cadr form) `(lambda (,(car largs))
-                                    ,(cps- `((lambda ,(cdr largs) ,lbody)
-                                             ,@(cddr form))
-                                           k))))))
+             (cond ((null largs)    ; ((lambda () body))
+                    (cps- lbody k))
+                   ((symbolp largs) ; ((lambda x body) args...)
+                    (cps- `((lambda (,largs) ,lbody) (list ,@(cdr form))) k))
+                   (T
+                    (cps- (cadr form) `(lambda (,(car largs))
+                                         ,(cps- `((lambda ,(cdr largs) ,lbody)
+                                                  ,@(cddr form))
+                                                k)))))))
 
           (T
            (app->cps form k ())))))
@@ -148,12 +183,11 @@
   (cond ((or (atom form) (constantp form)) form)
         ((and (eq (car form) 'lambda)
               (let ((body (caddr form))
-                    (args (cadr form))
-                    (func (car (caddr form))))
+                    (args (cadr form)))
                 (and (consp body)
                      (equal (cdr body) args)
-                     (constantp func))))
-         (η-reduce (car (caddr form))))
+                     (constantp (car (caddr form))))))
+         (car (caddr form)))
         (T (map η-reduce form))))
 
 (define (contains x form)
@@ -172,7 +206,7 @@
               (eq (caar form) 'lambda)
               (let ((args (cadr (car form)))
                     (body (caddr (car form))))
-                (and (consp body)
+                (and (consp body) (consp args)
                      (= (length body) 2)
                      (= (length args) 1)
                      (eq (car body) (car args))
@@ -196,7 +230,7 @@
               (let ((args (cadr (car form)))
                     (s (cadr form))
                     (body (caddr (car form))))
-                (and (= (length args) 1)
+                (and (consp args) (= (length args) 1)
                      (consp body)
                      (consp (car body))
                      (eq (caar body) 'lambda)
@@ -250,11 +284,13 @@ T
 
 #|
 todo:
-- tag lambdas that accept continuation arguments, compile computed
+* tag lambdas that accept continuation arguments, compile computed
   calls to calls to funcall/cc that does the right thing for both
   cc-lambdas and normal lambdas
 
-- handle dotted arglists in lambda
+* handle dotted arglists in lambda
+
+- implement CPS version of apply
 
 - use fewer gensyms
 

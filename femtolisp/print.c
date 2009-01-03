@@ -2,7 +2,6 @@ static htable_t printconses;
 static u_int32_t printlabel;
 static int print_pretty;
 static int SCR_WIDTH = 80;
-static int R_MARGIN, C_MARGIN, R_EDGE, L_PAD, R_PAD;
 
 static int HPOS, VPOS;
 static void outc(char c, ios_t *f)
@@ -15,8 +14,12 @@ static void outs(char *s, ios_t *f)
     ios_puts(s, f);
     HPOS += u8_strwidth(s);
 }
-static void outindent(int n, ios_t *f)
+static int outindent(int n, ios_t *f)
 {
+    // move back to left margin if we get too indented
+    if (n > SCR_WIDTH-12)
+        n = 2;
+    int n0 = n;
     ios_putc('\n', f);
     VPOS++;
     HPOS = n;
@@ -28,6 +31,7 @@ static void outindent(int n, ios_t *f)
         ios_putc(' ', f);
         n--;
     }
+    return n0;
 }
 
 void fl_print_chr(char c, ios_t *f)
@@ -137,7 +141,9 @@ static void print_symbol_name(ios_t *f, char *name)
 */
 static inline int tinyp(value_t v)
 {
-    return (issymbol(v) || isfixnum(v) || isbuiltinish(v));
+    if (issymbol(v))
+        return (u8_strwidth(symbol_name(v)) < 20);
+    return (isfixnum(v) || isbuiltinish(v));
 }
 
 static int smallp(value_t v)
@@ -203,7 +209,7 @@ static int indentevery(value_t v)
     // indent before every subform of a special form, unless every
     // subform is "small"
     value_t c = car_(v);
-    if (c == LAMBDA || c == labelsym)
+    if (c == LAMBDA || c == labelsym || c == setqsym)
         return 0;
     value_t f;
     if (issymbol(c) && (f=((symbol_t*)ptr(c))->syntax) && isspecial(f))
@@ -241,10 +247,11 @@ static void print_pair(ios_t *f, value_t v, int princ)
     int startpos = HPOS;
     outc('(', f);
     int newindent=HPOS, blk=blockindent(v);
-    int lastv, n=0, si, ind=0, est, always=0, nextsmall;
+    int lastv, n=0, si, ind=0, est, always=0, nextsmall, thistiny;
     if (!blk) always = indentevery(v);
     value_t head = car_(v);
     int after3 = indentafter3(head, v);
+    int n_unindented = 1;
     while (1) {
         lastv = VPOS;
         unmark_cons(v);
@@ -267,16 +274,13 @@ static void print_pair(ios_t *f, value_t v, int princ)
         else {
             est = lengthestimate(car_(cd));
             nextsmall = smallp(car_(cd));
-            ind = (((n > 0) &&
-                    ((!nextsmall && HPOS>C_MARGIN) || (VPOS > lastv))) ||
+            thistiny = tinyp(car_(v));
+            ind = (((VPOS > lastv) ||
+                    (HPOS>SCR_WIDTH/2 && !nextsmall && !thistiny && n>0)) ||
                    
-                   ((VPOS > lastv) && (!nextsmall || n==0)) ||
+                   (HPOS > SCR_WIDTH-4) ||
                    
-                   (HPOS > R_PAD && !nextsmall) ||
-                   
-                   (HPOS > R_MARGIN) ||
-                   
-                   (est!=-1 && (HPOS+est > R_EDGE)) ||
+                   (est!=-1 && (HPOS+est > SCR_WIDTH-2)) ||
                    
                    ((head == LAMBDA || head == labelsym) && !nextsmall) ||
                    
@@ -284,13 +288,17 @@ static void print_pair(ios_t *f, value_t v, int princ)
                    
                    (n == 2 && after3) ||
 
+                   (n_unindented >= 3 && !nextsmall) ||
+                   
                    (n == 0 && !smallp(head)));
         }
 
         if (ind) {
-            outindent(newindent, f);
+            newindent = outindent(newindent, f);
+            n_unindented = 1;
         }
         else {
+            n_unindented++;
             outc(' ', f);
             if (n==0) {
                 // set indent level after printing head
@@ -369,10 +377,12 @@ void fl_print_child(ios_t *f, value_t v, int princ)
                     }
                     else {
                         est = lengthestimate(vector_elt(v,i+1));
-                        if (HPOS > R_MARGIN ||
-                            (est!=-1 && (HPOS+est > R_EDGE)) ||
-                            (HPOS > C_MARGIN && !smallp(vector_elt(v,i+1))))
-                            outindent(newindent, f);
+                        if (HPOS > SCR_WIDTH-4 ||
+                            (est!=-1 && (HPOS+est > SCR_WIDTH-2)) ||
+                            (HPOS > SCR_WIDTH/2 &&
+                             !smallp(vector_elt(v,i+1)) &&
+                             !tinyp(vector_elt(v,i))))
+                            newindent = outindent(newindent, f);
                         else
                             outc(' ', f);
                     }
@@ -610,11 +620,6 @@ static void set_print_width()
     value_t pw = symbol_value(printwidthsym);
     if (!isfixnum(pw)) return;
     SCR_WIDTH = numval(pw);
-    R_MARGIN = SCR_WIDTH-6;
-    R_EDGE = SCR_WIDTH-2;
-    C_MARGIN = SCR_WIDTH/2;
-    L_PAD = (SCR_WIDTH*7)/20;
-    R_PAD = L_PAD*2;
 }
 
 void print(ios_t *f, value_t v, int princ)

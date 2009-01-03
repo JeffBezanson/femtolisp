@@ -293,6 +293,7 @@
       first)))
 
 (defun iota (n) (map-int identity n))
+(define ι iota)
 
 (defun error args (raise (cons 'error args)))
 
