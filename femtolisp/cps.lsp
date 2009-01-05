@@ -155,6 +155,9 @@
              `(let ((,v (lambda/cc (,g ,val) (,g (,k ,val)))))
                 ,(cps- E *top-k*))))
 
+          ((eq (car form) 'without-delimited-continuations)
+           `(,k ,(cadr form)))
+
           ((and (constantp (car form))
                 (builtinp (eval (car form))))
            (builtincall->cps form k))
@@ -298,14 +301,14 @@ todo:
 
  (let ((x 0))
    (while (< x 10)
-     (progn (#.print x) (setq x (+ 1 x)))))
+     (progn (print x) (setq x (+ 1 x)))))
  =>
   (let ((x 0))
     (reset
      (let ((l nil))
        (let ((k (shift k (k k))))
          (if (< x 10)
-             (progn (setq l (progn (#.print x)
+             (progn (setq l (progn (print x)
                                    (setq x (+ 1 x))))
                     (k k))
            l)))))

@@ -1,5 +1,5 @@
 ; femtoLisp standard library
-; by Jeff Bezanson (C) 2008
+; by Jeff Bezanson (C) 2009
 ; Distributed under the BSD License
 
 ; convert a sequence of body statements to a single expression.
@@ -165,12 +165,12 @@
 
 (defun listp (a) (or (eq a ()) (consp a)))
 
-(defun nthcdr (n lst)
+(defun nthcdr (lst n)
   (if (<= n 0) lst
-    (nthcdr (- n 1) (cdr lst))))
+    (nthcdr (cdr lst) (- n 1))))
 
 (defun list-ref (lst n)
-  (car (nthcdr n lst)))
+  (car (nthcdr lst n)))
 
 (defun list* l
   (if (atom (cdr l))
@@ -376,11 +376,11 @@
         (cdadr   rplacd   cadr)
         (cddar   rplacd   cdar)
         (cdddr   rplacd   cddr)
+        (list-ref rplaca  nthcdr)
         (get     put      identity)
         (aref    aset     identity)
         (symbol-function   set                identity)
         (symbol-value      set                identity)
-        (symbol-plist      set-symbol-plist   identity)
         (symbol-syntax     set-syntax         identity)))
 
 (defun setf-place-mutator (place val)

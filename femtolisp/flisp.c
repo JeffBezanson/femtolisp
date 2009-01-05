@@ -30,7 +30,7 @@
   * strings
   - hash tables
 
-  by Jeff Bezanson (C) 2008
+  by Jeff Bezanson (C) 2009
   Distributed under the BSD License
 */
 

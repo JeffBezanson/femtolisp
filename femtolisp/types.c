@@ -93,27 +93,3 @@ void relocate_typetable()
         }
     }
 }
-
-#define mk_primtype(name) \
-  name##type=get_type(name##sym);name##type->init = &cvalue_##name##_init
-
-void types_init()
-{
-    mk_primtype(int8);
-    mk_primtype(uint8);
-    mk_primtype(int16);
-    mk_primtype(uint16);
-    mk_primtype(int32);
-    mk_primtype(uint32);
-    mk_primtype(int64);
-    mk_primtype(uint64);
-    mk_primtype(long);
-    mk_primtype(ulong);
-    mk_primtype(byte);
-    mk_primtype(wchar);
-    mk_primtype(float);
-    mk_primtype(double);
-
-    stringtype = get_type(symbol_value(stringtypesym));
-    wcstringtype = get_type(symbol_value(wcstringtypesym));
-}

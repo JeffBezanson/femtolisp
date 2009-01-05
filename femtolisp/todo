@@ -834,8 +834,8 @@ String API
 IOStream API
 
  read             - (read[ stream]) ; get next sexpr from stream
- print, sprint
- princ, sprinc
+ print
+ princ
  iostream         - (stream[ cvalue-as-bytestream])
  file
  stream.eof

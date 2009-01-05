@@ -76,10 +76,9 @@ value_t fl_tablep(value_t *args, uint32_t nargs)
 
 static htable_t *totable(value_t v, char *fname)
 {
-    if (ishashtable(v))
-        return (htable_t*)cv_data((cvalue_t*)ptr(v));
-    type_error(fname, "table", v);
-    return NULL;
+    if (!ishashtable(v))
+        type_error(fname, "table", v);
+    return (htable_t*)cv_data((cvalue_t*)ptr(v));
 }
 
 value_t fl_table(value_t *args, uint32_t nargs)
