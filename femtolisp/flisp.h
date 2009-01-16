@@ -150,7 +150,7 @@ void raise(value_t e) __attribute__ ((__noreturn__));
 void type_error(char *fname, char *expected, value_t got) __attribute__ ((__noreturn__));
 void bounds_error(char *fname, value_t arr, value_t ind) __attribute__ ((__noreturn__));
 extern value_t ArgError, IOError, KeyError;
-static inline void argcount(char *fname, int nargs, int c)
+static inline void argcount(char *fname, uint32_t nargs, uint32_t c)
 {
     if (__unlikely(nargs != c))
         lerror(ArgError,"%s: too %s arguments", fname, nargs<c ? "few":"many");

@@ -615,13 +615,13 @@ static value_t assoc(value_t item, value_t v)
   is that a vararg lambda often needs to recur by applying itself to the
   tail of its argument list, so copying the list would be unacceptable.
 */
-static void list(value_t *pv, int nargs, value_t *plastcdr)
+static void list(value_t *pv, uint32_t nargs, value_t *plastcdr)
 {
     cons_t *c;
-    int i;
+    uint32_t i;
     *pv = cons_reserve(nargs);
     c = (cons_t*)ptr(*pv);
-    for(i=SP-nargs; i < (int)SP; i++) {
+    for(i=SP-nargs; i < SP; i++) {
         c->car = Stack[i];
         c->cdr = tagptr(c+1, TAG_CONS);
         c++;
@@ -683,8 +683,8 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
     value_t f, v, *pv, *argsyms, *body;
     cons_t *c;
     symbol_t *sym;
-    uint32_t saveSP, envsz, lenv;
-    int i, nargs=0, noeval=0;
+    uint32_t saveSP, envsz, lenv, nargs;
+    int i, noeval=0;
     fixnum_t s, lo, hi;
     cvalue_t *cv;
     int64_t accum;
@@ -700,8 +700,10 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                 if (car_(v)==e) return *pv;
                 v = cdr_(v); pv++;
             }
-            if (v == e) return *pv;  // dotted list
-            if (v != NIL) pv++;
+            if (v != NIL) {
+                if (v == e) return *pv;  // dotted list
+                pv++;
+            }
             if (*pv == NIL) break;
             pv = &vector_elt(*pv, 0);
         }
@@ -758,12 +760,14 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                     }
                     f = cdr_(f); pv++;
                 }
-                if (f == e) {
-                    *pv = v;
-                    SP = saveSP;
-                    return v;
+                if (f != NIL) {
+                    if (f == e) {
+                        *pv = v;
+                        SP = saveSP;
+                        return v;
+                    }
+                    pv++;
                 }
-                if (f != NIL) pv++;
                 if (*pv == NIL) break;
                 pv = &vector_elt(*pv, 0);
             }
@@ -792,19 +796,29 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                 PUSH(Stack[penv+1]); // env has already been captured; share
             }
             c = (cons_t*)ptr(v=cons_reserve(3));
+            e = Stack[saveSP];
+            if (!iscons(e)) goto notpair;
             c->car = LAMBDA;
             c->cdr = tagptr(c+1, TAG_CONS); c++;
-            c->car = car(Stack[saveSP]); //argsyms
+            c->car = car_(e);      //argsyms
             c->cdr = tagptr(c+1, TAG_CONS); c++;
-            c->car = car(cdr_(Stack[saveSP])); //body
-            c->cdr = Stack[SP-1]; //env
+            if (!iscons(e=cdr_(e))) goto notpair;
+            c->car = car_(e);      //body
+            c->cdr = Stack[SP-1];  //env
             break;
         case F_IF:
-            v = car(Stack[saveSP]);
-            if (eval(v) != NIL)
-                v = car(cdr_(Stack[saveSP]));
-            else
-                v = car(cdr(cdr_(Stack[saveSP])));
+            if (!iscons(Stack[saveSP])) goto notpair;
+            v = car_(Stack[saveSP]);
+            if (eval(v) != NIL) {
+                v = cdr_(Stack[saveSP]);
+                if (!iscons(v)) goto notpair;
+                v = car_(v);
+            }
+            else {
+                v = cdr_(Stack[saveSP]);
+                if (!iscons(v) || !iscons(v=cdr_(v))) goto notpair;
+                v = car_(v);
+            }
             tail_eval(v);
             break;
         case F_COND:
@@ -913,11 +927,15 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             break;
         case F_CAR:
             argcount("car", nargs, 1);
-            v = car(Stack[SP-1]);
+            v = Stack[SP-1];
+            if (!iscons(v)) goto notpair;
+            v = car_(v);
             break;
         case F_CDR:
             argcount("cdr", nargs, 1);
-            v = cdr(Stack[SP-1]);
+            v = Stack[SP-1];
+            if (!iscons(v)) goto notpair;
+            v = cdr_(v);
             break;
         case F_RPLACA:
             argcount("rplaca", nargs, 2);
@@ -1250,7 +1268,8 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
         // apply lambda expression
         f = cdr_(f);
         PUSH(f);
-        PUSH(car(f)); // arglist
+        if (!iscons(f)) goto notpair;
+        PUSH(car_(f)); // arglist
         argsyms = &Stack[SP-1];
         // build a calling environment for the lambda
         // the environment is the argument binds on top of the captured
@@ -1303,7 +1322,8 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             lerror(ArgError, "apply: too few arguments");
         }
         f = cdr_(Stack[saveSP+1]);
-        e = car(f);
+        if (!iscons(f)) goto notpair;
+        e = car_(f);
         if (selfevaluating(e)) { SP=saveSP; return(e); }
         PUSH(cdr_(f));                     // add closed environment
         *argsyms = car_(Stack[saveSP+1]);  // put lambda list
@@ -1339,6 +1359,8 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
         // not reached
     }
     type_error("apply", "function", f);
+ notpair:
+    lerror(TypeError, "expected cons");
     return NIL;
 }
 
