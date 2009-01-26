@@ -2,7 +2,8 @@ enum {
     TOK_NONE, TOK_OPEN, TOK_CLOSE, TOK_DOT, TOK_QUOTE, TOK_SYM, TOK_NUM,
     TOK_BQ, TOK_COMMA, TOK_COMMAAT, TOK_COMMADOT,
     TOK_SHARPDOT, TOK_LABEL, TOK_BACKREF, TOK_SHARPQUOTE, TOK_SHARPOPEN,
-    TOK_OPENB, TOK_CLOSEB, TOK_SHARPSYM, TOK_GENSYM, TOK_DOUBLEQUOTE
+    TOK_OPENB, TOK_CLOSEB, TOK_SHARPSYM, TOK_GENSYM, TOK_DOUBLEQUOTE,
+    TOK_SHARPSEMI
 };
 
 // defines which characters are ordinary symbol characters.
@@ -221,20 +222,36 @@ static u_int32_t peek(ios_t *f)
         }
         else if ((char)ch == '|') {
             // multiline comment
+            int commentlevel=1;
             while (1) {
                 ch = ios_getc(f);
-            hashpipe_got:
+            hashpipe_gotc:
                 if (ch == IOS_EOF)
                     lerror(ParseError, "read: eof within comment");
                 if ((char)ch == '|') {
                     ch = ios_getc(f);
-                    if ((char)ch == '#')
-                        break;
-                    goto hashpipe_got;
+                    if ((char)ch == '#') {
+                        commentlevel--;
+                        if (commentlevel == 0)
+                            break;
+                        else
+                            continue;
+                    }
+                    goto hashpipe_gotc;
+                }
+                else if ((char)ch == '#') {
+                    ch = ios_getc(f);
+                    if ((char)ch == '|')
+                        commentlevel++;
+                    else
+                        goto hashpipe_gotc;
                 }
             }
             // this was whitespace, so keep peeking
             return peek(f);
+        }
+        else if ((char)ch == ';') {
+            toktype = TOK_SHARPSEMI;
         }
         else if ((char)ch == ':') {
             // gensym
@@ -484,6 +501,10 @@ static value_t do_read_sexpr(ios_t *f, value_t label)
         return POP();
     case TOK_SHARPQUOTE:
         // femtoLisp doesn't need symbol-function, so #' does nothing
+        return do_read_sexpr(f, label);
+    case TOK_SHARPSEMI:
+        // datum comment
+        (void)do_read_sexpr(f, UNBOUND); // skip one
         return do_read_sexpr(f, label);
     case TOK_OPEN:
         PUSH(NIL);
