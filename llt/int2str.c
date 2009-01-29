@@ -4,9 +4,12 @@
 char *int2str(char *dest, size_t n, long num, uint32_t base)
 {
     int i = n-1;
-    int b = (int)base;
-    int neg = (num<0 ? 1 : 0);
+    int b = (int)base, neg = 0;
     char ch;
+    if (num < 0) {
+        num = -num;
+        neg = 1;
+    }
     dest[i--] = '\0';
     while (i >= 0) {
         ch = (char)(num % b);

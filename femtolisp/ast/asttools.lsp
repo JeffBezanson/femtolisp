@@ -1,3 +1,4 @@
+; -*- scheme -*-
 ; utilities for AST processing
 
 (define (symconcat s1 s2)
@@ -9,13 +10,13 @@
     (cons item lst)))
 
 (define (index-of item lst start)
-  (cond ((null lst) nil)
+  (cond ((null lst) #f)
 	((eq item (car lst)) start)
 	(T (index-of item (cdr lst) (+ start 1)))))
 
 (define (each f l)
   (if (null l) l
-    (progn (f (car l))
+    (begin (f (car l))
            (each f (cdr l)))))
 
 (define (maptree-pre f tr)
@@ -136,19 +137,19 @@
 		  env))))
 
 ; flatten op with any associativity
-(defmacro flatten-all-op (op e)
+(define-macro (flatten-all-op op e)
   `(pattern-expand
     (pattern-lambda (,op (-- l ...) (-- inner (,op ...)) (-- r ...))
                     (cons ',op (append l (cdr inner) r)))
     ,e))
 
-(defmacro pattern-lambda (pat body)
+(define-macro (pattern-lambda pat body)
   (let* ((args (patargs pat))
          (expander `(lambda ,args ,body)))
     `(lambda (expr)
        (let ((m (match ',pat expr)))
          (if m
              ; matches; perform expansion
-             (apply ,expander (map (lambda (var) (cdr (or (assoc var m) '(0 . nil))))
+             (apply ,expander (map (lambda (var) (cdr (or (assq var m) '(0 . #f))))
                                    ',args))
-           nil)))))
+           #f)))))

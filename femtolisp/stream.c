@@ -31,8 +31,8 @@ int isstream(value_t v)
 
 value_t fl_streamp(value_t *args, uint32_t nargs)
 {
-    argcount("streamp", nargs, 1);
-    return isstream(args[0]) ? T : NIL;
+    argcount("stream?", nargs, 1);
+    return isstream(args[0]) ? FL_T : FL_F;
 }
 
 static ios_t *tostream(value_t v, char *fname)
@@ -43,7 +43,7 @@ static ios_t *tostream(value_t v, char *fname)
 }
 
 static builtinspec_t streamfunc_info[] = {
-    { "streamp", fl_streamp },
+    { "stream?", fl_streamp },
     { NULL, NULL }
 };
 

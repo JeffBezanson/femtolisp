@@ -169,7 +169,7 @@ static int smallp(value_t v)
 static int specialindent(value_t head)
 {
     // indent these forms 2 spaces, not lined up with the first argument
-    if (head == LAMBDA || head == TRYCATCH || head == defunsym ||
+    if (head == LAMBDA || head == TRYCATCH || head == definesym ||
         head == defmacrosym || head == forsym || head == labelsym)
         return 2;
     return -1;
@@ -200,7 +200,13 @@ static int allsmallp(value_t v)
 static int indentafter3(value_t head, value_t v)
 {
     // for certain X always indent (X a b c) after b
-    return ((head == defunsym || head == defmacrosym || head == forsym) &&
+    return ((head == forsym) && !allsmallp(cdr_(v)));
+}
+
+static int indentafter2(value_t head, value_t v)
+{
+    // for certain X always indent (X a b) after a
+    return ((head == definesym || head == defmacrosym) &&
             !allsmallp(cdr_(v)));
 }
 
@@ -251,6 +257,7 @@ static void print_pair(ios_t *f, value_t v, int princ)
     if (!blk) always = indentevery(v);
     value_t head = car_(v);
     int after3 = indentafter3(head, v);
+    int after2 = indentafter2(head, v);
     int n_unindented = 1;
     while (1) {
         lastv = VPOS;
@@ -287,6 +294,7 @@ static void print_pair(ios_t *f, value_t v, int princ)
                    (n > 0 && always) ||
                    
                    (n == 2 && after3) ||
+                   (n == 1 && after2) ||
 
                    (n_unindented >= 3 && !nextsmall) ||
                    
@@ -328,8 +336,6 @@ void fl_print_child(ios_t *f, value_t v, int princ)
         name = symbol_name(v);
         if (princ)
             outs(name, f);
-        else if (v == NIL)
-            outs("()", f);
         else if (ismanaged(v)) {
             outs("#:", f);
             outs(name, f);
@@ -338,6 +344,18 @@ void fl_print_child(ios_t *f, value_t v, int princ)
             print_symbol_name(f, name);
         break;
     case TAG_BUILTIN:
+        if (v == FL_T) {
+            outs("#t", f);
+            break;
+        }
+        if (v == FL_F) {
+            outs("#f", f);
+            break;
+        }
+        if (v == NIL) {
+            outs("()", f);
+            break;
+        }
         if (isbuiltin(v)) {
             outs("#.", f);
             outs(builtin_names[uintval(v)], f);
@@ -624,7 +642,7 @@ static void set_print_width()
 
 void print(ios_t *f, value_t v, int princ)
 {
-    print_pretty = (symbol_value(printprettysym) != NIL);
+    print_pretty = (symbol_value(printprettysym) != FL_F);
     if (print_pretty)
         set_print_width();
     printlabel = 0;

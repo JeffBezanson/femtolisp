@@ -617,7 +617,12 @@ value_t cvalue_typeof(value_t *args, u_int32_t nargs)
     case TAG_NUM:  return fixnumsym;
     case TAG_SYM:  return symbolsym;
     case TAG_VECTOR: return vectorsym;
-    case TAG_BUILTIN: return builtinsym;
+    case TAG_BUILTIN:
+        if (args[0] == FL_T || args[0] == FL_F)
+            return booleansym;
+        if (args[0] == NIL)
+            return nullsym;
+        return builtinsym;
     }
     return cv_type((cvalue_t*)ptr(args[0]));
 }

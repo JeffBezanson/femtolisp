@@ -1,4 +1,5 @@
-(defun maplist (f l)
+; -*- scheme -*-
+(define (maplist f l)
   (if (null l) ()
     (cons (f l) (maplist f (cdr l)))))
 
@@ -6,37 +7,37 @@
 ; make m copies of a CDR-circular list of length n, and connect corresponding
 ; conses in CAR-circular loops
 ; replace maplist 'identity' with 'copy-tree' for rapdily exploding memory use
-(defun torus (m n)
+(define (torus m n)
   (let* ((l (map-int identity n))
          (g l)
          (prev g))
     (dotimes (i (- m 1))
-      (setq prev g)
-      (setq g (maplist identity g))
-      (rplacd (last prev) prev))
-    (rplacd (last g) g)
+      (set! prev g)
+      (set! g (maplist identity g))
+      (set-cdr! (last prev) prev))
+    (set-cdr! (last g) g)
     (let ((a l)
           (b g))
       (dotimes (i n)
-        (rplaca a b)
-        (setq a (cdr a))
-        (setq b (cdr b))))
+        (set-car! a b)
+        (set! a (cdr a))
+        (set! b (cdr b))))
     l))
 
-(defun cyl (m n)
+(define (cyl m n)
   (let* ((l (map-int identity n))
          (g l))
     (dotimes (i (- m 1))
-      (setq g (maplist identity g)))
+      (set! g (maplist identity g)))
     (let ((a l)
           (b g))
       (dotimes (i n)
-        (rplaca a b)
-        (setq a (cdr a))
-        (setq b (cdr b))))
+        (set-car! a b)
+        (set! a (cdr a))
+        (set! b (cdr b))))
     l))
 
-(time (progn (print (torus 100 100)) nil))
+(time (begin (print (torus 100 100)) ()))
 ;(time (dotimes (i 1) (load "100x100.lsp")))
 ; with ltable
 ; printing time: 0.415sec

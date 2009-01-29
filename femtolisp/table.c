@@ -70,8 +70,8 @@ int ishashtable(value_t v)
 
 value_t fl_tablep(value_t *args, uint32_t nargs)
 {
-    argcount("tablep", nargs, 1);
-    return ishashtable(args[0]) ? T : NIL;
+    argcount("table?", nargs, 1);
+    return ishashtable(args[0]) ? FL_T : FL_F;
 }
 
 static htable_t *totable(value_t v, char *fname)
@@ -139,7 +139,7 @@ value_t fl_table_has(value_t *args, uint32_t nargs)
 {
     argcount("has", nargs, 2);
     htable_t *h = totable(args[0], "has");
-    return equalhash_has(h, (void*)args[1]) ? T : NIL;
+    return equalhash_has(h, (void*)args[1]) ? FL_T : FL_F;
 }
 
 // (del table key)
@@ -177,7 +177,7 @@ value_t fl_table_foldl(value_t *args, uint32_t nargs)
 
 static builtinspec_t tablefunc_info[] = {
     { "table", fl_table },
-    { "tablep", fl_tablep },
+    { "table?", fl_tablep },
     { "put", fl_table_put },
     { "get", fl_table_get },
     { "has", fl_table_has },

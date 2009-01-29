@@ -256,8 +256,8 @@ value_t compare(value_t a, value_t b)
 value_t equal(value_t a, value_t b)
 {
     if (eq_comparable(a, b))
-        return (a == b) ? T : NIL;
-    return (numval(compare_(a,b,1))==0 ? T : NIL);
+        return (a == b) ? FL_T : FL_F;
+    return (numval(compare_(a,b,1))==0 ? FL_T : FL_F);
 }
 
 /*

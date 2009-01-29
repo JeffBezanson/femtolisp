@@ -81,21 +81,32 @@ value_t fl_intern(value_t *args, u_int32_t nargs)
     return symbol(cvalue_data(args[0]));
 }
 
+value_t fl_setconstant(value_t *args, u_int32_t nargs)
+{
+    argcount("set-constant!", nargs, 2);
+    symbol_t *sym = tosymbol(args[0], "set-constant!");
+    if (isconstant(args[0]) || sym->binding != UNBOUND)
+        lerror(ArgError, "set-constant!: cannot redefine %s",
+               symbol_name(args[0]));
+    setc(args[0], args[1]);
+    return args[1];
+}
+
 extern value_t LAMBDA;
 
 value_t fl_setsyntax(value_t *args, u_int32_t nargs)
 {
-    argcount("set-syntax", nargs, 2);
-    symbol_t *sym = tosymbol(args[0], "set-syntax");
+    argcount("set-syntax!", nargs, 2);
+    symbol_t *sym = tosymbol(args[0], "set-syntax!");
     if (sym->syntax && (sym->syntax == TAG_CONST || isspecial(sym->syntax)))
-        lerror(ArgError, "set-syntax: cannot define syntax for %s",
+        lerror(ArgError, "set-syntax!: cannot define syntax for %s",
                symbol_name(args[0]));
-    if (args[1] == NIL) {
+    if (args[1] == FL_F) {
         sym->syntax = 0;
     }
     else {
         if (!iscons(args[1]) || car_(args[1])!=LAMBDA)
-            type_error("set-syntax", "function", args[1]);
+            type_error("set-syntax!", "function", args[1]);
         sym->syntax = args[1];
     }
     return args[1];
@@ -109,7 +120,7 @@ value_t fl_symbolsyntax(value_t *args, u_int32_t nargs)
     // don't behave like functions (they take their arguments directly
     // from the form rather than from the stack of evaluated arguments)
     if (sym->syntax == TAG_CONST || isspecial(sym->syntax))
-        return NIL;
+        return FL_F;
     return sym->syntax;
 }
 
@@ -160,15 +171,15 @@ extern value_t QUOTE;
 
 value_t fl_constantp(value_t *args, u_int32_t nargs)
 {
-    argcount("constantp", nargs, 1);
+    argcount("constant?", nargs, 1);
     if (issymbol(args[0]))
-        return (isconstant(args[0]) ? T : NIL);
+        return (isconstant(args[0]) ? FL_T : FL_F);
     if (iscons(args[0])) {
         if (car_(args[0]) == QUOTE)
-            return T;
-        return NIL;
+            return FL_T;
+        return FL_F;
     }
-    return T;
+    return FL_T;
 }
 
 value_t fl_fixnum(value_t *args, u_int32_t nargs)
@@ -278,7 +289,7 @@ value_t fl_path_cwd(value_t *args, uint32_t nargs)
     char *ptr = tostring(args[0], "path.cwd");
     if (set_cwd(ptr))
         lerror(IOError, "could not cd to %s", ptr);
-    return T;
+    return FL_T;
 }
 
 value_t fl_os_getenv(value_t *args, uint32_t nargs)
@@ -286,7 +297,7 @@ value_t fl_os_getenv(value_t *args, uint32_t nargs)
     argcount("os.getenv", nargs, 1);
     char *name = tostring(args[0], "os.getenv");
     char *val = getenv(name);
-    if (val == NULL) return NIL;
+    if (val == NULL) return FL_F;
     if (*val == 0)
         return symbol_value(emptystringsym);
     return cvalue_static_cstring(val);
@@ -297,7 +308,7 @@ value_t fl_os_setenv(value_t *args, uint32_t nargs)
     argcount("os.setenv", nargs, 2);
     char *name = tostring(args[0], "os.setenv");
     int result;
-    if (args[1] == NIL) {
+    if (args[1] == FL_F) {
         result = unsetenv(name);
     }
     else {
@@ -306,7 +317,7 @@ value_t fl_os_setenv(value_t *args, uint32_t nargs)
     }
     if (result != 0)
         lerror(ArgError, "os.setenv: invalid environment variable");
-    return T;
+    return FL_T;
 }
 
 value_t fl_rand(value_t *args, u_int32_t nargs)
@@ -351,11 +362,12 @@ extern void stringfuncs_init();
 extern void table_init();
 
 static builtinspec_t builtin_info[] = {
-    { "set-syntax", fl_setsyntax },
+    { "set-constant!", fl_setconstant },
+    { "set-syntax!", fl_setsyntax },
     { "symbol-syntax", fl_symbolsyntax },
     { "syntax-environment", fl_syntax_env },
     { "environment", fl_global_env },
-    { "constantp", fl_constantp },
+    { "constant?", fl_constantp },
 
     { "print", fl_print },
     { "princ", fl_princ },

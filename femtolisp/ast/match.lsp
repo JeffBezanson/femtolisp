@@ -1,3 +1,4 @@
+; -*- scheme -*-
 ; tree regular expression pattern matching
 ; by Jeff Bezanson
 
@@ -41,12 +42,12 @@
   (cond ((symbolp p)
 	 (cond ((eq p '_) state)
 	       (T
-		(let ((capt (assoc p state)))
+		(let ((capt (assq p state)))
 		  (if capt
 		      (and (equal expr (cdr capt)) state)
                     (cons (cons p expr) state))))))
 	
-	((functionp p)
+	((function? p)
 	 (and (p expr) state))
 	
 	((consp p)
@@ -56,7 +57,7 @@
 		(and (match- (caddr p) expr state)
 		     (cons (cons (cadr p) expr) state)))
 	       ((eq (car p) '-$)  ; greedy alternation for toplevel pattern
-		(match-alt (cdr p) () (list expr) state nil 1))
+		(match-alt (cdr p) () (list expr) state #f 1))
 	       (T
 		(and (consp expr)
 		     (equal (car p) (car expr))
@@ -67,7 +68,7 @@
 
 ; match an alternation
 (define (match-alt alt prest expr state var L)
-  (if (null alt) nil  ; no alternatives left
+  (if (null alt) #f  ; no alternatives left
     (let ((subma (match- (car alt) (car expr) state)))
       (or (and subma
                (match-seq prest (cdr expr)
@@ -81,7 +82,7 @@
 ; match generalized kleene star (try consuming min to max)
 (define (match-star- p prest expr state var min max L sofar)
   (cond ; case 0: impossible to match
-   ((> min max) nil)
+   ((> min max) #f)
     ; case 1: only allowed to match 0 subexpressions
    ((= max 0) (match-seq prest expr
                          (if var (cons (cons var (reverse sofar)) state)
@@ -101,16 +102,16 @@
 
 ; match sequences of expressions
 (define (match-seq p expr state L)
-  (cond ((not state) nil)
-	((null p) (if (null expr) state nil))
+  (cond ((not state) #f)
+	((null p) (if (null expr) state #f))
 	(T
 	 (let ((subp (car p))
-	       (var  nil))
+	       (var  #f))
 	   (if (and (consp subp)
 		    (eq (car subp) '--))
-	       (progn (setq var (cadr subp))
-                      (setq subp (caddr subp)))
-             nil)
+	       (begin (set! var (cadr subp))
+                      (set! subp (caddr subp)))
+             #f)
 	   (let ((head (if (consp subp) (car subp) ())))
 	     (cond ((eq subp '...)
 		    (match-star '_ (cdr p) expr state var 0 L L))
@@ -149,7 +150,7 @@
 ; returns the new expression, or expr if no matches
 (define (apply-patterns plist expr)
   (if (null plist) expr
-    (if (functionp plist)
+    (if (function? plist)
         (let ((enew (plist expr)))
           (if (not enew)
               expr

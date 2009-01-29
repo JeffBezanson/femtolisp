@@ -1,15 +1,17 @@
+; -*- scheme -*-
+
 ; make label self-evaluating, but evaluating the lambda in the process
 ;(defmacro labl (name f)
 ;  (list list ''labl (list 'quote name) f))
 
-(defmacro labl (name f)
-  `(let (,name) (setq ,name ,f)))
+(define-macro (labl name f)
+  `(let (,name) (set! ,name ,f)))
 
 ;(define (reverse lst)
 ;  ((label rev-help (lambda (lst result)
 ;                     (if (null lst) result
 ;                       (rev-help (cdr lst) (cons (car lst) result)))))
-;   lst nil))
+;   lst ()))
 
 (define (append- . lsts)
   ((label append-h
@@ -28,20 +30,20 @@
 (define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))
 ;(princ (time (fib 34)) "\n")
 ;(dotimes (i 20000) (map-int (lambda (x) (list 'quote x)) 8))
-;(dotimes (i 40000) (append '(a b) '(1 2 3 4) nil '(c) nil '(5 6)))
+;(dotimes (i 40000) (append '(a b) '(1 2 3 4) () '(c) () '(5 6)))
 ;(dotimes (i 80000) (list 1 2 3 4 5))
-;(setq a (map-int identity 10000))
-;(dotimes (i 200) (rfoldl cons nil a))
+;(set! a (map-int identity 10000))
+;(dotimes (i 200) (rfoldl cons () a))
 
 ; iterative filter
-(defun ifilter (pred lst)
+(define (ifilter pred lst)
   ((label f (lambda (accum lst)
               (cond ((null lst) (nreverse accum))
                     ((not (pred (car lst))) (f accum (cdr lst)))
                     (T (f (cons (car lst) accum) (cdr lst))))))
-   nil lst))
+   () lst))
 
-(defun sort (l)
+(define (sort l)
   (if (or (null l) (null (cdr l))) l
     (let* ((piv (car l))
            (halves (separate (lambda (x) (< x piv)) (cdr l))))
@@ -49,29 +51,29 @@
              (list piv)
              (sort (cdr halves))))))
 
-(defmacro dotimes (var . body)
+(define-macro (dotimes var . body)
   (let ((v   (car var))
         (cnt (cadr var)))
     `(let ((,v 0))
        (while (< ,v ,cnt)
          (prog1
              ,(f-body body)
-           (setq ,v (+ ,v 1)))))))
+           (set! ,v (+ ,v 1)))))))
 
-(defun map-int (f n)
+(define (map-int f n)
   (if (<= n 0)
       ()
-    (let ((first (cons (f 0) nil)))
-      ((label map-int-
-              (lambda (acc i n)
-                (if (= i n)
-                    first
-                  (progn (rplacd acc (cons (f i) nil))
-                         (map-int- (cdr acc) (+ i 1) n)))))
-       first 1 n))))
+      (let ((first (cons (f 0) ())))
+	((label map-int-
+		(lambda (acc i n)
+		  (if (= i n)
+		      first
+		      (begin (rplacd acc (cons (f i) ()))
+			     (map-int- (cdr acc) (+ i 1) n)))))
+	 first 1 n))))
 
-(defmacro labl (name fn)
-  `((lambda (,name) (setq ,name ,fn)) nil))
+(define-macro (labl name fn)
+  `((lambda (,name) (set! ,name ,fn)) ()))
 
 (define (square x) (* x x))
 (define (evenp  x) (= x (* (/ x 2) 2)))
@@ -88,43 +90,43 @@
         (T        (gcd b (- a b)))))
 
 ; like eval-when-compile
-(defmacro literal (expr)
+(define-macro (literal expr)
   (let ((v (eval expr)))
-    (if (self-evaluating-p v) v (list quote v))))
+    (if (self-evaluating? v) v (list quote v))))
 
-(defun cardepth (l)
+(define (cardepth l)
   (if (atom l) 0
-    (+ 1 (cardepth (car l)))))
+      (+ 1 (cardepth (car l)))))
 
-(defun nestlist (f zero n)
+(define (nestlist f zero n)
   (if (<= n 0) ()
-    (cons zero (nestlist f (f zero) (- n 1)))))
+      (cons zero (nestlist f (f zero) (- n 1)))))
 
-(defun mapl (f . lsts)
+(define (mapl f . lsts)
   ((label mapl-
           (lambda (lsts)
             (if (null (car lsts)) ()
-              (progn (apply f lsts) (mapl- (map cdr lsts))))))
+		(begin (apply f lsts) (mapl- (map cdr lsts))))))
    lsts))
 
 ; test to see if a symbol begins with :
-(defun keywordp (s)
+(define (keywordp s)
   (and (>= s '|:|) (<= s '|:~|)))
 
 ; swap the cars and cdrs of every cons in a structure
-(defun swapad (c)
+(define (swapad c)
   (if (atom c) c
-    (rplacd c (K (swapad (car c))
-                 (rplaca c (swapad (cdr c)))))))
+      (rplacd c (K (swapad (car c))
+		   (rplaca c (swapad (cdr c)))))))
 
-(defun without (x l)
+(define (without x l)
   (filter (lambda (e) (not (eq e x))) l))
 
-(defun conscount (c)
+(define (conscount c)
   (if (consp c) (+ 1
                    (conscount (car c))
                    (conscount (cdr c)))
-    0))
+      0))
 
 ;  _ Welcome to
 ; (_ _ _ |_ _ |  . _ _ 2
@@ -135,12 +137,12 @@
 ;| (/_||||_()|_|_\|)
 ;                 | 
 
-(defmacro while- (test . forms)
+(define-macro (while- test . forms)
   `((label -loop- (lambda ()
                     (if ,test
-                        (progn ,@forms
+                        (begin ,@forms
                                (-loop-))
-                      nil)))))
+			())))))
 
 ; this would be a cool use of thunking to handle 'finally' clauses, but
 ; this code doesn't work in the case where the user manually re-raises
@@ -150,8 +152,8 @@
 ;      (catch (TypeError e) . exprs)
 ;      (catch (IOError e) . exprs)
 ;      (finally . exprs))
-(defmacro try (expr . forms)
-  (let ((final (f-body (cdr (or (assoc 'finally forms) '(())))))
+(define-macro (try expr . forms)
+  (let ((final (f-body (cdr (or (assq 'finally forms) '(())))))
         (body (foldr
                ; create a function to check for and handle one exception
                ; type, and pass off control to the next when no match
@@ -167,17 +169,13 @@
                         (,next ,var)))))
 
                ; default function; no matches so re-raise
-               '(lambda (e) (progn (*_try_finally_thunk_*) (raise e)))
+               '(lambda (e) (begin (*_try_finally_thunk_*) (raise e)))
 
                ; make list of catch forms
                (filter (lambda (f) (eq (car f) 'catch)) forms))))
     `(let ((*_try_finally_thunk_* (lambda () ,final)))
        (prog1 (attempt ,expr ,body)
          (*_try_finally_thunk_*)))))
-
-(defun map (f lst)
-  (if (atom lst) lst
-    (cons (funcall f (car lst)) (map f (cdr lst)))))
 
 (define Y
   (lambda (f)
@@ -191,56 +189,39 @@
        (lambda (n)
          (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))))))
 
-(defmacro debug ()
-  (let ((g (gensym)))
-    `(progn (princ "Debug REPL:\n")
-            (let ((,g (read)))
-              (while (not (eq ,g 'quit))
-                (prog1
-                    (print (trycatch (apply '(macro x x) ,g)
-                                     identity))
-                  (setq ,g (read))))))))
-
 ;(defun tt () (time (dotimes (i 500000) (* 0x1fffffff 1) )))
 ;(tt)
 ;(tt)
 ;(tt)
 
-(let ((g (gensym)))
-  (defmacro delay (expr)
-    `(let ((,g ',g))
-       (lambda () (if (eq ,g ',g) (setq ,g ,expr) ,g)))))
-
-(defun force (p) (p))
-
-(defmacro accumulate-while (cnd what . body)
+(define-macro (accumulate-while cnd what . body)
   (let ((first (gensym))
         (acc   (gensym)))
-    `(let ((,first nil)
-           (,acc (list nil)))
-       (setq ,first ,acc)
+    `(let ((,first ())
+           (,acc (list ())))
+       (set! ,first ,acc)
        (while ,cnd
-         (progn (setq ,acc
-                      (cdr (rplacd ,acc (cons ,what nil))))
-                ,@body))
+	      (begin (set! ,acc
+			   (cdr (rplacd ,acc (cons ,what ()))))
+		     ,@body))
        (cdr ,first))))
 
-(defmacro accumulate-for (var lo hi what . body)
+(define-macro (accumulate-for var lo hi what . body)
   (let ((first (gensym))
         (acc   (gensym)))
-    `(let ((,first nil)
-           (,acc (list nil)))
-       (setq ,first ,acc)
+    `(let ((,first ())
+           (,acc (list ())))
+       (set! ,first ,acc)
        (for ,lo ,hi
             (lambda (,var)
-              (progn (setq ,acc
-                           (cdr (rplacd ,acc (cons ,what nil))))
+              (begin (set! ,acc
+                           (cdr (rplacd ,acc (cons ,what ()))))
                      ,@body)))
        (cdr ,first))))
 
-(defun map-indexed (f lst)
+(define (map-indexed f lst)
   (if (atom lst) lst
     (let ((i 0))
       (accumulate-while (consp lst) (f (car lst) i)
-                        (progn (setq lst (cdr lst))
-                               (setq i (1+ i)))))))
+                        (begin (set! lst (cdr lst))
+                               (set! i (1+ i)))))))

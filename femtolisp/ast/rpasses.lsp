@@ -1,3 +1,4 @@
+; -*- scheme -*-
 (load "match.lsp")
 (load "asttools.lsp")
 
@@ -18,10 +19,14 @@
 
 ; transformations
 
+(let ((ctr 0))
+  (define (r-gensym) (prog1 (intern (string "%r:" ctr))
+			    (set! ctr (+ ctr 1)))))
+
 (define (dollarsign-transform e)
   (pattern-expand
    (pattern-lambda ($ lhs name)
-		   (let* ((g (if (not (consp lhs)) lhs (gensym)))
+		   (let* ((g (if (not (consp lhs)) lhs (r-gensym)))
 			  (n (if (symbolp name)
 				 name ;(symbol->string name)
                                name))
@@ -41,7 +46,7 @@
   (pattern-expand
    (pattern-lambda (-$ (<-  (r-call f lhs ...) rhs)
                        (<<- (r-call f lhs ...) rhs))
-		   (let ((g  (if (consp rhs) (gensym) rhs))
+		   (let ((g  (if (consp rhs) (r-gensym) rhs))
                          (op (car __)))
 		     `(r-block ,@(if (consp rhs) `((ref= ,g ,rhs)) ())
                                (,op ,lhs (r-call ,(symconcat f '<-) ,@(cddr (cadr __)) ,g))
@@ -77,9 +82,9 @@
   (let ((vars ()))
     (maptree-pre (lambda (s)
 		   (if (not (consp s)) s
-                     (cond ((eq (car s) 'lambda) nil)
+                     (cond ((eq (car s) 'lambda) ())
                            ((eq (car s) '<-)
-                            (setq vars (list-adjoin (cadr s) vars))
+                            (set! vars (list-adjoin (cadr s) vars))
                             (cddr s))
                            (T s))))
 		 n)
@@ -102,18 +107,3 @@
     (fancy-assignment-transform
      (dollarsign-transform
       (flatten-all-op && (flatten-all-op \|\| e)))))))
-
-;(trace map)
-;(pretty-print (compile-ish *input*))
-;(print
-; (time-call (lambda () (compile-ish *input*)) 1)
-;)
-(define (main)
-  (progn
-    (define *input* (load "datetimeR.lsp"))
-    ;(define t0 ((java.util.Date:new):getTime))
-    (time (compile-ish *input*))
-    ;(define t1 ((java.util.Date:new):getTime))
-))
-
-(main)

@@ -1,3 +1,4 @@
+; -*- scheme -*-
 ; uncomment for compatibility with CL
 ;(defun mapp (f l) (mapcar f l))
 ;(defmacro define (name &rest body)
@@ -18,7 +19,7 @@
         ((equal key (caar dl))  (cdar dl))
         (T (dict-lookup (cdr dl) key))))
 
-(define (dict-keys dl) (map (symbol-function 'car) dl))
+(define (dict-keys dl) (map car dl))
 
 ; graphs ----------------------------------------------------------------------
 (define (graph-empty) (dict-new))
@@ -50,14 +51,14 @@
         color-of-node
         (map
          (lambda (n)
-           (let ((color-pair (assoc n coloring)))
-             (if (consp color-pair) (cdr color-pair) nil)))
+           (let ((color-pair (assq n coloring)))
+             (if (consp color-pair) (cdr color-pair) ())))
          (graph-neighbors g node-to-color)))))
 
 (define (try-each f lst)
-  (if (null lst) nil
-    (let ((ret (funcall f (car lst))))
-      (if ret ret (try-each f (cdr lst))))))
+  (if (null lst) #f
+      (let ((ret (f (car lst))))
+	(if ret ret (try-each f (cdr lst))))))
 
 (define (color-node g coloring colors uncolored-nodes color)
   (cond
@@ -71,24 +72,24 @@
 
 (define (color-graph g colors)
   (if (null colors)
-      (null (graph-nodes g))
-    (color-node g () colors (graph-nodes g) (car colors))))
+      (and (null (graph-nodes g)) ())
+      (color-node g () colors (graph-nodes g) (car colors))))
 
 (define (color-pairs pairs colors)
   (color-graph (graph-from-edges pairs) colors))
 
 ; queens ----------------------------------------------------------------------
-(defun can-attack (x y)
+(define (can-attack x y)
   (let ((x1 (mod x 5))
         (y1 (truncate (/ x 5)))
         (x2 (mod y 5))
         (y2 (truncate (/ y 5))))
     (or (= x1 x2) (= y1 y2) (= (abs (- y2 y1)) (abs (- x2 x1))))))
 
-(defun generate-5x5-pairs ()
-  (let ((result nil))
+(define (generate-5x5-pairs)
+  (let ((result ()))
     (dotimes (x 25)
       (dotimes (y 25)
         (if (and (/= x y) (can-attack x y))
-            (setq result (cons (cons x y) result)) nil)))
+            (set! result (cons (cons x y) result)) ())))
     result))

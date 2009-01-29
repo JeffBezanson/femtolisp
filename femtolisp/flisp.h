@@ -103,18 +103,21 @@ enum {
     // special forms
     F_QUOTE=0, F_COND, F_IF, F_AND, F_OR, F_WHILE, F_LAMBDA,
     F_TRYCATCH, F_SPECIAL_APPLY, F_SETQ, F_PROGN,
+
     // functions
-    F_EQ, F_ATOM, F_NOT, F_SYMBOLP, F_NUMBERP, F_BOUNDP, F_CONSP,
-    F_BUILTINP, F_VECTORP, F_FIXNUMP, F_EQUAL,
-    F_CONS, F_LIST, F_CAR, F_CDR, F_RPLACA, F_RPLACD,
+    F_EQ, F_EQV, F_EQUAL, F_ATOM, F_NOT, F_NULL, F_BOOLEANP, F_SYMBOLP,
+    F_NUMBERP, F_BOUNDP, F_CONSP, F_BUILTINP, F_VECTORP, F_FIXNUMP,
+
+    F_CONS, F_LIST, F_CAR, F_CDR, F_SETCAR, F_SETCDR,
     F_EVAL, F_EVALSTAR, F_APPLY, F_PROG1, F_RAISE,
     F_ADD, F_SUB, F_MUL, F_DIV, F_LT, F_BNOT, F_BAND, F_BOR, F_BXOR,
-    F_VECTOR, F_AREF, F_ASET, F_LENGTH, F_ASSOC, F_COMPARE, F_FOR,
-    N_BUILTINS
+    F_VECTOR, F_AREF, F_ASET, F_LENGTH, F_ASSQ, F_COMPARE, F_FOR,
+    F_TRUE, F_FALSE, F_NIL,
+    N_BUILTINS,
 };
 #define isspecial(v) (uintval(v) <= (unsigned int)F_PROGN)
 
-extern value_t NIL, T;
+extern value_t NIL, FL_T, FL_F;
 
 /* read, eval, print main entry points */
 value_t read_sexpr(ios_t *f);

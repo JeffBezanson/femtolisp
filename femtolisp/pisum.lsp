@@ -1,4 +1,4 @@
-(defun pisum ()
+(define (pisum)
   (dotimes (j 500)
     ((label sumloop
             (lambda (i sum)

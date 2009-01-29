@@ -1,3 +1,4 @@
+; -*- scheme -*-
 (define (every-int n)
   (list (fixnum n) (int8 n) (uint8 n) (int16 n) (uint16 n) (int32 n) (uint32 n)
         (int64 n) (uint64 n)))
@@ -7,7 +8,7 @@
 
 (define (each f l)
   (if (atom l) ()
-    (progn (f (car l))
+    (begin (f (car l))
            (each f (cdr l)))))
 
 (define (each^2 f l m)
@@ -15,7 +16,7 @@
 
 (define (test-lt a b)
   (each^2 (lambda (neg pos)
-            (progn
+            (begin
               (eval `(assert (= -1 (compare ,neg ,pos))))
               (eval `(assert (=  1 (compare ,pos ,neg))))))
           a
@@ -23,7 +24,7 @@
 
 (define (test-eq a b)
   (each^2 (lambda (a b)
-            (progn
+            (begin
               (eval `(assert (= 0 (compare ,a ,b))))))
           a
           b))

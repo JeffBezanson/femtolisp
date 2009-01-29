@@ -1,3 +1,4 @@
+; -*- scheme -*-
 (define (cond->if form)
   (cond-clauses->if (cdr form)))
 (define (cond-clauses->if lst)
@@ -8,30 +9,30 @@
            ,(f-body (cdr clause))
          ,(cond-clauses->if (cdr lst))))))
 
-(define (progn->cps forms k)
+(define (begin->cps forms k)
   (cond ((atom forms)       `(,k ,forms))
         ((null (cdr forms)) (cps- (car forms) k))
         (T (let ((_ (gensym)))   ; var to bind ignored value
              (cps- (car forms) `(lambda (,_)
-                                  ,(progn->cps (cdr forms) k)))))))
+                                  ,(begin->cps (cdr forms) k)))))))
 
-(defmacro lambda/cc (args body)
+(define-macro (lambda/cc args body)
   `(rplaca (lambda ,args ,body) 'lambda/cc))
 
 ; a utility used at run time to dispatch a call with or without
 ; the continuation argument, depending on the function
 (define (funcall/cc f k . args)
-  (if (and (consp f) (eq (car f) 'lambda/cc))
+  (if (and (pair? f) (eq (car f) 'lambda/cc))
       (apply f (cons k args))
     (k (apply f args))))
 (define *funcall/cc-names*
   (list-to-vector
    (map (lambda (i) (intern (string 'funcall/cc- i)))
         (iota 6))))
-(defmacro def-funcall/cc-n (args)
+(define-macro (def-funcall/cc-n args)
   (let* ((name (aref *funcall/cc-names* (length args))))
     `(define (,name f k ,@args)
-       (if (and (consp f) (eq (car f) 'lambda/cc))
+       (if (and (pair? f) (eq (car f) 'lambda/cc))
            (f k ,@args)
          (k (f ,@args))))))
 (def-funcall/cc-n ())
@@ -43,7 +44,7 @@
 
 (define (rest->cps xformer form k argsyms)
   (let ((el (car form)))
-    (if (or (atom el) (constantp el))
+    (if (or (atom el) (constant? el))
         (xformer (cdr form) k (cons el argsyms))
       (let ((g (gensym)))
         (cps- el `(lambda (,g)
@@ -79,14 +80,14 @@
      (cps- (macroexpand form) *top-k*)))))
 (define (cps- form k)
   (let ((g (gensym)))
-    (cond ((or (atom form) (constantp form))
+    (cond ((or (atom form) (constant? form))
            `(,k ,form))
 
           ((eq (car form) 'lambda)
            `(,k (lambda/cc ,(cons g (cadr form)) ,(cps- (caddr form) g))))
 
-          ((eq (car form) 'progn)
-           (progn->cps (cdr form) k))
+          ((eq (car form) 'begin)
+           (begin->cps (cdr form) k))
 
           ((eq (car form) 'cond)
            (cps- (cond->if form) k))
@@ -116,7 +117,7 @@
                        ,(cps- form g))))))
 
           ((eq (car form) 'or)
-           (cond ((atom (cdr  form)) `(,k ()))
+           (cond ((atom (cdr  form)) `(,k #f))
                  ((atom (cddr form)) (cps- (cadr form) k))
                  (T
                   (if (atom k)
@@ -132,18 +133,18 @@
                  (body (caddr form))
                  (lastval (gensym)))
              (cps- (macroexpand
-                    `(let ((,lastval nil))
+                    `(let ((,lastval #f))
                        ((label ,g (lambda ()
                                     (if ,test
-                                        (progn (setq ,lastval ,body)
+                                        (begin (set! ,lastval ,body)
                                                (,g))
                                       ,lastval))))))
                    k)))
 
-          ((eq (car form) 'setq)
+          ((eq (car form) 'set!)
            (let ((var (cadr form))
                  (E   (caddr form)))
-             (cps- E `(lambda (,g) (,k (setq ,var ,g))))))
+             (cps- E `(lambda (,g) (,k (set! ,var ,g))))))
 
           ((eq (car form) 'reset)
            `(,k ,(cps- (cadr form) *top-k*)))
@@ -158,12 +159,12 @@
           ((eq (car form) 'without-delimited-continuations)
            `(,k ,(cadr form)))
 
-          ((and (constantp (car form))
-                (builtinp (eval (car form))))
+          ((and (constant? (car form))
+                (builtin? (eval (car form))))
            (builtincall->cps form k))
 
           ; ((lambda (...) body) ...)
-          ((and (consp (car form))
+          ((and (pair? (car form))
                 (eq (caar form) 'lambda))
            (let ((largs (cadr (car form)))
                  (lbody (caddr (car form))))
@@ -183,13 +184,13 @@
 ; (lambda (args...) (f args...)) => f
 ; but only for constant, builtin f
 (define (η-reduce form)
-  (cond ((or (atom form) (constantp form)) form)
+  (cond ((or (atom form) (constant? form)) form)
         ((and (eq (car form) 'lambda)
               (let ((body (caddr form))
                     (args (cadr form)))
-                (and (consp body)
+                (and (pair? body)
                      (equal (cdr body) args)
-                     (constantp (car (caddr form))))))
+                     (constant? (car (caddr form))))))
          (car (caddr form)))
         (T (map η-reduce form))))
 
@@ -198,18 +199,18 @@
       (any (lambda (p) (contains x p)) form)))
 
 (define (β-reduce form)
-  (if (or (atom form) (constantp form))
+  (if (or (atom form) (constant? form))
       form
     (β-reduce- (map β-reduce form))))
 
 (define (β-reduce- form)
         ; ((lambda (f) (f arg)) X) => (X arg)
   (cond ((and (= (length form) 2)
-              (consp (car form))
+              (pair? (car form))
               (eq (caar form) 'lambda)
               (let ((args (cadr (car form)))
                     (body (caddr (car form))))
-                (and (consp body) (consp args)
+                (and (pair? body) (pair? args)
                      (= (length body) 2)
                      (= (length args) 1)
                      (eq (car body) (car args))
@@ -227,15 +228,15 @@
         ; ((lambda (p1 args...) body) s exprs...)
         ; where exprs... doesn't contain p1
         ((and (= (length form) 2)
-              (consp (car form))
+              (pair? (car form))
               (eq (caar form) 'lambda)
-              (or (atom (cadr form)) (constantp (cadr form)))
+              (or (atom (cadr form)) (constant? (cadr form)))
               (let ((args (cadr (car form)))
                     (s (cadr form))
                     (body (caddr (car form))))
-                (and (consp args) (= (length args) 1)
-                     (consp body)
-                     (consp (car body))
+                (and (pair? args) (= (length args) 1)
+                     (pair? body)
+                     (pair? (car body))
                      (eq (caar body) 'lambda)
                      (let ((innerargs (cadr (car body)))
                            (innerbody (caddr (car body)))
@@ -248,14 +249,17 @@
 
         (T form)))
 
-(defmacro with-delimited-continuations code (cps (f-body code)))
+(define-macro (with-delimited-continuations . code)
+  (cps (f-body code)))
 
-(defmacro defgenerator (name args . body)
+(define-macro (define-generator form . body)
   (let ((ko  (gensym))
-        (cur (gensym)))
-    `(defun ,name ,args
-       (let ((,ko  ())
-             (,cur ()))
+        (cur (gensym))
+	(name (car form))
+	(args (cdr form)))
+    `(define (,name ,@args)
+       (let ((,ko  #f)
+             (,cur #f))
          (lambda ()
            (with-delimited-continuations
             (if ,ko (,ko ,cur)
@@ -263,17 +267,17 @@
                (let ((yield
                       (lambda (v)
                         (shift yk
-                               (progn (setq ,ko  yk)
-                                      (setq ,cur v))))))
+                               (begin (set! ,ko  yk)
+                                      (set! ,cur v))))))
                  ,(f-body body))))))))))
 
 ; a test case
-(defgenerator range-iterator (lo hi)
+(define-generator (range-iterator lo hi)
   ((label loop
           (lambda (i)
             (if (< hi i)
                 'done
-              (progn (yield i)
+              (begin (yield i)
                      (loop (+ 1 i))))))
    lo))
 
@@ -301,15 +305,15 @@ todo:
 
  (let ((x 0))
    (while (< x 10)
-     (progn (print x) (setq x (+ 1 x)))))
+     (begin (print x) (set! x (+ 1 x)))))
  =>
   (let ((x 0))
     (reset
-     (let ((l nil))
+     (let ((l #f))
        (let ((k (shift k (k k))))
          (if (< x 10)
-             (progn (setq l (progn (print x)
-                                   (setq x (+ 1 x))))
+             (begin (set! l (begin (print x)
+                                   (set! x (+ 1 x))))
                     (k k))
            l)))))
 |#

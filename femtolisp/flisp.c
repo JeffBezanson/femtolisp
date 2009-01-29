@@ -28,7 +28,7 @@
   * cvalues system providing C data types and a C FFI
   * constructor notation for nicely printing arbitrary values
   * strings
-  - hash tables
+  * hash tables
 
   by Jeff Bezanson (C) 2009
   Distributed under the BSD License
@@ -52,27 +52,28 @@
 
 static char *builtin_names[] =
     { "quote", "cond", "if", "and", "or", "while", "lambda",
-      "trycatch", "%apply", "setq", "progn",
+      "trycatch", "%apply", "set!", "begin",
 
-      "eq", "atom", "not", "symbolp", "numberp", "boundp", "consp",
-      "builtinp", "vectorp", "fixnump", "equal",
-      "cons", "list", "car", "cdr", "rplaca", "rplacd",
+      "eq?", "eqv?", "equal?", "atom?", "not", "null?", "boolean?", "symbol?",
+      "number?", "bound?", "pair?", "builtin?", "vector?", "fixnum?",
+
+      "cons", "list", "car", "cdr", "set-car!", "set-cdr!",
       "eval", "eval*", "apply", "prog1", "raise",
       "+", "-", "*", "/", "<", "~", "&", "!", "$",
-      "vector", "aref", "aset", "length", "assoc", "compare",
-      "for" };
+      "vector", "aref", "aset", "length", "assq", "compare", "for",
+      "", "", "" };
 
 #define N_STACK 98304
 value_t Stack[N_STACK];
 uint32_t SP = 0;
 
-value_t NIL, T, LAMBDA, QUOTE, IF, TRYCATCH;
+value_t NIL, FL_T, FL_F, LAMBDA, QUOTE, IF, TRYCATCH;
 value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT;
 value_t IOError, ParseError, TypeError, ArgError, UnboundError, MemoryError;
 value_t DivideError, BoundsError, Error, KeyError;
 value_t conssym, symbolsym, fixnumsym, vectorsym, builtinsym;
-value_t defunsym, defmacrosym, forsym, labelsym, printprettysym, setqsym;
-value_t printwidthsym;
+value_t definesym, defmacrosym, forsym, labelsym, printprettysym, setqsym;
+value_t printwidthsym, tsym, Tsym, fsym, Fsym, booleansym, nullsym, elsesym;
 
 static value_t eval_sexpr(value_t e, uint32_t penv, int tail);
 static value_t *alloc_words(int n);
@@ -592,7 +593,7 @@ int isnumber(value_t v)
 // eval -----------------------------------------------------------------------
 
 // return a cons element of v whose car is item
-static value_t assoc(value_t item, value_t v)
+static value_t assq(value_t item, value_t v)
 {
     value_t bind;
 
@@ -602,7 +603,7 @@ static value_t assoc(value_t item, value_t v)
             return bind;
         v = cdr_(v);
     }
-    return NIL;
+    return FL_F;
 }
 
 /*
@@ -646,7 +647,7 @@ static value_t do_trycatch(value_t expr, uint32_t penv)
     FL_CATCH {
         v = cdr_(Stack[SP-1]);
         if (!iscons(v)) {
-            v = NIL;   // 1-argument form
+            v = FL_F;   // 1-argument form
         }
         else {
             Stack[SP-1] = car_(v);
@@ -771,7 +772,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                 if (*pv == NIL) break;
                 pv = &vector_elt(*pv, 0);
             }
-            sym = tosymbol(e, "setq");
+            sym = tosymbol(e, "set!");
             if (sym->syntax != TAG_CONST)
                 sym->binding = v;
             break;
@@ -809,24 +810,28 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
         case F_IF:
             if (!iscons(Stack[saveSP])) goto notpair;
             v = car_(Stack[saveSP]);
-            if (eval(v) != NIL) {
+            if (eval(v) != FL_F) {
                 v = cdr_(Stack[saveSP]);
                 if (!iscons(v)) goto notpair;
                 v = car_(v);
             }
             else {
                 v = cdr_(Stack[saveSP]);
-                if (!iscons(v) || !iscons(v=cdr_(v))) goto notpair;
-                v = car_(v);
+                if (!iscons(v)) goto notpair;
+                if (!iscons(v=cdr_(v))) v = FL_F;  // allow 2-arg form
+                else v = car_(v);
             }
             tail_eval(v);
             break;
         case F_COND:
-            pv = &Stack[saveSP]; v = NIL;
+            pv = &Stack[saveSP]; v = FL_F;
             while (iscons(*pv)) {
                 c = tocons(car_(*pv), "cond");
-                v = eval(c->car);
-                if (v != NIL) {
+                v = c->car;
+                // allow last condition to be 'else'
+                if (iscons(cdr_(*pv)) || v != elsesym)
+                    v = eval(v);
+                if (v != FL_F) {
                     *pv = cdr_(car_(*pv));
                     // evaluate body forms
                     if (iscons(*pv)) {
@@ -842,11 +847,11 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             }
             break;
         case F_AND:
-            pv = &Stack[saveSP]; v = T;
+            pv = &Stack[saveSP]; v = FL_T;
             if (iscons(*pv)) {
                 while (iscons(cdr_(*pv))) {
-                    if ((v=eval(car_(*pv))) == NIL) {
-                        SP = saveSP; return NIL;
+                    if ((v=eval(car_(*pv))) == FL_F) {
+                        SP = saveSP; return FL_F;
                     }
                     *pv = cdr_(*pv);
                 }
@@ -854,10 +859,10 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             }
             break;
         case F_OR:
-            pv = &Stack[saveSP]; v = NIL;
+            pv = &Stack[saveSP]; v = FL_F;
             if (iscons(*pv)) {
                 while (iscons(cdr_(*pv))) {
-                    if ((v=eval(car_(*pv))) != NIL) {
+                    if ((v=eval(car_(*pv))) != FL_F) {
                         SP = saveSP; return v;
                     }
                     *pv = cdr_(*pv);
@@ -871,9 +876,9 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             PUSH(*body);
             Stack[saveSP] = car_(Stack[saveSP]);
             value_t *cond = &Stack[saveSP];
-            PUSH(NIL);
+            PUSH(FL_F);
             pv = &Stack[SP-1];
-            while (eval(*cond) != NIL) {
+            while (eval(*cond) != FL_F) {
                 *body = Stack[SP-2];
                 while (iscons(*body)) {
                     *pv = eval(car_(*body));
@@ -892,7 +897,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                 }
                 tail_eval(car_(*pv));
             }
-            v = NIL;
+            v = FL_F;
             break;
         case F_TRYCATCH:
             v = do_trycatch(car(Stack[saveSP]), penv);
@@ -900,13 +905,13 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
 
         // ordinary functions
         case F_BOUNDP:
-            argcount("boundp", nargs, 1);
-            sym = tosymbol(Stack[SP-1], "boundp");
-            v = (sym->binding == UNBOUND) ? NIL : T;
+            argcount("bound?", nargs, 1);
+            sym = tosymbol(Stack[SP-1], "bound?");
+            v = (sym->binding == UNBOUND) ? FL_F : FL_T;
             break;
         case F_EQ:
-            argcount("eq", nargs, 2);
-            v = ((Stack[SP-2] == Stack[SP-1]) ? T : NIL);
+            argcount("eq?", nargs, 2);
+            v = ((Stack[SP-2] == Stack[SP-1]) ? FL_T : FL_F);
             break;
         case F_CONS:
             argcount("cons", nargs, 2);
@@ -937,12 +942,12 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             if (!iscons(v)) goto notpair;
             v = cdr_(v);
             break;
-        case F_RPLACA:
-            argcount("rplaca", nargs, 2);
+        case F_SETCAR:
+            argcount("set-car!", nargs, 2);
             car(v=Stack[SP-2]) = Stack[SP-1];
             break;
-        case F_RPLACD:
-            argcount("rplacd", nargs, 2);
+        case F_SETCDR:
+            argcount("set-cdr!", nargs, 2);
             cdr(v=Stack[SP-2]) = Stack[SP-1];
             break;
         case F_VECTOR:
@@ -1015,36 +1020,47 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             }
             break;
         case F_ATOM:
-            argcount("atom", nargs, 1);
-            v = ((!iscons(Stack[SP-1])) ? T : NIL);
+            argcount("atom?", nargs, 1);
+            v = ((!iscons(Stack[SP-1])) ? FL_T : FL_F);
             break;
         case F_CONSP:
-            argcount("consp", nargs, 1);
-            v = (iscons(Stack[SP-1]) ? T : NIL);
+            argcount("pair?", nargs, 1);
+            v = (iscons(Stack[SP-1]) ? FL_T : FL_F);
             break;
         case F_SYMBOLP:
-            argcount("symbolp", nargs, 1);
-            v = ((issymbol(Stack[SP-1])) ? T : NIL);
+            argcount("symbol?", nargs, 1);
+            v = ((issymbol(Stack[SP-1])) ? FL_T : FL_F);
             break;
         case F_NUMBERP:
-            argcount("numberp", nargs, 1);
-            v = (isfixnum(Stack[SP-1]) || iscprim(Stack[SP-1]) ? T : NIL);
+            argcount("number?", nargs, 1);
+            v = (isfixnum(Stack[SP-1]) || iscprim(Stack[SP-1]) ? FL_T : FL_F);
             break;
         case F_FIXNUMP:
-            argcount("fixnump", nargs, 1);
-            v = (isfixnum(Stack[SP-1]) ? T : NIL);
+            argcount("fixnum?", nargs, 1);
+            v = (isfixnum(Stack[SP-1]) ? FL_T : FL_F);
             break;
         case F_BUILTINP:
-            argcount("builtinp", nargs, 1);
-            v = (isbuiltinish(Stack[SP-1]) ? T : NIL);
+            argcount("builtin?", nargs, 1);
+            v = Stack[SP-1];
+            v = ((isbuiltinish(v) && v!=FL_F && v!=FL_T && v!=NIL)
+                 ? FL_T : FL_F);
             break;
         case F_VECTORP:
-            argcount("vectorp", nargs, 1);
-            v = ((isvector(Stack[SP-1])) ? T : NIL);
+            argcount("vector?", nargs, 1);
+            v = ((isvector(Stack[SP-1])) ? FL_T : FL_F);
             break;
         case F_NOT:
             argcount("not", nargs, 1);
-            v = ((Stack[SP-1] == NIL) ? T : NIL);
+            v = ((Stack[SP-1] == FL_F) ? FL_T : FL_F);
+            break;
+        case F_NULL:
+            argcount("null?", nargs, 1);
+            v = ((Stack[SP-1] == NIL) ? FL_T : FL_F);
+            break;            
+        case F_BOOLEANP:
+            argcount("boolean?", nargs, 1);
+            v = Stack[SP-1];
+            v = ((v == FL_T || v == FL_F) ? FL_T : FL_F);
             break;
         case F_ADD:
             s = 0;
@@ -1157,19 +1173,37 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
         case F_LT:
             argcount("<", nargs, 2);
             if (bothfixnums(Stack[SP-2], Stack[SP-1])) {
-                v = (numval(Stack[SP-2]) < numval(Stack[SP-1])) ? T : NIL;
+                v = (numval(Stack[SP-2]) < numval(Stack[SP-1])) ? FL_T : FL_F;
             }
             else {
-                v = (numval(compare(Stack[SP-2], Stack[SP-1])) < 0) ? T : NIL;
+                v = (numval(compare(Stack[SP-2], Stack[SP-1])) < 0) ?
+                    FL_T : FL_F;
             }
             break;
         case F_EQUAL:
-            argcount("equal", nargs, 2);
-            if (eq_comparable(Stack[SP-2],Stack[SP-1])) {
-                v = (Stack[SP-2] == Stack[SP-1]) ? T : NIL;
+            argcount("equal?", nargs, 2);
+            if (Stack[SP-2] == Stack[SP-1]) {
+                v = FL_T;
+            }
+            else if (eq_comparable(Stack[SP-2],Stack[SP-1])) {
+                v = FL_F;
             }
             else {
-                v = (numval(compare(Stack[SP-2], Stack[SP-1]))==0) ? T : NIL;
+                v = (numval(compare(Stack[SP-2], Stack[SP-1]))==0) ?
+                    FL_T : FL_F;
+            }
+            break;
+        case F_EQV:
+            argcount("eqv?", nargs, 2);
+            if (Stack[SP-2] == Stack[SP-1]) {
+                v = FL_T;
+            }
+            else if (!leafp(Stack[SP-2]) || !leafp(Stack[SP-1])) {
+                v = FL_F;
+            }
+            else {
+                v = (numval(compare(Stack[SP-2], Stack[SP-1]))==0) ?
+                    FL_T : FL_F;
             }
             break;
         case F_EVAL:
@@ -1207,9 +1241,9 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                 lerror(ArgError, "prog1: too few arguments");
             v = Stack[saveSP+1];
             break;
-        case F_ASSOC:
-            argcount("assoc", nargs, 2);
-            v = assoc(Stack[SP-2], Stack[SP-1]);
+        case F_ASSQ:
+            argcount("assq", nargs, 2);
+            v = assq(Stack[SP-2], Stack[SP-1]);
             break;
         case F_FOR:
             argcount("for", nargs, 3);
@@ -1224,7 +1258,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             SP += 4;  // make space
             Stack[SP-4] = fixnum(3);       // env size
             Stack[SP-1] = cdr_(cdr_(f));   // cloenv
-            v = NIL;
+            v = FL_F;
             for(s=lo; s <= hi; s++) {
                 f = Stack[SP-5];
                 Stack[SP-3] = car_(f);     // lambda list
@@ -1256,6 +1290,10 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             }
             noeval = 1;
             goto apply_lambda;
+        case F_TRUE:
+        case F_FALSE:
+        case F_NIL:
+            goto apply_type_error;
         default:
             // function pointer tagged as a builtin
             v = ((builtin_t)ptr(f))(&Stack[saveSP+1], nargs);
@@ -1358,6 +1396,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
         }
         // not reached
     }
+ apply_type_error:
     type_error("apply", "function", f);
  notpair:
     lerror(TypeError, "expected cons");
@@ -1369,7 +1408,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
 extern void builtins_init();
 extern void comparehash_init();
 
-static char *EXEDIR;
+static char *EXEDIR = NULL;
 
 void assign_global_builtins(builtinspec_t *b)
 {
@@ -1393,8 +1432,9 @@ void lisp_init(void)
     htable_new(&printconses, 32);
     comparehash_init();
 
-    NIL = symbol("nil"); setc(NIL, NIL);
-    T   = symbol("T");   setc(T,   T);
+    NIL = builtin(F_NIL);
+    FL_T = builtin(F_TRUE);
+    FL_F = builtin(F_FALSE);
     LAMBDA = symbol("lambda");
     QUOTE = symbol("quote");
     TRYCATCH = symbol("trycatch");
@@ -1417,12 +1457,17 @@ void lisp_init(void)
     fixnumsym = symbol("fixnum");
     vectorsym = symbol("vector");
     builtinsym = symbol("builtin");
-    defunsym = symbol("defun");
-    defmacrosym = symbol("defmacro");
+    booleansym = symbol("boolean");
+    nullsym = symbol("null");
+    definesym = symbol("define");
+    defmacrosym = symbol("define-macro");
     forsym = symbol("for");
     labelsym = symbol("label");
-    setqsym = symbol("setq");
-    set(printprettysym=symbol("*print-pretty*"), T);
+    setqsym = symbol("set!");
+    elsesym = symbol("else");
+    tsym = symbol("t"); Tsym = symbol("T");
+    fsym = symbol("f"); Fsym = symbol("F");
+    set(printprettysym=symbol("*print-pretty*"), FL_T);
     set(printwidthsym=symbol("*print-width*"), fixnum(SCR_WIDTH));
     lasterror = NIL;
     lerrorbuf[0] = '\0';
@@ -1433,7 +1478,7 @@ void lisp_init(void)
             ((symbol_t*)ptr(symbol(builtin_names[i])))->syntax = builtin(i);
         i++;
     }
-    for (; i < N_BUILTINS; i++) {
+    for (; i < F_TRUE; i++) {
         setc(symbol(builtin_names[i]), builtin(i));
     }
 
@@ -1559,6 +1604,7 @@ int locale_is_utf8;
 int main(int argc, char *argv[])
 {
     value_t v;
+    char fname_buf[1024];
 
     locale_is_utf8 = u8_is_locale_utf8(setlocale(LC_ALL, ""));
 
@@ -1575,7 +1621,13 @@ int main(int argc, char *argv[])
         if (argc > 1) return 1;
         else goto repl;
     }
-    load_file("system.lsp");
+    fname_buf[0] = '\0';
+    if (EXEDIR != NULL) {
+        strcat(fname_buf, EXEDIR);
+        strcat(fname_buf, PATHSEPSTRING);
+    }
+    strcat(fname_buf, "system.lsp");
+    load_file(fname_buf);
     if (argc > 1) { load_file(argv[1]); return 0; }
     printf(";  _                   \n");
     printf("; |_ _ _ |_ _ |  . _ _\n");

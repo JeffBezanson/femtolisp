@@ -37,8 +37,8 @@ static value_t print_to_string(value_t v, int princ)
 
 value_t fl_stringp(value_t *args, u_int32_t nargs)
 {
-    argcount("stringp", nargs, 1);
-    return isstring(args[0]) ? T : NIL;
+    argcount("string?", nargs, 1);
+    return isstring(args[0]) ? FL_T : FL_F;
 }
 
 value_t fl_string_length(value_t *args, u_int32_t nargs)
@@ -84,7 +84,7 @@ value_t fl_string_decode(value_t *args, u_int32_t nargs)
 {
     int term=0;
     if (nargs == 2) {
-        term = (POP() != NIL);
+        term = (POP() != FL_F);
         nargs--;
     }
     argcount("string.decode", nargs, 1);
@@ -254,7 +254,7 @@ static value_t mem_find_byte(char *s, char c, size_t start, size_t len)
 {
     char *p = memchr(s+start, c, len-start);
     if (p == NULL)
-        return NIL;
+        return FL_F;
     return size_wrap((size_t)(p - s));
 }
 
@@ -293,7 +293,7 @@ value_t fl_string_find(value_t *args, u_int32_t nargs)
         type_error("string.find", "string", args[1]);
     }
     if (needlesz > len-start)
-        return NIL;
+        return FL_F;
     else if (needlesz == 1)
         return mem_find_byte(s, needle[0], start, len);
     else if (needlesz == 0)
@@ -305,7 +305,7 @@ value_t fl_string_find(value_t *args, u_int32_t nargs)
                 return size_wrap(i);
         }
     }
-    return NIL;
+    return FL_F;
 }
 
 value_t fl_string_inc(value_t *args, u_int32_t nargs)
@@ -349,7 +349,7 @@ value_t fl_string_dec(value_t *args, u_int32_t nargs)
 
 static builtinspec_t stringfunc_info[] = {
     { "string", fl_string },
-    { "stringp", fl_stringp },
+    { "string?", fl_stringp },
     { "string.length", fl_string_length },
     { "string.split", fl_string_split },
     { "string.sub", fl_string_sub },

@@ -270,12 +270,6 @@ static u_int32_t peek(ios_t *f)
             read_token(f, ch, 0);
             toktype = TOK_SHARPSYM;
             tokval = symbol(buf);
-            c = nextchar(f);
-            if (c != '(') {
-                take();
-                lerror(ParseError, "read: expected argument list for %s",
-                       symbol_name(tokval));
-            }
         }
         else {
             lerror(ParseError, "read: unknown read macro");
@@ -465,6 +459,7 @@ static value_t do_read_sexpr(ios_t *f, value_t label)
     value_t v, sym, oldtokval, *head;
     value_t *pv;
     u_int32_t t;
+    char c;
 
     t = peek(f);
     take();
@@ -511,8 +506,18 @@ static value_t do_read_sexpr(ios_t *f, value_t label)
         read_list(f, &Stack[SP-1], label);
         return POP();
     case TOK_SHARPSYM:
-        // constructor notation
         sym = tokval;
+        if (sym == tsym || sym == Tsym)
+            return FL_T;
+        else if (sym == fsym || sym == Fsym)
+            return FL_F;
+        // constructor notation
+        c = nextchar(f);
+        if (c != '(') {
+            take();
+            lerror(ParseError, "read: expected argument list for %s",
+                   symbol_name(tokval));
+        }
         PUSH(NIL);
         read_list(f, &Stack[SP-1], UNBOUND);
         v = POP();
