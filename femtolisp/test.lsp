@@ -9,20 +9,20 @@
 
 ;(define (reverse lst)
 ;  ((label rev-help (lambda (lst result)
-;                     (if (null lst) result
+;                     (if (null? lst) result
 ;                       (rev-help (cdr lst) (cons (car lst) result)))))
 ;   lst ()))
 
 (define (append- . lsts)
   ((label append-h
           (lambda (lsts)
-            (cond ((null lsts) ())
-                  ((null (cdr lsts)) (car lsts))
-                  (T ((label append2 (lambda (l d)
-                                       (if (null l) d
-                                         (cons (car l)
-                                               (append2 (cdr l) d)))))
-                      (car lsts) (append-h (cdr lsts)))))))
+            (cond ((null? lsts) ())
+                  ((null? (cdr lsts)) (car lsts))
+                  (#t ((label append2 (lambda (l d)
+					(if (null? l) d
+					    (cons (car l)
+						  (append2 (cdr l) d)))))
+		       (car lsts) (append-h (cdr lsts)))))))
    lsts))
 
 ;(princ 'Hello '| | 'world! "\n")
@@ -38,13 +38,13 @@
 ; iterative filter
 (define (ifilter pred lst)
   ((label f (lambda (accum lst)
-              (cond ((null lst) (nreverse accum))
+              (cond ((null? lst) (nreverse accum))
                     ((not (pred (car lst))) (f accum (cdr lst)))
-                    (T (f (cons (car lst) accum) (cdr lst))))))
+                    (#t (f (cons (car lst) accum) (cdr lst))))))
    () lst))
 
 (define (sort l)
-  (if (or (null l) (null (cdr l))) l
+  (if (or (null? l) (null? (cdr l))) l
     (let* ((piv (car l))
            (halves (separate (lambda (x) (< x piv)) (cdr l))))
       (nconc (sort (car halves))
@@ -81,13 +81,13 @@
   (cond ((= p 0) 1)
         ((= b 0) 0)
         ((evenp p) (square (expt b (/ p 2))))
-        (T (* b (expt b (- p 1))))))
+        (#t (* b (expt b (- p 1))))))
 
 (define (gcd a b)
   (cond ((= a 0) b)
         ((= b 0) a)
         ((< a b)  (gcd a (- b a)))
-        (T        (gcd b (- a b)))))
+        (#t       (gcd b (- a b)))))
 
 ; like eval-when-compile
 (define-macro (literal expr)
@@ -95,7 +95,7 @@
     (if (self-evaluating? v) v (list quote v))))
 
 (define (cardepth l)
-  (if (atom l) 0
+  (if (atom? l) 0
       (+ 1 (cardepth (car l)))))
 
 (define (nestlist f zero n)
@@ -105,7 +105,7 @@
 (define (mapl f . lsts)
   ((label mapl-
           (lambda (lsts)
-            (if (null (car lsts)) ()
+            (if (null? (car lsts)) ()
 		(begin (apply f lsts) (mapl- (map cdr lsts))))))
    lsts))
 
@@ -115,7 +115,7 @@
 
 ; swap the cars and cdrs of every cons in a structure
 (define (swapad c)
-  (if (atom c) c
+  (if (atom? c) c
       (rplacd c (K (swapad (car c))
 		   (rplaca c (swapad (cdr c)))))))
 
@@ -123,7 +123,7 @@
   (filter (lambda (e) (not (eq e x))) l))
 
 (define (conscount c)
-  (if (consp c) (+ 1
+  (if (pair? c) (+ 1
                    (conscount (car c))
                    (conscount (cdr c)))
       0))
@@ -163,7 +163,7 @@
                        (todo   (f-body (cddr  catc))))
                    `(lambda (,var)
                       (if (or (eq ,var ',extype)
-                              (and (consp ,var)
+                              (and (pair? ,var)
                                    (eq (car ,var) ',extype)))
                           ,todo
                         (,next ,var)))))
@@ -220,8 +220,8 @@
        (cdr ,first))))
 
 (define (map-indexed f lst)
-  (if (atom lst) lst
+  (if (atom? lst) lst
     (let ((i 0))
-      (accumulate-while (consp lst) (f (car lst) i)
+      (accumulate-while (pair? lst) (f (car lst) i)
                         (begin (set! lst (cdr lst))
                                (set! i (1+ i)))))))

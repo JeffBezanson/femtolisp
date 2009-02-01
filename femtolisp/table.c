@@ -103,11 +103,11 @@ value_t fl_table(value_t *args, uint32_t nargs)
     return nt;
 }
 
-// (put table key value)
+// (put! table key value)
 value_t fl_table_put(value_t *args, uint32_t nargs)
 {
-    argcount("put", nargs, 3);
-    htable_t *h = totable(args[0], "put");
+    argcount("put!", nargs, 3);
+    htable_t *h = totable(args[0], "put!");
     void **table0 = h->table;
     equalhash_put(h, (void*)args[1], (void*)args[2]);
     // register finalizer if we outgrew inline space
@@ -142,13 +142,13 @@ value_t fl_table_has(value_t *args, uint32_t nargs)
     return equalhash_has(h, (void*)args[1]) ? FL_T : FL_F;
 }
 
-// (del table key)
+// (del! table key)
 value_t fl_table_del(value_t *args, uint32_t nargs)
 {
-    argcount("del", nargs, 2);
-    htable_t *h = totable(args[0], "del");
+    argcount("del!", nargs, 2);
+    htable_t *h = totable(args[0], "del!");
     if (!equalhash_remove(h, (void*)args[1]))
-        lerror(KeyError, "del: key not found");
+        lerror(KeyError, "del!: key not found");
     return args[0];
 }
 
@@ -178,10 +178,10 @@ value_t fl_table_foldl(value_t *args, uint32_t nargs)
 static builtinspec_t tablefunc_info[] = {
     { "table", fl_table },
     { "table?", fl_tablep },
-    { "put", fl_table_put },
+    { "put!", fl_table_put },
     { "get", fl_table_get },
     { "has", fl_table_has },
-    { "del", fl_table_del },
+    { "del!", fl_table_del },
     { "table.foldl", fl_table_foldl },
     { NULL, NULL }
 };

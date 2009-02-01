@@ -2,7 +2,7 @@
 (define (cond->if form)
   (cond-clauses->if (cdr form)))
 (define (cond-clauses->if lst)
-  (if (atom lst)
+  (if (atom? lst)
       lst
     (let ((clause (car lst)))
       `(if ,(car clause)
@@ -10,11 +10,11 @@
          ,(cond-clauses->if (cdr lst))))))
 
 (define (begin->cps forms k)
-  (cond ((atom forms)       `(,k ,forms))
-        ((null (cdr forms)) (cps- (car forms) k))
-        (T (let ((_ (gensym)))   ; var to bind ignored value
-             (cps- (car forms) `(lambda (,_)
-                                  ,(begin->cps (cdr forms) k)))))))
+  (cond ((atom? forms)       `(,k ,forms))
+        ((null? (cdr forms))  (cps- (car forms) k))
+        (#t (let ((_ (gensym)))   ; var to bind ignored value
+	      (cps- (car forms) `(lambda (,_)
+				   ,(begin->cps (cdr forms) k)))))))
 
 (define-macro (lambda/cc args body)
   `(rplaca (lambda ,args ,body) 'lambda/cc))
@@ -44,7 +44,7 @@
 
 (define (rest->cps xformer form k argsyms)
   (let ((el (car form)))
-    (if (or (atom el) (constant? el))
+    (if (or (atom? el) (constant? el))
         (xformer (cdr form) k (cons el argsyms))
       (let ((g (gensym)))
         (cps- el `(lambda (,g)
@@ -58,17 +58,17 @@
 
 ; (f x) => (cps- f `(lambda (F) ,(cps- x `(lambda (X) (F ,k X)))))
 (define (app->cps form k argsyms)
-  (cond ((atom form)
+  (cond ((atom? form)
          (let ((r (reverse argsyms)))
            (make-funcall/cc (car r) k (cdr r))))
-        (T (rest->cps app->cps form k argsyms))))
+        (#t (rest->cps app->cps form k argsyms))))
 
 ; (+ x) => (cps- x `(lambda (X) (,k (+ X))))
 (define (builtincall->cps form k)
   (prim->cps (cdr form) k (list (car form))))
 (define (prim->cps form k argsyms)
-  (cond ((atom form) `(,k ,(reverse argsyms)))
-        (T           (rest->cps prim->cps form k argsyms))))
+  (cond ((atom? form) `(,k ,(reverse argsyms)))
+        (#t           (rest->cps prim->cps form k argsyms))))
 
 (define *top-k* (gensym))
 (set *top-k* identity)
@@ -80,7 +80,7 @@
      (cps- (macroexpand form) *top-k*)))))
 (define (cps- form k)
   (let ((g (gensym)))
-    (cond ((or (atom form) (constant? form))
+    (cond ((or (atom? form) (constant? form))
            `(,k ,form))
 
           ((eq (car form) 'lambda)
@@ -96,7 +96,7 @@
            (let ((test (cadr form))
                  (then (caddr form))
                  (else (cadddr form)))
-             (if (atom k)
+             (if (atom? k)
                  (cps- test `(lambda (,g)
                                (if ,g
                                    ,(cps- then k)
@@ -105,9 +105,9 @@
                   ,(cps- form g)))))
 
           ((eq (car form) 'and)
-           (cond ((atom (cdr  form)) `(,k T))
-                 ((atom (cddr form)) (cps- (cadr form) k))
-                 (T
+           (cond ((atom? (cdr  form)) `(,k #t))
+                 ((atom? (cddr form)) (cps- (cadr form) k))
+                 (#t
                   (if (atom k)
                       (cps- (cadr form)
                             `(lambda (,g)
@@ -117,10 +117,10 @@
                        ,(cps- form g))))))
 
           ((eq (car form) 'or)
-           (cond ((atom (cdr  form)) `(,k #f))
-                 ((atom (cddr form)) (cps- (cadr form) k))
-                 (T
-                  (if (atom k)
+           (cond ((atom? (cdr  form)) `(,k #f))
+                 ((atom? (cddr form)) (cps- (cadr form) k))
+                 (#t
+                  (if (atom? k)
                       (cps- (cadr form)
                             `(lambda (,g)
                                (if ,g (,k ,g)
@@ -168,23 +168,23 @@
                 (eq (caar form) 'lambda))
            (let ((largs (cadr (car form)))
                  (lbody (caddr (car form))))
-             (cond ((null largs)    ; ((lambda () body))
+             (cond ((null? largs)   ; ((lambda () body))
                     (cps- lbody k))
-                   ((symbolp largs) ; ((lambda x body) args...)
+                   ((symbol? largs) ; ((lambda x body) args...)
                     (cps- `((lambda (,largs) ,lbody) (list ,@(cdr form))) k))
-                   (T
+                   (#t
                     (cps- (cadr form) `(lambda (,(car largs))
                                          ,(cps- `((lambda ,(cdr largs) ,lbody)
                                                   ,@(cddr form))
                                                 k)))))))
 
-          (T
+          (#t
            (app->cps form k ())))))
 
 ; (lambda (args...) (f args...)) => f
 ; but only for constant, builtin f
 (define (η-reduce form)
-  (cond ((or (atom form) (constant? form)) form)
+  (cond ((or (atom? form) (constant? form)) form)
         ((and (eq (car form) 'lambda)
               (let ((body (caddr form))
                     (args (cadr form)))
@@ -192,16 +192,16 @@
                      (equal (cdr body) args)
                      (constant? (car (caddr form))))))
          (car (caddr form)))
-        (T (map η-reduce form))))
+        (#t (map η-reduce form))))
 
 (define (contains x form)
   (or (eq form x)
       (any (lambda (p) (contains x p)) form)))
 
 (define (β-reduce form)
-  (if (or (atom form) (constant? form))
+  (if (or (atom? form) (constant? form))
       form
-    (β-reduce- (map β-reduce form))))
+      (β-reduce- (map β-reduce form))))
 
 (define (β-reduce- form)
         ; ((lambda (f) (f arg)) X) => (X arg)
@@ -215,7 +215,7 @@
                      (= (length args) 1)
                      (eq (car body) (car args))
                      (not (eq (cadr body) (car args)))
-                     (symbolp (cadr body)))))
+                     (symbol? (cadr body)))))
          `(,(cadr form)
            ,(cadr (caddr (car form)))))
 
@@ -230,7 +230,7 @@
         ((and (= (length form) 2)
               (pair? (car form))
               (eq (caar form) 'lambda)
-              (or (atom (cadr form)) (constant? (cadr form)))
+              (or (atom? (cadr form)) (constant? (cadr form)))
               (let ((args (cadr (car form)))
                     (s (cadr form))
                     (body (caddr (car form))))
@@ -247,7 +247,7 @@
                               ,s
                               ,@params)))))))
 
-        (T form)))
+        (#t form)))
 
 (define-macro (with-delimited-continuations . code)
   (cps (f-body code)))
@@ -287,7 +287,7 @@
           (cons 'a (reset (cons 'b (shift f (cons 1 (f (f (cons 'c ())))))))))
          '(a 1 b b c)))
 
-T
+#t
 
 #|
 todo:

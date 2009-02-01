@@ -60,7 +60,7 @@ static char *builtin_names[] =
       "cons", "list", "car", "cdr", "set-car!", "set-cdr!",
       "eval", "eval*", "apply", "prog1", "raise",
       "+", "-", "*", "/", "<", "~", "&", "!", "$",
-      "vector", "aref", "aset", "length", "assq", "compare", "for",
+      "vector", "aref", "aset!", "length", "assq", "compare", "for",
       "", "", "" };
 
 #define N_STACK 98304
@@ -1004,19 +1004,19 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             }
             break;
         case F_ASET:
-            argcount("aset", nargs, 3);
+            argcount("aset!", nargs, 3);
             e = Stack[SP-3];
             if (isvector(e)) {
-                i = tofixnum(Stack[SP-2], "aset");
+                i = tofixnum(Stack[SP-2], "aset!");
                 if (__unlikely((unsigned)i >= vector_size(e)))
-                    bounds_error("aref", v, Stack[SP-1]);
+                    bounds_error("aset!", v, Stack[SP-1]);
                 vector_elt(e, i) = (v=Stack[SP-1]);
             }
             else if (isarray(e)) {
                 v = cvalue_array_aset(&Stack[SP-3]);
             }
             else {
-                type_error("aset", "sequence", e);
+                type_error("aset!", "sequence", e);
             }
             break;
         case F_ATOM:

@@ -520,14 +520,22 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             else
                 HPOS+=ios_printf(f, "%s", rep);
         }
+        else if (d == 0) {
+            if (1/d < 0)
+                HPOS+=ios_printf(f, "-0.0%s", type==floatsym?"f":"");
+            else
+                HPOS+=ios_printf(f, "0.0%s",  type==floatsym?"f":"");
+        }
         else {
             snprint_real(buf, sizeof(buf), d, 0, ndec, 3, 10);
-            if (weak || princ || strpbrk(buf, ".eE")) {
-                outs(buf, f);
+            int hasdec = (strpbrk(buf, ".eE") != NULL);
+            outs(buf, f);
+            if (weak || princ || hasdec) {
                 if (type == floatsym) outc('f', f);
             }
             else {
-                HPOS+=ios_printf(f, "#%s(%s)", symbol_name(type), buf);
+                if (!hasdec) outs(".0", f);
+                if (type==floatsym) outc('f', f);
             }
         }
     }

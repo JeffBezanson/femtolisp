@@ -7,9 +7,9 @@
   (list (fixnum n) (int8 n) (int16 n) (int32 n) (int64 n)))
 
 (define (each f l)
-  (if (atom l) ()
-    (begin (f (car l))
-           (each f (cdr l)))))
+  (if (atom? l) ()
+      (begin (f (car l))
+	     (each f (cdr l)))))
 
 (define (each^2 f l m)
   (each (lambda (o) (each (lambda (p) (f o p)) m)) l))
@@ -82,4 +82,4 @@
                  (3 . d) (2 . c) (0 . b) (1 . a))))
 
 (princ "all tests pass\n")
-T
+#t

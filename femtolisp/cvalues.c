@@ -791,7 +791,7 @@ static value_t cvalue_array_aset(value_t *args)
 {
     char *data; ulong_t index;
     fltype_t *eltype = cv_class((cvalue_t*)ptr(args[0]))->eltype;
-    check_addr_args("aset", args[0], args[1], &data, &index);
+    check_addr_args("aset!", args[0], args[1], &data, &index);
     char *dest = data + index*eltype->size;
     cvalue_init(eltype, args[2], dest);
     return args[2];

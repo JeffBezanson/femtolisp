@@ -7,9 +7,9 @@
 ; tree inspection utils
 
 (define (assigned-var e)
-  (and (consp e)
+  (and (pair? e)
        (or (eq (car e) '<-) (eq (car e) 'ref=))
-       (symbolp (cadr e))
+       (symbol? (cadr e))
        (cadr e)))
 
 (define (func-argnames f)
@@ -26,13 +26,13 @@
 (define (dollarsign-transform e)
   (pattern-expand
    (pattern-lambda ($ lhs name)
-		   (let* ((g (if (not (consp lhs)) lhs (r-gensym)))
-			  (n (if (symbolp name)
+		   (let* ((g (if (not (pair? lhs)) lhs (r-gensym)))
+			  (n (if (symbol? name)
 				 name ;(symbol->string name)
                                name))
 			  (expr `(r-call
 				  r-aref ,g (index-in-strlist ,n (r-call attr ,g "names")))))
-		     (if (not (consp lhs))
+		     (if (not (pair? lhs))
 			 expr
                        `(r-block (ref= ,g ,lhs) ,expr))))
    e))
@@ -46,9 +46,9 @@
   (pattern-expand
    (pattern-lambda (-$ (<-  (r-call f lhs ...) rhs)
                        (<<- (r-call f lhs ...) rhs))
-		   (let ((g  (if (consp rhs) (r-gensym) rhs))
+		   (let ((g  (if (pair? rhs) (r-gensym) rhs))
                          (op (car __)))
-		     `(r-block ,@(if (consp rhs) `((ref= ,g ,rhs)) ())
+		     `(r-block ,@(if (pair? rhs) `((ref= ,g ,rhs)) ())
                                (,op ,lhs (r-call ,(symconcat f '<-) ,@(cddr (cadr __)) ,g))
                                ,g)))
    e))
@@ -68,10 +68,10 @@
 ; convert r function expressions to lambda
 (define (normalize-r-functions e)
   (maptree-post (lambda (n)
-		  (if (and (consp n) (eq (car n) 'function))
+		  (if (and (pair? n) (eq (car n) 'function))
 		      `(lambda ,(func-argnames n)
 			 (r-block ,@(gen-default-inits (cadr n))
-				  ,@(if (and (consp (caddr n))
+				  ,@(if (and (pair? (caddr n))
 					     (eq (car (caddr n)) 'r-block))
 					(cdr (caddr n))
                                       (list (caddr n)))))
@@ -81,19 +81,19 @@
 (define (find-assigned-vars n)
   (let ((vars ()))
     (maptree-pre (lambda (s)
-		   (if (not (consp s)) s
+		   (if (not (pair? s)) s
                      (cond ((eq (car s) 'lambda) ())
                            ((eq (car s) '<-)
                             (set! vars (list-adjoin (cadr s) vars))
                             (cddr s))
-                           (T s))))
+                           (#t s))))
 		 n)
     vars))
 
 ; introduce let based on assignment statements
 (define (letbind-locals e)
   (maptree-post (lambda (n)
-                  (if (and (consp n) (eq (car n) 'lambda))
+                  (if (and (pair? n) (eq (car n) 'lambda))
                       (let ((vars (find-assigned-vars (cddr n))))
                         `(lambda ,(cadr n) (let ,(map (lambda (v) (list v ()))
                                                       vars)

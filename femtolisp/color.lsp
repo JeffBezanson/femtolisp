@@ -1,23 +1,17 @@
 ; -*- scheme -*-
-; uncomment for compatibility with CL
-;(defun mapp (f l) (mapcar f l))
-;(defmacro define (name &rest body)
-;  (if (symbolp name)
-;      (list 'setq name (car body))
-;    (list 'defun (car name) (cdr name) (cons 'progn body))))
 
 ; dictionaries ----------------------------------------------------------------
 (define (dict-new) ())
 
 (define (dict-extend dl key value)
-  (cond ((null dl)              (list (cons key value)))
-        ((equal key (caar dl))  (cons (cons key value) (cdr dl)))
-        (T (cons (car dl) (dict-extend (cdr dl) key value)))))
+  (cond ((null? dl)              (list (cons key value)))
+        ((equal? key (caar dl))  (cons (cons key value) (cdr dl)))
+        (else (cons (car dl) (dict-extend (cdr dl) key value)))))
 
 (define (dict-lookup dl key)
-  (cond ((null dl)              ())
-        ((equal key (caar dl))  (cdar dl))
-        (T (dict-lookup (cdr dl) key))))
+  (cond ((null? dl)              ())
+        ((equal? key (caar dl))  (cdar dl))
+        (else (dict-lookup (cdr dl) key))))
 
 (define (dict-keys dl) (map car dl))
 
@@ -39,7 +33,7 @@
 (define (graph-add-node g n1) (dict-extend g n1 ()))
 
 (define (graph-from-edges edge-list)
-  (if (null edge-list)
+  (if (null? edge-list)
       (graph-empty)
     (graph-connect (graph-from-edges (cdr edge-list))
                    (caar edge-list)
@@ -52,17 +46,17 @@
         (map
          (lambda (n)
            (let ((color-pair (assq n coloring)))
-             (if (consp color-pair) (cdr color-pair) ())))
+             (if (pair? color-pair) (cdr color-pair) ())))
          (graph-neighbors g node-to-color)))))
 
 (define (try-each f lst)
-  (if (null lst) #f
+  (if (null? lst) #f
       (let ((ret (f (car lst))))
 	(if ret ret (try-each f (cdr lst))))))
 
 (define (color-node g coloring colors uncolored-nodes color)
   (cond
-   ((null uncolored-nodes) coloring)
+   ((null? uncolored-nodes) coloring)
    ((node-colorable? g coloring (car uncolored-nodes) color)
     (let ((new-coloring
            (cons (cons (car uncolored-nodes) color) coloring)))
@@ -71,8 +65,8 @@
                 colors)))))
 
 (define (color-graph g colors)
-  (if (null colors)
-      (and (null (graph-nodes g)) ())
+  (if (null? colors)
+      (and (null? (graph-nodes g)) ())
       (color-node g () colors (graph-nodes g) (car colors))))
 
 (define (color-pairs pairs colors)

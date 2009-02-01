@@ -16,7 +16,16 @@ static int symchar(char c)
     return (!isspace(c) && !strchr(special, c));
 }
 
-static int isnumtok(char *tok, value_t *pval)
+static int isdigit_base(char c, int base)
+{
+    if (base < 11)
+        return (c >= '0' && c < '0'+base);
+    return ((c >= '0' && c <= '9') ||
+            (c >= 'a' && c < 'a'+base-10) ||
+            (c >= 'A' && c < 'A'+base-10));
+}
+
+static int isnumtok_base(char *tok, value_t *pval, int base)
 {
     char *end;
     int64_t i64;
@@ -24,48 +33,61 @@ static int isnumtok(char *tok, value_t *pval)
     double d;
     if (*tok == '\0')
         return 0;
-    if (!(tok[0]=='0' && isdigit(tok[1])) &&
-        strpbrk(tok, ".eEpP")) {
+    if (strpbrk(tok, ".eEpP")) {
         d = strtod(tok, &end);
         if (*end == '\0') {
             if (pval) *pval = mk_double(d);
             return 1;
         }
-        if (end > tok && end[0] == 'f' && end[1] == '\0') {
+        // floats can end in f or f0
+        if (end > tok && end[0] == 'f' &&
+            (end[1] == '\0' ||
+             (end[1] == '0' && end[2] == '\0'))) {
             if (pval) *pval = mk_float((float)d);
             return 1;
         }
     }
 
     if (tok[0] == '+') {
-        if (!strcmp(tok,"+NaN")) {
+        if (!strcmp(tok,"+NaN") || !strcasecmp(tok,"+nan.0")) {
             if (pval) *pval = mk_double(D_PNAN);
             return 1;
         }
-        if (!strcmp(tok,"+Inf")) {
+        if (!strcmp(tok,"+Inf") || !strcasecmp(tok,"+inf.0")) {
             if (pval) *pval = mk_double(D_PINF);
             return 1;
         }
     }
     else if (tok[0] == '-') {
-        if (!strcmp(tok,"-NaN")) {
+        if (!strcmp(tok,"-NaN") || !strcasecmp(tok,"-nan.0")) {
             if (pval) *pval = mk_double(D_NNAN);
             return 1;
         }
-        if (!strcmp(tok,"-Inf")) {
+        if (!strcmp(tok,"-Inf") || !strcasecmp(tok,"-inf.0")) {
             if (pval) *pval = mk_double(D_NINF);
             return 1;
         }
-        i64 = strtoll(tok, &end, 0);
+        i64 = strtoll(tok, &end, base);
         if (pval) *pval = return_from_int64(i64);
         return (*end == '\0');
     }
-    else if (!isdigit(tok[0])) {
-        return 0;
-    }
-    ui64 = strtoull(tok, &end, 0);
+    ui64 = strtoull(tok, &end, base);
     if (pval) *pval = return_from_uint64(ui64);
     return (*end == '\0');
+}
+
+static int isnumtok(char *tok, value_t *pval)
+{
+    return isnumtok_base(tok, pval, 0);
+}
+
+static int read_numtok(char *tok, value_t *pval, int base)
+{
+    int result;
+    errno = 0;
+    result = isnumtok_base(tok, pval, base);
+    if (errno) lerror(ParseError, "read: overflow in numeric constant");
+    return result;
 }
 
 static u_int32_t toktype = TOK_NONE;
@@ -148,7 +170,7 @@ static u_int32_t peek(ios_t *f)
 {
     char c, *end;
     fixnum_t x;
-    int ch;
+    int ch, base;
 
     if (toktype != TOK_NONE)
         return toktype;
@@ -176,30 +198,30 @@ static u_int32_t peek(ios_t *f)
         toktype = TOK_DOUBLEQUOTE;
     }
     else if (c == '#') {
-        ch = ios_getc(f);
+        ch = ios_getc(f); c = (char)ch;
         if (ch == IOS_EOF)
             lerror(ParseError, "read: invalid read macro");
-        if ((char)ch == '.') {
+        if (c == '.') {
             toktype = TOK_SHARPDOT;
         }
-        else if ((char)ch == '\'') {
+        else if (c == '\'') {
             toktype = TOK_SHARPQUOTE;
         }
-        else if ((char)ch == '\\') {
+        else if (c == '\\') {
             uint32_t cval;
             if (ios_getutf8(f, &cval) == IOS_EOF)
                 lerror(ParseError, "read: end of input in character constant");
             toktype = TOK_NUM;
             tokval = mk_wchar(cval);
         }
-        else if ((char)ch == '(') {
+        else if (c == '(') {
             toktype = TOK_SHARPOPEN;
         }
-        else if ((char)ch == '<') {
+        else if (c == '<') {
             lerror(ParseError, "read: unreadable object");
         }
-        else if (isdigit((char)ch)) {
-            read_token(f, (char)ch, 1);
+        else if (isdigit(c)) {
+            read_token(f, c, 1);
             c = (char)ios_getc(f);
             if (c == '#')
                 toktype = TOK_BACKREF;
@@ -213,14 +235,14 @@ static u_int32_t peek(ios_t *f)
                 lerror(ParseError, "read: invalid label");
             tokval = fixnum(x);
         }
-        else if ((char)ch == '!') {
+        else if (c == '!') {
             // #! single line comment for shbang script support
             do {
                 ch = ios_getc(f);
             } while (ch != IOS_EOF && (char)ch != '\n');
             return peek(f);
         }
-        else if ((char)ch == '|') {
+        else if (c == '|') {
             // multiline comment
             int commentlevel=1;
             while (1) {
@@ -250,10 +272,10 @@ static u_int32_t peek(ios_t *f)
             // this was whitespace, so keep peeking
             return peek(f);
         }
-        else if ((char)ch == ';') {
+        else if (c == ';') {
             toktype = TOK_SHARPSEMI;
         }
-        else if ((char)ch == ':') {
+        else if (c == ':') {
             // gensym
             ch = ios_getc(f);
             if ((char)ch == 'g')
@@ -266,8 +288,18 @@ static u_int32_t peek(ios_t *f)
             toktype = TOK_GENSYM;
             tokval = fixnum(x);
         }
-        else if (symchar((char)ch)) {
+        else if (symchar(c)) {
             read_token(f, ch, 0);
+
+            if (((c == 'b' && (base= 2)) ||
+                 (c == 'o' && (base= 8)) ||
+                 (c == 'd' && (base=10)) ||
+                 (c == 'x' && (base=16))) && isdigit_base(buf[1],base)) {
+                if (!read_numtok(&buf[1], &tokval, base))
+                    lerror(ParseError, "read: invalid base %d constant", base);
+                return (toktype=TOK_NUM);
+            }
+
             toktype = TOK_SHARPSYM;
             tokval = symbol(buf);
         }
@@ -293,12 +325,8 @@ static u_int32_t peek(ios_t *f)
                 return (toktype=TOK_DOT);
             }
             else {
-                errno = 0;
-                if (isnumtok(buf, &tokval)) {
-                    if (errno)
-                        lerror(ParseError,"read: overflow in numeric constant");
+                if (read_numtok(buf, &tokval, 0))
                     return (toktype=TOK_NUM);
-                }
             }
         }
         toktype = TOK_SYM;
