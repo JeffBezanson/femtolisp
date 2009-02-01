@@ -59,7 +59,7 @@ static char *builtin_names[] =
 
       "cons", "list", "car", "cdr", "set-car!", "set-cdr!",
       "eval", "eval*", "apply", "prog1", "raise",
-      "+", "-", "*", "/", "<", "~", "&", "!", "$",
+      "+", "-", "*", "/", "<", "lognot", "logand", "logior", "logxor",
       "vector", "aref", "aset!", "length", "assq", "compare", "for",
       "", "", "" };
 
@@ -1139,28 +1139,28 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             }
             break;
         case F_BNOT:
-            argcount("~", nargs, 1);
+            argcount("lognot", nargs, 1);
             if (isfixnum(Stack[SP-1]))
                 v = fixnum(~numval(Stack[SP-1]));
             else
                 v = fl_bitwise_not(Stack[SP-1]);
             break;
         case F_BAND:
-            argcount("&", nargs, 2);
+            argcount("logand", nargs, 2);
             if (bothfixnums(Stack[SP-1], Stack[SP-2]))
                 v = Stack[SP-1] & Stack[SP-2];
             else
                 v = fl_bitwise_op(Stack[SP-2], Stack[SP-1], 0, "&");
             break;
         case F_BOR:
-            argcount("!", nargs, 2);
+            argcount("logior", nargs, 2);
             if (bothfixnums(Stack[SP-1], Stack[SP-2]))
                 v = Stack[SP-1] | Stack[SP-2];
             else
                 v = fl_bitwise_op(Stack[SP-2], Stack[SP-1], 1, "!");
             break;
         case F_BXOR:
-            argcount("$", nargs, 2);
+            argcount("logxor", nargs, 2);
             if (bothfixnums(Stack[SP-1], Stack[SP-2]))
                 v = fixnum(numval(Stack[SP-1]) ^ numval(Stack[SP-2]));
             else

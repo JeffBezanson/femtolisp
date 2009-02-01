@@ -182,6 +182,35 @@ value_t fl_constantp(value_t *args, u_int32_t nargs)
     return FL_T;
 }
 
+value_t fl_integerp(value_t *args, u_int32_t nargs)
+{
+    argcount("integer?", nargs, 1);
+    value_t v = args[0];
+    if (isfixnum(v)) {
+        return FL_T;
+    }
+    else if (iscprim(v)) {
+        numerictype_t nt = cp_numtype((cprim_t*)ptr(v));
+        if (nt < T_FLOAT)
+            return FL_T;
+        void *data = cp_data((cprim_t*)ptr(v));
+        if (nt == T_FLOAT) {
+            float f = *(float*)data;
+            if (f < 0) f = -f;
+            if (f <= FLT_MAXINT && (float)(int32_t)f == f)
+                return FL_T;
+        }
+        else {
+            assert(nt == T_DOUBLE);
+            double d = *(double*)data;
+            if (d < 0) d = -d;
+            if (d <= DBL_MAXINT && (double)(int64_t)d == d)
+                return FL_T;
+        }
+    }
+    return FL_F;
+}
+
 value_t fl_fixnum(value_t *args, u_int32_t nargs)
 {
     argcount("fixnum", nargs, 1);
@@ -377,6 +406,7 @@ static builtinspec_t builtin_info[] = {
     { "intern", fl_intern },
     { "fixnum", fl_fixnum },
     { "truncate", fl_truncate },
+    { "integer?", fl_integerp },
 
     { "vector.alloc", fl_vector_alloc },
 

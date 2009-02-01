@@ -347,6 +347,27 @@ value_t fl_string_dec(value_t *args, u_int32_t nargs)
     return size_wrap(i);
 }
 
+value_t fl_numbertostring(value_t *args, u_int32_t nargs)
+{
+    if (nargs < 1 || nargs > 2)
+        argcount("number->string", nargs, 2);
+    value_t n = args[0];
+    int64_t num;
+    if (isfixnum(n))      num = numval(n);
+    else if (!iscprim(n)) type_error("number->string", "integer", n);
+    else num = conv_to_int64(cp_data((cprim_t*)ptr(n)),
+                             cp_numtype((cprim_t*)ptr(n)));
+    ulong radix = 10;
+    if (nargs == 2) {
+        radix = toulong(args[1], "number->string");
+        if (radix < 2 || radix > 36)
+            lerror(ArgError, "number->string: invalid radix");
+    }
+    char buf[128];
+    char *str = int2str(buf, sizeof(buf), num, radix);
+    return string_from_cstr(str);
+}
+
 static builtinspec_t stringfunc_info[] = {
     { "string", fl_string },
     { "string?", fl_stringp },
@@ -360,6 +381,9 @@ static builtinspec_t stringfunc_info[] = {
     { "string.reverse", fl_string_reverse },
     { "string.encode", fl_string_encode },
     { "string.decode", fl_string_decode },
+
+    { "number->string", fl_numbertostring },
+
     { NULL, NULL }
 };
 

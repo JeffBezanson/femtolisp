@@ -16,15 +16,6 @@ static int symchar(char c)
     return (!isspace(c) && !strchr(special, c));
 }
 
-static int isdigit_base(char c, int base)
-{
-    if (base < 11)
-        return (c >= '0' && c < '0'+base);
-    return ((c >= '0' && c <= '9') ||
-            (c >= 'a' && c < 'a'+base-10) ||
-            (c >= 'A' && c < 'A'+base-10));
-}
-
 static int isnumtok_base(char *tok, value_t *pval, int base)
 {
     char *end;

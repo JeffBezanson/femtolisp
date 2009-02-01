@@ -600,13 +600,10 @@ cvalues todo:
 * allow int constructors to accept other int cvalues
 * array constructor should accept any cvalue of the right size
 * make sure cvalues participate well in circular printing
-- lispvalue type
-  . keep track of whether a cvalue leads to any lispvalues, so they can
-    be automatically relocated (?)
 * float, double
 - struct, union (may want to start with more general layout type)
 - pointer type, function type
-- finalizers and lifetime dependency tracking
+* finalizers
 - functions autorelease, guestfunction
 - cref/cset/byteref/byteset
 * wchar type, wide character strings as (array wchar)
@@ -614,13 +611,13 @@ cvalues todo:
 - ccall
 - anonymous unions
 * fix princ for cvalues
-- make header size for primitives 8 bytes, even on 64-bit arch
+* make header size for primitives <= 8 bytes, even on 64-bit arch
 - more efficient read for #array(), so it doesn't need to build a pairlist
-- make sure shared pieces of types, like lists of enum values, can be
-  printed as shared structure to avoid duplication.
-- share more types, allocate less
+? lispvalue type
+  . keep track of whether a cvalue leads to any lispvalues, so they can
+    be automatically relocated (?)
 
-- string constructor/concatenator:
+* string constructor/concatenator:
 (string 'sym #char(65) #wchar(945) "blah" 23)
    ; gives "symA\u03B1blah23"
 "ccc"  reads to (array char)
