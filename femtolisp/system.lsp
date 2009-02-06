@@ -40,10 +40,22 @@
       (cons (f (car lst)) (map f (cdr lst)))))
 
 (define-macro (let binds . body)
-  (cons (list 'lambda
-              (map (lambda (c) (if (pair? c) (car c) c)) binds)
-              (f-body body))
-        (map (lambda (c) (if (pair? c) (cadr c) #f)) binds)))
+  ((lambda (lname)
+     (begin
+       (if (symbol? binds)
+	   (begin (set! lname binds)
+		  (set! binds (car body))
+		  (set! body (cdr body))))
+       ((lambda (thelambda theargs)
+	  (cons (if lname
+		    (list 'label lname thelambda)
+		    thelambda)
+		theargs))
+	(list 'lambda
+	      (map (lambda (c) (if (pair? c) (car c) c)) binds)
+	      (f-body body))
+	(map (lambda (c) (if (pair? c) (cadr c) #f)) binds))))
+   #f))
 
 (define (nconc . lsts)
   (cond ((null? lsts) ())
@@ -142,7 +154,7 @@
 	(macroexpand (list 'lambda (cdr form) (f-body body)))))
 (define macroexpand (macroexpand macroexpand))
 
-(define =   equal)
+(define =   eqv)
 (define eql eqv)
 (define (/= a b) (not (equal a b)))
 (define != /=)
@@ -522,3 +534,8 @@
     (table.foldl (lambda (k v z) (put! nt k v))
                  () t)
     nt))
+
+(define *whitespace*
+  (string.encode #array(wchar 9 10 11 12 13 32 133 160 5760 6158 8192
+			      8193 8194 8195 8196 8197 8198 8199 8200
+			      8201 8202 8232 8233 8239 8287 12288)))
