@@ -830,14 +830,15 @@ String API
 
 IOStream API
 
- read             - (read[ stream]) ; get next sexpr from stream
- print
- princ
+*read             - (read[ stream]) ; get next sexpr from stream
+*print
+*princ
  iostream         - (stream[ cvalue-as-bytestream])
+ memstream
 *file
  io.eof
  io.write     - (io.write s cvalue)
-*io.read      - (io.read s ctype)
+ io.read      - (io.read s ctype [len])
  io.flush
  io.close
  io.pos       - (io.pos s [set-pos])

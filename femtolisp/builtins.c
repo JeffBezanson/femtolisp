@@ -35,30 +35,6 @@ value_t list_nth(value_t l, size_t n)
     return NIL;
 }
 
-value_t fl_print(value_t *args, u_int32_t nargs)
-{
-    unsigned i;
-    for (i=0; i < nargs; i++)
-        print(ios_stdout, args[i], 0);
-    ios_putc('\n', ios_stdout);
-    return nargs ? args[nargs-1] : NIL;
-}
-
-value_t fl_princ(value_t *args, u_int32_t nargs)
-{
-    unsigned i;
-    for (i=0; i < nargs; i++)
-        print(ios_stdout, args[i], 1);
-    return nargs ? args[nargs-1] : NIL;
-}
-
-value_t fl_read(value_t *args, u_int32_t nargs)
-{
-    (void)args;
-    argcount("read", nargs, 0);
-    return read_sexpr(ios_stdin);
-}
-
 value_t fl_load(value_t *args, u_int32_t nargs)
 {
     argcount("load", nargs, 1);
@@ -317,7 +293,7 @@ value_t fl_path_cwd(value_t *args, uint32_t nargs)
     }
     char *ptr = tostring(args[0], "path.cwd");
     if (set_cwd(ptr))
-        lerror(IOError, "could not cd to %s", ptr);
+        lerror(IOError, "path.cwd: could not cd to %s", ptr);
     return FL_T;
 }
 
@@ -399,9 +375,6 @@ static builtinspec_t builtin_info[] = {
     { "environment", fl_global_env },
     { "constant?", fl_constantp },
 
-    { "print", fl_print },
-    { "princ", fl_princ },
-    { "read", fl_read },
     { "load", fl_load },
     { "exit", fl_exit },
     { "intern", fl_intern },

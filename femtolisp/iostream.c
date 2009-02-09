@@ -7,14 +7,14 @@
 #include "llt.h"
 #include "flisp.h"
 
-static value_t iostreamsym, rdsym, wrsym, apsym, crsym, truncsym;
+static value_t iostreamsym, rdsym, wrsym, apsym, crsym, truncsym, instrsym;
 static fltype_t *iostreamtype;
 
 void print_iostream(value_t v, ios_t *f, int princ)
 {
     (void)v;
     (void)princ;
-    fl_print_str("#<iostream>", f);
+    fl_print_str("#<io stream>", f);
 }
 
 void free_iostream(value_t self)
@@ -71,25 +71,54 @@ value_t fl_file(value_t *args, uint32_t nargs)
     value_t f = cvalue(iostreamtype, sizeof(ios_t));
     ios_t *s = value2c(ios_t*, f);
     if (ios_file(s, fname, r, w, c, t) == NULL)
-        lerror(IOError, "could not open file \"%s\"", fname);
+        lerror(IOError, "file: could not open \"%s\"", fname);
     if (a) ios_seek_end(s);
     return f;
 }
 
-value_t fl_ioread(value_t *args, u_int32_t nargs)
+value_t fl_read(value_t *args, u_int32_t nargs)
 {
-    argcount("io.read", nargs, 1);
-    ios_t *s = toiostream(args[0], "io.read");
+    if (nargs > 1)
+        argcount("read", nargs, 1);
+    ios_t *s;
+    if (nargs > 0)
+        s = toiostream(args[0], "read");
+    else
+        s = toiostream(symbol_value(instrsym), "read");
     value_t v = read_sexpr(s);
     if (ios_eof(s))
-        lerror(IOError, "end of file reached");
+        lerror(IOError, "read: end of file reached");
     return v;
+}
+
+static void do_ioprint(value_t *args, u_int32_t nargs, int princ, char *fname)
+{
+    if (nargs < 2)
+        argcount(fname, nargs, 2);
+    ios_t *s = toiostream(args[0], fname);
+    unsigned i;
+    for (i=1; i < nargs; i++) {
+        print(s, args[i], princ);
+        if (!princ) ios_putc('\n', s);
+    }
+}
+value_t fl_ioprint(value_t *args, u_int32_t nargs)
+{
+    do_ioprint(args, nargs, 0, "io.print");
+    return args[nargs-1];
+}
+value_t fl_ioprinc(value_t *args, u_int32_t nargs)
+{
+    do_ioprint(args, nargs, 1, "io.princ");
+    return args[nargs-1];
 }
 
 static builtinspec_t iostreamfunc_info[] = {
     { "iostream?", fl_iostreamp },
     { "file", fl_file },
-    { "io.read", fl_ioread },
+    { "read", fl_read },
+    { "io.print", fl_ioprint },
+    { "io.princ", fl_ioprinc },
     { NULL, NULL }
 };
 
@@ -101,14 +130,15 @@ void iostream_init()
     apsym = symbol(":append");
     crsym = symbol(":create");
     truncsym = symbol(":truncate");
+    instrsym = symbol("*input-stream*");
     iostreamtype = define_opaque_type(iostreamsym, sizeof(ios_t),
                                       &iostream_vtable, NULL);
     assign_global_builtins(iostreamfunc_info);
 
-    setc(symbol("*stdout*"), cvalue_from_ref(iostreamtype, &ios_stdout,
+    setc(symbol("*stdout*"), cvalue_from_ref(iostreamtype, ios_stdout,
                                              sizeof(ios_t), NIL));
-    setc(symbol("*stderr*"), cvalue_from_ref(iostreamtype, &ios_stderr,
+    setc(symbol("*stderr*"), cvalue_from_ref(iostreamtype, ios_stderr,
                                              sizeof(ios_t), NIL));
-    setc(symbol("*stdin*" ), cvalue_from_ref(iostreamtype, &ios_stdin,
+    setc(symbol("*stdin*" ), cvalue_from_ref(iostreamtype, ios_stdin,
                                              sizeof(ios_t), NIL));
 }

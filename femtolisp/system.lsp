@@ -23,21 +23,26 @@
                (list 'set-syntax! (list 'quote (car form))
                      (list 'lambda (cdr form) (f-body body)))))
 
-(define-macro (label name fn)
-  (list (list 'lambda (list name) (list 'set! name fn)) #f))
-
 (define-macro (define form . body)
   (if (symbol? form)
       (list 'set! form (car body))
       (list 'set! (car form) (list 'lambda (cdr form) (f-body body)))))
 
-(define (set s v) (eval (list 'set! s (list 'quote v))))
+(define *output-stream* *stdout*)
+(define *input-stream*  *stdin*)
+(define (print . args)
+  (apply io.print (cons *output-stream* args)))
+(define (princ . args)
+  (apply io.princ (cons *output-stream* args)))
 
-(define (identity x) x)
+(define (set s v) (eval (list 'set! s (list 'quote v))))
 
 (define (map f lst)
   (if (atom? lst) lst
       (cons (f (car lst)) (map f (cdr lst)))))
+
+(define-macro (label name fn)
+  (list (list 'lambda (list name) (list 'set! name fn)) #f))
 
 (define-macro (let binds . body)
   ((lambda (lname)
@@ -166,6 +171,7 @@
 (define (mod x y) (- x (* (/ x y) y)))
 (define remainder mod)
 (define (abs x)   (if (< x 0) (- x) x))
+(define (identity x) x)
 (define K prog1)  ; K combinator ;)
 
 (define (caar x) (car (car x)))
