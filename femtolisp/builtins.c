@@ -389,6 +389,7 @@ value_t fl_randf(value_t *args, u_int32_t nargs)
 
 extern void stringfuncs_init();
 extern void table_init();
+extern void iostream_init();
 
 static builtinspec_t builtin_info[] = {
     { "set-constant!", fl_setconstant },
@@ -431,4 +432,5 @@ void builtins_init()
     assign_global_builtins(builtin_info);
     stringfuncs_init();
     table_init();
+    iostream_init();
 }

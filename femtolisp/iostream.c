@@ -1,0 +1,114 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <string.h>
+#include <assert.h>
+#include <sys/types.h>
+#include "llt.h"
+#include "flisp.h"
+
+static value_t iostreamsym, rdsym, wrsym, apsym, crsym, truncsym;
+static fltype_t *iostreamtype;
+
+void print_iostream(value_t v, ios_t *f, int princ)
+{
+    (void)v;
+    (void)princ;
+    fl_print_str("#<iostream>", f);
+}
+
+void free_iostream(value_t self)
+{
+    ios_t *s = value2c(ios_t*, self);
+    ios_close(s);
+}
+
+void relocate_iostream(value_t oldv, value_t newv)
+{
+    ios_t *olds = value2c(ios_t*, oldv);
+    ios_t *news = value2c(ios_t*, newv);
+    cvalue_t *cv = (cvalue_t*)ptr(oldv);
+    if (isinlined(cv)) {
+        if (olds->buf == &olds->local[0]) {
+            news->buf = &news->local[0];
+        }
+    }
+}
+
+cvtable_t iostream_vtable = { print_iostream, relocate_iostream,
+                              free_iostream, NULL };
+
+int isiostream(value_t v)
+{
+    return iscvalue(v) && cv_class((cvalue_t*)ptr(v)) == iostreamtype;
+}
+
+value_t fl_iostreamp(value_t *args, uint32_t nargs)
+{
+    argcount("iostream?", nargs, 1);
+    return isiostream(args[0]) ? FL_T : FL_F;
+}
+
+static ios_t *toiostream(value_t v, char *fname)
+{
+    if (!isiostream(v))
+        type_error(fname, "iostream", v);
+    return value2c(ios_t*, v);
+}
+
+value_t fl_file(value_t *args, uint32_t nargs)
+{
+    if (nargs < 1)
+        argcount("file", nargs, 1);
+    int i, r=1, w=0, c=0, t=0, a=0;
+    char *fname = tostring(args[0], "file");
+    for(i=1; i < (int)nargs; i++) {
+        if      (args[i] == wrsym)    w = 1;
+        else if (args[i] == apsym)    a = 1;
+        else if (args[i] == crsym)    c = 1;
+        else if (args[i] == truncsym) t = 1;
+    }
+    value_t f = cvalue(iostreamtype, sizeof(ios_t));
+    ios_t *s = value2c(ios_t*, f);
+    if (ios_file(s, fname, r, w, c, t) == NULL)
+        lerror(IOError, "could not open file \"%s\"", fname);
+    if (a) ios_seek_end(s);
+    return f;
+}
+
+value_t fl_ioread(value_t *args, u_int32_t nargs)
+{
+    argcount("io.read", nargs, 1);
+    ios_t *s = toiostream(args[0], "io.read");
+    value_t v = read_sexpr(s);
+    if (ios_eof(s))
+        lerror(IOError, "end of file reached");
+    return v;
+}
+
+static builtinspec_t iostreamfunc_info[] = {
+    { "iostream?", fl_iostreamp },
+    { "file", fl_file },
+    { "io.read", fl_ioread },
+    { NULL, NULL }
+};
+
+void iostream_init()
+{
+    iostreamsym = symbol("iostream");
+    rdsym = symbol(":read");
+    wrsym = symbol(":write");
+    apsym = symbol(":append");
+    crsym = symbol(":create");
+    truncsym = symbol(":truncate");
+    iostreamtype = define_opaque_type(iostreamsym, sizeof(ios_t),
+                                      &iostream_vtable, NULL);
+    assign_global_builtins(iostreamfunc_info);
+
+    setc(symbol("*stdout*"), cvalue_from_ref(iostreamtype, &ios_stdout,
+                                             sizeof(ios_t), NIL));
+    setc(symbol("*stderr*"), cvalue_from_ref(iostreamtype, &ios_stderr,
+                                             sizeof(ios_t), NIL));
+    setc(symbol("*stdin*" ), cvalue_from_ref(iostreamtype, &ios_stdin,
+                                             sizeof(ios_t), NIL));
+}

@@ -1565,7 +1565,7 @@ value_t load_file(char *fname)
     ios_t fi;
     ios_t * volatile f;
     fname = strdup(fname);
-    f = &fi; f = ios_file(f, fname, 0, 0);
+    f = &fi; f = ios_file(f, fname, 1, 0, 0, 0);
     if (f == NULL) lerror(IOError, "file \"%s\" not found", fname);
     FL_TRY {
         while (1) {

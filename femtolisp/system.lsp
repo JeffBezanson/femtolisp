@@ -14,7 +14,7 @@
 ; this allows define, defun, defmacro, let, etc. to contain multiple
 ; body expressions as in Common Lisp.
 (set! f-body (lambda (e)
-               (cond ((atom? e)       e)
+               (cond ((atom? e)       #f)
                      ((eq (cdr e) ()) (car e))
                      (#t              (cons 'begin e)))))
 

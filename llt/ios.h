@@ -86,7 +86,7 @@ size_t ios_readprep(ios_t *from, size_t n);
 //int ios_unlock(ios_t *s);
 
 /* stream creation */
-ios_t *ios_file(ios_t *s, char *fname, int create, int rewrite);
+ios_t *ios_file(ios_t *s, char *fname, int rd, int wr, int create, int trunc);
 ios_t *ios_mem(ios_t *s, size_t initsize);
 ios_t *ios_str(ios_t *s, char *str);
 ios_t *ios_fd(ios_t *s, long fd, int isfile);

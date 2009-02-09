@@ -834,25 +834,25 @@ IOStream API
  print
  princ
  iostream         - (stream[ cvalue-as-bytestream])
- file
- stream.eof
- stream.write     - (stream.write s cvalue)
- stream.read      - (stream.read s ctype)
- stream.flush
- stream.close
- stream.pos       - (stream.pos s [set-pos])
- stream.seek      - (stream.seek s offset)
- stream.getc      - get utf8 character(s)
- stream.readline
- stream.copy      - (stream.copy to from [nbytes])
- stream.copyuntil - (stream.copy to from byte)
+*file
+ io.eof
+ io.write     - (io.write s cvalue)
+*io.read      - (io.read s ctype)
+ io.flush
+ io.close
+ io.pos       - (io.pos s [set-pos])
+ io.seek      - (io.seek s offset)
+ io.getc      - get utf8 character(s)
+ io.readline
+ io.copy      - (io.copy to from [nbytes])
+ io.copyuntil - (io.copy to from byte)
  fifo
  socket
- stream.seekend   - move to end of stream
- stream.trunc
- stream.tostring! - destructively convert stringstream to string
- stream.readlines
- stream.readall
+ io.seekend   - move to end of stream
+ io.trunc
+ io.tostring! - destructively convert stringstream to string
+ io.readlines
+ io.readall
  print-to-string
  princ-to-string
 

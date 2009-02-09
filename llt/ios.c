@@ -629,20 +629,24 @@ static void _ios_init(ios_t *s)
 
 /* stream object initializers. we do no allocation. */
 
-ios_t *ios_file(ios_t *s, char *fname, int create, int rewrite)
+ios_t *ios_file(ios_t *s, char *fname, int rd, int wr, int create, int trunc)
 {
     int fd;
-    int flags = O_RDWR;
+    if (!(rd || wr))
+        // must specify read and/or write
+        goto open_file_err;
+    int flags = wr ? (rd ? O_RDWR : O_WRONLY) : O_RDONLY;
     if (create) flags |= O_CREAT;
-    if (rewrite) flags |= O_TRUNC;
+    if (trunc)  flags |= O_TRUNC;
     fd = open(fname, flags, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH/*644*/);
-    if (fd == -1) {
-        s->fd = -1;
-        return NULL;
-    }
+    if (fd == -1)
+        goto open_file_err;
     s = ios_fd(s, fd, 1);
     s->ownfd = 1;
     return s;
+ open_file_err:
+    s->fd = -1;
+    return NULL;
 }
 
 ios_t *ios_mem(ios_t *s, size_t initsize)
