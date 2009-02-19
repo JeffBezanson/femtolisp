@@ -516,6 +516,8 @@ void ios_close(ios_t *s)
     s->fd = -1;
     if (s->buf!=NULL && s->ownbuf && s->buf!=&s->local[0])
         free(s->buf);
+    s->buf = NULL;
+    s->size = s->maxsize = s->bpos = 0;
 }
 
 static void _buf_init(ios_t *s, bufmode_t bm)

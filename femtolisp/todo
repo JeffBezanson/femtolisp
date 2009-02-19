@@ -833,22 +833,23 @@ IOStream API
 *read             - (read[ stream]) ; get next sexpr from stream
 *print
 *princ
+*file
  iostream         - (stream[ cvalue-as-bytestream])
  memstream
-*file
- io.eof
+ fifo
+ socket
+*io.eof
+*io.flush
+*io.close
+*io.discardbuffer
  io.write     - (io.write s cvalue)
  io.read      - (io.read s ctype [len])
- io.flush
- io.close
- io.pos       - (io.pos s [set-pos])
- io.seek      - (io.seek s offset)
  io.getc      - get utf8 character(s)
  io.readline
  io.copy      - (io.copy to from [nbytes])
  io.copyuntil - (io.copy to from byte)
- fifo
- socket
+ io.pos       - (io.pos s [set-pos])
+ io.seek      - (io.seek s offset)
  io.seekend   - move to end of stream
  io.trunc
  io.tostring! - destructively convert stringstream to string

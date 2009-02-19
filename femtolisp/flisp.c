@@ -111,7 +111,6 @@ typedef struct _ectx_t {
 
 static exception_context_t *ctx = NULL;
 static value_t lasterror;
-static char lerrorbuf[512];
 
 #define FL_TRY \
   exception_context_t _ctx; int l__tr, l__ca; \
@@ -122,14 +121,11 @@ static char lerrorbuf[512];
 
 #define FL_CATCH \
   else \
-      for (l__ca=1; l__ca; l__ca=0, lerrorbuf[0]='\0', lasterror=NIL)
+      for (l__ca=1; l__ca; l__ca=0, lasterror=NIL)
 
 void raise(value_t e)
 {
-    if (e != lasterror) {
-        lasterror = e;
-        lerrorbuf[0] = '\0';  // overwriting exception; clear error buf
-    }
+    lasterror = e;
     // unwind read state
     while (readstate != ctx->rdst) {
         free_readstate(readstate);
@@ -142,15 +138,21 @@ void raise(value_t e)
     longjmp(thisctx->buf, 1);
 }
 
+static value_t make_error_msg(char *format, va_list args)
+{
+    char msgbuf[512];
+    vsnprintf(msgbuf, sizeof(msgbuf), format, args);
+    return string_from_cstr(msgbuf);
+}
+
 void lerror(value_t e, char *format, ...)
 {
     va_list args;
     va_start(args, format);
-    vsnprintf(lerrorbuf, sizeof(lerrorbuf), format, args);
+    value_t msg = make_error_msg(format, args);
     va_end(args);
 
-    lasterror = e;
-    raise(e);
+    raise(list2(e, msg));
 }
 
 void type_error(char *fname, char *expected, value_t got)
@@ -1470,7 +1472,6 @@ void lisp_init(void)
     set(printprettysym=symbol("*print-pretty*"), FL_T);
     set(printwidthsym=symbol("*print-width*"), fixnum(SCR_WIDTH));
     lasterror = NIL;
-    lerrorbuf[0] = '\0';
     special_apply_form = fl_cons(builtin(F_SPECIAL_APPLY), NIL);
     i = 0;
     while (isspecial(builtin(i))) {
@@ -1483,13 +1484,13 @@ void lisp_init(void)
     }
 
 #ifdef LINUX
-    set(symbol("os.name"), symbol("linux"));
+    set(symbol("*os-name*"), symbol("linux"));
 #elif defined(WIN32) || defined(WIN64)
-    set(symbol("os.name"), symbol("win32"));
+    set(symbol("*os-name*"), symbol("win32"));
 #elif defined(MACOSX)
-    set(symbol("os.name"), symbol("macos"));
+    set(symbol("*os-name*"), symbol("macos"));
 #else
-    set(symbol("os.name"), symbol("unknown"));
+    set(symbol("*os-name*"), symbol("unknown"));
 #endif
 
     cvalues_init();
@@ -1521,81 +1522,15 @@ value_t toplevel_eval(value_t expr)
     return v;
 }
 
-static void print_toplevel_exception()
-{
-    if (iscons(lasterror) && car_(lasterror) == TypeError &&
-        llength(lasterror) == 4) {
-        ios_printf(ios_stderr, "type-error: ");
-        print(ios_stderr, car_(cdr_(lasterror)), 1);
-        ios_printf(ios_stderr, ": expected ");
-        print(ios_stderr, car_(cdr_(cdr_(lasterror))), 1);
-        ios_printf(ios_stderr, ", got ");
-        print(ios_stderr, car_(cdr_(cdr_(cdr_(lasterror)))), 0);
-    }
-    else if (iscons(lasterror) && car_(lasterror) == UnboundError &&
-             iscons(cdr_(lasterror))) {
-        ios_printf(ios_stderr, "unbound-error: eval: variable %s has no value",
-                   (symbol_name(car_(cdr_(lasterror)))));
-    }
-    else if (iscons(lasterror) && car_(lasterror) == Error) {
-        value_t v = cdr_(lasterror);
-        ios_printf(ios_stderr, "error: ");
-        while (iscons(v)) {
-            print(ios_stderr, car_(v), 1);
-            v = cdr_(v);
-        }
-    }
-    else {
-        if (lasterror != NIL) {
-            if (!lerrorbuf[0])
-                ios_printf(ios_stderr, "*** Unhandled exception: ");
-            print(ios_stderr, lasterror, 0);
-            if (lerrorbuf[0])
-                ios_printf(ios_stderr, ": ");
-        }
-    }
-
-    if (lerrorbuf[0])
-        ios_printf(ios_stderr, "%s", lerrorbuf);
-}
-
-value_t load_file(char *fname)
-{
-    value_t volatile e, v=NIL;
-    ios_t fi;
-    ios_t * volatile f;
-    fname = strdup(fname);
-    f = &fi; f = ios_file(f, fname, 1, 0, 0, 0);
-    if (f == NULL) lerror(IOError, "file \"%s\" not found", fname);
-    FL_TRY {
-        while (1) {
-            e = read_sexpr(f);
-            //print(ios_stdout,e,0); ios_putc('\n', ios_stdout);
-            if (ios_eof(f)) break;
-            v = toplevel_eval(e);
-        }
-    }
-    FL_CATCH {
-        ios_close(f);
-        size_t msglen = strlen(lerrorbuf);
-        snprintf(&lerrorbuf[msglen], sizeof(lerrorbuf)-msglen,
-                 "\nin file \"%s\"", fname);
-        lerrorbuf[sizeof(lerrorbuf)-1] = '\0';
-        free(fname);
-        raise(lasterror);
-    }
-    free(fname);
-    ios_close(f);
-    return v;
-}
-
 static value_t argv_list(int argc, char *argv[])
 {
     int i;
     PUSH(NIL);
-    if (argc > 1) { argc--; argv++; }
-    for(i=argc-1; i >= 0; i--)
-        Stack[SP-1] = fl_cons(cvalue_static_cstring(argv[i]), Stack[SP-1]);
+    for(i=argc-1; i >= 0; i--) {
+        PUSH(cvalue_static_cstring(argv[i]));
+        Stack[SP-2] = fl_cons(Stack[SP-1], Stack[SP-2]);
+        (void)POP();
+    }
     return POP();
 }
 
@@ -1603,23 +1538,21 @@ int locale_is_utf8;
 
 int main(int argc, char *argv[])
 {
-    value_t v;
+    value_t e, v;
     char fname_buf[1024];
 
     locale_is_utf8 = u8_is_locale_utf8(setlocale(LC_ALL, ""));
 
     lisp_init();
-    set(symbol("argv"), argv_list(argc, argv));
+
     FL_TRY {
         // install toplevel exception handler
     }
     FL_CATCH {
-        print_toplevel_exception();
-        lerrorbuf[0] = '\0';
-        lasterror = NIL;
-        ios_puts("\n\n", ios_stderr);
-        if (argc > 1) return 1;
-        else goto repl;
+        ios_printf(ios_stderr, "fatal error during bootstrap:\n");
+        print(ios_stderr, lasterror, 0);
+        ios_putc('\n', ios_stderr);
+        exit(1);
     }
     fname_buf[0] = '\0';
     if (EXEDIR != NULL) {
@@ -1627,27 +1560,19 @@ int main(int argc, char *argv[])
         strcat(fname_buf, PATHSEPSTRING);
     }
     strcat(fname_buf, "system.lsp");
-    load_file(fname_buf);
-    if (argc > 1) { load_file(argv[1]); return 0; }
-    printf(";  _                   \n");
-    printf("; |_ _ _ |_ _ |  . _ _\n");
-    printf("; | (-||||_(_)|__|_)|_)\n");
-    printf(";-------------------|----------------------------------------------------------\n\n");
- repl:
+
+    ios_t fi;
+    ios_t *f = &fi; f = ios_file(f, fname_buf, 1, 0, 0, 0);
+    if (f == NULL) lerror(IOError, "file \"%s\" not found", fname_buf);
     while (1) {
-        ios_puts("> ", ios_stdout); ios_flush(ios_stdout);
-        FL_TRY {
-            v = read_sexpr(ios_stdin);
-        }
-        FL_CATCH {
-            ios_purge(ios_stdin);
-            raise(lasterror);
-        }
-        if (ios_eof(ios_stdin)) break;
-        print(ios_stdout, v=toplevel_eval(v), 0);
-        set(symbol("that"), v);
-        ios_puts("\n\n", ios_stdout);
+        e = read_sexpr(f);
+        if (ios_eof(f)) break;
+        v = toplevel_eval(e);
     }
-    ios_putc('\n', ios_stdout);
+    ios_close(f);
+
+    PUSH(symbol_value(symbol("__start")));
+    PUSH(argv_list(argc, argv));
+    (void)toplevel_eval(special_apply_form);
     return 0;
 }

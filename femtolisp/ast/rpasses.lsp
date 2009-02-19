@@ -20,8 +20,9 @@
 ; transformations
 
 (let ((ctr 0))
-  (define (r-gensym) (prog1 (intern (string "%r:" ctr))
-			    (set! ctr (+ ctr 1)))))
+  (set! r-gensym (lambda ()
+		   (prog1 (intern (string "%r:" ctr))
+			  (set! ctr (+ ctr 1))))))
 
 (define (dollarsign-transform e)
   (pattern-expand

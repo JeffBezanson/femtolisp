@@ -86,9 +86,49 @@ value_t fl_read(value_t *args, u_int32_t nargs)
     else
         s = toiostream(symbol_value(instrsym), "read");
     value_t v = read_sexpr(s);
-    if (ios_eof(s))
-        lerror(IOError, "read: end of file reached");
     return v;
+}
+
+value_t fl_iogetc(value_t *args, u_int32_t nargs)
+{
+    argcount("io.getc", nargs, 1);
+    ios_t *s = toiostream(args[0], "io.getc");
+    uint32_t wc;
+    if (ios_getutf8(s, &wc) == IOS_EOF)
+        lerror(IOError, "io.getc: end of file reached");
+    return mk_wchar(wc);
+}
+
+value_t fl_ioflush(value_t *args, u_int32_t nargs)
+{
+    argcount("io.flush", nargs, 1);
+    ios_t *s = toiostream(args[0], "io.flush");
+    if (ios_flush(s) != 0)
+        return FL_F;
+    return FL_T;
+}
+
+value_t fl_ioclose(value_t *args, u_int32_t nargs)
+{
+    argcount("io.close", nargs, 1);
+    ios_t *s = toiostream(args[0], "io.close");
+    ios_close(s);
+    return FL_T;
+}
+
+value_t fl_iopurge(value_t *args, u_int32_t nargs)
+{
+    argcount("io.discardbuffer", nargs, 1);
+    ios_t *s = toiostream(args[0], "io.discardbuffer");
+    ios_purge(s);
+    return FL_T;
+}
+
+value_t fl_ioeof(value_t *args, u_int32_t nargs)
+{
+    argcount("io.eof?", nargs, 1);
+    ios_t *s = toiostream(args[0], "io.eof?");
+    return (ios_eof(s) ? FL_T : FL_F);
 }
 
 static void do_ioprint(value_t *args, u_int32_t nargs, int princ, char *fname)
@@ -99,7 +139,6 @@ static void do_ioprint(value_t *args, u_int32_t nargs, int princ, char *fname)
     unsigned i;
     for (i=1; i < nargs; i++) {
         print(s, args[i], princ);
-        if (!princ) ios_putc('\n', s);
     }
 }
 value_t fl_ioprint(value_t *args, u_int32_t nargs)
@@ -119,6 +158,11 @@ static builtinspec_t iostreamfunc_info[] = {
     { "read", fl_read },
     { "io.print", fl_ioprint },
     { "io.princ", fl_ioprinc },
+    { "io.flush", fl_ioflush },
+    { "io.close", fl_ioclose },
+    { "io.eof?" , fl_ioeof },
+    { "io.getc" , fl_iogetc },
+    { "io.discardbuffer", fl_iopurge },
     { NULL, NULL }
 };
 

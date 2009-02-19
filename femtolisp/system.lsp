@@ -101,6 +101,43 @@
 	((eqv        (caar lst) item) (car lst))
 	(#t          (assv item (cdr lst)))))
 
+(define (delete-duplicates lst)
+  (if (atom? lst)
+      lst
+      (let ((elt  (car lst))
+	    (tail (cdr lst)))
+	(if (member elt tail)
+	    (delete-duplicates tail)
+	    (cons elt
+		  (delete-duplicates tail))))))
+
+(define (get-defined-vars- expr)
+  (cond ((atom? expr) ())
+	((and (eq? (car expr) 'define)
+	      (pair? (cdr expr)))
+	 (or (and (symbol? (cadr expr))
+		  (list (cadr expr)))
+	     (and (pair? (cadr expr))
+		  (symbol? (caadr expr))
+		  (list (caadr expr)))
+	     ()))
+	((eq? (car expr) 'begin)
+	 (apply append (map get-defined-vars- (cdr expr))))
+	(else ())))
+(define (get-defined-vars expr)
+  (delete-duplicates (get-defined-vars- expr)))
+
+; redefine f-body to support internal defines
+(define f-body- f-body)
+(define (f-body e)
+  ((lambda (B)
+     ((lambda (V)
+	(if (null? V)
+	    B
+	    (cons (list 'lambda V B) (map (lambda (x) #f) V))))
+      (get-defined-vars B)))
+   (f-body- e)))
+
 (define (macrocall? e) (and (symbol? (car e))
 			    (symbol-syntax (car e))))
 
@@ -173,6 +210,7 @@
 (define (abs x)   (if (< x 0) (- x) x))
 (define (identity x) x)
 (define K prog1)  ; K combinator ;)
+(define begin0 prog1)
 
 (define (caar x) (car (car x)))
 (define (cdar x) (cdr (car x)))
@@ -290,18 +328,19 @@
 
 (define-macro (let* binds . body)
   (cons (list 'lambda (map car binds)
-              (cons 'begin
-                    (nconc (map (lambda (b) (cons 'set! b)) binds)
-                           body)))
+              (f-body
+	       (nconc (map (lambda (b) (cons 'set! b)) binds)
+		      body)))
         (map (lambda (x) #f) binds)))
+(set-syntax! 'letrec (symbol-syntax 'let*))
 
 (define-macro (labels binds . body)
   (cons (list 'lambda (map car binds)
-              (cons 'begin
-                    (nconc (map (lambda (b)
-                                  (list 'set! (car b) (cons 'lambda (cdr b))))
-                                binds)
-                           body)))
+              (f-body
+	       (nconc (map (lambda (b)
+			     (list 'set! (car b) (cons 'lambda (cdr b))))
+			   binds)
+		      body)))
         (map (lambda (x) #f) binds)))
 
 (define-macro (when   c . body) (list 'if c (f-body body) #f))
@@ -545,3 +584,97 @@
   (string.encode #array(wchar 9 10 11 12 13 32 133 160 5760 6158 8192
 			      8193 8194 8195 8196 8197 8198 8199 8200
 			      8201 8202 8232 8233 8239 8287 12288)))
+
+(define (load filename)
+  (let ((F (file filename :read)))
+    (trycatch
+     (prog1
+      (let next (E v)
+	(if (not (io.eof? F))
+	    (next (read F)
+		  (eval E))
+	    v))
+      (io.close F))
+     (lambda (e)
+       (begin
+	 (io.close F)
+	 (raise `(load-error ,filename ,e)))))))
+
+(define *banner*
+";  _
+; |_ _ _ |_ _ |  . _ _
+; | (-||||_(_)|__|_)|_)
+;-------------------|----------------------------------------------------------
+
+")
+
+(define (repl)
+  (define (prompt)
+    (princ "> ") (io.flush *output-stream*)
+    (let ((v (trycatch (read)
+		       (lambda (e) (begin (io.discardbuffer *input-stream*)
+					  (raise e))))))
+      (and (not (io.eof? *input-stream*))
+	   (let ((V (eval v)))
+	     (print V)
+	     (set! that V)
+	     #t))))
+  (define (reploop)
+    (when (trycatch (and (prompt) (princ "\n"))
+		    print-exception)
+	  (begin (princ "\n")
+		 (reploop))))
+  (reploop)
+  (princ "\n"))
+
+(define (print-exception e)
+  (cond ((and (pair? e)
+	      (eq? (car e) 'type-error)
+	      (= (length e) 4))
+	 (io.princ *stderr* "type-error: ")
+	 (io.print *stderr* (cadr e))
+	 (io.princ *stderr* ": expected ")
+	 (io.print *stderr* (caddr e))
+	 (io.princ *stderr* ", got ")
+	 (io.print *stderr* (cadddr e)))
+
+	((and (pair? e)
+	      (eq? (car e) 'unbound-error)
+	      (pair? (cdr e)))
+	 (io.princ *stderr*
+		   "unbound-error: eval: variable " (cadr e)
+		   " has no value"))
+
+	((and (pair? e)
+	      (eq? (car e) 'error))
+	 (io.princ *stderr* "error: ")
+	 (apply io.princ (cons *stderr* (cdr e))))
+
+	((and (pair? e)
+	      (eq? (car e) 'load-error))
+	 (print-exception (caddr e))
+	 (io.princ *stderr* "in file " (cadr e)))
+
+	((and (list? e)
+	      (= (length e) 2))
+	 (io.princ *stderr* (car e) ": " (cadr e)))
+
+	(else (io.princ *stderr* "*** Unhandled exception: ")
+	      (io.print *stderr* e)))
+
+  (io.princ *stderr* "\n")
+  #t)
+
+(define (__script fname)
+  (trycatch (load fname)
+	    (lambda (e) (begin (print-exception e)
+			       (exit 1)))))
+
+(define (__start . argv)
+  (if (pair? (cdr argv))
+      (begin (set! *argv* (cdr argv))
+	     (__script (cadr argv)))
+      (begin (set! *argv* argv)
+	     (princ *banner*)
+	     (repl)))
+  (exit 0))

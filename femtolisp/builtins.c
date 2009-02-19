@@ -35,12 +35,6 @@ value_t list_nth(value_t l, size_t n)
     return NIL;
 }
 
-value_t fl_load(value_t *args, u_int32_t nargs)
-{
-    argcount("load", nargs, 1);
-    return load_file(tostring(args[0], "load"));
-}
-
 value_t fl_exit(value_t *args, u_int32_t nargs)
 {
     if (nargs > 0)
@@ -375,7 +369,6 @@ static builtinspec_t builtin_info[] = {
     { "environment", fl_global_env },
     { "constant?", fl_constantp },
 
-    { "load", fl_load },
     { "exit", fl_exit },
     { "intern", fl_intern },
     { "fixnum", fl_fixnum },
