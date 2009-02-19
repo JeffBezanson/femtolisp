@@ -101,43 +101,6 @@
 	((eqv        (caar lst) item) (car lst))
 	(#t          (assv item (cdr lst)))))
 
-(define (delete-duplicates lst)
-  (if (atom? lst)
-      lst
-      (let ((elt  (car lst))
-	    (tail (cdr lst)))
-	(if (member elt tail)
-	    (delete-duplicates tail)
-	    (cons elt
-		  (delete-duplicates tail))))))
-
-(define (get-defined-vars- expr)
-  (cond ((atom? expr) ())
-	((and (eq? (car expr) 'define)
-	      (pair? (cdr expr)))
-	 (or (and (symbol? (cadr expr))
-		  (list (cadr expr)))
-	     (and (pair? (cadr expr))
-		  (symbol? (caadr expr))
-		  (list (caadr expr)))
-	     ()))
-	((eq? (car expr) 'begin)
-	 (apply append (map get-defined-vars- (cdr expr))))
-	(else ())))
-(define (get-defined-vars expr)
-  (delete-duplicates (get-defined-vars- expr)))
-
-; redefine f-body to support internal defines
-(define f-body- f-body)
-(define (f-body e)
-  ((lambda (B)
-     ((lambda (V)
-	(if (null? V)
-	    B
-	    (cons (list 'lambda V B) (map (lambda (x) #f) V))))
-      (get-defined-vars B)))
-   (f-body- e)))
-
 (define (macrocall? e) (and (symbol? (car e))
 			    (symbol-syntax (car e))))
 
@@ -195,6 +158,43 @@
   (list 'set-syntax! (list 'quote (car form))
 	(macroexpand (list 'lambda (cdr form) (f-body body)))))
 (define macroexpand (macroexpand macroexpand))
+
+(define (delete-duplicates lst)
+  (if (atom? lst)
+      lst
+      (let ((elt  (car lst))
+	    (tail (cdr lst)))
+	(if (member elt tail)
+	    (delete-duplicates tail)
+	    (cons elt
+		  (delete-duplicates tail))))))
+
+(define (get-defined-vars- expr)
+  (cond ((atom? expr) ())
+	((and (eq? (car expr) 'define)
+	      (pair? (cdr expr)))
+	 (or (and (symbol? (cadr expr))
+		  (list (cadr expr)))
+	     (and (pair? (cadr expr))
+		  (symbol? (caadr expr))
+		  (list (caadr expr)))
+	     ()))
+	((eq? (car expr) 'begin)
+	 (apply append (map get-defined-vars- (cdr expr))))
+	(else ())))
+(define (get-defined-vars expr)
+  (delete-duplicates (get-defined-vars- expr)))
+
+; redefine f-body to support internal defines
+(define f-body- f-body)
+(define (f-body e)
+  ((lambda (B)
+     ((lambda (V)
+	(if (null? V)
+	    B
+	    (cons (list 'lambda V B) (map (lambda (x) #f) V))))
+      (get-defined-vars B)))
+   (f-body- e)))
 
 (define =   eqv)
 (define eql eqv)
@@ -334,15 +334,6 @@
         (map (lambda (x) #f) binds)))
 (set-syntax! 'letrec (symbol-syntax 'let*))
 
-(define-macro (labels binds . body)
-  (cons (list 'lambda (map car binds)
-              (f-body
-	       (nconc (map (lambda (b)
-			     (list 'set! (car b) (cons 'lambda (cdr b))))
-			   binds)
-		      body)))
-        (map (lambda (x) #f) binds)))
-
 (define-macro (when   c . body) (list 'if c (f-body body) #f))
 (define-macro (unless c . body) (list 'if c #f (f-body body)))
 
@@ -384,96 +375,6 @@
     `(prog1 (trycatch ,expr
                       (lambda (,e) (begin ,finally (raise ,e))))
 	    ,finally)))
-
-; (try expr
-;      (catch (type-error e) . exprs)
-;      (catch (io-error e) . exprs)
-;      (catch (e) . exprs)
-;      (finally . exprs))
-(define-macro (try expr . forms)
-  (let* ((e        (gensym))
-         (reraised (gensym))
-         (final (f-body (cdr (or (assq 'finally forms) '(())))))
-         (catches (filter (lambda (f) (eq (car f) 'catch)) forms))
-         (catchblock `(cond
-                       ,.(map (lambda (catc)
-                                (let* ((specific (cdr (cadr catc)))
-                                       (extype   (caadr catc))
-                                       (var      (if specific (car specific)
-                                                   extype))
-                                       (todo     (cddr catc)))
-                                  `(,(if specific
-					 ; exception matching logic
-                                         `(or (eq ,e ',extype)
-                                              (and (pair? ,e)
-                                                   (eq (car ,e)
-                                                       ',extype)))
-					 #t); (catch (e) ...), match anything
-                                    (let ((,var ,e)) (begin ,@todo)))))
-                              catches)
-                       (#t (raise ,e))))) ; no matches, reraise
-    (if final
-        (if catches
-            ; form with both catch and finally
-            `(prog1 (trycatch ,expr
-                              (lambda (,e)
-                                (trycatch ,catchblock
-                                          (lambda (,reraised)
-                                            (begin ,final
-                                                   (raise ,reraised))))))
-               ,final)
-          ; finally only; same as unwind-protect
-          `(prog1 (trycatch ,expr (lambda (,e)
-                                    (begin ,final (raise ,e))))
-             ,final))
-      ; catch, no finally
-      `(trycatch ,expr (lambda (,e) ,catchblock)))))
-
-; setf
-; expands (setf (place x ...) v) to (mutator (f x ...) v)
-; (mutator (identity x ...) v) is interpreted as (mutator x ... v)
-(set! *setf-place-list*
-       ; place   mutator  f
-      '((car     rplaca   identity)
-        (cdr     rplacd   identity)
-        (caar    rplaca   car)
-        (cadr    rplaca   cdr)
-        (cdar    rplacd   car)
-        (cddr    rplacd   cdr)
-        (caaar   rplaca   caar)
-        (caadr   rplaca   cadr)
-        (cadar   rplaca   cdar)
-        (caddr   rplaca   cddr)
-        (cdaar   rplacd   caar)
-        (cdadr   rplacd   cadr)
-        (cddar   rplacd   cdar)
-        (cdddr   rplacd   cddr)
-        (list-ref rplaca  nthcdr)
-        (get     put!     identity)
-        (aref    aset!    identity)
-        (symbol-syntax    set-syntax!        identity)))
-
-(define (setf-place-mutator place val)
-  (if (symbol? place)
-      (list 'set! place val)
-    (let ((mutator (assq (car place) *setf-place-list*)))
-      (if (null? mutator)
-          (error "setf: unknown place " (car place))
-	  (if (eq (caddr mutator) 'identity)
-	      (cons (cadr mutator) (append (cdr place) (list val)))
-	      (list (cadr mutator)
-		    (cons (caddr mutator) (cdr place))
-		    val))))))
-
-(define-macro (setf . args)
-  (f-body
-   ((label setf-
-           (lambda (args)
-             (if (null? args)
-                 ()
-               (cons (setf-place-mutator (car args) (cadr args))
-                     (setf- (cddr args))))))
-    args)))
 
 (define (revappend l1 l2) (nconc (reverse l1) l2))
 (define (nreconc   l1 l2) (nconc (nreverse l1) l2))
@@ -600,13 +501,16 @@
 	 (io.close F)
 	 (raise `(load-error ,filename ,e)))))))
 
-(define *banner*
-";  _
+(define (string.tail s n)
+  (string.sub s (string.inc s 0 n) (sizeof s)))
+
+(define *banner* (string.tail "
+;  _
 ; |_ _ _ |_ _ |  . _ _
 ; | (-||||_(_)|__|_)|_)
 ;-------------------|----------------------------------------------------------
 
-")
+" 1))
 
 (define (repl)
   (define (prompt)

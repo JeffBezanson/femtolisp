@@ -1,13 +1,6 @@
 ; tree regular expression pattern matching
 ; by Jeff Bezanson
 
-(define (unique lst)
-  (if (null? lst)
-      ()
-      (cons (car lst)
-	    (filter (lambda (x) (not (eq? x (car lst))))
-		    (unique (cdr lst))))))
-
 ; list of special pattern symbols that cannot be variable names
 (define metasymbols '(_ ...))
 
@@ -141,7 +134,7 @@
 	  ((pair? p)
 	   (if (eq? (car p) '-/)
 	       ()
-	       (unique (apply append (map patargs- (cdr p))))))
+	       (delete-duplicates (apply append (map patargs- (cdr p))))))
 	  
 	  (else ())))
   (cons '__ (patargs- p)))
