@@ -337,45 +337,6 @@
 (define-macro (when   c . body) (list 'if c (f-body body) #f))
 (define-macro (unless c . body) (list 'if c #f (f-body body)))
 
-(define-macro (dotimes var . body)
-  (let ((v (car var))
-        (cnt (cadr var)))
-    `(for 0 (- ,cnt 1)
-          (lambda (,v) ,(f-body body)))))
-
-(define (map-int f n)
-  (if (<= n 0)
-      ()
-    (let ((first (cons (f 0) ()))
-          (acc ()))
-      (set! acc first)
-      (for 1 (- n 1)
-           (lambda (i)
-             (begin (rplacd acc (cons (f i) ()))
-                    (set! acc (cdr acc)))))
-      first)))
-
-(define (iota n) (map-int identity n))
-(define ι iota)
-
-(define (error . args) (raise (cons 'error args)))
-
-(define-macro (throw tag value) `(raise (list 'thrown-value ,tag ,value)))
-(define-macro (catch tag expr)
-  (let ((e (gensym)))
-    `(trycatch ,expr
-               (lambda (,e) (if (and (pair? ,e)
-                                     (eq (car  ,e) 'thrown-value)
-                                     (eq (cadr ,e) ,tag))
-                                (caddr ,e)
-				(raise ,e))))))
-
-(define-macro (unwind-protect expr finally)
-  (let ((e (gensym)))
-    `(prog1 (trycatch ,expr
-                      (lambda (,e) (begin ,finally (raise ,e))))
-	    ,finally)))
-
 (define (revappend l1 l2) (nconc (reverse l1) l2))
 (define (nreconc   l1 l2) (nconc (nreverse l1) l2))
 
@@ -445,6 +406,63 @@
       (cadr x)
       (bq-process x)))
 
+(define (quote-value v)
+  (if (self-evaluating? v)
+      v
+      (list 'quote v)))
+
+(define-macro (case key . clauses)
+  (define (vals-to-cond key v)
+    (cond ((eq? v 'else)   'else)
+	  ((null? v)       #f)
+	  ((null? (cdr v)) `(eqv? ,key ,(quote-value (car v))))
+	  (else            `(memv ,key ',v))))
+  (let ((g (gensym)))
+    `(let ((,g ,key))
+       (cond ,@(map (lambda (clause)
+		      (cons (vals-to-cond g (car clause))
+			    (cdr clause)))
+		    clauses)))))
+
+(define-macro (dotimes var . body)
+  (let ((v (car var))
+        (cnt (cadr var)))
+    `(for 0 (- ,cnt 1)
+          (lambda (,v) ,(f-body body)))))
+
+(define (map-int f n)
+  (if (<= n 0)
+      ()
+    (let ((first (cons (f 0) ()))
+          (acc ()))
+      (set! acc first)
+      (for 1 (- n 1)
+           (lambda (i)
+             (begin (rplacd acc (cons (f i) ()))
+                    (set! acc (cdr acc)))))
+      first)))
+
+(define (iota n) (map-int identity n))
+(define ι iota)
+
+(define (error . args) (raise (cons 'error args)))
+
+(define-macro (throw tag value) `(raise (list 'thrown-value ,tag ,value)))
+(define-macro (catch tag expr)
+  (let ((e (gensym)))
+    `(trycatch ,expr
+               (lambda (,e) (if (and (pair? ,e)
+                                     (eq (car  ,e) 'thrown-value)
+                                     (eq (cadr ,e) ,tag))
+                                (caddr ,e)
+				(raise ,e))))))
+
+(define-macro (unwind-protect expr finally)
+  (let ((e (gensym)))
+    `(prog1 (trycatch ,expr
+                      (lambda (,e) (begin ,finally (raise ,e))))
+	    ,finally)))
+
 (define-macro (assert expr) `(if ,expr #t (raise '(assert-failed ,expr))))
 
 (define-macro (time expr)
@@ -455,6 +473,7 @@
 	(princ "Elapsed time: " (- (time.now) ,t0) " seconds\n")))))
 
 (define (display x) (princ x) #t)
+(define (println . args) (prog1 (apply print args) (princ "\n")))
 
 (define (vu8 . elts) (apply array (cons 'uint8 elts)))
 

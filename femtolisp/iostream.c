@@ -61,7 +61,6 @@ value_t fl_file(value_t *args, uint32_t nargs)
     if (nargs < 1)
         argcount("file", nargs, 1);
     int i, r=1, w=0, c=0, t=0, a=0;
-    char *fname = tostring(args[0], "file");
     for(i=1; i < (int)nargs; i++) {
         if      (args[i] == wrsym)    w = 1;
         else if (args[i] == apsym)    a = 1;
@@ -69,6 +68,7 @@ value_t fl_file(value_t *args, uint32_t nargs)
         else if (args[i] == truncsym) t = 1;
     }
     value_t f = cvalue(iostreamtype, sizeof(ios_t));
+    char *fname = tostring(args[0], "file");
     ios_t *s = value2c(ios_t*, f);
     if (ios_file(s, fname, r, w, c, t) == NULL)
         lerror(IOError, "file: could not open \"%s\"", fname);
@@ -78,14 +78,21 @@ value_t fl_file(value_t *args, uint32_t nargs)
 
 value_t fl_read(value_t *args, u_int32_t nargs)
 {
-    if (nargs > 1)
+    if (nargs > 1) {
         argcount("read", nargs, 1);
-    ios_t *s;
-    if (nargs > 0)
-        s = toiostream(args[0], "read");
-    else
-        s = toiostream(symbol_value(instrsym), "read");
-    value_t v = read_sexpr(s);
+    }
+    else if (nargs == 0) {
+        PUSH(symbol_value(instrsym));
+        args = &Stack[SP-1];
+    }
+    ios_t *s = toiostream(args[0], "read");
+    // temporarily pin the stream while reading
+    ios_t temp = *s;
+    if (s->buf == &s->local[0])
+        temp.buf = &temp.local[0];
+    value_t v = read_sexpr(&temp);
+    s = value2c(ios_t*, args[0]);
+    *s = temp;
     return v;
 }
 

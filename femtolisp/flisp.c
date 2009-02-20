@@ -148,10 +148,12 @@ static value_t make_error_msg(char *format, va_list args)
 void lerror(value_t e, char *format, ...)
 {
     va_list args;
+    PUSH(e);
     va_start(args, format);
     value_t msg = make_error_msg(format, args);
     va_end(args);
 
+    e = POP();
     raise(list2(e, msg));
 }
 
@@ -446,6 +448,7 @@ static void trace_globals(symbol_t *root)
 }
 
 static value_t special_apply_form;
+static value_t memory_exception_value;
 
 void gc(int mustgrow)
 {
@@ -471,6 +474,7 @@ void gc(int mustgrow)
     }
     lasterror = relocate(lasterror);
     special_apply_form = relocate(special_apply_form);
+    memory_exception_value = relocate(memory_exception_value);
 
     sweep_finalizers();
 
@@ -488,7 +492,7 @@ void gc(int mustgrow)
     if (grew || ((lim-curheap) < (int)(heapsize/5)) || mustgrow) {
         temp = realloc_aligned(tospace, grew ? heapsize : heapsize*2, 16);
         if (temp == NULL)
-            lerror(MemoryError, "out of memory");
+            raise(memory_exception_value);
         tospace = temp;
         if (!grew) {
             heapsize*=2;
@@ -496,7 +500,7 @@ void gc(int mustgrow)
         else {
             temp = bitvector_resize(consflags, heapsize/sizeof(cons_t), 1);
             if (temp == NULL)
-                lerror(MemoryError, "out of memory");
+                raise(memory_exception_value);
             consflags = (uint32_t*)temp;
         }
         grew = !grew;
@@ -1505,6 +1509,9 @@ void lisp_init(void)
         setc(symbol("*install-dir*"), cvalue_static_cstring(EXEDIR));
     }
 
+    memory_exception_value = list2(MemoryError,
+                                   cvalue_static_cstring("out of memory"));
+
     builtins_init();
 }
 
@@ -1545,15 +1552,6 @@ int main(int argc, char *argv[])
 
     lisp_init();
 
-    FL_TRY {
-        // install toplevel exception handler
-    }
-    FL_CATCH {
-        ios_printf(ios_stderr, "fatal error during bootstrap:\n");
-        print(ios_stderr, lasterror, 0);
-        ios_putc('\n', ios_stderr);
-        exit(1);
-    }
     fname_buf[0] = '\0';
     if (EXEDIR != NULL) {
         strcat(fname_buf, EXEDIR);
@@ -1561,18 +1559,28 @@ int main(int argc, char *argv[])
     }
     strcat(fname_buf, "system.lsp");
 
-    ios_t fi;
-    ios_t *f = &fi; f = ios_file(f, fname_buf, 1, 0, 0, 0);
-    if (f == NULL) lerror(IOError, "file \"%s\" not found", fname_buf);
-    while (1) {
-        e = read_sexpr(f);
-        if (ios_eof(f)) break;
-        v = toplevel_eval(e);
-    }
-    ios_close(f);
+    ios_t fi; ios_t *f = &fi;
+    FL_TRY {
+        // install toplevel exception handler
+        f = ios_file(f, fname_buf, 1, 0, 0, 0);
+        if (f == NULL) lerror(IOError, "file \"%s\" not found", fname_buf);
+        while (1) {
+            e = read_sexpr(f);
+            if (ios_eof(f)) break;
+            v = toplevel_eval(e);
+        }
+        ios_close(f);
 
-    PUSH(symbol_value(symbol("__start")));
-    PUSH(argv_list(argc, argv));
-    (void)toplevel_eval(special_apply_form);
+        PUSH(symbol_value(symbol("__start")));
+        PUSH(argv_list(argc, argv));
+        (void)toplevel_eval(special_apply_form);
+    }
+    FL_CATCH {
+        ios_printf(ios_stderr, "fatal error during bootstrap:\n");
+        print(ios_stderr, lasterror, 0);
+        ios_putc('\n', ios_stderr);
+        return 1;
+    }
+
     return 0;
 }

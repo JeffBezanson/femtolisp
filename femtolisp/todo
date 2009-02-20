@@ -935,7 +935,11 @@ consolidated todo list as of 8/30:
 * hashtable
 * generic aref/aset
 - expose io stream object
-- new toplevel
+* new toplevel
+
+* make raising a memory error non-consing
+- eliminate string copy in lerror() when possible
+- fix printing lists of short strings
 
 - remaining c types
 - remaining cvalues functions
