@@ -424,6 +424,25 @@
 			    (cdr clause)))
 		    clauses)))))
 
+(define-macro (do vars test-spec . commands)
+  (let ((loop (gensym))
+	(test-expr (car test-spec))
+	(vars  (map car  vars))
+	(inits (map cadr vars))
+	(steps (map (lambda (x)
+		      (if (pair? (cddr x))
+			  (caddr x)
+			  (car x)))
+		    vars)))
+    `(letrec ((,loop (lambda ,vars
+		       (if ,test-expr
+			   (begin
+			     ,@(cdr test-spec))
+			   (begin
+			     ,@commands
+			     (,loop ,@steps))))))
+       (,loop ,@inits))))
+
 (define-macro (dotimes var . body)
   (let ((v (car var))
         (cnt (cadr var)))
