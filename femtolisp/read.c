@@ -26,7 +26,8 @@ static int isnumtok_base(char *tok, value_t *pval, int base)
     double d;
     if (*tok == '\0')
         return 0;
-    if (strpbrk(tok, ".eEpP")) {
+    if (!((tok[0]=='0' && tok[1]=='x') || (base >= 15)) &&
+        strpbrk(tok, ".eEpP")) {
         d = strtod(tok, &end);
         if (*end == '\0') {
             if (pval) *pval = mk_double(d);

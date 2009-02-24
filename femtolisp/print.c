@@ -375,6 +375,7 @@ void fl_print_child(ios_t *f, value_t v, int princ)
         break;
     case TAG_CVALUE:
     case TAG_CPRIM:
+      if (v == UNBOUND) { HPOS+=ios_printf(f, "#<undefined>"); break; }
     case TAG_VECTOR:
     case TAG_CONS:
         if ((label=(value_t)ptrhash_get(&printconses, (void*)v)) !=
