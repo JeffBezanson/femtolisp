@@ -633,19 +633,35 @@ value_t cvalue_copy(value_t v)
     PUSH(v);
     cvalue_t *cv = (cvalue_t*)ptr(v);
     size_t nw = cv_nwords(cv);
-    value_t *pnv = alloc_words(nw);
+    cvalue_t *ncv = (cvalue_t*)alloc_words(nw);
     v = POP(); cv = (cvalue_t*)ptr(v);
-    memcpy(pnv, cv, nw * sizeof(value_t));
+    memcpy(ncv, cv, nw * sizeof(value_t));
     if (!isinlined(cv)) {
         size_t len = cv_len(cv);
         if (cv_isstr(cv)) len++;
-        void *data = malloc(len);
-        memcpy(data, cv_data(cv), len);
-        ((cvalue_t*)pnv)->data = data;
-        autorelease((cvalue_t*)pnv);
+        ncv->data = malloc(len);
+        memcpy(ncv->data, cv_data(cv), len);
+        autorelease(ncv);
+        if (hasparent(cv)) {
+            ncv->type = (fltype_t*)(((uptrint_t)ncv->type) & ~CV_PARENT_BIT);
+            ncv->parent = NIL;
+        }
+    }
+    else {
+        ncv->data = &ncv->_space[0];
     }
 
-    return tagptr(pnv, TAG_CVALUE);
+    return tagptr(ncv, TAG_CVALUE);
+}
+
+value_t fl_copy(value_t *args, u_int32_t nargs)
+{
+    argcount("copy", nargs, 1);
+    if (iscons(args[0]) || isvector(args[0]))
+        lerror(ArgError, "copy: argument must be a leaf atom");
+    if (!iscvalue(args[0]))
+        return args[0];
+    return cvalue_copy(args[0]);
 }
 
 static void cvalue_init(fltype_t *type, value_t v, void *dest)
@@ -828,6 +844,16 @@ value_t cbuiltin(char *name, builtin_t f)
     */
 }
 
+static builtinspec_t cvalues_builtin_info[] = {
+    { "c-value", cvalue_new },
+    { "typeof", cvalue_typeof },
+    { "sizeof", cvalue_sizeof },
+    { "builtin", fl_builtin },
+    { "copy", fl_copy },
+    // todo: autorelease
+    { NULL, NULL }
+};
+
 #define cv_intern(tok) tok##sym = symbol(#tok)
 #define ctor_cv_intern(tok) \
     cv_intern(tok);set(tok##sym, cbuiltin(#tok, cvalue_##tok))
@@ -873,11 +899,7 @@ void cvalues_init()
     cv_intern(union);
     cv_intern(void);
 
-    set(symbol("c-value"), cbuiltin("c-value", cvalue_new));
-    set(symbol("typeof"), cbuiltin("typeof", cvalue_typeof));
-    set(symbol("sizeof"), cbuiltin("sizeof", cvalue_sizeof));
-    set(symbol("builtin"), cbuiltin("builtin", fl_builtin));
-    // todo: autorelease
+    assign_global_builtins(cvalues_builtin_info);
 
     stringtypesym = symbol("*string-type*");
     setc(stringtypesym, list2(arraysym, bytesym));

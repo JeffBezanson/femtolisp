@@ -629,7 +629,7 @@ low-level functions:
 - (cset cvalue key value)   ; key is field name, index, or struct offset
   . write&use conv_from_long to put fixnums into typed locations
   . aset is the same
-- (copy cv)
+* (copy cv)
 - (offset type|cvalue field [field ...])
 - (eltype type field [field ...])
 - (memcpy dest-cv src-cv)
@@ -814,7 +814,7 @@ String API
 *string         - append/construct
 *string.inc     - (string.inc s i [nchars])
 *string.dec
- string.count   - # of chars between 2 byte offsets
+*string.count   - # of chars between 2 byte offsets
  string.width   - # columns
 *string.char    - char at byte offset
 *string.sub     - substring between 2 byte offsets

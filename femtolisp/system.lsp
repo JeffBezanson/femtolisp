@@ -196,6 +196,8 @@
       (get-defined-vars B)))
    (f-body- e)))
 
+(define-macro (body . forms) (f-body forms))
+
 (define =   eqv)
 (define eql eqv)
 (define (/= a b) (not (equal a b)))
@@ -527,13 +529,13 @@
 (define (load filename)
   (let ((F (file filename :read)))
     (trycatch
-     (prog1
-      (let next (E v)
-	(if (not (io.eof? F))
-	    (next (read F)
-		  (eval E))
-	    v))
-      (io.close F))
+     (let next (prev E v)
+       (if (not (io.eof? F))
+	   (next (read F)
+                 prev
+		 (eval E))
+	   (begin (io.close F)
+		  (eval E)))) ; evaluate last form in almost-tail position
      (lambda (e)
        (begin
 	 (io.close F)

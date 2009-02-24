@@ -41,13 +41,29 @@ value_t fl_stringp(value_t *args, u_int32_t nargs)
     return isstring(args[0]) ? FL_T : FL_F;
 }
 
-value_t fl_string_length(value_t *args, u_int32_t nargs)
+value_t fl_string_count(value_t *args, u_int32_t nargs)
 {
-    argcount("string.length", nargs, 1);
+    size_t start = 0;
+    if (nargs < 1 || nargs > 3)
+        argcount("string.count", nargs, 1);
     if (!isstring(args[0]))
-        type_error("string.length", "string", args[0]);
+        type_error("string.count", "string", args[0]);
     size_t len = cv_len((cvalue_t*)ptr(args[0]));
-    return size_wrap(u8_charnum(cvalue_data(args[0]), len));
+    size_t stop = len;
+    if (nargs > 1) {
+        start = toulong(args[1], "string.count");
+        if (start > len)
+            bounds_error("string.count", args[0], args[1]);
+        if (nargs > 2) {
+            stop = toulong(args[2], "string.count");
+            if (stop > len)
+                bounds_error("string.count", args[0], args[2]);
+            if (stop <= start)
+                return fixnum(0);
+        }
+    }
+    char *str = cvalue_data(args[0]);
+    return size_wrap(u8_charnum(str+start, stop-start));
 }
 
 value_t fl_string_reverse(value_t *args, u_int32_t nargs)
@@ -371,7 +387,7 @@ value_t fl_numbertostring(value_t *args, u_int32_t nargs)
 static builtinspec_t stringfunc_info[] = {
     { "string", fl_string },
     { "string?", fl_stringp },
-    { "string.length", fl_string_length },
+    { "string.count", fl_string_count },
     { "string.split", fl_string_split },
     { "string.sub", fl_string_sub },
     { "string.find", fl_string_find },
