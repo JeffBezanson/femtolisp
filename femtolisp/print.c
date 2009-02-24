@@ -139,10 +139,13 @@ static void print_symbol_name(ios_t *f, char *name)
   pathological or deeply-nested expressions, but those are difficult
   to print anyway.
 */
+#define SMALL_STR_LEN 20
 static inline int tinyp(value_t v)
 {
     if (issymbol(v))
-        return (u8_strwidth(symbol_name(v)) < 20);
+        return (u8_strwidth(symbol_name(v)) < SMALL_STR_LEN);
+    if (isstring(v))
+        return (cv_len((cvalue_t*)ptr(v)) < SMALL_STR_LEN);
     return (isfixnum(v) || isbuiltinish(v));
 }
 

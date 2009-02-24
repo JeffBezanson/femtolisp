@@ -82,6 +82,7 @@ static value_t relocate(value_t v);
 typedef struct _readstate_t {
     htable_t backrefs;
     htable_t gensyms;
+    value_t source;
     struct _readstate_t *prev;
 } readstate_t;
 static readstate_t *readstate = NULL;
@@ -470,6 +471,7 @@ void gc(int mustgrow)
             rs->backrefs.table[i] = (void*)relocate((value_t)rs->backrefs.table[i]);
         for(i=0; i < rs->gensyms.size; i++)
             rs->gensyms.table[i] = (void*)relocate((value_t)rs->gensyms.table[i]);
+        rs->source = relocate(rs->source);
         rs = rs->prev;
     }
     lasterror = relocate(lasterror);
@@ -1543,6 +1545,8 @@ static value_t argv_list(int argc, char *argv[])
 
 int locale_is_utf8;
 
+extern value_t fl_file(value_t *args, uint32_t nargs);
+
 int main(int argc, char *argv[])
 {
     value_t e, v;
@@ -1559,17 +1563,20 @@ int main(int argc, char *argv[])
     }
     strcat(fname_buf, "system.lsp");
 
-    ios_t fi; ios_t *f = &fi;
     FL_TRY {
         // install toplevel exception handler
-        f = ios_file(f, fname_buf, 1, 0, 0, 0);
-        if (f == NULL) lerror(IOError, "file \"%s\" not found", fname_buf);
+        PUSH(cvalue_static_cstring(fname_buf));
+        PUSH(symbol(":read"));
+        value_t f = fl_file(&Stack[SP-2], 2);
+        POPN(2);
+        PUSH(f);
         while (1) {
-            e = read_sexpr(f);
-            if (ios_eof(f)) break;
+            e = read_sexpr(Stack[SP-1]);
+            if (ios_eof(value2c(ios_t*,Stack[SP-1]))) break;
             v = toplevel_eval(e);
         }
-        ios_close(f);
+        ios_close(value2c(ios_t*,Stack[SP-1]));
+        (void)POP();
 
         PUSH(symbol_value(symbol("__start")));
         PUSH(argv_list(argc, argv));

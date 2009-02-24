@@ -85,15 +85,8 @@ value_t fl_read(value_t *args, u_int32_t nargs)
         PUSH(symbol_value(instrsym));
         args = &Stack[SP-1];
     }
-    ios_t *s = toiostream(args[0], "read");
-    // temporarily pin the stream while reading
-    ios_t temp = *s;
-    if (s->buf == &s->local[0])
-        temp.buf = &temp.local[0];
-    value_t v = read_sexpr(&temp);
-    s = value2c(ios_t*, args[0]);
-    *s = temp;
-    return v;
+    (void)toiostream(args[0], "read");
+    return read_sexpr(args[0]);
 }
 
 value_t fl_iogetc(value_t *args, u_int32_t nargs)

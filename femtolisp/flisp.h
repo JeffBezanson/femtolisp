@@ -120,7 +120,7 @@ enum {
 extern value_t NIL, FL_T, FL_F;
 
 /* read, eval, print main entry points */
-value_t read_sexpr(ios_t *f);
+value_t read_sexpr(value_t f);
 void print(ios_t *f, value_t v, int princ);
 value_t toplevel_eval(value_t expr);
 value_t apply(value_t f, value_t l);
