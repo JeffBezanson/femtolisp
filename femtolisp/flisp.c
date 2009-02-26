@@ -51,16 +51,26 @@
 #include "flisp.h"
 
 static char *builtin_names[] =
-    { "quote", "cond", "if", "and", "or", "while", "lambda",
+    { // special forms
+      "quote", "cond", "if", "and", "or", "while", "lambda",
       "trycatch", "%apply", "set!", "begin",
 
+      // predicates
       "eq?", "eqv?", "equal?", "atom?", "not", "null?", "boolean?", "symbol?",
       "number?", "bound?", "pair?", "builtin?", "vector?", "fixnum?",
 
+      // lists
       "cons", "list", "car", "cdr", "set-car!", "set-cdr!",
+
+      // execution
       "eval", "eval*", "apply", "prog1", "raise",
+
+      // arithmetic
       "+", "-", "*", "/", "<", "lognot", "logand", "logior", "logxor",
-      "vector", "aref", "aset!", "length", "assq", "compare", "for",
+      "compare",
+
+      // sequences
+      "vector", "aref", "aset!", "length", "assq", "for",
       "", "", "" };
 
 #define N_STACK 98304

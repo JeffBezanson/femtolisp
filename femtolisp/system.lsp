@@ -3,12 +3,14 @@
 ; by Jeff Bezanson (C) 2009
 ; Distributed under the BSD License
 
-(set-constant! 'eq       eq?)
-(set-constant! 'eqv      eqv?)
-(set-constant! 'equal    equal?)
-(set-constant! 'rplaca   set-car!)
-(set-constant! 'rplacd   set-cdr!)
-(set-constant! 'char?    (lambda (x) (eq? (typeof x) 'wchar)))
+(if (not (bound? 'eq))
+    (begin
+      (set-constant! 'eq       eq?)
+      (set-constant! 'eqv      eqv?)
+      (set-constant! 'equal    equal?)
+      (set-constant! 'rplaca   set-car!)
+      (set-constant! 'rplacd   set-cdr!)
+      (set-constant! 'char?    (lambda (x) (eq? (typeof x) 'wchar)))))
 
 ; convert a sequence of body statements to a single expression.
 ; this allows define, defun, defmacro, let, etc. to contain multiple
@@ -149,16 +151,6 @@
                     (#t e)))))
    e () ()))
 
-(define-macro (define form . body)
-  (if (symbol? form)
-      (list 'set! form (car body))
-      (list 'set! (car form)
-	    (macroexpand (list 'lambda (cdr form) (f-body body))))))
-(define-macro (define-macro form . body)
-  (list 'set-syntax! (list 'quote (car form))
-	(macroexpand (list 'lambda (cdr form) (f-body body)))))
-(define macroexpand (macroexpand macroexpand))
-
 (define (delete-duplicates lst)
   (if (atom? lst)
       lst
@@ -198,9 +190,11 @@
 
 (define-macro (body . forms) (f-body forms))
 
+(define (expand x) (macroexpand x))
+
 (define =   eqv)
 (define eql eqv)
-(define (/= a b) (not (equal a b)))
+(define (/= a b) (not (eqv a b)))
 (define != /=)
 (define (>  a b) (< b a))
 (define (<= a b) (not (< b a)))
@@ -533,9 +527,9 @@
        (if (not (io.eof? F))
 	   (next (read F)
                  prev
-		 (eval E))
+		 (eval (expand E)))
 	   (begin (io.close F)
-		  (eval E)))) ; evaluate last form in almost-tail position
+		  (eval (expand E))))) ; evaluate last form in almost-tail position
      (lambda (e)
        (begin
 	 (io.close F)
@@ -614,7 +608,15 @@
 	    (lambda (e) (begin (print-exception e)
 			       (exit 1)))))
 
+(if (or (eq? *os-name* 'win32)
+	(eq? *os-name* 'win64)
+	(eq? *os-name* 'windows))
+    (define *directory-separator* "\\")
+    (define *directory-separator* "/"))
+
 (define (__start . argv)
+  ; reload this file with our new definition of load
+  (load (string *install-dir* *directory-separator* "system.lsp"))
   (if (pair? (cdr argv))
       (begin (set! *argv* (cdr argv))
 	     (__script (cadr argv)))
