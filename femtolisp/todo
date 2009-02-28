@@ -807,6 +807,19 @@ such exceptions can be printed recursively
 lerror() should make a lisp string S from the result of sprintf, then
 raise `(,e ,S). first argument e should be a symbol.
 
+
+new expansion process:
+
+get rid of macroexpanding versions of define and define-macro
+macroexpand doesn't expand (define ...)
+  macroexpand implements let-syntax
+add lambda-expand which applies f-body to the bodies of lambdas, then
+  converts defines to set!
+call expand on every form before evaluating
+  (define (expand x) (lambda-expand (macroexpand x)))
+(define (eval x) (%eval (expand x)))
+reload system.lsp with the new eval
+
 -----------------------------------------------------------------------------
 
 String API
@@ -815,17 +828,17 @@ String API
 *string.inc     - (string.inc s i [nchars])
 *string.dec
 *string.count   - # of chars between 2 byte offsets
- string.width   - # columns
 *string.char    - char at byte offset
 *string.sub     - substring between 2 byte offsets
 *string.split   - (string.split s sep-chars)
- string.trim    - (string.trim s chars-at-start chars-at-end)
+*string.trim    - (string.trim s chars-at-start chars-at-end)
 *string.reverse
 *string.find    - (string.find s str|char [offs]), or nil if not found
  string.rfind
- string.map     - (string.map f s)
 *string.encode  - to utf8
 *string.decode  - from utf8 to UCS
+ string.width   - # columns
+ string.map     - (string.map f s)
 
 
 IOStream API

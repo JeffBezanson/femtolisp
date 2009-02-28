@@ -515,11 +515,6 @@
                  () t)
     nt))
 
-(define *whitespace*
-  (string.encode #array(wchar 9 10 11 12 13 32 133 160 5760 6158 8192
-			      8193 8194 8195 8196 8197 8198 8199 8200
-			      8201 8202 8232 8233 8239 8287 12288)))
-
 (define (load filename)
   (let ((F (file filename :read)))
     (trycatch
@@ -529,7 +524,8 @@
                  prev
 		 (eval (expand E)))
 	   (begin (io.close F)
-		  (eval (expand E))))) ; evaluate last form in almost-tail position
+		  ; evaluate last form in almost-tail position
+		  (eval (expand E)))))
      (lambda (e)
        (begin
 	 (io.close F)
@@ -545,6 +541,27 @@
 ;-------------------|----------------------------------------------------------
 
 " 1))
+
+(define *whitespace*
+  (string.encode #array(wchar 9 10 11 12 13 32 133 160 5760 6158 8192
+			      8193 8194 8195 8196 8197 8198 8199 8200
+			      8201 8202 8232 8233 8239 8287 12288)))
+
+(define (string.trim s at-start at-end)
+  (define (trim-start s chars i L)
+    (if (and (< i L)
+	     (string.find chars (string.char s i)))
+	(trim-start s chars (string.inc s i) L)
+	i))
+  (define (trim-end s chars i)
+    (if (and (> i 0)
+	     (string.find chars (string.char s (string.dec s i))))
+	(trim-end s chars (string.dec s i))
+	i))
+  (let ((L (length s)))
+    (string.sub s
+		(trim-start s at-start 0 L)
+		(trim-end   s at-end   L))))
 
 (define (repl)
   (define (prompt)
@@ -595,7 +612,8 @@
 
 	((and (list? e)
 	      (= (length e) 2))
-	 (io.princ *stderr* (car e) ": " (cadr e)))
+	 (io.print *stderr* (car e))
+	 (io.princ *stderr* ": " (cadr e)))
 
 	(else (io.princ *stderr* "*** Unhandled exception: ")
 	      (io.print *stderr* e)))

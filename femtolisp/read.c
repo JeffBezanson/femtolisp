@@ -288,7 +288,9 @@ static u_int32_t peek()
             if (((c == 'b' && (base= 2)) ||
                  (c == 'o' && (base= 8)) ||
                  (c == 'd' && (base=10)) ||
-                 (c == 'x' && (base=16))) && isdigit_base(buf[1],base)) {
+                 (c == 'x' && (base=16))) &&
+                (isdigit_base(buf[1],base) ||
+                 buf[1]=='-')) {
                 if (!read_numtok(&buf[1], &tokval, base))
                     lerror(ParseError, "read: invalid base %d constant", base);
                 return (toktype=TOK_NUM);
