@@ -17,7 +17,7 @@
 				   ,(begin->cps (cdr forms) k)))))))
 
 (define-macro (lambda/cc args body)
-  `(rplaca (lambda ,args ,body) 'lambda/cc))
+  `(set-car! (lambda ,args ,body) 'lambda/cc))
 
 ; a utility used at run time to dispatch a call with or without
 ; the continuation argument, depending on the function
@@ -26,7 +26,7 @@
       (apply f (cons k args))
       (k (apply f args))))
 (define *funcall/cc-names*
-  (list-to-vector
+  (list->vector
    (map (lambda (i) (intern (string 'funcall/cc- i)))
         (iota 6))))
 (define-macro (def-funcall/cc-n args)

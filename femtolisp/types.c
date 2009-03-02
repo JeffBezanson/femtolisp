@@ -41,6 +41,10 @@ fltype_t *get_type(value_t t)
     if (iscons(t)) {
         if (isarray) {
             fltype_t *eltype = get_type(car_(cdr_(t)));
+            if (eltype->size == 0) {
+                free(ft);
+                lerror(ArgError, "invalid array element type");
+            }
             ft->elsz = eltype->size;
             ft->eltype = eltype;
             ft->init = &cvalue_array_init;

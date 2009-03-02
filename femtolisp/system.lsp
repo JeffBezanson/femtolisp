@@ -6,11 +6,7 @@
 (if (not (bound? 'eq))
     (begin
       (set-constant! 'eq       eq?)
-      (set-constant! 'eqv      eqv?)
-      (set-constant! 'equal    equal?)
-      (set-constant! 'rplaca   set-car!)
-      (set-constant! 'rplacd   set-cdr!)
-      (set-constant! 'char?    (lambda (x) (eq? (typeof x) 'wchar)))))
+      (set-constant! 'equal    equal?)))
 
 ; convert a sequence of body statements to a single expression.
 ; this allows define, defun, defmacro, let, etc. to contain multiple
@@ -69,8 +65,8 @@
         ((null? (cdr lsts)) (car lsts))
         ((null? (car lsts)) (apply nconc (cdr lsts)))
         (#t (prog1 (car lsts)
-		   (rplacd (last (car lsts))
-			   (apply nconc (cdr lsts)))))))
+		   (set-cdr! (last (car lsts))
+			     (apply nconc (cdr lsts)))))))
 
 (define (append . lsts)
   (cond ((null? lsts) ())
@@ -83,24 +79,24 @@
 
 (define (member item lst)
   (cond ((atom? lst) #f)
-        ((equal      (car lst) item) lst)
+        ((equal?     (car lst) item) lst)
         (#t          (member item (cdr lst)))))
 (define (memq item lst)
   (cond ((atom? lst) #f)
-        ((eq         (car lst) item) lst)
+        ((eq?        (car lst) item) lst)
         (#t          (memq item (cdr lst)))))
 (define (memv item lst)
   (cond ((atom? lst) #f)
-        ((eqv        (car lst) item) lst)
+        ((eqv?       (car lst) item) lst)
         (#t          (memv item (cdr lst)))))
 
 (define (assoc item lst)
   (cond ((atom? lst) #f)
-	((equal      (caar lst) item) (car lst))
+	((equal?     (caar lst) item) (car lst))
 	(#t          (assoc item (cdr lst)))))
 (define (assv item lst)
   (cond ((atom? lst) #f)
-	((eqv        (caar lst) item) (car lst))
+	((eqv?       (caar lst) item) (car lst))
 	(#t          (assv item (cdr lst)))))
 
 (define (macrocall? e) (and (symbol? (car e))
@@ -192,9 +188,9 @@
 
 (define (expand x) (macroexpand x))
 
-(define =   eqv)
-(define eql eqv)
-(define (/= a b) (not (eqv a b)))
+(define =   eqv?)
+(define eql eqv?)
+(define (/= a b) (not (eqv? a b)))
 (define != /=)
 (define (>  a b) (< b a))
 (define (<= a b) (not (< b a)))
@@ -205,6 +201,7 @@
 (define remainder mod)
 (define (abs x)   (if (< x 0) (- x) x))
 (define (identity x) x)
+(define (char? x) (eq? (typeof x) 'wchar))
 (define K prog1)  ; K combinator ;)
 (define begin0 prog1)
 
@@ -250,7 +247,7 @@
 (define (nlist* . l)
   (if (atom? (cdr l))
       (car l)
-      (rplacd l (apply nlist* (cdr l)))))
+      (set-cdr! l (apply nlist* (cdr l)))))
 
 (define (lastcdr l)
   (if (atom? l) l
@@ -265,7 +262,7 @@
 (define (map! f lst)
   (prog1 lst
 	 (while (pair? lst)
-		(rplaca lst (f (car lst)))
+		(set-car! lst (f (car lst)))
 		(set! lst (cdr lst)))))
 
 (define (mapcar f . lsts)
@@ -318,8 +315,8 @@
   (let ((prev ()))
     (while (pair? l)
 	   (set! l (prog1 (cdr l)
-			  (rplacd l (prog1 prev
-					   (set! prev l))))))
+			  (set-cdr! l (prog1 prev
+					     (set! prev l))))))
     prev))
 
 (define-macro (let* binds . body)
@@ -336,8 +333,8 @@
 (define (revappend l1 l2) (nconc (reverse l1) l2))
 (define (nreconc   l1 l2) (nconc (nreverse l1) l2))
 
-(define (list-to-vector l) (apply vector l))
-(define (vector-to-list v)
+(define (list->vector l) (apply vector l))
+(define (vector->list v)
   (let ((n (length v))
         (l ()))
     (for 1 n
@@ -362,7 +359,7 @@
 (define (bq-process x)
   (cond ((self-evaluating? x)
          (if (vector? x)
-             (let ((body (bq-process (vector-to-list x))))
+             (let ((body (bq-process (vector->list x))))
                (if (eq (car body) 'list)
                    (cons vector (cdr body))
                  (list apply vector body)))
@@ -408,7 +405,7 @@
       (list 'quote v)))
 
 (define-macro (case key . clauses)
-  (define (vals-to-cond key v)
+  (define (vals->cond key v)
     (cond ((eq? v 'else)   'else)
 	  ((null? v)       #f)
 	  ((null? (cdr v)) `(eqv? ,key ,(quote-value (car v))))
@@ -416,7 +413,7 @@
   (let ((g (gensym)))
     `(let ((,g ,key))
        (cond ,@(map (lambda (clause)
-		      (cons (vals-to-cond g (car clause))
+		      (cons (vals->cond g (car clause))
 			    (cdr clause)))
 		    clauses)))))
 
@@ -453,7 +450,7 @@
       (set! acc first)
       (for 1 (- n 1)
            (lambda (i)
-             (begin (rplacd acc (cons (f i) ()))
+             (begin (set-cdr! acc (cons (f i) ()))
                     (set! acc (cdr acc)))))
       first)))
 

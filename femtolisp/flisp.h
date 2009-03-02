@@ -153,7 +153,7 @@ void lerror(value_t e, char *format, ...) __attribute__ ((__noreturn__));
 void raise(value_t e) __attribute__ ((__noreturn__));
 void type_error(char *fname, char *expected, value_t got) __attribute__ ((__noreturn__));
 void bounds_error(char *fname, value_t arr, value_t ind) __attribute__ ((__noreturn__));
-extern value_t ArgError, IOError, KeyError;
+extern value_t ArgError, IOError, KeyError, MemoryError;
 static inline void argcount(char *fname, uint32_t nargs, uint32_t c)
 {
     if (__unlikely(nargs != c))
@@ -220,7 +220,7 @@ typedef struct {
 #define cv_isstr(cv)   (cv_class(cv)->eltype == bytetype)
 
 #define cvalue_data(v) cv_data((cvalue_t*)ptr(v))
-#define value2c(type, v) (type)cv_data((cvalue_t*)ptr(v))
+#define value2c(type, v) ((type)cv_data((cvalue_t*)ptr(v)))
 
 #define valid_numtype(v) ((v) < N_NUMTYPES)
 #define cp_class(cp)   ((cp)->type)

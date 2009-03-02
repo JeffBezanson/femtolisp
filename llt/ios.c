@@ -328,6 +328,7 @@ static void _write_update_pos(ios_t *s)
 
 size_t ios_write(ios_t *s, char *data, size_t n)
 {
+    if (s->readonly) return 0;
     if (n == 0) return 0;
     size_t space;
     size_t wrote = 0;
@@ -566,7 +567,8 @@ int ios_setbuf(ios_t *s, char *buf, size_t size, int own)
     size_t nvalid=0;
 
     nvalid = (size < s->size) ? size : s->size;
-    memcpy(buf, s->buf, nvalid);
+    if (nvalid > 0)
+        memcpy(buf, s->buf, nvalid);
     if (s->bpos > nvalid) {
         // truncated
         s->bpos = nvalid;
@@ -588,6 +590,14 @@ int ios_bufmode(ios_t *s, bufmode_t mode)
         return -1;
     s->bm = mode;
     return 0;
+}
+
+void ios_set_readonly(ios_t *s)
+{
+    if (s->readonly) return;
+    ios_flush(s);
+    s->state = bst_none;
+    s->readonly = 1;
 }
 
 void ios_bswap(ios_t *s, int bswap)
@@ -645,6 +655,8 @@ ios_t *ios_file(ios_t *s, char *fname, int rd, int wr, int create, int trunc)
         goto open_file_err;
     s = ios_fd(s, fd, 1);
     s->ownfd = 1;
+    if (!wr)
+        s->readonly = 1;
     return s;
  open_file_err:
     s->fd = -1;

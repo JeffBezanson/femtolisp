@@ -848,15 +848,15 @@ IOStream API
 *princ
 *file
  iostream         - (stream[ cvalue-as-bytestream])
- memstream
+*memstream
  fifo
  socket
 *io.eof
 *io.flush
 *io.close
 *io.discardbuffer
- io.write     - (io.write s cvalue)
- io.read      - (io.read s ctype [len])
+*io.write     - (io.write s cvalue)
+*io.read      - (io.read s ctype [len])
  io.getc      - get utf8 character(s)
  io.readline
  io.copy      - (io.copy to from [nbytes])
@@ -865,7 +865,7 @@ IOStream API
  io.seek      - (io.seek s offset)
  io.seekend   - move to end of stream
  io.trunc
- io.tostring! - destructively convert stringstream to string
+ io.read!     - destructively take data
  io.readlines
  io.readall
  print-to-string

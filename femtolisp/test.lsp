@@ -68,7 +68,7 @@
 		(lambda (acc i n)
 		  (if (= i n)
 		      first
-		      (begin (rplacd acc (cons (f i) ()))
+		      (begin (set-cdr! acc (cons (f i) ()))
 			     (map-int- (cdr acc) (+ i 1) n)))))
 	 first 1 n))))
 
@@ -116,8 +116,8 @@
 ; swap the cars and cdrs of every cons in a structure
 (define (swapad c)
   (if (atom? c) c
-      (rplacd c (K (swapad (car c))
-		   (rplaca c (swapad (cdr c)))))))
+      (set-cdr! c (K (swapad (car c))
+		     (set-car! c (swapad (cdr c)))))))
 
 (define (without x l)
   (filter (lambda (e) (not (eq e x))) l))
@@ -202,7 +202,7 @@
        (set! ,first ,acc)
        (while ,cnd
 	      (begin (set! ,acc
-			   (cdr (rplacd ,acc (cons ,what ()))))
+			   (cdr (set-cdr! ,acc (cons ,what ()))))
 		     ,@body))
        (cdr ,first))))
 
@@ -215,7 +215,7 @@
        (for ,lo ,hi
             (lambda (,var)
               (begin (set! ,acc
-                           (cdr (rplacd ,acc (cons ,what ()))))
+                           (cdr (set-cdr! ,acc (cons ,what ()))))
                      ,@body)))
        (cdr ,first))))
 

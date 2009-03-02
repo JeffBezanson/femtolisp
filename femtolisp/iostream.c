@@ -7,7 +7,8 @@
 #include "llt.h"
 #include "flisp.h"
 
-static value_t iostreamsym, rdsym, wrsym, apsym, crsym, truncsym, instrsym;
+static value_t iostreamsym, rdsym, wrsym, apsym, crsym, truncsym;
+static value_t instrsym, outstrsym;
 static fltype_t *iostreamtype;
 
 void print_iostream(value_t v, ios_t *f, int princ)
@@ -60,19 +61,32 @@ value_t fl_file(value_t *args, uint32_t nargs)
 {
     if (nargs < 1)
         argcount("file", nargs, 1);
-    int i, r=1, w=0, c=0, t=0, a=0;
+    int i, r=0, w=0, c=0, t=0, a=0;
     for(i=1; i < (int)nargs; i++) {
         if      (args[i] == wrsym)    w = 1;
-        else if (args[i] == apsym)    a = 1;
-        else if (args[i] == crsym)    c = 1;
-        else if (args[i] == truncsym) t = 1;
+        else if (args[i] == apsym)    { a = 1; w = 1; }
+        else if (args[i] == crsym)    { c = 1; w = 1; }
+        else if (args[i] == truncsym) { t = 1; w = 1; }
+        else if (args[i] == rdsym)    r = 1;
     }
+    if ((r|w|c|t|a) == 0) r = 1;  // default to reading
     value_t f = cvalue(iostreamtype, sizeof(ios_t));
     char *fname = tostring(args[0], "file");
     ios_t *s = value2c(ios_t*, f);
     if (ios_file(s, fname, r, w, c, t) == NULL)
         lerror(IOError, "file: could not open \"%s\"", fname);
     if (a) ios_seek_end(s);
+    return f;
+}
+
+value_t fl_memstream(value_t *args, u_int32_t nargs)
+{
+    argcount("memstream", nargs, 0);
+    (void)args;
+    value_t f = cvalue(iostreamtype, sizeof(ios_t));
+    ios_t *s = value2c(ios_t*, f);
+    if (ios_mem(s, 0) == NULL)
+        lerror(MemoryError, "memstream: could not allocate stream");
     return f;
 }
 
@@ -152,9 +166,84 @@ value_t fl_ioprinc(value_t *args, u_int32_t nargs)
     return args[nargs-1];
 }
 
+value_t fl_ioread(value_t *args, u_int32_t nargs)
+{
+    if (nargs != 3)
+        argcount("io.read", nargs, 2);
+    (void)toiostream(args[0], "io.read");
+    size_t n;
+    fltype_t *ft;
+    if (nargs == 3) {
+        // form (io.read s type count)
+        ft = get_array_type(args[1]);
+        n = toulong(args[2], "io.read") * ft->elsz;
+    }
+    else {
+        ft = get_type(args[1]);
+        if (ft->eltype != NULL && !iscons(cdr_(cdr_(args[1]))))
+            lerror(ArgError, "io.read: incomplete type");
+        n = ft->size;
+    }
+    value_t cv = cvalue(ft, n);
+    char *data;
+    if (iscvalue(cv)) data = cv_data((cvalue_t*)ptr(cv));
+    else data = cp_data((cprim_t*)ptr(cv));
+    size_t got = ios_read(value2c(ios_t*,args[0]), data, n);
+    if (got < n)
+        lerror(IOError, "io.read: end of input reached");
+    return cv;
+}
+
+// get pointer and size for any plain-old-data value
+static void to_sized_ptr(value_t v, char *fname, char **pdata, size_t *psz)
+{
+    if (isiostream(v) && (value2c(ios_t*,v)->bm == bm_mem)) {
+        ios_t *x = value2c(ios_t*,v);
+        *pdata = x->buf;
+        *psz = x->size;
+    }
+    else if (iscvalue(v)) {
+        cvalue_t *pcv = (cvalue_t*)ptr(v);
+        *pdata = cv_data(pcv);
+        *psz = cv_len(pcv);
+    }
+    else if (iscprim(v)) {
+        cprim_t *pcp = (cprim_t*)ptr(v);
+        *pdata = cp_data(pcp);
+        *psz = cp_class(pcp)->size;
+    }
+    else {
+        type_error(fname, "byte stream", v);
+    }
+}
+
+value_t fl_iowrite(value_t *args, u_int32_t nargs)
+{
+    argcount("io.write", nargs, 2);
+    ios_t *s = toiostream(args[0], "io.write");
+    char *data;
+    size_t sz;
+    to_sized_ptr(args[1], "io.write", &data, &sz);
+    size_t n = ios_write(s, data, sz);
+    return size_wrap(n);
+}
+
+value_t fl_dump(value_t *args, u_int32_t nargs)
+{
+    argcount("dump", nargs, 1);
+    ios_t *s = toiostream(symbol_value(outstrsym), "dump");
+    char *data;
+    size_t sz;
+    to_sized_ptr(args[0], "dump", &data, &sz);
+    hexdump(s, data, sz, 0);
+    return FL_T;
+}
+
 static builtinspec_t iostreamfunc_info[] = {
     { "iostream?", fl_iostreamp },
+    { "dump", fl_dump },
     { "file", fl_file },
+    { "memstream", fl_memstream },
     { "read", fl_read },
     { "io.print", fl_ioprint },
     { "io.princ", fl_ioprinc },
@@ -163,6 +252,8 @@ static builtinspec_t iostreamfunc_info[] = {
     { "io.eof?" , fl_ioeof },
     { "io.getc" , fl_iogetc },
     { "io.discardbuffer", fl_iopurge },
+    { "io.read", fl_ioread },
+    { "io.write", fl_iowrite },
     { NULL, NULL }
 };
 
@@ -175,6 +266,7 @@ void iostream_init()
     crsym = symbol(":create");
     truncsym = symbol(":truncate");
     instrsym = symbol("*input-stream*");
+    outstrsym = symbol("*output-stream*");
     iostreamtype = define_opaque_type(iostreamsym, sizeof(ios_t),
                                       &iostream_vtable, NULL);
     assign_global_builtins(iostreamfunc_info);

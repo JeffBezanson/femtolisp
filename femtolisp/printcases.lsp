@@ -7,7 +7,7 @@ bq-process
 
 (map-int (lambda (x) `(a b c d e)) 90)
 
-(list-to-vector (map-int (lambda (x) `(a b c d e)) 90))
+(list->vector (map-int (lambda (x) `(a b c d e)) 90))
 
 '((lambda (x y) (if (< x y) x y)) (a b c) (d e f) 2 3 (r t y))
 

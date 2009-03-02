@@ -38,7 +38,7 @@ typedef struct {
     long fd;
 
     unsigned char byteswap:1;
-    //unsigned char readonly:1;
+    unsigned char readonly:1;
     unsigned char ownbuf:1;
     unsigned char ownfd:1;
     unsigned char _eof:1;
@@ -76,6 +76,7 @@ char *ios_takebuf(ios_t *s, size_t *psize);  // release buffer to caller
 // set buffer space to use
 int ios_setbuf(ios_t *s, char *buf, size_t size, int own);
 int ios_bufmode(ios_t *s, bufmode_t mode);
+void ios_set_readonly(ios_t *s);
 void ios_bswap(ios_t *s, int bswap);
 int ios_copy(ios_t *to, ios_t *from, size_t nbytes);
 int ios_copyall(ios_t *to, ios_t *from);
