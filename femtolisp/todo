@@ -858,7 +858,8 @@ IOStream API
 *io.write     - (io.write s cvalue)
 *io.read      - (io.read s ctype [len])
  io.getc      - get utf8 character(s)
- io.readline
+*io.readline
+*io.readuntil
  io.copy      - (io.copy to from [nbytes])
  io.copyuntil - (io.copy to from byte)
  io.pos       - (io.pos s [set-pos])

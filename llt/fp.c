@@ -86,25 +86,3 @@ int flt_equals(float a, float b)
         return 1;
     return 0;
 }
-
-double randn()
-{
-    double s, vre, vim, ure, uim;
-    static double next = -42;
-
-    if (next != -42) {
-        s = next;
-        next = -42;
-        return s;
-    }
-    do {
-        ure = rand_double();
-        uim = rand_double();
-        vre = 2*ure - 1;
-        vim = 2*uim - 1;
-        s = vre*vre + vim*vim;
-    } while (s >= 1);
-    s = sqrt(-2*log(s)/s);
-    next = s * vre;
-    return s * vim;
-}

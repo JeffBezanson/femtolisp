@@ -239,6 +239,30 @@ value_t fl_dump(value_t *args, u_int32_t nargs)
     return FL_T;
 }
 
+value_t fl_ioreaduntil(value_t *args, u_int32_t nargs)
+{
+    argcount("io.readuntil", nargs, 2);
+    value_t str = cvalue_string(80);
+    cvalue_t *cv = (cvalue_t*)ptr(str);
+    char *data = cv_data(cv);
+    ios_t dest;
+    ios_mem(&dest, 0);
+    ios_setbuf(&dest, data, 80, 0);
+    char delim = (char)toulong(args[1], "io.readuntil");
+    ios_t *src = toiostream(args[0], "io.readuntil");
+    size_t n = ios_copyuntil(&dest, src, delim);
+    cv->len = n;
+    if (dest.buf != data) {
+        // outgrew initial space
+        cv->data = dest.buf;
+        cv_autorelease(cv);
+    }
+    ((char*)cv->data)[n] = '\0';
+    if (n == 0 && ios_eof(src))
+        return FL_F;
+    return str;
+}
+
 static builtinspec_t iostreamfunc_info[] = {
     { "iostream?", fl_iostreamp },
     { "dump", fl_dump },
@@ -254,6 +278,7 @@ static builtinspec_t iostreamfunc_info[] = {
     { "io.discardbuffer", fl_iopurge },
     { "io.read", fl_ioread },
     { "io.write", fl_iowrite },
+    { "io.readuntil", fl_ioreaduntil },
     { NULL, NULL }
 };
 

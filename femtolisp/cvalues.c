@@ -838,7 +838,7 @@ value_t cbuiltin(char *name, builtin_t f)
     // directly-callable values are assumed not to move for
     // evaluator performance, so put builtin func metadata on the
     // unmanaged heap
-    cvalue_t *buf = malloc_aligned(nw * sizeof(value_t), 8);
+    cvalue_t *buf = malloc(nw * sizeof(value_t));
     memcpy(buf, ptr(gf), nw*sizeof(value_t));
     return tagptr(buf, TAG_BUILTIN);
     */

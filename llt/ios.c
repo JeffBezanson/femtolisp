@@ -309,8 +309,17 @@ size_t ios_readprep(ios_t *s, size_t n)
     if (space >= n || s->bm == bm_mem || s->fd == -1)
         return space;
     if (s->maxsize < s->bpos+n) {
-        if (_buf_realloc(s, s->maxsize + n)==NULL)
-            return space;
+        // it won't fit. grow buffer or move data back.
+        if (n <= s->maxsize && space <= ((s->maxsize)>>5)) {
+            if (space)
+                memmove(s->buf, s->buf+s->bpos, space);
+            s->size -= s->bpos;
+            s->bpos = 0;
+        }
+        else {
+            if (_buf_realloc(s, s->bpos + n)==NULL)
+                return space;
+        }
     }
     size_t got;
     int result = _os_read(s->fd, s->buf+s->size, s->maxsize - s->size, &got);
@@ -617,6 +626,34 @@ int ios_copy(ios_t *to, ios_t *from, size_t nbytes)
 int ios_copyall(ios_t *to, ios_t *from)
 {
     return ios_copy_(to, from, 0, 1);
+}
+
+#define LINE_CHUNK_SIZE 160
+
+size_t ios_copyuntil(ios_t *to, ios_t *from, char delim)
+{
+    size_t total = 0, avail;
+    if (!ios_eof(from)) {
+        do {
+            avail = ios_readprep(from, LINE_CHUNK_SIZE);
+            size_t written;
+            char *pd = (char*)memchr(from->buf+from->bpos, delim, avail);
+            if (pd == NULL) {
+                written = ios_write(to, from->buf+from->bpos, avail);
+                from->bpos += avail;
+                total += written;
+            }
+            else {
+                size_t ntowrite = pd - (from->buf+from->bpos) + 1;
+                written = ios_write(to, from->buf+from->bpos, ntowrite);
+                from->bpos += ntowrite;
+                total += written;
+                return total;
+            }
+        } while (!ios_eof(from) && avail >= LINE_CHUNK_SIZE);
+    }
+    from->_eof = 1;
+    return total;
 }
 
 static void _ios_init(ios_t *s)

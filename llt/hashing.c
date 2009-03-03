@@ -1,5 +1,5 @@
 /*
-  Hashing and random numbers
+  Hashing
 */
 #include <stdlib.h>
 #include <stdio.h>
@@ -10,6 +10,7 @@
 #include "hashing.h"
 #include "timefuncs.h"
 #include "ios.h"
+#include "random.h"
 
 uint_t nextipow2(uint_t i)
 {
@@ -74,35 +75,6 @@ u_int32_t memhash32(char* buf, size_t n)
 
     hashlittle2(buf, n, &c, &b);
     return c;
-}
-
-#include "mt19937ar.c"
-
-double rand_double()
-{
-    union ieee754_double d;
-
-    d.ieee.mantissa0 = random();
-    d.ieee.mantissa1 = random();
-    d.ieee.negative = 0;
-    d.ieee.exponent = IEEE754_DOUBLE_BIAS + 0;    /* 2^0 */
-    return d.d - 1.0;
-}
-
-float rand_float()
-{
-    union ieee754_float f;
-
-    f.ieee.mantissa = random();
-    f.ieee.negative = 0;
-    f.ieee.exponent = IEEE754_FLOAT_BIAS + 0;     /* 2^0 */
-    return f.f - 1.0;
-}
-
-void randomize()
-{
-    u_int64_t tm = i64time();
-    init_by_array((unsigned long*)&tm, 2);
 }
 
 double D_PNAN;

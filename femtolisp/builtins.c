@@ -14,6 +14,7 @@
 #include <errno.h>
 #include "llt.h"
 #include "flisp.h"
+#include "random.h"
 
 size_t llength(value_t v)
 {

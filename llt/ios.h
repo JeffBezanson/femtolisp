@@ -80,6 +80,7 @@ void ios_set_readonly(ios_t *s);
 void ios_bswap(ios_t *s, int bswap);
 int ios_copy(ios_t *to, ios_t *from, size_t nbytes);
 int ios_copyall(ios_t *to, ios_t *from);
+size_t ios_copyuntil(ios_t *to, ios_t *from, char delim);
 // ensure at least n bytes are buffered if possible. returns # available.
 size_t ios_readprep(ios_t *from, size_t n);
 //void ios_lock(ios_t *s);
@@ -112,7 +113,6 @@ int ios_getutf8(ios_t *s, uint32_t *pwc);
 int ios_ungetutf8(ios_t *s, uint32_t wc);
 int ios_getstringz(ios_t *dest, ios_t *src);
 int ios_getstringn(ios_t *dest, ios_t *src, size_t nchars);
-int ios_readline(ios_t *dest, ios_t *s, char delim);
 int ios_getline(ios_t *s, char **pbuf, size_t *psz);
 
 // discard data buffered for reading

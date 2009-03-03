@@ -560,6 +560,8 @@
 		(trim-start s at-start 0 L)
 		(trim-end   s at-end   L))))
 
+(define (io.readline s) (io.readuntil s #byte(0xA)))
+
 (define (repl)
   (define (prompt)
     (princ "> ") (io.flush *output-stream*)

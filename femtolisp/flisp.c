@@ -202,8 +202,8 @@ static symbol_t *mk_symbol(char *str)
     symbol_t *sym;
     size_t len = strlen(str);
 
-    sym = (symbol_t*)malloc_aligned(sizeof(symbol_t)-sizeof(void*) + len + 1,
-                                    8);
+    sym = (symbol_t*)malloc(sizeof(symbol_t)-sizeof(void*) + len + 1);
+    assert(((uptrint_t)sym & 0x7) == 0); // make sure malloc aligns 8
     sym->left = sym->right = NULL;
     if (str[0] == ':') {
         value_t s = tagptr(sym, TAG_SYM);
@@ -502,7 +502,7 @@ void gc(int mustgrow)
     // more space to fill next time. if we grew tospace last time,
     // grow the other half of the heap this time to catch up.
     if (grew || ((lim-curheap) < (int)(heapsize/5)) || mustgrow) {
-        temp = realloc_aligned(tospace, grew ? heapsize : heapsize*2, 16);
+        temp = realloc(tospace, grew ? heapsize : heapsize*2);
         if (temp == NULL)
             raise(memory_exception_value);
         tospace = temp;
@@ -1442,8 +1442,8 @@ void lisp_init(void)
 
     llt_init();
 
-    fromspace = malloc_aligned(heapsize, 16);
-    tospace   = malloc_aligned(heapsize, 16);
+    fromspace = malloc(heapsize);
+    tospace   = malloc(heapsize);
     curheap = fromspace;
     lim = curheap+heapsize-sizeof(cons_t);
     consflags = bitvector_new(heapsize/sizeof(cons_t), 1);
