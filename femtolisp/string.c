@@ -14,24 +14,17 @@
 #include "llt.h"
 #include "flisp.h"
 
+extern value_t fl_buffer(value_t *args, u_int32_t nargs);
+extern value_t stream_to_string(value_t *ps);
 static value_t print_to_string(value_t v, int princ)
 {
-    ios_t str;
-    ios_mem(&str, 0);
-    print(&str, v, princ);
-    value_t outp;
-    if (str.size < MAX_INL_SIZE) {
-        outp = cvalue_string(str.size);
-        memcpy(cv_data((cvalue_t*)ptr(outp)), str.buf, str.size);
-    }
-    else {
-        size_t sz;
-        char *buf = ios_takebuf(&str, &sz);
-        buf[sz] = '\0';
-        outp = cvalue_from_ref(stringtype, buf, sz-1, NIL);
-        cv_autorelease((cvalue_t*)ptr(outp));
-    }
-    ios_close(&str);
+    PUSH(v);
+    value_t buf = fl_buffer(NULL, 0);
+    ios_t *s = value2c(ios_t*,buf);
+    print(s, Stack[SP-1], princ);
+    Stack[SP-1] = buf;
+    value_t outp = stream_to_string(&Stack[SP-1]);
+    (void)POP();
     return outp;
 }
 
@@ -93,7 +86,7 @@ value_t fl_string_encode(value_t *args, u_int32_t nargs)
             return str;
         }
     }
-    type_error("string.encode", "wide character array", args[0]);
+    type_error("string.encode", "wchar array", args[0]);
 }
 
 value_t fl_string_decode(value_t *args, u_int32_t nargs)
@@ -153,7 +146,7 @@ value_t fl_string(value_t *args, u_int32_t nargs)
             sz += cv_len((cvalue_t*)ptr(cv));
             continue;
         }
-        args[i] = print_to_string(args[i], 0);
+        args[i] = print_to_string(args[i], iscprim(args[i]));
         if (nargs == 1)  // convert single value to string
             return args[i];
         sz += cv_len((cvalue_t*)ptr(args[i]));

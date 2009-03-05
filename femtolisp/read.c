@@ -580,7 +580,7 @@ static value_t do_read_sexpr(value_t label)
     case TOK_DOUBLEQUOTE:
         return read_string();
     }
-    return NIL;
+    return FL_F;
 }
 
 value_t read_sexpr(value_t f)

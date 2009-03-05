@@ -79,14 +79,14 @@ value_t fl_file(value_t *args, uint32_t nargs)
     return f;
 }
 
-value_t fl_memstream(value_t *args, u_int32_t nargs)
+value_t fl_buffer(value_t *args, u_int32_t nargs)
 {
-    argcount("memstream", nargs, 0);
+    argcount("buffer", nargs, 0);
     (void)args;
     value_t f = cvalue(iostreamtype, sizeof(ios_t));
     ios_t *s = value2c(ios_t*, f);
     if (ios_mem(s, 0) == NULL)
-        lerror(MemoryError, "memstream: could not allocate stream");
+        lerror(MemoryError, "buffer: could not allocate stream");
     return f;
 }
 
@@ -111,6 +111,17 @@ value_t fl_iogetc(value_t *args, u_int32_t nargs)
     if (ios_getutf8(s, &wc) == IOS_EOF)
         lerror(IOError, "io.getc: end of file reached");
     return mk_wchar(wc);
+}
+
+value_t fl_ioputc(value_t *args, u_int32_t nargs)
+{
+    argcount("io.putc", nargs, 2);
+    ios_t *s = toiostream(args[0], "io.putc");
+    uint32_t wc;
+    if (!iscprim(args[1]) || ((cprim_t*)ptr(args[1]))->type != wchartype)
+        type_error("io.putc", "wchar", args[1]);
+    wc = *(uint32_t*)cp_data((cprim_t*)ptr(args[1]));
+    return fixnum(ios_pututf8(s, wc));
 }
 
 value_t fl_ioflush(value_t *args, u_int32_t nargs)
@@ -194,29 +205,6 @@ value_t fl_ioread(value_t *args, u_int32_t nargs)
     return cv;
 }
 
-// get pointer and size for any plain-old-data value
-static void to_sized_ptr(value_t v, char *fname, char **pdata, size_t *psz)
-{
-    if (isiostream(v) && (value2c(ios_t*,v)->bm == bm_mem)) {
-        ios_t *x = value2c(ios_t*,v);
-        *pdata = x->buf;
-        *psz = x->size;
-    }
-    else if (iscvalue(v)) {
-        cvalue_t *pcv = (cvalue_t*)ptr(v);
-        *pdata = cv_data(pcv);
-        *psz = cv_len(pcv);
-    }
-    else if (iscprim(v)) {
-        cprim_t *pcp = (cprim_t*)ptr(v);
-        *pdata = cp_data(pcp);
-        *psz = cp_class(pcp)->size;
-    }
-    else {
-        type_error(fname, "byte stream", v);
-    }
-}
-
 value_t fl_iowrite(value_t *args, u_int32_t nargs)
 {
     argcount("io.write", nargs, 2);
@@ -263,11 +251,39 @@ value_t fl_ioreaduntil(value_t *args, u_int32_t nargs)
     return str;
 }
 
+value_t stream_to_string(value_t *ps)
+{
+    value_t str;
+    size_t n;
+    ios_t *st = value2c(ios_t*,*ps);
+    if (st->buf == &st->local[0]) {
+        n = st->size;
+        str = cvalue_string(n);
+        memcpy(cvalue_data(str), value2c(ios_t*,*ps)->buf, n);
+    }
+    else {
+        char *b = ios_takebuf(st, &n); n--;
+        b[n] = '\0';
+        str = cvalue_from_ref(stringtype, b, n, NIL);
+        cv_autorelease((cvalue_t*)ptr(str));
+    }
+    return str;
+}
+
+value_t fl_iotostring(value_t *args, u_int32_t nargs)
+{
+    argcount("io.tostring!", nargs, 1);
+    ios_t *src = toiostream(args[0], "io.tostring!");
+    if (src->bm != bm_mem)
+        lerror(ArgError, "io.tostring!: requires memory stream");
+    return stream_to_string(&args[0]);
+}
+
 static builtinspec_t iostreamfunc_info[] = {
     { "iostream?", fl_iostreamp },
     { "dump", fl_dump },
     { "file", fl_file },
-    { "memstream", fl_memstream },
+    { "buffer", fl_buffer },
     { "read", fl_read },
     { "io.print", fl_ioprint },
     { "io.princ", fl_ioprinc },
@@ -275,10 +291,12 @@ static builtinspec_t iostreamfunc_info[] = {
     { "io.close", fl_ioclose },
     { "io.eof?" , fl_ioeof },
     { "io.getc" , fl_iogetc },
+    { "io.putc" , fl_ioputc },
     { "io.discardbuffer", fl_iopurge },
     { "io.read", fl_ioread },
     { "io.write", fl_iowrite },
     { "io.readuntil", fl_ioreaduntil },
+    { "io.tostring!", fl_iotostring },
     { NULL, NULL }
 };
 

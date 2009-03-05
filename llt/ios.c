@@ -674,6 +674,7 @@ static void _ios_init(ios_t *s)
     s->ownfd = 0;
     s->_eof = 0;
     s->rereadable = 0;
+    s->readonly = 0;
 }
 
 /* stream object initializers. we do no allocation. */
@@ -826,6 +827,13 @@ int ios_getutf8(ios_t *s, uint32_t *pwc)
     *pwc = u8_nextchar(s->buf, &i);
     ios_read(s, buf, sz+1);
     return 1;
+}
+
+int ios_pututf8(ios_t *s, uint32_t wc)
+{
+    char buf[8];
+    size_t n = u8_toutf8(buf, 8, &wc, 1);
+    return ios_write(s, buf, n);
 }
 
 void ios_purge(ios_t *s)

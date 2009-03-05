@@ -239,6 +239,15 @@
 (define (list-ref lst n)
   (car (nthcdr lst n)))
 
+; bounded length test
+; use this instead of (= (length lst) n), since it avoids unnecessary
+; work and always terminates.
+(define (length= lst n)
+  (cond ((< n 0)     #f)
+	((= n 0)     (null? lst))
+	((null? lst) (= n 0))
+	(else        (length= (cdr lst) (- n 1)))))
+
 (define (list* . l)
   (if (atom? (cdr l))
       (car l)
@@ -408,6 +417,7 @@
   (define (vals->cond key v)
     (cond ((eq? v 'else)   'else)
 	  ((null? v)       #f)
+          ((atom? v)       `(eqv? ,key ,v))
 	  ((null? (cdr v)) `(eqv? ,key ,(quote-value (car v))))
 	  (else            `(memv ,key ',v))))
   (let ((g (gensym)))
@@ -560,6 +570,20 @@
 		(trim-start s at-start 0 L)
 		(trim-end   s at-end   L))))
 
+(define (string.map f s)
+  (let ((b (buffer))
+	(n (length s)))
+    (let loop ((i 0))
+      (if (< i n)
+	  (begin (io.putc b (f (string.char s i)))
+		 (loop (string.inc s i)))
+	  (io.tostring! b)))))
+
+(define (print-to-string v)
+  (let ((b (buffer)))
+    (io.print b v)
+    (io.tostring! b)))
+
 (define (io.readline s) (io.readuntil s #byte(0xA)))
 
 (define (repl)
@@ -584,12 +608,9 @@
 (define (print-exception e)
   (cond ((and (pair? e)
 	      (eq? (car e) 'type-error)
-	      (= (length e) 4))
-	 (io.princ *stderr* "type-error: ")
-	 (io.print *stderr* (cadr e))
-	 (io.princ *stderr* ": expected ")
-	 (io.print *stderr* (caddr e))
-	 (io.princ *stderr* ", got ")
+	      (length= e 4))
+	 (io.princ *stderr*
+		   "type-error: " (cadr e) ": expected " (caddr e) ", got ")
 	 (io.print *stderr* (cadddr e)))
 
 	((and (pair? e)
@@ -610,9 +631,12 @@
 	 (io.princ *stderr* "in file " (cadr e)))
 
 	((and (list? e)
-	      (= (length e) 2))
-	 (io.print *stderr* (car e))
-	 (io.princ *stderr* ": " (cadr e)))
+	      (length= e 2))
+	 (io.princ *stderr* (car e) ": ")
+	 (let ((msg (cadr e)))
+	   ((if (or (string? msg) (symbol? msg))
+		io.princ io.print)
+	    *stderr* msg)))
 
 	(else (io.princ *stderr* "*** Unhandled exception: ")
 	      (io.print *stderr* e)))

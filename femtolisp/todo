@@ -838,7 +838,7 @@ String API
 *string.encode  - to utf8
 *string.decode  - from utf8 to UCS
  string.width   - # columns
- string.map     - (string.map f s)
+*string.map     - (string.map f s)
 
 
 IOStream API
@@ -857,7 +857,8 @@ IOStream API
 *io.discardbuffer
 *io.write     - (io.write s cvalue)
 *io.read      - (io.read s ctype [len])
- io.getc      - get utf8 character(s)
+*io.getc      - get utf8 character
+*io.putc
 *io.readline
 *io.readuntil
  io.copy      - (io.copy to from [nbytes])
@@ -867,6 +868,7 @@ IOStream API
  io.seekend   - move to end of stream
  io.trunc
  io.read!     - destructively take data
+*io.tostring!
  io.readlines
  io.readall
  print-to-string
@@ -954,6 +956,8 @@ consolidated todo list as of 8/30:
 * make raising a memory error non-consing
 - eliminate string copy in lerror() when possible
 * fix printing lists of short strings
+
+- preallocate all byte,int8,uint8 values, and some wchars
 
 - remaining c types
 - remaining cvalues functions

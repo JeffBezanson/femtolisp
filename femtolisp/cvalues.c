@@ -206,12 +206,16 @@ value_t cvalue_static_cstring(char *str)
     return cvalue_from_ref(stringtype, str, strlen(str), NIL);
 }
 
-value_t string_from_cstr(char *str)
+value_t string_from_cstrn(char *str, size_t n)
 {
-    size_t n = strlen(str);
     value_t v = cvalue_string(n);
     memcpy(cvalue_data(v), str, n);
     return v;
+}
+
+value_t string_from_cstr(char *str)
+{
+    return string_from_cstrn(str, strlen(str));
 }
 
 int isstring(value_t v)
@@ -241,31 +245,45 @@ static void cv_pin(cvalue_t *cv)
 }
 */
 
-#define num_ctor(typenam, ctype, cnvt, tag)                             \
-static void cvalue_##typenam##_init(fltype_t *type, value_t arg,        \
-                                    void *dest)                         \
-{                                                                       \
-    ctype##_t n=0;                                                      \
-    (void)type;                                                         \
-    if (isfixnum(arg)) {                                                \
-        n = numval(arg);                                                \
-    }                                                                   \
-    else if (iscprim(arg)) {                                            \
-        cprim_t *cp = (cprim_t*)ptr(arg);                               \
-        void *p = cp_data(cp);                                          \
-        n = (ctype##_t)conv_to_##cnvt(p, cp_numtype(cp));               \
-    }                                                                   \
-    else {                                                              \
-        type_error(#typenam, "number", arg);                            \
-    }                                                                   \
-    *((ctype##_t*)dest) = n;                                            \
-}                                                                       \
+#define num_init(ctype, cnvt, tag)                              \
+static int cvalue_##ctype##_init(fltype_t *type, value_t arg,   \
+                                 void *dest)                    \
+{                                                               \
+    ctype##_t n=0;                                              \
+    (void)type;                                                 \
+    if (isfixnum(arg)) {                                        \
+        n = numval(arg);                                        \
+    }                                                           \
+    else if (iscprim(arg)) {                                    \
+        cprim_t *cp = (cprim_t*)ptr(arg);                       \
+        void *p = cp_data(cp);                                  \
+        n = (ctype##_t)conv_to_##cnvt(p, cp_numtype(cp));       \
+    }                                                           \
+    else {                                                      \
+        return 1;                                               \
+    }                                                           \
+    *((ctype##_t*)dest) = n;                                    \
+    return 0;                                                   \
+}
+num_init(int8, int32, T_INT8)
+num_init(uint8, uint32, T_UINT8)
+num_init(int16, int32, T_INT16)
+num_init(uint16, uint32, T_UINT16)
+num_init(int32, int32, T_INT32)
+num_init(uint32, uint32, T_UINT32)
+num_init(int64, int64, T_INT64)
+num_init(uint64, uint64, T_UINT64)
+num_init(float, double, T_FLOAT)
+num_init(double, double, T_DOUBLE)
+
+#define num_ctor(typenam, ctype, tag)                                   \
 value_t cvalue_##typenam(value_t *args, u_int32_t nargs)                \
 {                                                                       \
     if (nargs==0) { PUSH(fixnum(0)); args = &Stack[SP-1]; }             \
     value_t cp = cprim(typenam##type, sizeof(ctype##_t));               \
-    cvalue_##typenam##_init(typenam##type,                              \
-                            args[0], cp_data((cprim_t*)ptr(cp)));       \
+    if (cvalue_##ctype##_init(typenam##type,                            \
+                              args[0], cp_data((cprim_t*)ptr(cp))))     \
+        type_error(#typenam, "number", args[0]);                        \
     return cp;                                                          \
 }                                                                       \
 value_t mk_##typenam(ctype##_t n)                                       \
@@ -275,25 +293,25 @@ value_t mk_##typenam(ctype##_t n)                                       \
     return cp;                                                          \
 }
 
-num_ctor(int8, int8, int32, T_INT8)
-num_ctor(uint8, uint8, uint32, T_UINT8)
-num_ctor(int16, int16, int32, T_INT16)
-num_ctor(uint16, uint16, uint32, T_UINT16)
-num_ctor(int32, int32, int32, T_INT32)
-num_ctor(uint32, uint32, uint32, T_UINT32)
-num_ctor(int64, int64, int64, T_INT64)
-num_ctor(uint64, uint64, uint64, T_UINT64)
-num_ctor(byte,  uint8, uint32, T_UINT8)
-num_ctor(wchar, int32, int32, T_INT32)
+num_ctor(int8, int8, T_INT8)
+num_ctor(uint8, uint8, T_UINT8)
+num_ctor(int16, int16, T_INT16)
+num_ctor(uint16, uint16, T_UINT16)
+num_ctor(int32, int32, T_INT32)
+num_ctor(uint32, uint32, T_UINT32)
+num_ctor(int64, int64, T_INT64)
+num_ctor(uint64, uint64, T_UINT64)
+num_ctor(byte,  uint8, T_UINT8)
+num_ctor(wchar, int32, T_INT32)
 #ifdef BITS64
-num_ctor(long, long, int64, T_INT64)
-num_ctor(ulong, ulong, uint64, T_UINT64)
+num_ctor(long, int64, T_INT64)
+num_ctor(ulong, uint64, T_UINT64)
 #else
-num_ctor(long, long, int32, T_INT32)
-num_ctor(ulong, ulong, uint32, T_UINT32)
+num_ctor(long, int32, T_INT32)
+num_ctor(ulong, uint32, T_UINT32)
 #endif
-num_ctor(float, float, double, T_FLOAT)
-num_ctor(double, double, double, T_DOUBLE)
+num_ctor(float, float, T_FLOAT)
+num_ctor(double, double, T_DOUBLE)
 
 value_t size_wrap(size_t sz)
 {
@@ -315,7 +333,7 @@ size_t toulong(value_t n, char *fname)
     return 0;
 }
 
-static void cvalue_enum_init(fltype_t *ft, value_t arg, void *dest)
+static int cvalue_enum_init(fltype_t *ft, value_t arg, void *dest)
 {
     int n=0;
     value_t syms;
@@ -328,7 +346,7 @@ static void cvalue_enum_init(fltype_t *ft, value_t arg, void *dest)
         while (iscons(syms)) {
             if (car_(syms) == arg) {
                 *(int*)dest = n;
-                return;
+                return 0;
             }
             n++;
             syms = cdr_(syms);
@@ -348,6 +366,7 @@ static void cvalue_enum_init(fltype_t *ft, value_t arg, void *dest)
     if ((unsigned)n >= llength(syms))
         lerror(ArgError, "enum: value out of range");
     *(int*)dest = n;
+    return 0;
 }
 
 value_t cvalue_enum(value_t *args, u_int32_t nargs)
@@ -388,7 +407,7 @@ static size_t predict_arraylen(value_t arg)
     return 1;
 }
 
-static void cvalue_array_init(fltype_t *ft, value_t arg, void *dest)
+static int cvalue_array_init(fltype_t *ft, value_t arg, void *dest)
 {
     value_t type = ft->type;
     size_t elsize, i, cnt, sz;
@@ -408,7 +427,7 @@ static void cvalue_array_init(fltype_t *ft, value_t arg, void *dest)
     if (isvector(arg)) {
         array_init_fromargs((char*)dest, &vector_elt(arg,0), cnt,
                             eltype, elsize);
-        return;
+        return 0;
     }
     else if (iscons(arg) || arg==NIL) {
         i = 0;
@@ -423,7 +442,7 @@ static void cvalue_array_init(fltype_t *ft, value_t arg, void *dest)
             lerror(ArgError, "array: size mismatch");
         array_init_fromargs((char*)dest, &Stack[SP-i], i, eltype, elsize);
         POPN(i);
-        return;
+        return 0;
     }
     else if (iscvalue(arg)) {
         cvalue_t *cv = (cvalue_t*)ptr(arg);
@@ -434,7 +453,7 @@ static void cvalue_array_init(fltype_t *ft, value_t arg, void *dest)
                     memcpy(dest, cv_data(cv), sz);
                 else
                     lerror(ArgError, "array: size mismatch");
-                return;
+                return 0;
             }
             else {
                 // TODO: initialize array from different type elements
@@ -446,6 +465,7 @@ static void cvalue_array_init(fltype_t *ft, value_t arg, void *dest)
         cvalue_init(eltype, arg, dest);
     else
         type_error("array", "sequence", arg);
+    return 0;
 }
 
 value_t cvalue_array(value_t *args, u_int32_t nargs)
@@ -593,19 +613,39 @@ size_t ctype_sizeof(value_t type, int *palign)
     return 0;
 }
 
+// get pointer and size for any plain-old-data value
+void to_sized_ptr(value_t v, char *fname, char **pdata, size_t *psz)
+{
+    if (isiostream(v) && (value2c(ios_t*,v)->bm == bm_mem)) {
+        ios_t *x = value2c(ios_t*,v);
+        *pdata = x->buf;
+        *psz = x->size;
+    }
+    else if (iscvalue(v)) {
+        cvalue_t *pcv = (cvalue_t*)ptr(v);
+        *pdata = cv_data(pcv);
+        *psz = cv_len(pcv);
+    }
+    else if (iscprim(v)) {
+        cprim_t *pcp = (cprim_t*)ptr(v);
+        *pdata = cp_data(pcp);
+        *psz = cp_class(pcp)->size;
+    }
+    else {
+        type_error(fname, "bytes", v);
+    }
+}
+
 value_t cvalue_sizeof(value_t *args, u_int32_t nargs)
 {
     argcount("sizeof", nargs, 1);
-    if (iscvalue(args[0])) {
-        cvalue_t *cv = (cvalue_t*)ptr(args[0]);
-        return size_wrap(cv_len(cv));
+    if (issymbol(args[0]) || iscons(args[0])) {
+        int a;
+        return size_wrap(ctype_sizeof(args[0], &a));
     }
-    else if (iscprim(args[0])) {
-        cprim_t *cp = (cprim_t*)ptr(args[0]);
-        return fixnum(cp_class(cp)->size);
-    }
-    int a;
-    return size_wrap(ctype_sizeof(args[0], &a));
+    size_t n; char *data;
+    to_sized_ptr(args[0], "sizeof", &data, &n);
+    return size_wrap(n);
 }
 
 value_t cvalue_typeof(value_t *args, u_int32_t nargs)
@@ -861,6 +901,9 @@ static builtinspec_t cvalues_builtin_info[] = {
 #define mk_primtype(name) \
   name##type=get_type(name##sym);name##type->init = &cvalue_##name##_init
 
+#define mk_primtype_(name,ctype) \
+  name##type=get_type(name##sym);name##type->init = &cvalue_##ctype##_init
+
 void cvalues_init()
 {
     htable_new(&TypeTable, 256);
@@ -915,10 +958,15 @@ void cvalues_init()
     mk_primtype(uint32);
     mk_primtype(int64);
     mk_primtype(uint64);
-    mk_primtype(long);
-    mk_primtype(ulong);
-    mk_primtype(byte);
-    mk_primtype(wchar);
+#ifdef BITS64
+    mk_primtype_(long,int64);
+    mk_primtype_(ulong,uint64);
+#else
+    mk_primtype_(long,int32);
+    mk_primtype_(ulong,uint32);
+#endif
+    mk_primtype_(byte,uint8);
+    mk_primtype_(wchar,int32);
     mk_primtype(float);
     mk_primtype(double);
 

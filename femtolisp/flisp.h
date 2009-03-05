@@ -174,7 +174,7 @@ void fl_print_chr(char c, ios_t *f);
 void fl_print_str(char *s, ios_t *f);
 void fl_print_child(ios_t *f, value_t v, int princ);
 
-typedef void (*cvinitfunc_t)(struct _fltype_t*, value_t, void*);
+typedef int (*cvinitfunc_t)(struct _fltype_t*, value_t, void*);
 
 typedef struct _fltype_t {
     value_t type;
@@ -268,9 +268,13 @@ size_t toulong(value_t n, char *fname);
 value_t cvalue_string(size_t sz);
 value_t cvalue_static_cstring(char *str);
 value_t string_from_cstr(char *str);
+value_t string_from_cstrn(char *str, size_t n);
 int isstring(value_t v);
 int isnumber(value_t v);
+int isiostream(value_t v);
 value_t cvalue_compare(value_t a, value_t b);
+
+void to_sized_ptr(value_t v, char *fname, char **pdata, size_t *psz);
 
 fltype_t *get_type(value_t t);
 fltype_t *get_array_type(value_t eltype);
