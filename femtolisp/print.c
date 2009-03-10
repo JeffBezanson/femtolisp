@@ -360,7 +360,8 @@ void fl_print_child(ios_t *f, value_t v, int princ)
             break;
         }
         if (isbuiltin(v)) {
-            outs("#.", f);
+            if (!princ)
+                outs("#.", f);
             outs(builtin_names[uintval(v)], f);
             break;
         }
@@ -370,7 +371,10 @@ void fl_print_child(ios_t *f, value_t v, int princ)
                                (unsigned long)(builtin_t)ptr(v));
         }
         else {
-            HPOS += ios_printf(f, "#builtin(%s)", symbol_name(label));
+            if (princ)
+                outs(symbol_name(label), f);
+            else
+                HPOS += ios_printf(f, "#builtin(%s)", symbol_name(label));
         }
         break;
     case TAG_CVALUE:
@@ -534,12 +538,9 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             snprint_real(buf, sizeof(buf), d, 0, ndec, 3, 10);
             int hasdec = (strpbrk(buf, ".eE") != NULL);
             outs(buf, f);
-            if (weak || princ || hasdec) {
+            if (!hasdec) outs(".0", f);
+            if (!princ && !weak) {
                 if (type == floatsym) outc('f', f);
-            }
-            else {
-                if (!hasdec) outs(".0", f);
-                if (type==floatsym) outc('f', f);
             }
         }
     }

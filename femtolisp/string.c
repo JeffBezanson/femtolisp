@@ -146,7 +146,7 @@ value_t fl_string(value_t *args, u_int32_t nargs)
             sz += cv_len((cvalue_t*)ptr(cv));
             continue;
         }
-        args[i] = print_to_string(args[i], iscprim(args[i]));
+        args[i] = print_to_string(args[i], iscprim(args[i])||isbuiltinish(args[i]));
         if (nargs == 1)  // convert single value to string
             return args[i];
         sz += cv_len((cvalue_t*)ptr(args[i]));
