@@ -325,7 +325,7 @@ static void print_pair(ios_t *f, value_t v, int princ)
     }
 }
 
-void cvalue_print(ios_t *f, value_t v, int princ);
+static void cvalue_print(ios_t *f, value_t v, int princ);
 
 void fl_print_child(ios_t *f, value_t v, int princ)
 {
@@ -427,7 +427,7 @@ void fl_print_child(ios_t *f, value_t v, int princ)
     }
 }
 
-void print_string(ios_t *f, char *str, size_t sz)
+static void print_string(ios_t *f, char *str, size_t sz)
 {
     char buf[512];
     size_t i = 0;
@@ -609,17 +609,19 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
                 outc(']', f);
         }
         else if (car_(type) == enumsym) {
-            value_t sym = list_nth(car(cdr_(type)), *(size_t*)data);
+            int n = *(int*)data;
+            value_t syms = car(cdr_(type));
+            assert(isvector(syms));
             if (!weak) {
                 outs("#enum(", f);
-                fl_print_child(f, car(cdr_(type)), princ);
+                fl_print_child(f, syms, princ);
                 outc(' ', f);
             }
-            if (sym == NIL) {
+            if (n >= (int)vector_size(syms)) {
                 cvalue_printdata(f, data, len, int32sym, princ, 1);
             }
             else {
-                fl_print_child(f, sym, princ);
+                fl_print_child(f, vector_elt(syms, n), princ);
             }
             if (!weak)
                 outc(')', f);
@@ -627,7 +629,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
     }
 }
 
-void cvalue_print(ios_t *f, value_t v, int princ)
+static void cvalue_print(ios_t *f, value_t v, int princ)
 {
     cvalue_t *cv = (cvalue_t*)ptr(v);
     void *data = cptr(v);

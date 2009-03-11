@@ -66,7 +66,7 @@ static char *builtin_names[] =
       "eval", "eval*", "apply", "prog1", "raise",
 
       // arithmetic
-      "+", "-", "*", "/", "<", "lognot", "logand", "logior", "logxor",
+      "+", "-", "*", "/", "<", "lognot", "logand", "logior", "logxor", "ash",
       "compare",
 
       // sequences
@@ -1173,6 +1173,20 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             else
                 v = fl_bitwise_op(Stack[SP-2], Stack[SP-1], 2, "$");
             break;
+        case F_ASH:
+          argcount("ash", nargs, 2);
+          i = tofixnum(Stack[SP-1], "ash");
+          if (isfixnum(Stack[SP-2])) {
+            if (i < 0)
+              v = fixnum(numval(Stack[SP-2])>>(-i));
+            else
+              v = fixnum(numval(Stack[SP-2])<<i);
+          }
+          else if (i < 0)
+            v = fl_shr(Stack[SP-2], -i);
+          else
+            v = fl_shl(Stack[SP-2],  i);
+          break;
         case F_COMPARE:
             argcount("compare", nargs, 2);
             v = compare(Stack[SP-2], Stack[SP-1]);
@@ -1425,7 +1439,7 @@ void assign_global_builtins(builtinspec_t *b)
     }
 }
 
-void lisp_init(void)
+static void lisp_init(void)
 {
     int i;
 

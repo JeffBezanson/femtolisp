@@ -26,16 +26,6 @@ size_t llength(value_t v)
     return n;
 }
 
-value_t list_nth(value_t l, size_t n)
-{
-    while (n && iscons(l)) {
-        l = cdr_(l);
-        n--;
-    }
-    if (iscons(l)) return car_(l);
-    return NIL;
-}
-
 value_t fl_exit(value_t *args, u_int32_t nargs)
 {
     if (nargs > 0)

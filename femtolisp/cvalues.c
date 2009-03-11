@@ -30,7 +30,6 @@ static fltype_t *floattype, *doubletype;
 
 static void cvalue_init(fltype_t *type, value_t v, void *dest);
 
-void cvalue_print(ios_t *f, value_t v, int princ);
 // cvalues-specific builtins
 value_t cvalue_new(value_t *args, u_int32_t nargs);
 value_t cvalue_sizeof(value_t *args, u_int32_t nargs);
@@ -340,16 +339,14 @@ static int cvalue_enum_init(fltype_t *ft, value_t arg, void *dest)
     value_t type = ft->type;
 
     syms = car(cdr(type));
-    if (!iscons(syms))
-        type_error("enum", "cons", syms);
+    if (!isvector(syms))
+        type_error("enum", "vector", syms);
     if (issymbol(arg)) {
-        while (iscons(syms)) {
-            if (car_(syms) == arg) {
+        for(n=0; n < (int)vector_size(syms); n++) {
+            if (vector_elt(syms, n) == arg) {
                 *(int*)dest = n;
                 return 0;
             }
-            n++;
-            syms = cdr_(syms);
         }
         lerror(ArgError, "enum: invalid enum value");
     }
@@ -363,7 +360,7 @@ static int cvalue_enum_init(fltype_t *ft, value_t arg, void *dest)
     else {
         type_error("enum", "number", arg);
     }
-    if ((unsigned)n >= llength(syms))
+    if ((unsigned)n >= vector_size(syms))
         lerror(ArgError, "enum: value out of range");
     *(int*)dest = n;
     return 0;
@@ -493,7 +490,7 @@ size_t cvalue_arraylen(value_t v)
     return cv_len(cv)/(cv_class(cv)->elsz);
 }
 
-value_t cvalue_relocate(value_t v)
+static value_t cvalue_relocate(value_t v)
 {
     size_t nw;
     cvalue_t *cv = (cvalue_t*)ptr(v);
@@ -513,8 +510,8 @@ value_t cvalue_relocate(value_t v)
     return ncv;
 }
 
-size_t cvalue_struct_offs(value_t type, value_t field, int computeTotal,
-                          int *palign)
+static size_t cvalue_struct_offs(value_t type, value_t field, int computeTotal,
+                                 int *palign)
 {
     value_t fld = car(cdr_(type));
     size_t fsz, ssz = 0;
@@ -904,7 +901,7 @@ static builtinspec_t cvalues_builtin_info[] = {
 #define mk_primtype_(name,ctype) \
   name##type=get_type(name##sym);name##type->init = &cvalue_##ctype##_init
 
-void cvalues_init()
+static void cvalues_init()
 {
     htable_new(&TypeTable, 256);
     htable_new(&reverse_dlsym_lookup_table, 256);
@@ -1010,7 +1007,7 @@ value_t return_from_int64(int64_t Saccum)
     RETURN_NUM_AS(Saccum, int32);
 }
 
-value_t fl_add_any(value_t *args, u_int32_t nargs, fixnum_t carryIn)
+static value_t fl_add_any(value_t *args, u_int32_t nargs, fixnum_t carryIn)
 {
     uint64_t Uaccum=0;
     int64_t Saccum = carryIn;
@@ -1078,7 +1075,7 @@ value_t fl_add_any(value_t *args, u_int32_t nargs, fixnum_t carryIn)
     return return_from_uint64(Uaccum);
 }
 
-value_t fl_neg(value_t n)
+static value_t fl_neg(value_t n)
 {
     if (isfixnum(n)) {
         return fixnum(-numval(n));
@@ -1117,7 +1114,7 @@ value_t fl_neg(value_t n)
     type_error("-", "number", n);
 }
 
-value_t fl_mul_any(value_t *args, u_int32_t nargs, int64_t Saccum)
+static value_t fl_mul_any(value_t *args, u_int32_t nargs, int64_t Saccum)
 {
     uint64_t Uaccum=1;
     double Faccum=1;
@@ -1178,7 +1175,7 @@ value_t fl_mul_any(value_t *args, u_int32_t nargs, int64_t Saccum)
     return return_from_uint64(Uaccum);
 }
 
-value_t fl_div2(value_t a, value_t b)
+static value_t fl_div2(value_t a, value_t b)
 {
     double da, db;
     int_t ai, bi;
@@ -1281,7 +1278,7 @@ static void *int_data_ptr(value_t a, int *pnumtype, char *fname)
     return NULL;
 }
 
-value_t fl_bitwise_not(value_t a)
+static value_t fl_bitwise_not(value_t a)
 {
     cprim_t *cp;
     int ta;
@@ -1292,10 +1289,10 @@ value_t fl_bitwise_not(value_t a)
         ta = cp_numtype(cp);
         aptr = cp_data(cp);
         switch (ta) {
-        case T_INT8:   return mk_int8(~*(int8_t *)aptr);
-        case T_UINT8:  return mk_uint8(~*(uint8_t *)aptr);
-        case T_INT16:  return mk_int16(~*(int16_t *)aptr);
-        case T_UINT16: return mk_uint16(~*(uint16_t*)aptr);
+        case T_INT8:   return fixnum(~*(int8_t *)aptr);
+        case T_UINT8:  return fixnum(~*(uint8_t *)aptr);
+        case T_INT16:  return fixnum(~*(int16_t *)aptr);
+        case T_UINT16: return fixnum(~*(uint16_t*)aptr);
         case T_INT32:  return mk_int32(~*(int32_t *)aptr);
         case T_UINT32: return mk_uint32(~*(uint32_t*)aptr);
         case T_INT64:  return mk_int64(~*(int64_t *)aptr);
@@ -1307,7 +1304,7 @@ value_t fl_bitwise_not(value_t a)
 }
 
 #define BITSHIFT_OP(name, op)                                       \
-value_t fl_##name(value_t a, int n)                                 \
+static value_t fl_##name(value_t a, int n)                          \
 {                                                                   \
     cprim_t *cp;                                                    \
     int ta;                                                         \
@@ -1317,23 +1314,23 @@ value_t fl_##name(value_t a, int n)                                 \
         ta = cp_numtype(cp);                                        \
         aptr = cp_data(cp);                                         \
         switch (ta) {                                               \
-        case T_INT8:   return mk_int8((*(int8_t *)aptr) op n);      \
-        case T_UINT8:  return mk_uint8((*(uint8_t *)aptr) op n);    \
-        case T_INT16:  return mk_int16((*(int16_t *)aptr) op n);    \
-        case T_UINT16: return mk_uint16((*(uint16_t*)aptr) op n);   \
+        case T_INT8:   return fixnum((*(int8_t *)aptr) op n);       \
+        case T_UINT8:  return fixnum((*(uint8_t *)aptr) op n);      \
+        case T_INT16:  return fixnum((*(int16_t *)aptr) op n);      \
+        case T_UINT16: return fixnum((*(uint16_t*)aptr) op n);      \
         case T_INT32:  return mk_int32((*(int32_t *)aptr) op n);    \
         case T_UINT32: return mk_uint32((*(uint32_t*)aptr) op n);   \
         case T_INT64:  return mk_int64((*(int64_t *)aptr) op n);    \
         case T_UINT64: return mk_uint64((*(uint64_t*)aptr) op n);   \
         }                                                           \
     }                                                               \
-    type_error(#op, "integer", a);                                  \
+    type_error("ash", "integer", a);                                \
     return NIL;                                                     \
 }
 BITSHIFT_OP(shl,<<)
 BITSHIFT_OP(shr,>>)
 
-value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)
+static value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)
 {
     int_t ai, bi;
     int ta, tb, itmp;
@@ -1366,10 +1363,10 @@ value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)
     switch (opcode) {
     case 0:
     switch (ta) {
-    case T_INT8:   return mk_int8(  *(int8_t *)aptr  & (int8_t  )b64);
-    case T_UINT8:  return mk_uint8( *(uint8_t *)aptr & (uint8_t )b64);
-    case T_INT16:  return mk_int16( *(int16_t*)aptr  & (int16_t )b64);
-    case T_UINT16: return mk_uint16(*(uint16_t*)aptr & (uint16_t)b64);
+    case T_INT8:   return fixnum(   *(int8_t *)aptr  & (int8_t  )b64);
+    case T_UINT8:  return fixnum(   *(uint8_t *)aptr & (uint8_t )b64);
+    case T_INT16:  return fixnum(   *(int16_t*)aptr  & (int16_t )b64);
+    case T_UINT16: return fixnum(   *(uint16_t*)aptr & (uint16_t)b64);
     case T_INT32:  return mk_int32( *(int32_t*)aptr  & (int32_t )b64);
     case T_UINT32: return mk_uint32(*(uint32_t*)aptr & (uint32_t)b64);
     case T_INT64:  return mk_int64( *(int64_t*)aptr  & (int64_t )b64);
@@ -1378,10 +1375,10 @@ value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)
     break;
     case 1:
     switch (ta) {
-    case T_INT8:   return mk_int8(  *(int8_t *)aptr  | (int8_t  )b64);
-    case T_UINT8:  return mk_uint8( *(uint8_t *)aptr | (uint8_t )b64);
-    case T_INT16:  return mk_int16( *(int16_t*)aptr  | (int16_t )b64);
-    case T_UINT16: return mk_uint16(*(uint16_t*)aptr | (uint16_t)b64);
+    case T_INT8:   return fixnum(   *(int8_t *)aptr  | (int8_t  )b64);
+    case T_UINT8:  return fixnum(   *(uint8_t *)aptr | (uint8_t )b64);
+    case T_INT16:  return fixnum(   *(int16_t*)aptr  | (int16_t )b64);
+    case T_UINT16: return fixnum(   *(uint16_t*)aptr | (uint16_t)b64);
     case T_INT32:  return mk_int32( *(int32_t*)aptr  | (int32_t )b64);
     case T_UINT32: return mk_uint32(*(uint32_t*)aptr | (uint32_t)b64);
     case T_INT64:  return mk_int64( *(int64_t*)aptr  | (int64_t )b64);
@@ -1390,10 +1387,10 @@ value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)
     break;
     case 2:
     switch (ta) {
-    case T_INT8:   return mk_int8(  *(int8_t *)aptr  ^ (int8_t  )b64);
-    case T_UINT8:  return mk_uint8( *(uint8_t *)aptr ^ (uint8_t )b64);
-    case T_INT16:  return mk_int16( *(int16_t*)aptr  ^ (int16_t )b64);
-    case T_UINT16: return mk_uint16(*(uint16_t*)aptr ^ (uint16_t)b64);
+    case T_INT8:   return fixnum(   *(int8_t *)aptr  ^ (int8_t  )b64);
+    case T_UINT8:  return fixnum(   *(uint8_t *)aptr ^ (uint8_t )b64);
+    case T_INT16:  return fixnum(   *(int16_t*)aptr  ^ (int16_t )b64);
+    case T_UINT16: return fixnum(   *(uint16_t*)aptr ^ (uint16_t)b64);
     case T_INT32:  return mk_int32( *(int32_t*)aptr  ^ (int32_t )b64);
     case T_UINT32: return mk_uint32(*(uint32_t*)aptr ^ (uint32_t)b64);
     case T_INT64:  return mk_int64( *(int64_t*)aptr  ^ (int64_t )b64);

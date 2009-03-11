@@ -43,7 +43,7 @@ typedef struct _symbol_t {
 #define tag(x) ((x)&0x7)
 #define ptr(x) ((void*)((x)&(~(value_t)0x7)))
 #define tagptr(p,t) (((value_t)(p)) | (t))
-#define fixnum(x) ((value_t)((x)<<2))
+#define fixnum(x) ((value_t)(((fixnum_t)(x))<<2))
 #define numval(x)  (((fixnum_t)(x))>>2)
 #ifdef BITS64
 #define fits_fixnum(x) (((x)>>61) == 0 || (~((x)>>61)) == 0)
@@ -110,7 +110,7 @@ enum {
 
     F_CONS, F_LIST, F_CAR, F_CDR, F_SETCAR, F_SETCDR,
     F_EVAL, F_EVALSTAR, F_APPLY, F_PROG1, F_RAISE,
-    F_ADD, F_SUB, F_MUL, F_DIV, F_LT, F_BNOT, F_BAND, F_BOR, F_BXOR,
+    F_ADD, F_SUB, F_MUL, F_DIV, F_LT, F_BNOT, F_BAND, F_BOR, F_BXOR, F_ASH,
     F_COMPARE,
     F_VECTOR, F_AREF, F_ASET, F_LENGTH, F_ASSQ, F_FOR,
     F_TRUE, F_FALSE, F_NIL,
@@ -136,7 +136,6 @@ value_t fl_gensym();
 char *symbol_name(value_t v);
 value_t alloc_vector(size_t n, int init);
 size_t llength(value_t v);
-value_t list_nth(value_t l, size_t n);
 value_t compare(value_t a, value_t b);  // -1, 0, or 1
 value_t equal(value_t a, value_t b);    // T or nil
 int equal_lispvalue(value_t a, value_t b);
