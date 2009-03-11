@@ -274,25 +274,14 @@ value_t fl_gensym()
     return gensym(NULL, 0);
 }
 
-static char *snprintf_gensym_id(char *nbuf, size_t n, uint32_t g)
-{
-    size_t i=n-1;
-
-    nbuf[i--] = '\0';
-    do {
-        nbuf[i--] = '0' + g%10;
-        g/=10;
-    } while (g && i);
-    nbuf[i] = 'g';
-    return &nbuf[i];
-}
-
 char *symbol_name(value_t v)
 {
     if (ismanaged(v)) {
         gensym_t *gs = (gensym_t*)ptr(v);
         gsnameno = 1-gsnameno;
-        return snprintf_gensym_id(gsname[gsnameno], sizeof(gsname[0]), gs->id);
+        char *n = int2str(gsname[gsnameno]+1, sizeof(gsname[0])-1, gs->id, 10);
+        *(--n) = 'g';
+        return n;
     }
     return ((symbol_t*)ptr(v))->name;
 }
@@ -1593,7 +1582,7 @@ int main(int argc, char *argv[])
         (void)toplevel_eval(special_apply_form);
     }
     FL_CATCH {
-        ios_printf(ios_stderr, "fatal error during bootstrap:\n");
+        ios_puts("fatal error during bootstrap:\n", ios_stderr);
         print(ios_stderr, lasterror, 0);
         ios_putc('\n', ios_stderr);
         return 1;

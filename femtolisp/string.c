@@ -14,20 +14,6 @@
 #include "llt.h"
 #include "flisp.h"
 
-extern value_t fl_buffer(value_t *args, u_int32_t nargs);
-extern value_t stream_to_string(value_t *ps);
-static value_t print_to_string(value_t v, int princ)
-{
-    PUSH(v);
-    value_t buf = fl_buffer(NULL, 0);
-    ios_t *s = value2c(ios_t*,buf);
-    print(s, Stack[SP-1], princ);
-    Stack[SP-1] = buf;
-    value_t outp = stream_to_string(&Stack[SP-1]);
-    (void)POP();
-    return outp;
-}
-
 value_t fl_stringp(value_t *args, u_int32_t nargs)
 {
     argcount("string?", nargs, 1);
@@ -113,74 +99,22 @@ value_t fl_string_decode(value_t *args, u_int32_t nargs)
     return wcstr;
 }
 
+extern value_t fl_buffer(value_t *args, u_int32_t nargs);
+extern value_t stream_to_string(value_t *ps);
+
 value_t fl_string(value_t *args, u_int32_t nargs)
 {
-    value_t cv, t;
-    u_int32_t i;
-    size_t len, sz = 0;
-    cvalue_t *temp;
-    cprim_t *cp;
-    char *data;
-    uint32_t wc;
-
-    for(i=0; i < nargs; i++) {
-        cv = args[i];
-        if (issymbol(cv)) {
-            sz += strlen(symbol_name(cv));
-            continue;
-        }
-        else if (iscprim(cv)) {
-            cp = (cprim_t*)ptr(cv);
-            t = cp_type(cp);
-            if (t == bytesym) {
-                sz++;
-                continue;
-            }
-            else if (t == wcharsym) {
-                wc = *(uint32_t*)cp_data(cp);
-                sz += u8_charlen(wc);
-                continue;
-            }
-        }
-        else if (isstring(cv)) {
-            sz += cv_len((cvalue_t*)ptr(cv));
-            continue;
-        }
-        args[i] = print_to_string(args[i], iscprim(args[i])||isbuiltinish(args[i]));
-        if (nargs == 1)  // convert single value to string
-            return args[i];
-        sz += cv_len((cvalue_t*)ptr(args[i]));
-        //lerror(ArgError, "string: expected string, symbol or character");
-    }
-    cv = cvalue_string(sz);
-    char *ptr = cvalue_data(cv);
-    for(i=0; i < nargs; i++) {
-        if (issymbol(args[i])) {
-            char *name = symbol_name(args[i]);
-            while (*name) *ptr++ = *name++;
-        }
-        else if (iscprim(args[i])) {
-            cp = (cprim_t*)ptr(args[i]);
-            t = cp_type(cp);
-            data = cp_data(cp);
-            if (t == bytesym) {
-                *ptr++ = *(char*)data;
-            }
-            else {
-                // wchar
-                ptr += u8_wc_toutf8(ptr, *(uint32_t*)data);
-            }
-        }
-        else {
-            // string
-            temp = (cvalue_t*)ptr(args[i]);
-            data = cv_data(temp);
-            len = cv_len(temp);
-            memcpy(ptr, data, len);
-            ptr += len;
-        }
-    }
-    return cv;
+    if (nargs == 1 && isstring(args[0]))
+        return args[0];
+    value_t buf = fl_buffer(NULL, 0);
+    ios_t *s = value2c(ios_t*,buf);
+    uint32_t i;
+    for (i=0; i < nargs; i++)
+        print(s, args[i], 1);
+    PUSH(buf);
+    value_t outp = stream_to_string(&Stack[SP-1]);
+    (void)POP();
+    return outp;
 }
 
 value_t fl_string_split(value_t *args, u_int32_t nargs)

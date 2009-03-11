@@ -379,7 +379,7 @@ void fl_print_child(ios_t *f, value_t v, int princ)
         break;
     case TAG_CVALUE:
     case TAG_CPRIM:
-      if (v == UNBOUND) { HPOS+=ios_printf(f, "#<undefined>"); break; }
+      if (v == UNBOUND) { outs("#<undefined>", f); break; }
     case TAG_VECTOR:
     case TAG_CONS:
         if ((label=(value_t)ptrhash_get(&printconses, (void*)v)) !=
@@ -523,25 +523,26 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
                 rep = sign_bit(d) ? "-NaN" : "+NaN";
             else
                 rep = sign_bit(d) ? "-Inf" : "+Inf";
-            if (type == floatsym)
+            if (type == floatsym && !princ && !weak)
                 HPOS+=ios_printf(f, "#%s(%s)", symbol_name(type), rep);
             else
-                HPOS+=ios_printf(f, "%s", rep);
+                outs(rep, f);
         }
         else if (d == 0) {
             if (1/d < 0)
-                HPOS+=ios_printf(f, "-0.0%s", type==floatsym?"f":"");
+                outs("-0.0", f);
             else
-                HPOS+=ios_printf(f, "0.0%s",  type==floatsym?"f":"");
+                outs("0.0", f);
+            if (type == floatsym && !princ && !weak)
+                outc('f', f);
         }
         else {
             snprint_real(buf, sizeof(buf), d, 0, ndec, 3, 10);
             int hasdec = (strpbrk(buf, ".eE") != NULL);
             outs(buf, f);
             if (!hasdec) outs(".0", f);
-            if (!princ && !weak) {
-                if (type == floatsym) outc('f', f);
-            }
+            if (type == floatsym && !princ && !weak)
+                outc('f', f);
         }
     }
     else if (issymbol(type)) {
