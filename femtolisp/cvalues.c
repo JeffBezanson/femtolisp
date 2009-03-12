@@ -490,26 +490,6 @@ size_t cvalue_arraylen(value_t v)
     return cv_len(cv)/(cv_class(cv)->elsz);
 }
 
-static value_t cvalue_relocate(value_t v)
-{
-    size_t nw;
-    cvalue_t *cv = (cvalue_t*)ptr(v);
-    cvalue_t *nv;
-    value_t ncv;
-
-    nw = cv_nwords(cv);
-    nv = (cvalue_t*)alloc_words(nw);
-    memcpy(nv, cv, nw*sizeof(value_t));
-    if (isinlined(cv))
-        nv->data = &nv->_space[0];
-    ncv = tagptr(nv, TAG_CVALUE);
-    fltype_t *t = cv_class(cv);
-    if (t->vtable != NULL && t->vtable->relocate != NULL)
-        t->vtable->relocate(v, ncv);
-    forward(v, ncv);
-    return ncv;
-}
-
 static size_t cvalue_struct_offs(value_t type, value_t field, int computeTotal,
                                  int *palign)
 {
@@ -662,6 +642,26 @@ value_t cvalue_typeof(value_t *args, u_int32_t nargs)
         return builtinsym;
     }
     return cv_type((cvalue_t*)ptr(args[0]));
+}
+
+value_t cvalue_relocate(value_t v)
+{
+    size_t nw;
+    cvalue_t *cv = (cvalue_t*)ptr(v);
+    cvalue_t *nv;
+    value_t ncv;
+
+    nw = cv_nwords(cv);
+    nv = (cvalue_t*)alloc_words(nw);
+    memcpy(nv, cv, nw*sizeof(value_t));
+    if (isinlined(cv))
+        nv->data = &nv->_space[0];
+    ncv = tagptr(nv, TAG_CVALUE);
+    fltype_t *t = cv_class(cv);
+    if (t->vtable != NULL && t->vtable->relocate != NULL)
+        t->vtable->relocate(v, ncv);
+    forward(v, ncv);
+    return ncv;
 }
 
 value_t cvalue_copy(value_t v)

@@ -195,6 +195,11 @@
 (define (>  a b) (< b a))
 (define (<= a b) (not (< b a)))
 (define (>= a b) (not (< a b)))
+(define (negative? x) (< x 0))
+(define (zero? x)     (= x 0))
+(define (positive? x) (> x 0))
+(define (even? x) (= (logand x 1) 0))
+(define (odd? x) (not (even? x)))
 (define (1+ n) (+ n 1))
 (define (1- n) (- n 1))
 (define (mod x y) (- x (* (/ x y) y)))
@@ -467,6 +472,12 @@
 (define (iota n) (map-int identity n))
 (define ι iota)
 
+(define (for-each f l)
+  (when (pair? l)
+	(begin (f (car l))
+	       (for-each f (cdr l))))
+  #t)
+
 (define (error . args) (raise (cons 'error args)))
 
 (define-macro (throw tag value) `(raise (list 'thrown-value ,tag ,value)))
@@ -485,6 +496,14 @@
                       (lambda (,e) (begin ,finally (raise ,e))))
 	    ,finally)))
 
+(if (or (eq? *os-name* 'win32)
+	(eq? *os-name* 'win64)
+	(eq? *os-name* 'windows))
+    (begin (define *directory-separator* "\\")
+	   (define *linefeed* "\r\n"))
+    (begin (define *directory-separator* "/")
+	   (define *linefeed* "\n")))
+
 (define-macro (assert expr) `(if ,expr #t (raise '(assert-failed ,expr))))
 
 (define-macro (time expr)
@@ -494,8 +513,9 @@
 	,expr
 	(princ "Elapsed time: " (- (time.now) ,t0) " seconds\n")))))
 
+(define (terpri) (princ *linefeed*))
 (define (display x) (princ x) #t)
-(define (println . args) (prog1 (apply print args) (princ "\n")))
+(define (println . args) (prog1 (apply print args) (terpri)))
 
 (define (vu8 . elts) (apply array (cons 'uint8 elts)))
 
@@ -598,12 +618,12 @@
 	     (set! that V)
 	     #t))))
   (define (reploop)
-    (when (trycatch (and (prompt) (princ "\n"))
+    (when (trycatch (and (prompt) (terpri))
 		    print-exception)
-	  (begin (princ "\n")
+	  (begin (terpri)
 		 (reploop))))
   (reploop)
-  (princ "\n"))
+  (terpri))
 
 (define (print-exception e)
   (cond ((and (pair? e)
@@ -641,19 +661,13 @@
 	(else (io.princ *stderr* "*** Unhandled exception: ")
 	      (io.print *stderr* e)))
 
-  (io.princ *stderr* "\n")
+  (io.princ *stderr* *linefeed*)
   #t)
 
 (define (__script fname)
   (trycatch (load fname)
 	    (lambda (e) (begin (print-exception e)
 			       (exit 1)))))
-
-(if (or (eq? *os-name* 'win32)
-	(eq? *os-name* 'win64)
-	(eq? *os-name* 'windows))
-    (define *directory-separator* "\\")
-    (define *directory-separator* "/"))
 
 (define (__start . argv)
   ; reload this file with our new definition of load

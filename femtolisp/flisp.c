@@ -10,7 +10,7 @@
   it uses a Scheme-style evaluation rule where any expression may appear in
     head position as long as it evaluates to a function.
   it uses Scheme-style varargs (dotted formal argument lists)
-  lambdas can have only 1 body expression; use (progn ...) for multiple
+  lambdas can have only 1 body expression; use (begin ...) for multiple
     expressions. this is due to the closure representation
     (lambda args body . env)
 
@@ -29,6 +29,7 @@
   * constructor notation for nicely printing arbitrary values
   * strings
   * hash tables
+  * I/O streams
 
   by Jeff Bezanson (C) 2009
   Distributed under the BSD License
@@ -894,7 +895,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             }
             v = *pv;
             break;
-        case F_PROGN:
+        case F_BEGIN:
             // return last arg
             pv = &Stack[saveSP];
             if (iscons(*pv)) {
@@ -1153,25 +1154,52 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                 v = fl_bitwise_not(Stack[SP-1]);
             break;
         case F_BAND:
-            argcount("logand", nargs, 2);
-            if (bothfixnums(Stack[SP-1], Stack[SP-2]))
-                v = Stack[SP-1] & Stack[SP-2];
-            else
-                v = fl_bitwise_op(Stack[SP-2], Stack[SP-1], 0, "&");
+            if (nargs == 0)
+                v = fixnum(-1);
+            else {
+                v = Stack[SP-nargs];
+                while (nargs > 1) {
+                    e = Stack[SP-nargs+1];
+                    if (bothfixnums(v, e))
+                        v = v & e;
+                    else
+                        v = fl_bitwise_op(v, e, 0, "&");
+                    nargs--;
+                    Stack[SP-nargs] = v;
+                }
+            }
             break;
         case F_BOR:
-            argcount("logior", nargs, 2);
-            if (bothfixnums(Stack[SP-1], Stack[SP-2]))
-                v = Stack[SP-1] | Stack[SP-2];
-            else
-                v = fl_bitwise_op(Stack[SP-2], Stack[SP-1], 1, "!");
+            if (nargs == 0)
+                v = fixnum(0);
+            else {
+                v = Stack[SP-nargs];
+                while (nargs > 1) {
+                    e = Stack[SP-nargs+1];
+                    if (bothfixnums(v, e))
+                        v = v | e;
+                    else
+                        v = fl_bitwise_op(v, e, 1, "!");
+                    nargs--;
+                    Stack[SP-nargs] = v;
+                }
+            }
             break;
         case F_BXOR:
-            argcount("logxor", nargs, 2);
-            if (bothfixnums(Stack[SP-1], Stack[SP-2]))
-                v = fixnum(numval(Stack[SP-1]) ^ numval(Stack[SP-2]));
-            else
-                v = fl_bitwise_op(Stack[SP-2], Stack[SP-1], 2, "$");
+            if (nargs == 0)
+                v = fixnum(0);
+            else {
+                v = Stack[SP-nargs];
+                while (nargs > 1) {
+                    e = Stack[SP-nargs+1];
+                    if (bothfixnums(v, e))
+                        v = fixnum(numval(v) ^ numval(e));
+                    else
+                        v = fl_bitwise_op(v, e, 2, "$");
+                    nargs--;
+                    Stack[SP-nargs] = v;
+                }
+            }
             break;
         case F_ASH:
           argcount("ash", nargs, 2);

@@ -848,10 +848,10 @@ IOStream API
 *princ
 *file
  iostream         - (stream[ cvalue-as-bytestream])
-*memstream
+*buffer
  fifo
  socket
-*io.eof
+*io.eof?
 *io.flush
 *io.close
 *io.discardbuffer
@@ -950,7 +950,7 @@ consolidated todo list as of 8/30:
 * finalizers in gc
 * hashtable
 * generic aref/aset
-- expose io stream object
+* expose io stream object
 * new toplevel
 
 * make raising a memory error non-consing

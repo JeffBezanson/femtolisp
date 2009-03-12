@@ -102,7 +102,7 @@ extern uint32_t SP;
 enum {
     // special forms
     F_QUOTE=0, F_COND, F_IF, F_AND, F_OR, F_WHILE, F_LAMBDA,
-    F_TRYCATCH, F_SPECIAL_APPLY, F_SETQ, F_PROGN,
+    F_TRYCATCH, F_SPECIAL_APPLY, F_SETQ, F_BEGIN,
 
     // functions
     F_EQ, F_EQV, F_EQUAL, F_ATOM, F_NOT, F_NULL, F_BOOLEANP, F_SYMBOLP,
@@ -116,7 +116,7 @@ enum {
     F_TRUE, F_FALSE, F_NIL,
     N_BUILTINS,
 };
-#define isspecial(v) (uintval(v) <= (unsigned int)F_PROGN)
+#define isspecial(v) (uintval(v) <= (unsigned int)F_BEGIN)
 
 extern value_t NIL, FL_T, FL_F;
 
