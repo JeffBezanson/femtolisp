@@ -280,7 +280,7 @@ char *symbol_name(value_t v)
     if (ismanaged(v)) {
         gensym_t *gs = (gensym_t*)ptr(v);
         gsnameno = 1-gsnameno;
-        char *n = int2str(gsname[gsnameno]+1, sizeof(gsname[0])-1, gs->id, 10);
+        char *n = uint2str(gsname[gsnameno]+1, sizeof(gsname[0])-1, gs->id, 10);
         *(--n) = 'g';
         return n;
     }
@@ -449,6 +449,7 @@ static void trace_globals(symbol_t *root)
 }
 
 static value_t special_apply_form;
+static value_t apply1_args;
 static value_t memory_exception_value;
 
 void gc(int mustgrow)
@@ -476,6 +477,7 @@ void gc(int mustgrow)
     }
     lasterror = relocate(lasterror);
     special_apply_form = relocate(special_apply_form);
+    apply1_args = relocate(apply1_args);
     memory_exception_value = relocate(memory_exception_value);
 
     sweep_finalizers();
@@ -520,6 +522,12 @@ value_t apply(value_t f, value_t l)
     value_t v = toplevel_eval(special_apply_form);
     POPN(2);
     return v;
+}
+
+value_t apply1(value_t f, value_t a0)
+{
+    car_(apply1_args) = a0;
+    return apply(f, apply1_args);
 }
 
 value_t listn(size_t n, ...)
@@ -658,10 +666,8 @@ static value_t do_trycatch(value_t expr, uint32_t penv)
             v = FL_F;   // 1-argument form
         }
         else {
-            Stack[SP-1] = car_(v);
-            value_t quoted = list2(QUOTE, lasterror);
-            expr = list2(Stack[SP-1], quoted);
-            v = eval(expr);
+            Stack[SP-1] = eval(car_(v));
+            v = apply1(Stack[SP-1], lasterror);
         }
     }
     return v;
@@ -1202,19 +1208,22 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             }
             break;
         case F_ASH:
-          argcount("ash", nargs, 2);
-          i = tofixnum(Stack[SP-1], "ash");
-          if (isfixnum(Stack[SP-2])) {
-            if (i < 0)
-              v = fixnum(numval(Stack[SP-2])>>(-i));
+            argcount("ash", nargs, 2);
+            i = tofixnum(Stack[SP-1], "ash");
+            if (isfixnum(Stack[SP-2])) {
+                if (i <= 0)
+                    v = fixnum(numval(Stack[SP-2])>>(-i));
+                else {
+                    accum = ((int64_t)numval(Stack[SP-2]))<<i;
+                    if (fits_fixnum(accum))
+                        v = fixnum(accum);
+                    else
+                        v = return_from_int64(accum);
+                }
+            }
             else
-              v = fixnum(numval(Stack[SP-2])<<i);
-          }
-          else if (i < 0)
-            v = fl_shr(Stack[SP-2], -i);
-          else
-            v = fl_shl(Stack[SP-2],  i);
-          break;
+                v = fl_ash(Stack[SP-2], i);
+            break;
         case F_COMPARE:
             argcount("compare", nargs, 2);
             v = compare(Stack[SP-2], Stack[SP-1]);
@@ -1520,6 +1529,7 @@ static void lisp_init(void)
     set(printwidthsym=symbol("*print-width*"), fixnum(SCR_WIDTH));
     lasterror = NIL;
     special_apply_form = fl_cons(builtin(F_SPECIAL_APPLY), NIL);
+    apply1_args = fl_cons(NIL, NIL);
     i = 0;
     while (isspecial(builtin(i))) {
         if (i != F_SPECIAL_APPLY)

@@ -1,15 +1,11 @@
 #include <stdlib.h>
 #include "dtypes.h"
 
-char *int2str(char *dest, size_t len, int64_t num, uint32_t base)
+char *uint2str(char *dest, size_t len, uint64_t num, uint32_t base)
 {
-    int i = len-1, neg = 0;
-    int64_t b = (int64_t)base;
+    int i = len-1;
+    uint64_t b = (uint64_t)base;
     char ch;
-    if (num < 0) {
-        num = -num;
-        neg = 1;
-    }
     dest[i--] = '\0';
     while (i >= 0) {
         ch = (char)(num % b);
@@ -22,8 +18,6 @@ char *int2str(char *dest, size_t len, int64_t num, uint32_t base)
         if (num == 0)
             break;
     }
-    if (i >= 0 && neg)
-        dest[i--] = '-';
     return &dest[i+1];
 }
 

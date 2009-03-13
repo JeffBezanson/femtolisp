@@ -1303,32 +1303,39 @@ static value_t fl_bitwise_not(value_t a)
     return NIL;
 }
 
-#define BITSHIFT_OP(name, op)                                       \
-static value_t fl_##name(value_t a, int n)                          \
-{                                                                   \
-    cprim_t *cp;                                                    \
-    int ta;                                                         \
-    void *aptr;                                                     \
-    if (iscprim(a)) {                                               \
-        cp = (cprim_t*)ptr(a);                                      \
-        ta = cp_numtype(cp);                                        \
-        aptr = cp_data(cp);                                         \
-        switch (ta) {                                               \
-        case T_INT8:   return fixnum((*(int8_t *)aptr) op n);       \
-        case T_UINT8:  return fixnum((*(uint8_t *)aptr) op n);      \
-        case T_INT16:  return fixnum((*(int16_t *)aptr) op n);      \
-        case T_UINT16: return fixnum((*(uint16_t*)aptr) op n);      \
-        case T_INT32:  return mk_int32((*(int32_t *)aptr) op n);    \
-        case T_UINT32: return mk_uint32((*(uint32_t*)aptr) op n);   \
-        case T_INT64:  return mk_int64((*(int64_t *)aptr) op n);    \
-        case T_UINT64: return mk_uint64((*(uint64_t*)aptr) op n);   \
-        }                                                           \
-    }                                                               \
-    type_error("ash", "integer", a);                                \
-    return NIL;                                                     \
+static value_t fl_ash(value_t a, int n)
+{
+    cprim_t *cp;
+    int ta;
+    void *aptr;
+    if (iscprim(a)) {
+        if (n == 0) return a;
+        cp = (cprim_t*)ptr(a);
+        ta = cp_numtype(cp);
+        aptr = cp_data(cp);
+        if (n < 0) {
+            n = -n;
+            switch (ta) {
+            case T_INT8:   return fixnum((*(int8_t *)aptr) >> n);
+            case T_UINT8:  return fixnum((*(uint8_t *)aptr) >> n);
+            case T_INT16:  return fixnum((*(int16_t *)aptr) >> n);
+            case T_UINT16: return fixnum((*(uint16_t*)aptr) >> n);
+            case T_INT32:  return mk_int32((*(int32_t *)aptr) >> n);
+            case T_UINT32: return mk_uint32((*(uint32_t*)aptr) >> n);
+            case T_INT64:  return mk_int64((*(int64_t *)aptr) >> n);
+            case T_UINT64: return mk_uint64((*(uint64_t*)aptr) >> n);
+            }
+        }
+        else {
+            if (ta == T_UINT64)
+                return return_from_uint64((*(uint64_t*)aptr)<<n);
+            int64_t i64 = conv_to_int64(aptr, ta);
+            return return_from_int64(i64<<n);
+        }
+    }
+    type_error("ash", "integer", a);
+    return NIL;
 }
-BITSHIFT_OP(shl,<<)
-BITSHIFT_OP(shr,>>)
 
 static value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)
 {

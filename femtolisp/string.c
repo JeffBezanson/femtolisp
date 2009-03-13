@@ -295,11 +295,16 @@ value_t fl_numbertostring(value_t *args, u_int32_t nargs)
     if (nargs < 1 || nargs > 2)
         argcount("number->string", nargs, 2);
     value_t n = args[0];
-    int64_t num;
+    int neg = 0;
+    uint64_t num;
     if (isfixnum(n))      num = numval(n);
     else if (!iscprim(n)) type_error("number->string", "integer", n);
-    else num = conv_to_int64(cp_data((cprim_t*)ptr(n)),
-                             cp_numtype((cprim_t*)ptr(n)));
+    else num = conv_to_uint64(cp_data((cprim_t*)ptr(n)),
+                              cp_numtype((cprim_t*)ptr(n)));
+    if (numval(compare(args[0],fixnum(0))) < 0) {
+        num = -num;
+        neg = 1;
+    }
     ulong radix = 10;
     if (nargs == 2) {
         radix = toulong(args[1], "number->string");
@@ -307,7 +312,9 @@ value_t fl_numbertostring(value_t *args, u_int32_t nargs)
             lerror(ArgError, "number->string: invalid radix");
     }
     char buf[128];
-    char *str = int2str(buf, sizeof(buf), num, radix);
+    char *str = uint2str(buf, sizeof(buf), num, radix);
+    if (neg && str > &buf[0])
+        *(--str) = '-';
     return string_from_cstr(str);
 }
 

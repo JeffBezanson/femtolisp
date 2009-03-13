@@ -125,6 +125,7 @@ value_t read_sexpr(value_t f);
 void print(ios_t *f, value_t v, int princ);
 value_t toplevel_eval(value_t expr);
 value_t apply(value_t f, value_t l);
+value_t apply1(value_t f, value_t a0);
 value_t load_file(char *fname);
 
 /* object model manipulation */
