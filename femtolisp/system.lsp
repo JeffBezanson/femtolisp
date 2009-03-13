@@ -189,9 +189,7 @@
 (define (expand x) (macroexpand x))
 
 (define =   eqv?)
-(define eql eqv?)
 (define (/= a b) (not (eqv? a b)))
-(define != /=)
 (define (>  a b) (< b a))
 (define (<= a b) (not (< b a)))
 (define (>= a b) (not (< a b)))
@@ -422,7 +420,7 @@
   (define (vals->cond key v)
     (cond ((eq? v 'else)   'else)
 	  ((null? v)       #f)
-          ((atom? v)       `(eqv? ,key ,v))
+          ((atom? v)       `(eqv? ,key ,(quote-value v)))
 	  ((null? (cdr v)) `(eqv? ,key ,(quote-value (car v))))
 	  (else            `(memv ,key ',v))))
   (let ((g (gensym)))

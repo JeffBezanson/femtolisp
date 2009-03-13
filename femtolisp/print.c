@@ -14,6 +14,11 @@ static void outs(char *s, ios_t *f)
     ios_puts(s, f);
     HPOS += u8_strwidth(s);
 }
+static void outsn(char *s, ios_t *f, size_t n)
+{
+    ios_write(f, s, n);
+    HPOS += u8_strwidth(s);
+}
 static int outindent(int n, ios_t *f)
 {
     // move back to left margin if we get too indented
@@ -269,7 +274,7 @@ static void print_pair(ios_t *f, value_t v, int princ)
         cd = cdr_(v);
         if (!iscons(cd) || ptrhash_has(&printconses, (void*)cd)) {
             if (cd != NIL) {
-                outs(" . ", f);
+                outsn(" . ", f, 3);
                 fl_print_child(f, cd, princ);
             }
             outc(')', f);
@@ -340,7 +345,7 @@ void fl_print_child(ios_t *f, value_t v, int princ)
         if (princ)
             outs(name, f);
         else if (ismanaged(v)) {
-            outs("#:", f);
+            outsn("#:", f, 2);
             outs(name, f);
         }
         else
@@ -348,20 +353,20 @@ void fl_print_child(ios_t *f, value_t v, int princ)
         break;
     case TAG_BUILTIN:
         if (v == FL_T) {
-            outs("#t", f);
+            outsn("#t", f, 2);
             break;
         }
         if (v == FL_F) {
-            outs("#f", f);
+            outsn("#f", f, 2);
             break;
         }
         if (v == NIL) {
-            outs("()", f);
+            outsn("()", f, 2);
             break;
         }
         if (isbuiltin(v)) {
             if (!princ)
-                outs("#.", f);
+                outsn("#.", f, 2);
             outs(builtin_names[uintval(v)], f);
             break;
         }
@@ -434,8 +439,8 @@ static void print_string(ios_t *f, char *str, size_t sz)
 
     outc('"', f);
     while (i < sz) {
-        u8_escape(buf, sizeof(buf), str, &i, sz, 1, 0);
-        outs(buf, f);
+        size_t n = u8_escape(buf, sizeof(buf), str, &i, sz, 1, 0);
+        outsn(buf, f, n-1);
     }
     outc('"', f);
 }
@@ -467,7 +472,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             size_t nb = u8_toutf8(seq, sizeof(seq), &wc, 1);
             seq[nb] = '\0';
             // TODO: better multibyte handling
-            if (!princ) outs("#\\", f);
+            if (!princ) outsn("#\\", f, 2);
             outs(seq, f);
         }
         else if (weak) {
@@ -530,9 +535,9 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
         }
         else if (d == 0) {
             if (1/d < 0)
-                outs("-0.0", f);
+                outsn("-0.0", f, 4);
             else
-                outs("0.0", f);
+                outsn("0.0", f, 3);
             if (type == floatsym && !princ && !weak)
                 outc('f', f);
         }
@@ -540,7 +545,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             snprint_real(buf, sizeof(buf), d, 0, ndec, 3, 10);
             int hasdec = (strpbrk(buf, ".eE") != NULL);
             outs(buf, f);
-            if (!hasdec) outs(".0", f);
+            if (!hasdec) outsn(".0", f, 2);
             if (type == floatsym && !princ && !weak)
                 outc('f', f);
         }
@@ -589,7 +594,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             }
             size_t i;
             if (!weak) {
-                outs("#array(", f);
+                outsn("#array(", f, 7);
                 fl_print_child(f, eltype, princ);
                 if (cnt > 0)
                     outc(' ', f);
@@ -613,7 +618,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             value_t syms = car(cdr_(type));
             assert(isvector(syms));
             if (!weak) {
-                outs("#enum(", f);
+                outsn("#enum(", f, 6);
                 fl_print_child(f, syms, princ);
                 outc(' ', f);
             }
