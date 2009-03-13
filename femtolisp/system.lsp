@@ -281,12 +281,12 @@
 
 (define (mapcar f . lsts)
   ((label mapcar-
-          (lambda (lsts)
+          (lambda (f lsts)
             (cond ((null? lsts) (f))
                   ((atom? (car lsts)) (car lsts))
-                  (#t (cons (apply f (map car lsts))
-			    (mapcar- (map cdr lsts)))))))
-   lsts))
+                  (#t (cons (apply   f (map car lsts))
+			    (mapcar- f (map cdr lsts)))))))
+   f lsts))
 
 (define (transpose M) (apply mapcar (cons list M)))
 
@@ -473,10 +473,10 @@
 (define ι iota)
 
 (define (for-each f l)
-  (when (pair? l)
-	(begin (f (car l))
-	       (for-each f (cdr l))))
-  #t)
+  (if (pair? l)
+      (begin (f (car l))
+	     (for-each f (cdr l)))
+      #t))
 
 (define (error . args) (raise (cons 'error args)))
 
@@ -593,11 +593,11 @@
 (define (string.map f s)
   (let ((b (buffer))
 	(n (length s)))
-    (let loop ((i 0))
-      (if (< i n)
-	  (begin (io.putc b (f (string.char s i)))
-		 (loop (string.inc s i)))
-	  (io.tostring! b)))))
+    (let ((i 0))
+      (while (< i n)
+	     (begin (io.putc b (f (string.char s i)))
+		    (set! i (string.inc s i)))))
+    (io.tostring! b)))
 
 (define (print-to-string v)
   (let ((b (buffer)))

@@ -15,15 +15,16 @@
   (if (<= n 0) ()
       (cons zero (nestlist f (f zero) (- n 1)))))
 
-(define (make-string k ch)
-  (cond ((<= k 0) "")
-	((=  k 1) (string ch))
-	((=  k 2) (string ch ch))
-	((odd? k) (string ch (make-string (- k 1) ch)))
-	(else (let ((half (make-string (/ k 2) ch)))
-		(string half half)))))
+(define (string.rep s k)
+  (cond ((< k 4)
+	 (cond ((<= k 0) "")
+	       ((=  k 1) (string s))
+	       ((=  k 2) (string s s))
+	       (else     (string s s s))))
+	((odd? k) (string s (string.rep s (- k 1))))
+	(else     (string.rep (string s s) (/ k 2)))))
 
-(define (pad0 s n) (string (make-string (- n (length s)) "0") s))
+(define (pad0 s n) (string (string.rep "0" (- n (length s))) s))
 
 (define (bin-draw s)
   (string.map (lambda (c) (case c

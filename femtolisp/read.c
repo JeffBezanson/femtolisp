@@ -2,8 +2,7 @@ enum {
     TOK_NONE, TOK_OPEN, TOK_CLOSE, TOK_DOT, TOK_QUOTE, TOK_SYM, TOK_NUM,
     TOK_BQ, TOK_COMMA, TOK_COMMAAT, TOK_COMMADOT,
     TOK_SHARPDOT, TOK_LABEL, TOK_BACKREF, TOK_SHARPQUOTE, TOK_SHARPOPEN,
-    TOK_OPENB, TOK_CLOSEB, TOK_SHARPSYM, TOK_GENSYM, TOK_DOUBLEQUOTE,
-    TOK_SHARPSEMI
+    TOK_OPENB, TOK_CLOSEB, TOK_SHARPSYM, TOK_GENSYM, TOK_DOUBLEQUOTE
 };
 
 #define F value2c(ios_t*,readstate->source)
@@ -160,6 +159,8 @@ static int read_token(char c, int digits)
     return issym;
 }
 
+static value_t do_read_sexpr(value_t label);
+
 static u_int32_t peek()
 {
     char c, *end;
@@ -267,7 +268,9 @@ static u_int32_t peek()
             return peek();
         }
         else if (c == ';') {
-            toktype = TOK_SHARPSEMI;
+            // datum comment
+            (void)do_read_sexpr(UNBOUND); // skip
+            return peek();
         }
         else if (c == ':') {
             // gensym
@@ -330,8 +333,6 @@ static u_int32_t peek()
     }
     return toktype;
 }
-
-static value_t do_read_sexpr(value_t label);
 
 static value_t read_vector(value_t label, u_int32_t closer)
 {
@@ -520,10 +521,6 @@ static value_t do_read_sexpr(value_t label)
         return POP();
     case TOK_SHARPQUOTE:
         // femtoLisp doesn't need symbol-function, so #' does nothing
-        return do_read_sexpr(label);
-    case TOK_SHARPSEMI:
-        // datum comment
-        (void)do_read_sexpr(UNBOUND); // skip one
         return do_read_sexpr(label);
     case TOK_OPEN:
         PUSH(NIL);
