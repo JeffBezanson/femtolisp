@@ -67,6 +67,22 @@
 		  t)
 	      new-s))))))
 
+; convert to proper list, i.e. remove "dots", and append
+(define (append.2 l tail)
+  (cond ((null? l)  tail)
+        ((atom? l)  (cons l tail))
+        (#t         (cons (car l) (append.2 (cdr l) tail)))))
+
+; transform code by calling (f expr env) on each subexpr, where
+; env is a list of lexical variables in effect at that point.
+(define (lexical-walk f t)
+  (map&fold t () f
+	    (lambda (tree state)
+	      (if (and (eq? (car t) 'lambda)
+		       (pair? (cdr t)))
+		  (append.2 (cadr t) state)
+		  state))))
+
 ; collapse forms like (&& (&& (&& (&& a b) c) d) e) to (&& a b c d e)
 (define (flatten-left-op op e)
   (maptree-post (lambda (node)

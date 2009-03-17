@@ -98,3 +98,11 @@
 		      body)))
         (map (lambda (x) #f) binds)))
 
+  (define (evalhead e env)
+    (if (and (symbol? e)
+	     (or (constant? e)
+		 (and (not (memq e env))
+		      (bound? e)
+		      (builtin? (eval e)))))
+	(eval e)
+	e))

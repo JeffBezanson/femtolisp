@@ -101,36 +101,35 @@
 	(if f (apply f (cdr e))
 	    e))))
 
-; convert to proper list, i.e. remove "dots", and append
-(define (append.2 l tail)
-  (cond ((null? l)  tail)
-        ((atom? l)  (cons l tail))
-        (#t         (cons (car l) (append.2 (cdr l) tail)))))
-
 (define (cadr x) (car (cdr x)))
+(define (cddr x) (cdr (cdr x)))
+(define (caddr x) (car (cdr (cdr x))))
 
-(define (macroexpand e)
-  ((label mexpand
-          (lambda (e env f)
-            (begin
-              (while (and (pair? e)
-                          (not (member (car e) env))
-                          (set! f (macrocall? e)))
-                (set! e (apply f (cdr e))))
-              (cond ((and (pair? e)
-                          (not (eq (car e) 'quote)))
-                     (let ((newenv
-                            (if (and (eq (car e) 'lambda)
-                                     (pair? (cdr e)))
-                                (append.2 (cadr e) env)
-                              env)))
-                       (map (lambda (x) (mexpand x newenv ())) e)))
-                    ;((and (symbol? e) (constant? e)) (eval e))
-                    ;((and (symbol? e)
-                    ;      (not (member e *special-forms*))
-                    ;      (not (member e env))) (cons '%top e))
-                    (#t e)))))
-   e () ()))
+(define (macroexpand e) (macroexpand-in e ()))
+
+(define (macroexpand-in e env)
+  (if (atom? e) e
+      (let ((f (assq (car e) env)))
+	(if f
+	    (macroexpand-in (apply (cadr f) (cdr e)) (caddr f))
+	    (let ((f (macrocall? e)))
+	      (if f
+		  (macroexpand-in (apply f (cdr e)) env)
+		  (cond ((eq (car e) 'quote) e)
+			((eq (car e) 'let-syntax)
+			 (let ((binds (cadr e))
+			       (body  (f-body (cddr e))))
+			   (macroexpand-in
+			    body
+			    (nconc
+			     (map (lambda (bind)
+				    (list (car bind)
+					  (macroexpand-in (cadr bind) env)
+					  env))
+				  binds)
+			     env))))
+			(else
+			 (map (lambda (x) (macroexpand-in x env)) e)))))))))
 
 (define (delete-duplicates lst)
   (if (atom? lst)
@@ -195,11 +194,9 @@
 
 (define (caar x) (car (car x)))
 (define (cdar x) (cdr (car x)))
-(define (cddr x) (cdr (cdr x)))
 (define (caaar x) (car (car (car x))))
 (define (caadr x) (car (car (cdr x))))
 (define (cadar x) (car (cdr (car x))))
-(define (caddr x) (car (cdr (cdr x))))
 (define (cadddr x) (car (cdr (cdr (cdr x)))))
 (define (cdaar x) (cdr (car (car x))))
 (define (cdadr x) (cdr (car (cdr x))))
@@ -596,7 +593,7 @@
 		       (lambda (e) (begin (io.discardbuffer *input-stream*)
 					  (raise e))))))
       (and (not (io.eof? *input-stream*))
-	   (let ((V (eval v)))
+	   (let ((V (eval (expand v))))
 	     (print V)
 	     (set! that V)
 	     #t))))
