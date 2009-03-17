@@ -26,7 +26,59 @@ size_t llength(value_t v)
     return n;
 }
 
-value_t fl_exit(value_t *args, u_int32_t nargs)
+static value_t fl_nconc(value_t *args, u_int32_t nargs)
+{
+    if (nargs == 0)
+        return NIL;
+    value_t first=NIL;
+    value_t *pcdr = &first;
+    cons_t *c;
+    int a;
+    for(a=0; a < (int)nargs-1; a++) {
+        if (iscons(args[a])) {
+            *pcdr = args[a];
+            c = (cons_t*)ptr(args[a]);
+            while (iscons(c->cdr))
+                c = (cons_t*)ptr(c->cdr);
+            pcdr = &c->cdr;
+        }
+        else if (args[a] != NIL) {
+            type_error("nconc", "cons", args[a]);
+        }
+    }
+    *pcdr = args[a];
+    return first;
+}
+
+static value_t fl_assq(value_t *args, u_int32_t nargs)
+{
+    argcount("assq", nargs, 2);
+    value_t item = args[0];
+    value_t v = args[1];
+    value_t bind;
+
+    while (iscons(v)) {
+        bind = car_(v);
+        if (iscons(bind) && car_(bind) == item)
+            return bind;
+        v = cdr_(v);
+    }
+    return FL_F;
+}
+
+static value_t fl_memq(value_t *args, u_int32_t nargs)
+{
+    argcount("memq", nargs, 2);
+    while (iscons(args[1])) {
+        cons_t *c = (cons_t*)ptr(args[1]);
+        if (c->car == args[0])
+            return args[1];
+        args[1] = c->cdr;
+    }
+    return FL_F;
+}
+
+static value_t fl_exit(value_t *args, u_int32_t nargs)
 {
     if (nargs > 0)
         exit(tofixnum(args[0], "exit"));
@@ -34,7 +86,7 @@ value_t fl_exit(value_t *args, u_int32_t nargs)
     return NIL;
 }
 
-value_t fl_intern(value_t *args, u_int32_t nargs)
+static value_t fl_intern(value_t *args, u_int32_t nargs)
 {
     argcount("intern", nargs, 1);
     if (!isstring(args[0]))
@@ -42,7 +94,7 @@ value_t fl_intern(value_t *args, u_int32_t nargs)
     return symbol(cvalue_data(args[0]));
 }
 
-value_t fl_setconstant(value_t *args, u_int32_t nargs)
+static value_t fl_setconstant(value_t *args, u_int32_t nargs)
 {
     argcount("set-constant!", nargs, 2);
     symbol_t *sym = tosymbol(args[0], "set-constant!");
@@ -55,7 +107,7 @@ value_t fl_setconstant(value_t *args, u_int32_t nargs)
 
 extern value_t LAMBDA;
 
-value_t fl_setsyntax(value_t *args, u_int32_t nargs)
+static value_t fl_setsyntax(value_t *args, u_int32_t nargs)
 {
     argcount("set-syntax!", nargs, 2);
     symbol_t *sym = tosymbol(args[0], "set-syntax!");
@@ -73,7 +125,7 @@ value_t fl_setsyntax(value_t *args, u_int32_t nargs)
     return args[1];
 }
 
-value_t fl_symbolsyntax(value_t *args, u_int32_t nargs)
+static value_t fl_symbolsyntax(value_t *args, u_int32_t nargs)
 {
     argcount("symbol-syntax", nargs, 1);
     symbol_t *sym = tosymbol(args[0], "symbol-syntax");
@@ -111,7 +163,7 @@ static void global_env_assoc_list(symbol_t *root, value_t *pv)
 
 extern symbol_t *symtab;
 
-value_t fl_syntax_env(value_t *args, u_int32_t nargs)
+static value_t fl_syntax_env(value_t *args, u_int32_t nargs)
 {
     (void)args;
     argcount("syntax-environment", nargs, 0);
@@ -130,7 +182,7 @@ value_t fl_global_env(value_t *args, u_int32_t nargs)
 
 extern value_t QUOTE;
 
-value_t fl_constantp(value_t *args, u_int32_t nargs)
+static value_t fl_constantp(value_t *args, u_int32_t nargs)
 {
     argcount("constant?", nargs, 1);
     if (issymbol(args[0]))
@@ -143,7 +195,7 @@ value_t fl_constantp(value_t *args, u_int32_t nargs)
     return FL_T;
 }
 
-value_t fl_integerp(value_t *args, u_int32_t nargs)
+static value_t fl_integerp(value_t *args, u_int32_t nargs)
 {
     argcount("integer?", nargs, 1);
     value_t v = args[0];
@@ -172,7 +224,7 @@ value_t fl_integerp(value_t *args, u_int32_t nargs)
     return FL_F;
 }
 
-value_t fl_fixnum(value_t *args, u_int32_t nargs)
+static value_t fl_fixnum(value_t *args, u_int32_t nargs)
 {
     argcount("fixnum", nargs, 1);
     if (isfixnum(args[0])) {
@@ -194,7 +246,7 @@ value_t fl_fixnum(value_t *args, u_int32_t nargs)
     lerror(ArgError, "fixnum: cannot convert argument");
 }
 
-value_t fl_truncate(value_t *args, u_int32_t nargs)
+static value_t fl_truncate(value_t *args, u_int32_t nargs)
 {
     argcount("truncate", nargs, 1);
     if (isfixnum(args[0]))
@@ -217,7 +269,7 @@ value_t fl_truncate(value_t *args, u_int32_t nargs)
     type_error("truncate", "number", args[0]);
 }
 
-value_t fl_vector_alloc(value_t *args, u_int32_t nargs)
+static value_t fl_vector_alloc(value_t *args, u_int32_t nargs)
 {
     fixnum_t i;
     value_t f, v;
@@ -239,7 +291,7 @@ value_t fl_vector_alloc(value_t *args, u_int32_t nargs)
     return v;
 }
 
-value_t fl_time_now(value_t *args, u_int32_t nargs)
+static value_t fl_time_now(value_t *args, u_int32_t nargs)
 {
     argcount("time.now", nargs, 0);
     (void)args;
@@ -258,7 +310,7 @@ static double todouble(value_t a, char *fname)
     type_error(fname, "number", a);
 }
 
-value_t fl_time_string(value_t *args, uint32_t nargs)
+static value_t fl_time_string(value_t *args, uint32_t nargs)
 {
     argcount("time.string", nargs, 1);
     double t = todouble(args[0], "time.string");
@@ -267,7 +319,7 @@ value_t fl_time_string(value_t *args, uint32_t nargs)
     return string_from_cstr(buf);
 }
 
-value_t fl_path_cwd(value_t *args, uint32_t nargs)
+static value_t fl_path_cwd(value_t *args, uint32_t nargs)
 {
     if (nargs > 1)
         argcount("path.cwd", nargs, 1);
@@ -282,7 +334,7 @@ value_t fl_path_cwd(value_t *args, uint32_t nargs)
     return FL_T;
 }
 
-value_t fl_os_getenv(value_t *args, uint32_t nargs)
+static value_t fl_os_getenv(value_t *args, uint32_t nargs)
 {
     argcount("os.getenv", nargs, 1);
     char *name = tostring(args[0], "os.getenv");
@@ -293,7 +345,7 @@ value_t fl_os_getenv(value_t *args, uint32_t nargs)
     return cvalue_static_cstring(val);
 }
 
-value_t fl_os_setenv(value_t *args, uint32_t nargs)
+static value_t fl_os_setenv(value_t *args, uint32_t nargs)
 {
     argcount("os.setenv", nargs, 2);
     char *name = tostring(args[0], "os.setenv");
@@ -310,7 +362,7 @@ value_t fl_os_setenv(value_t *args, uint32_t nargs)
     return FL_T;
 }
 
-value_t fl_rand(value_t *args, u_int32_t nargs)
+static value_t fl_rand(value_t *args, u_int32_t nargs)
 {
     (void)args; (void)nargs;
     fixnum_t r;
@@ -321,7 +373,7 @@ value_t fl_rand(value_t *args, u_int32_t nargs)
 #endif
     return fixnum(r);
 }
-value_t fl_rand32(value_t *args, u_int32_t nargs)
+static value_t fl_rand32(value_t *args, u_int32_t nargs)
 {
     (void)args; (void)nargs;
     ulong r = random();
@@ -331,18 +383,18 @@ value_t fl_rand32(value_t *args, u_int32_t nargs)
     return mk_uint32(r);
 #endif
 }
-value_t fl_rand64(value_t *args, u_int32_t nargs)
+static value_t fl_rand64(value_t *args, u_int32_t nargs)
 {
     (void)args; (void)nargs;
     uint64_t r = (((uint64_t)random())<<32) | random();
     return mk_uint64(r);
 }
-value_t fl_randd(value_t *args, u_int32_t nargs)
+static value_t fl_randd(value_t *args, u_int32_t nargs)
 {
     (void)args; (void)nargs;
     return mk_double(rand_double());
 }
-value_t fl_randf(value_t *args, u_int32_t nargs)
+static value_t fl_randf(value_t *args, u_int32_t nargs)
 {
     (void)args; (void)nargs;
     return mk_float(rand_float());
@@ -365,6 +417,9 @@ static builtinspec_t builtin_info[] = {
     { "fixnum", fl_fixnum },
     { "truncate", fl_truncate },
     { "integer?", fl_integerp },
+    { "nconc", fl_nconc },
+    { "assq", fl_assq },
+    { "memq", fl_memq },
 
     { "vector.alloc", fl_vector_alloc },
 

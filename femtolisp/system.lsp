@@ -60,14 +60,6 @@
 	(map (lambda (c) (if (pair? c) (cadr c) #f)) binds))))
    #f))
 
-(define (nconc . lsts)
-  (cond ((null? lsts) ())
-        ((null? (cdr lsts)) (car lsts))
-        ((null? (car lsts)) (apply nconc (cdr lsts)))
-        (#t (prog1 (car lsts)
-		   (set-cdr! (last (car lsts))
-			     (apply nconc (cdr lsts)))))))
-
 (define (append . lsts)
   (cond ((null? lsts) ())
         ((null? (cdr lsts)) (car lsts))
@@ -81,10 +73,6 @@
   (cond ((atom? lst) #f)
         ((equal?     (car lst) item) lst)
         (#t          (member item (cdr lst)))))
-(define (memq item lst)
-  (cond ((atom? lst) #f)
-        ((eq?        (car lst) item) lst)
-        (#t          (memq item (cdr lst)))))
 (define (memv item lst)
   (cond ((atom? lst) #f)
         ((eqv?       (car lst) item) lst)
@@ -120,9 +108,6 @@
         (#t         (cons (car l) (append.2 (cdr l) tail)))))
 
 (define (cadr x) (car (cdr x)))
-
-;(set! *special-forms* '(quote cond if and or while lambda trycatch
-;                        set! begin))
 
 (define (macroexpand e)
   ((label mexpand
@@ -574,27 +559,27 @@
 
 (define (string.trim s at-start at-end)
   (define (trim-start s chars i L)
-    (if (and (< i L)
-	     (string.find chars (string.char s i)))
-	(trim-start s chars (string.inc s i) L)
+    (if (and (#.< i L)
+	     (#.string.find chars (#.string.char s i)))
+	(trim-start s chars (#.string.inc s i) L)
 	i))
   (define (trim-end s chars i)
     (if (and (> i 0)
-	     (string.find chars (string.char s (string.dec s i))))
-	(trim-end s chars (string.dec s i))
+	     (#.string.find chars (#.string.char s (#.string.dec s i))))
+	(trim-end s chars (#.string.dec s i))
 	i))
-  (let ((L (length s)))
+  (let ((L (#.length s)))
     (string.sub s
 		(trim-start s at-start 0 L)
 		(trim-end   s at-end   L))))
 
 (define (string.map f s)
   (let ((b (buffer))
-	(n (length s)))
+	(n (#.length s)))
     (let ((i 0))
-      (while (< i n)
-	     (begin (io.putc b (f (string.char s i)))
-		    (set! i (string.inc s i)))))
+      (while (#.< i n)
+	     (begin (#.io.putc b (f (#.string.char s i)))
+		    (set! i (#.string.inc s i)))))
     (io.tostring! b)))
 
 (define (print-to-string v)

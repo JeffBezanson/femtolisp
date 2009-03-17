@@ -137,6 +137,8 @@ for internal use:
   instead, unless the value is part of an aggregate (e.g. struct).
   . this avoids allocating a new type for every size.
   . and/or add function array.alloc
+x preallocate all byte,int8,uint8 values, and some wchars (up to 0x31B7?)
+  . this made no difference in a string.map microbenchmark
 
 bugs:
 * with the fully recursive (simpler) relocate(), the size of cons chains
@@ -956,8 +958,6 @@ consolidated todo list as of 8/30:
 * make raising a memory error non-consing
 - eliminate string copy in lerror() when possible
 * fix printing lists of short strings
-
-- preallocate all byte,int8,uint8 values, and some wchars
 
 - remaining c types
 - remaining cvalues functions

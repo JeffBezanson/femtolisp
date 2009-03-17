@@ -264,7 +264,7 @@ value_t fl_string_inc(value_t *args, u_int32_t nargs)
     while (cnt--) {
         if (i >= len)
             bounds_error("string.inc", args[0], args[1]);
-        u8_inc(s, &i);
+        (void)(isutf(s[++i]) || isutf(s[++i]) || isutf(s[++i]) || ++i);
     }
     return size_wrap(i);
 }
@@ -285,7 +285,7 @@ value_t fl_string_dec(value_t *args, u_int32_t nargs)
     while (cnt--) {
         if (i == 0)
             bounds_error("string.dec", args[0], args[1]);
-        u8_dec(s, &i);
+        (void)(isutf(s[--i]) || isutf(s[--i]) || isutf(s[--i]) || --i);
     }
     return size_wrap(i);
 }

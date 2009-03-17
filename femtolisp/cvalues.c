@@ -275,7 +275,7 @@ num_init(uint64, uint64, T_UINT64)
 num_init(float, double, T_FLOAT)
 num_init(double, double, T_DOUBLE)
 
-#define num_ctor(typenam, ctype, tag)                                   \
+#define num_ctor_init(typenam, ctype, tag)                              \
 value_t cvalue_##typenam(value_t *args, u_int32_t nargs)                \
 {                                                                       \
     if (nargs==0) { PUSH(fixnum(0)); args = &Stack[SP-1]; }             \
@@ -284,13 +284,19 @@ value_t cvalue_##typenam(value_t *args, u_int32_t nargs)                \
                               args[0], cp_data((cprim_t*)ptr(cp))))     \
         type_error(#typenam, "number", args[0]);                        \
     return cp;                                                          \
-}                                                                       \
+}
+
+#define num_ctor_ctor(typenam, ctype, tag)                              \
 value_t mk_##typenam(ctype##_t n)                                       \
 {                                                                       \
     value_t cp = cprim(typenam##type, sizeof(ctype##_t));               \
     *(ctype##_t*)cp_data((cprim_t*)ptr(cp)) = n;                        \
     return cp;                                                          \
 }
+
+#define num_ctor(typenam, ctype, tag) \
+    num_ctor_init(typenam, ctype, tag) \
+    num_ctor_ctor(typenam, ctype, tag)
 
 num_ctor(int8, int8, T_INT8)
 num_ctor(uint8, uint8, T_UINT8)
@@ -823,8 +829,20 @@ static value_t cvalue_array_aref(value_t *args)
 {
     char *data; ulong_t index;
     fltype_t *eltype = cv_class((cvalue_t*)ptr(args[0]))->eltype;
-    value_t el = cvalue(eltype, eltype->size);
+    value_t el;
+    numerictype_t nt = eltype->numtype;
+    if (nt >= T_INT32)
+        el = cvalue(eltype, eltype->size);
     check_addr_args("aref", args[0], args[1], &data, &index);
+    if (nt < T_INT32) {
+        if (nt == T_INT8)
+            return fixnum((int8_t)data[index]);
+        else if (nt == T_UINT8)
+            return fixnum((uint8_t)data[index]);
+        else if (nt == T_INT16)
+            return fixnum(((int16_t*)data)[index]);
+        return fixnum(((uint16_t*)data)[index]);
+    }
     char *dest = cptr(el);
     size_t sz = eltype->size;
     if (sz == 1)

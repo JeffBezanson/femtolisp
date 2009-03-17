@@ -71,7 +71,7 @@ static char *builtin_names[] =
       "compare",
 
       // sequences
-      "vector", "aref", "aset!", "length", "assq", "for",
+      "vector", "aref", "aset!", "length", "for",
       "", "", "" };
 
 #define N_STACK 98304
@@ -607,20 +607,6 @@ int isnumber(value_t v)
 #include "read.c"
 
 // eval -----------------------------------------------------------------------
-
-// return a cons element of v whose car is item
-static value_t assq(value_t item, value_t v)
-{
-    value_t bind;
-
-    while (iscons(v)) {
-        bind = car_(v);
-        if (iscons(bind) && car_(bind) == item)
-            return bind;
-        v = cdr_(v);
-    }
-    return FL_F;
-}
 
 /*
   take the final cdr as an argument so the list builtin can give
@@ -1298,10 +1284,6 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             if (__unlikely(nargs < 1))
                 lerror(ArgError, "prog1: too few arguments");
             v = Stack[saveSP+1];
-            break;
-        case F_ASSQ:
-            argcount("assq", nargs, 2);
-            v = assq(Stack[SP-2], Stack[SP-1]);
             break;
         case F_FOR:
             argcount("for", nargs, 3);
