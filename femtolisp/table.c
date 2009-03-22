@@ -134,7 +134,7 @@ value_t fl_table_get(value_t *args, uint32_t nargs)
     return v;
 }
 
-// (has table key)
+// (has? table key)
 value_t fl_table_has(value_t *args, uint32_t nargs)
 {
     argcount("has", nargs, 2);
@@ -168,7 +168,10 @@ value_t fl_table_foldl(value_t *args, uint32_t nargs)
             car_(cdr_(cdr_(c))) = args[1];
             args[1] = apply(args[0], c);
             // reload pointer
-            table = ((htable_t*)cv_data((cvalue_t*)ptr(args[2])))->table;
+            h = (htable_t*)cv_data((cvalue_t*)ptr(args[2]));
+            if (h->size != n)
+                lerror(EnumerationError, "table.foldl: table modified");
+            table = h->table;
         }
     }
     (void)POP();
@@ -180,7 +183,7 @@ static builtinspec_t tablefunc_info[] = {
     { "table?", fl_tablep },
     { "put!", fl_table_put },
     { "get", fl_table_get },
-    { "has", fl_table_has },
+    { "has?", fl_table_has },
     { "del!", fl_table_del },
     { "table.foldl", fl_table_foldl },
     { NULL, NULL }

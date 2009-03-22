@@ -156,6 +156,17 @@ value_t fl_ioeof(value_t *args, u_int32_t nargs)
     return (ios_eof(s) ? FL_T : FL_F);
 }
 
+value_t fl_ioseek(value_t *args, u_int32_t nargs)
+{
+    argcount("io.seek", nargs, 2);
+    ios_t *s = toiostream(args[0], "io.seek");
+    size_t pos = toulong(args[1], "io.seek");
+    off_t res = ios_seek(s, (off_t)pos);
+    if (res == -1)
+        return FL_F;
+    return FL_T;
+}
+
 static void do_ioprint(value_t *args, u_int32_t nargs, int princ, char *fname)
 {
     if (nargs < 2)
@@ -227,6 +238,18 @@ value_t fl_dump(value_t *args, u_int32_t nargs)
     return FL_T;
 }
 
+static char get_delim_arg(value_t arg, char *fname)
+{
+    size_t uldelim = toulong(arg, fname);
+    if (uldelim > 0x7f) {
+        // wchars > 0x7f, or anything else > 0xff, are out of range
+        if ((iscprim(arg) && cp_class((cprim_t*)ptr(arg))==wchartype) ||
+            uldelim > 0xff)
+            lerror(ArgError, "%s: delimiter out of range", fname);
+    }
+    return (char)uldelim;
+}
+
 value_t fl_ioreaduntil(value_t *args, u_int32_t nargs)
 {
     argcount("io.readuntil", nargs, 2);
@@ -236,7 +259,7 @@ value_t fl_ioreaduntil(value_t *args, u_int32_t nargs)
     ios_t dest;
     ios_mem(&dest, 0);
     ios_setbuf(&dest, data, 80, 0);
-    char delim = (char)toulong(args[1], "io.readuntil");
+    char delim = get_delim_arg(args[1], "io.readuntil");
     ios_t *src = toiostream(args[0], "io.readuntil");
     size_t n = ios_copyuntil(&dest, src, delim);
     cv->len = n;
@@ -249,6 +272,15 @@ value_t fl_ioreaduntil(value_t *args, u_int32_t nargs)
     if (n == 0 && ios_eof(src))
         return FL_F;
     return str;
+}
+
+value_t fl_iocopyuntil(value_t *args, u_int32_t nargs)
+{
+    argcount("io.copyuntil", nargs, 3);
+    ios_t *dest = toiostream(args[0], "io.copyuntil");
+    ios_t *src = toiostream(args[1], "io.copyuntil");
+    char delim = get_delim_arg(args[2], "io.copyuntil");
+    return size_wrap(ios_copyuntil(dest, src, delim));
 }
 
 value_t stream_to_string(value_t *ps)
@@ -290,12 +322,14 @@ static builtinspec_t iostreamfunc_info[] = {
     { "io.flush", fl_ioflush },
     { "io.close", fl_ioclose },
     { "io.eof?" , fl_ioeof },
+    { "io.seek" , fl_ioseek },
     { "io.getc" , fl_iogetc },
     { "io.putc" , fl_ioputc },
     { "io.discardbuffer", fl_iopurge },
     { "io.read", fl_ioread },
     { "io.write", fl_iowrite },
     { "io.readuntil", fl_ioreaduntil },
+    { "io.copyuntil", fl_iocopyuntil },
     { "io.tostring!", fl_iotostring },
     { NULL, NULL }
 };

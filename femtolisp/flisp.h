@@ -153,7 +153,7 @@ void lerror(value_t e, char *format, ...) __attribute__ ((__noreturn__));
 void raise(value_t e) __attribute__ ((__noreturn__));
 void type_error(char *fname, char *expected, value_t got) __attribute__ ((__noreturn__));
 void bounds_error(char *fname, value_t arr, value_t ind) __attribute__ ((__noreturn__));
-extern value_t ArgError, IOError, KeyError, MemoryError;
+extern value_t ArgError, IOError, KeyError, MemoryError, EnumerationError;
 static inline void argcount(char *fname, uint32_t nargs, uint32_t c)
 {
     if (__unlikely(nargs != c))
