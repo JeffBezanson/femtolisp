@@ -17,7 +17,7 @@ static int symchar(char c)
     return (!isspace(c) && !strchr(special, c));
 }
 
-static int isnumtok_base(char *tok, value_t *pval, int base)
+int isnumtok_base(char *tok, value_t *pval, int base)
 {
     char *end;
     int64_t i64;

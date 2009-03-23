@@ -290,6 +290,14 @@ value_t fl_string_dec(value_t *args, u_int32_t nargs)
     return size_wrap(i);
 }
 
+static ulong get_radix_arg(value_t arg, char *fname)
+{
+    ulong radix = toulong(arg, fname);
+    if (radix < 2 || radix > 36)
+        lerror(ArgError, "%s: invalid radix", fname);
+    return radix;
+}
+
 value_t fl_numbertostring(value_t *args, u_int32_t nargs)
 {
     if (nargs < 1 || nargs > 2)
@@ -306,16 +314,27 @@ value_t fl_numbertostring(value_t *args, u_int32_t nargs)
         neg = 1;
     }
     ulong radix = 10;
-    if (nargs == 2) {
-        radix = toulong(args[1], "number->string");
-        if (radix < 2 || radix > 36)
-            lerror(ArgError, "number->string: invalid radix");
-    }
+    if (nargs == 2)
+        radix = get_radix_arg(args[1], "number->string");
     char buf[128];
     char *str = uint2str(buf, sizeof(buf), num, radix);
     if (neg && str > &buf[0])
         *(--str) = '-';
     return string_from_cstr(str);
+}
+
+value_t fl_stringtonumber(value_t *args, uint32_t nargs)
+{
+    if (nargs < 1 || nargs > 2)
+        argcount("string->number", nargs, 2);
+    char *str = tostring(args[0], "string->number");
+    value_t n;
+    ulong radix = 0;
+    if (nargs == 2)
+        radix = get_radix_arg(args[1], "string->number");
+    if (!isnumtok_base(str, &n, (int)radix))
+        return FL_F;
+    return n;
 }
 
 static builtinspec_t stringfunc_info[] = {
@@ -333,6 +352,7 @@ static builtinspec_t stringfunc_info[] = {
     { "string.decode", fl_string_decode },
 
     { "number->string", fl_numbertostring },
+    { "string->number", fl_stringtonumber },
 
     { NULL, NULL }
 };

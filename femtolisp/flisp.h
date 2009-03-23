@@ -141,6 +141,7 @@ value_t compare(value_t a, value_t b);  // -1, 0, or 1
 value_t equal(value_t a, value_t b);    // T or nil
 int equal_lispvalue(value_t a, value_t b);
 uptrint_t hash_lispvalue(value_t a);
+int isnumtok_base(char *tok, value_t *pval, int base);
 
 /* safe casts */
 cons_t *tocons(value_t v, char *fname);
