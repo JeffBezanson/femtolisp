@@ -119,6 +119,11 @@ value_t fl_table_put(value_t *args, uint32_t nargs)
     return args[0];
 }
 
+static void key_error(char *fname, value_t key)
+{
+    lerror(list2(KeyError, key), "%s: key not found", fname);
+}
+
 // (get table key [default])
 value_t fl_table_get(value_t *args, uint32_t nargs)
 {
@@ -129,7 +134,7 @@ value_t fl_table_get(value_t *args, uint32_t nargs)
     if (v == (value_t)HT_NOTFOUND) {
         if (nargs == 3)
             return args[2];
-        lerror(KeyError, "get: key not found");
+        key_error("get", args[1]);
     }
     return v;
 }
@@ -148,7 +153,7 @@ value_t fl_table_del(value_t *args, uint32_t nargs)
     argcount("del!", nargs, 2);
     htable_t *h = totable(args[0], "del!");
     if (!equalhash_remove(h, (void*)args[1]))
-        lerror(KeyError, "del!: key not found");
+        key_error("del!", args[1]);
     return args[0];
 }
 

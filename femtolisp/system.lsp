@@ -3,11 +3,6 @@
 ; by Jeff Bezanson (C) 2009
 ; Distributed under the BSD License
 
-(if (not (bound? 'eq))
-    (begin
-      (set-constant! 'eq       eq?)
-      (set-constant! 'equal    equal?)))
-
 ; convert a sequence of body statements to a single expression.
 ; this allows define, defun, defmacro, let, etc. to contain multiple
 ; body expressions as in Common Lisp.

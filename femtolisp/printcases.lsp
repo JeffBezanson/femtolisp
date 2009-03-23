@@ -1,6 +1,11 @@
 macroexpand
 append
 bq-process
+
+(define (syntax-environment)
+  (map (lambda (s) (cons s (symbol-syntax s)))
+       (filter symbol-syntax (environment))))
+
 (syntax-environment)
 
 (symbol-syntax 'try)

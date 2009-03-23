@@ -94,17 +94,6 @@ static value_t fl_intern(value_t *args, u_int32_t nargs)
     return symbol(cvalue_data(args[0]));
 }
 
-static value_t fl_setconstant(value_t *args, u_int32_t nargs)
-{
-    argcount("set-constant!", nargs, 2);
-    symbol_t *sym = tosymbol(args[0], "set-constant!");
-    if (isconstant(args[0]) || sym->binding != UNBOUND)
-        lerror(ArgError, "set-constant!: cannot redefine %s",
-               symbol_name(args[0]));
-    setc(args[0], args[1]);
-    return args[1];
-}
-
 extern value_t LAMBDA;
 
 static value_t fl_setsyntax(value_t *args, u_int32_t nargs)
@@ -137,46 +126,28 @@ static value_t fl_symbolsyntax(value_t *args, u_int32_t nargs)
     return sym->syntax;
 }
 
-static void syntax_env_assoc_list(symbol_t *root, value_t *pv)
+static void global_env_list(symbol_t *root, value_t *pv)
 {
     while (root != NULL) {
-        if (root->syntax && root->syntax != TAG_CONST &&
-            !isspecial(root->syntax)) {
-            PUSH(fl_cons(tagptr(root,TAG_SYM), root->syntax));
-            *pv = fl_cons(POP(), *pv);
+        if (root->name[0] != ':' &&
+            (root->binding != UNBOUND ||
+             (root->syntax && root->syntax != TAG_CONST &&
+              !isspecial(root->syntax)))) {
+            *pv = fl_cons(tagptr(root,TAG_SYM), *pv);
         }
-        syntax_env_assoc_list(root->left, pv);
-        root = root->right;
-    }
-}
-static void global_env_assoc_list(symbol_t *root, value_t *pv)
-{
-    while (root != NULL) {
-        if (root->binding != UNBOUND) {
-            PUSH(fl_cons(tagptr(root,TAG_SYM), root->binding));
-            *pv = fl_cons(POP(), *pv);
-        }
-        global_env_assoc_list(root->left, pv);
+        global_env_list(root->left, pv);
         root = root->right;
     }
 }
 
 extern symbol_t *symtab;
 
-static value_t fl_syntax_env(value_t *args, u_int32_t nargs)
-{
-    (void)args;
-    argcount("syntax-environment", nargs, 0);
-    PUSH(NIL);
-    syntax_env_assoc_list(symtab, &Stack[SP-1]);
-    return POP();
-}
 value_t fl_global_env(value_t *args, u_int32_t nargs)
 {
     (void)args;
     argcount("environment", nargs, 0);
     PUSH(NIL);
-    global_env_assoc_list(symtab, &Stack[SP-1]);
+    global_env_list(symtab, &Stack[SP-1]);
     return POP();
 }
 
@@ -234,16 +205,7 @@ static value_t fl_fixnum(value_t *args, u_int32_t nargs)
         cprim_t *cp = (cprim_t*)ptr(args[0]);
         return fixnum(conv_to_long(cp_data(cp), cp_numtype(cp)));
     }
-    else if (isstring(args[0])) {
-        cvalue_t *cv = (cvalue_t*)ptr(args[0]);
-        char *pend;
-        errno = 0;
-        long i = strtol(cv_data(cv), &pend, 0);
-        if (*pend != '\0' || errno!=0)
-            lerror(ArgError, "fixnum: invalid string");
-        return fixnum(i);
-    }
-    lerror(ArgError, "fixnum: cannot convert argument");
+    type_error("fixnum", "number", args[0]);
 }
 
 static value_t fl_truncate(value_t *args, u_int32_t nargs)
@@ -405,10 +367,8 @@ extern void table_init();
 extern void iostream_init();
 
 static builtinspec_t builtin_info[] = {
-    { "set-constant!", fl_setconstant },
     { "set-syntax!", fl_setsyntax },
     { "symbol-syntax", fl_symbolsyntax },
-    { "syntax-environment", fl_syntax_env },
     { "environment", fl_global_env },
     { "constant?", fl_constantp },
 

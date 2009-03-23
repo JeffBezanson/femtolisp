@@ -1522,6 +1522,8 @@ static void lisp_init(void)
     for (; i < F_TRUE; i++) {
         setc(symbol(builtin_names[i]), builtin(i));
     }
+    setc(symbol("eq"), builtin(F_EQ));
+    setc(symbol("equal"), builtin(F_EQUAL));
 
 #ifdef LINUX
     set(symbol("*os-name*"), symbol("linux"));
