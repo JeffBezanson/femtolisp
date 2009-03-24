@@ -8,6 +8,7 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <ctype.h>
+#include <wctype.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <errno.h>
@@ -193,6 +194,23 @@ value_t fl_string_char(value_t *args, u_int32_t nargs)
     return mk_wchar(u8_nextchar(s, &i));
 }
 
+value_t fl_char_upcase(value_t *args, u_int32_t nargs)
+{
+    argcount("char.upcase", nargs, 1);
+    cprim_t *cp = (cprim_t*)ptr(args[0]);
+    if (!iscprim(args[0]) || cp_class(cp) != wchartype)
+      type_error("char.upcase", "wchar", args[0]);
+    return mk_wchar(towupper(*(int32_t*)cp_data(cp)));
+}
+value_t fl_char_downcase(value_t *args, u_int32_t nargs)
+{
+    argcount("char.downcase", nargs, 1);
+    cprim_t *cp = (cprim_t*)ptr(args[0]);
+    if (!iscprim(args[0]) || cp_class(cp) != wchartype)
+      type_error("char.downcase", "wchar", args[0]);
+    return mk_wchar(towlower(*(int32_t*)cp_data(cp)));
+}
+
 static value_t mem_find_byte(char *s, char c, size_t start, size_t len)
 {
     char *p = memchr(s+start, c, len-start);
@@ -350,6 +368,9 @@ static builtinspec_t stringfunc_info[] = {
     { "string.reverse", fl_string_reverse },
     { "string.encode", fl_string_encode },
     { "string.decode", fl_string_decode },
+
+    { "char.upcase", fl_char_upcase },
+    { "char.downcase", fl_char_downcase },
 
     { "number->string", fl_numbertostring },
     { "string->number", fl_stringtonumber },

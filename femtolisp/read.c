@@ -206,9 +206,10 @@ static u_int32_t peek()
             uint32_t cval;
             if (ios_getutf8(F, &cval) == IOS_EOF)
                 lerror(ParseError, "read: end of input in character constant");
-            if (cval == (uint32_t)'u' || cval == (uint32_t)'U') {
+            if (cval == (uint32_t)'u' || cval == (uint32_t)'U' ||
+                cval == (uint32_t)'x') {
                 read_token('u', 0);
-                if (buf[1] != '\0') {  // not a solitary 'u' or 'U'
+                if (buf[1] != '\0') {  // not a solitary 'u','U','x'
                     if (!read_numtok(&buf[1], &tokval, 16))
                         lerror(ParseError,
                                "read: invalid hex character constant");

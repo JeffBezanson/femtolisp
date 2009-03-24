@@ -475,11 +475,8 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             if (!princ) outsn("#\\", f, 2);
             outs(seq, f);
         }
-        else if (weak) {
-            HPOS+=ios_printf(f, "%d", (int)wc);
-        }
         else {
-            HPOS+=ios_printf(f, "#%s(%d)", symbol_name(type), (int)wc);
+            HPOS+=ios_printf(f, "#\\x%04x", (int)wc);
         }
     }
     else if (type == int64sym
