@@ -121,7 +121,7 @@ value_t fl_table_put(value_t *args, uint32_t nargs)
 
 static void key_error(char *fname, value_t key)
 {
-    lerror(list2(KeyError, key), "%s: key not found", fname);
+    lerrorf(list2(KeyError, key), "%s: key not found", fname);
 }
 
 // (get table key [default])

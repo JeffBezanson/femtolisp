@@ -312,7 +312,7 @@ static ulong get_radix_arg(value_t arg, char *fname)
 {
     ulong radix = toulong(arg, fname);
     if (radix < 2 || radix > 36)
-        lerror(ArgError, "%s: invalid radix", fname);
+        lerrorf(ArgError, "%s: invalid radix", fname);
     return radix;
 }
 

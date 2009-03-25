@@ -305,7 +305,7 @@ static u_int32_t peek()
                 (isdigit_base(buf[1],base) ||
                  buf[1]=='-')) {
                 if (!read_numtok(&buf[1], &tokval, base))
-                    lerror(ParseError, "read: invalid base %d constant", base);
+                    lerrorf(ParseError, "read: invalid base %d constant", base);
                 return (toktype=TOK_NUM);
             }
 
@@ -546,8 +546,8 @@ static value_t do_read_sexpr(value_t label)
         c = nextchar();
         if (c != '(') {
             take();
-            lerror(ParseError, "read: expected argument list for %s",
-                   symbol_name(tokval));
+            lerrorf(ParseError, "read: expected argument list for %s",
+                    symbol_name(tokval));
         }
         PUSH(NIL);
         read_list(&Stack[SP-1], UNBOUND);
@@ -568,7 +568,7 @@ static value_t do_read_sexpr(value_t label)
     case TOK_LABEL:
         // create backreference label
         if (ptrhash_has(&readstate->backrefs, (void*)tokval))
-            lerror(ParseError, "read: label %ld redefined", numval(tokval));
+            lerrorf(ParseError, "read: label %ld redefined", numval(tokval));
         oldtokval = tokval;
         v = do_read_sexpr(tokval);
         ptrhash_put(&readstate->backrefs, (void*)oldtokval, (void*)v);
@@ -577,7 +577,7 @@ static value_t do_read_sexpr(value_t label)
         // look up backreference
         v = (value_t)ptrhash_get(&readstate->backrefs, (void*)tokval);
         if (v == (value_t)HT_NOTFOUND)
-            lerror(ParseError, "read: undefined label %ld", numval(tokval));
+            lerrorf(ParseError, "read: undefined label %ld", numval(tokval));
         return v;
     case TOK_GENSYM:
         pv = (value_t*)ptrhash_bp(&readstate->gensyms, (void*)tokval);

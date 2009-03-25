@@ -102,16 +102,16 @@ extern uint32_t SP;
 enum {
     // special forms
     F_QUOTE=0, F_COND, F_IF, F_AND, F_OR, F_WHILE, F_LAMBDA,
-    F_TRYCATCH, F_SPECIAL_APPLY, F_SETQ, F_BEGIN,
+    F_TRYCATCH, F_SPECIAL_APPLY, F_SETQ, F_PROG1, F_BEGIN,
 
     // functions
     F_EQ, F_EQV, F_EQUAL, F_ATOM, F_NOT, F_NULL, F_BOOLEANP, F_SYMBOLP,
     F_NUMBERP, F_BOUNDP, F_CONSP, F_BUILTINP, F_VECTORP, F_FIXNUMP,
 
     F_CONS, F_LIST, F_CAR, F_CDR, F_SETCAR, F_SETCDR,
-    F_EVAL, F_EVALSTAR, F_APPLY, F_PROG1, F_RAISE,
-    F_ADD, F_SUB, F_MUL, F_DIV, F_LT, F_BNOT, F_BAND, F_BOR, F_BXOR, F_ASH,
-    F_COMPARE,
+    F_EVAL, F_EVALSTAR, F_APPLY,
+    F_ADD, F_SUB, F_MUL, F_DIV, F_LT, F_BNOT, F_COMPARE,
+
     F_VECTOR, F_AREF, F_ASET, F_LENGTH, F_FOR,
     F_TRUE, F_FALSE, F_NIL,
     N_BUILTINS,
@@ -150,7 +150,8 @@ fixnum_t tofixnum(value_t v, char *fname);
 char *tostring(value_t v, char *fname);
 
 /* error handling */
-void lerror(value_t e, char *format, ...) __attribute__ ((__noreturn__));
+void lerrorf(value_t e, char *format, ...) __attribute__ ((__noreturn__));
+void lerror(value_t e, const char *msg) __attribute__ ((__noreturn__));
 void raise(value_t e) __attribute__ ((__noreturn__));
 void type_error(char *fname, char *expected, value_t got) __attribute__ ((__noreturn__));
 void bounds_error(char *fname, value_t arr, value_t ind) __attribute__ ((__noreturn__));
@@ -158,7 +159,7 @@ extern value_t ArgError, IOError, KeyError, MemoryError, EnumerationError;
 static inline void argcount(char *fname, uint32_t nargs, uint32_t c)
 {
     if (__unlikely(nargs != c))
-        lerror(ArgError,"%s: too %s arguments", fname, nargs<c ? "few":"many");
+        lerrorf(ArgError,"%s: too %s arguments", fname, nargs<c ? "few":"many");
 }
 
 typedef struct {
@@ -267,7 +268,7 @@ size_t cvalue_arraylen(value_t v);
 value_t size_wrap(size_t sz);
 size_t toulong(value_t n, char *fname);
 value_t cvalue_string(size_t sz);
-value_t cvalue_static_cstring(char *str);
+value_t cvalue_static_cstring(const char *str);
 value_t string_from_cstr(char *str);
 value_t string_from_cstrn(char *str, size_t n);
 int isstring(value_t v);

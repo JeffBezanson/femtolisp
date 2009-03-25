@@ -74,7 +74,7 @@ value_t fl_file(value_t *args, uint32_t nargs)
     char *fname = tostring(args[0], "file");
     ios_t *s = value2c(ios_t*, f);
     if (ios_file(s, fname, r, w, c, t) == NULL)
-        lerror(IOError, "file: could not open \"%s\"", fname);
+        lerrorf(IOError, "file: could not open \"%s\"", fname);
     if (a) ios_seek_end(s);
     return f;
 }
@@ -245,7 +245,7 @@ static char get_delim_arg(value_t arg, char *fname)
         // wchars > 0x7f, or anything else > 0xff, are out of range
         if ((iscprim(arg) && cp_class((cprim_t*)ptr(arg))==wchartype) ||
             uldelim > 0xff)
-            lerror(ArgError, "%s: delimiter out of range", fname);
+            lerrorf(ArgError, "%s: delimiter out of range", fname);
     }
     return (char)uldelim;
 }

@@ -962,6 +962,7 @@ consolidated todo list as of 8/30:
 - remaining c types
 - remaining cvalues functions
 - finish ios
+
 - special efficient reader for #array
 - reimplement vectors as (array lispvalue)
 - implement fast subvectors and subarrays

@@ -1,4 +1,9 @@
 ; -*- scheme -*-
+(define (cond-body e)
+  (cond ((atom? e)       #f)
+	((null? (cdr e)) (car e))
+	(#t              (cons 'begin e))))
+
 (define (cond->if form)
   (cond-clauses->if (cdr form)))
 (define (cond-clauses->if lst)
@@ -6,7 +11,7 @@
       lst
     (let ((clause (car lst)))
       `(if ,(car clause)
-           ,(f-body (cdr clause))
+           ,(cond-body (cdr clause))
          ,(cond-clauses->if (cdr lst))))))
 
 (define (begin->cps forms k)

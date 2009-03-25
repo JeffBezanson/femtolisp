@@ -31,6 +31,7 @@ int isdigit_base(char c, int base)
 }
 
 /* assumes valid base, returns 1 on error, 0 if OK */
+/*
 int str2int(char *str, size_t len, int64_t *res, uint32_t base)
 {
     int64_t result, place;
@@ -54,3 +55,4 @@ int str2int(char *str, size_t len, int64_t *res, uint32_t base)
     *res = result;
     return 0;
 }
+*/

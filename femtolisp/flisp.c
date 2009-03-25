@@ -54,7 +54,7 @@
 static char *builtin_names[] =
     { // special forms
       "quote", "cond", "if", "and", "or", "while", "lambda",
-      "trycatch", "%apply", "set!", "begin",
+      "trycatch", "%apply", "set!", "prog1", "begin",
 
       // predicates
       "eq?", "eqv?", "equal?", "atom?", "not", "null?", "boolean?", "symbol?",
@@ -64,11 +64,10 @@ static char *builtin_names[] =
       "cons", "list", "car", "cdr", "set-car!", "set-cdr!",
 
       // execution
-      "eval", "eval*", "apply", "prog1", "raise",
+      "eval", "eval*", "apply",
 
       // arithmetic
-      "+", "-", "*", "/", "<", "lognot", "logand", "logior", "logxor", "ash",
-      "compare",
+      "+", "-", "*", "/", "<", "lognot", "compare",
 
       // sequences
       "vector", "aref", "aset!", "length", "for",
@@ -157,7 +156,7 @@ static value_t make_error_msg(char *format, va_list args)
     return string_from_cstr(msgbuf);
 }
 
-void lerror(value_t e, char *format, ...)
+void lerrorf(value_t e, char *format, ...)
 {
     va_list args;
     PUSH(e);
@@ -169,6 +168,14 @@ void lerror(value_t e, char *format, ...)
     raise(list2(e, msg));
 }
 
+void lerror(value_t e, const char *msg)
+{
+    PUSH(e);
+    value_t m = cvalue_static_cstring(msg);
+    e = POP();
+    raise(list2(e, m));
+}
+
 void type_error(char *fname, char *expected, value_t got)
 {
     raise(listn(4, TypeError, symbol(fname), symbol(expected), got));
@@ -176,7 +183,7 @@ void type_error(char *fname, char *expected, value_t got)
 
 void bounds_error(char *fname, value_t arr, value_t ind)
 {
-    lerror(listn(3, BoundsError, arr, ind), "%s: index out of bounds", fname);
+    lerrorf(listn(3, BoundsError, arr, ind), "%s: index out of bounds", fname);
 }
 
 // safe cast operators --------------------------------------------------------
@@ -899,6 +906,19 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             }
             v = FL_F;
             break;
+        case F_PROG1:
+            // return first arg
+            pv = &Stack[saveSP];
+            if (__unlikely(!iscons(*pv)))
+                lerror(ArgError, "prog1: too few arguments");
+            PUSH(eval(car_(*pv)));
+            *pv = cdr_(*pv);
+            while (iscons(*pv)) {
+                (void)eval(car_(*pv));
+                *pv = cdr_(*pv);
+            }
+            v = POP();
+            break;
         case F_TRYCATCH:
             v = do_trycatch(car(Stack[saveSP]), penv);
             break;
@@ -1145,71 +1165,6 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             else
                 v = fl_bitwise_not(Stack[SP-1]);
             break;
-        case F_BAND:
-            if (nargs == 0)
-                v = fixnum(-1);
-            else {
-                v = Stack[SP-nargs];
-                while (nargs > 1) {
-                    e = Stack[SP-nargs+1];
-                    if (bothfixnums(v, e))
-                        v = v & e;
-                    else
-                        v = fl_bitwise_op(v, e, 0, "&");
-                    nargs--;
-                    Stack[SP-nargs] = v;
-                }
-            }
-            break;
-        case F_BOR:
-            if (nargs == 0)
-                v = fixnum(0);
-            else {
-                v = Stack[SP-nargs];
-                while (nargs > 1) {
-                    e = Stack[SP-nargs+1];
-                    if (bothfixnums(v, e))
-                        v = v | e;
-                    else
-                        v = fl_bitwise_op(v, e, 1, "!");
-                    nargs--;
-                    Stack[SP-nargs] = v;
-                }
-            }
-            break;
-        case F_BXOR:
-            if (nargs == 0)
-                v = fixnum(0);
-            else {
-                v = Stack[SP-nargs];
-                while (nargs > 1) {
-                    e = Stack[SP-nargs+1];
-                    if (bothfixnums(v, e))
-                        v = fixnum(numval(v) ^ numval(e));
-                    else
-                        v = fl_bitwise_op(v, e, 2, "$");
-                    nargs--;
-                    Stack[SP-nargs] = v;
-                }
-            }
-            break;
-        case F_ASH:
-            argcount("ash", nargs, 2);
-            i = tofixnum(Stack[SP-1], "ash");
-            if (isfixnum(Stack[SP-2])) {
-                if (i <= 0)
-                    v = fixnum(numval(Stack[SP-2])>>(-i));
-                else {
-                    accum = ((int64_t)numval(Stack[SP-2]))<<i;
-                    if (fits_fixnum(accum))
-                        v = fixnum(accum);
-                    else
-                        v = return_from_int64(accum);
-                }
-            }
-            else
-                v = fl_ash(Stack[SP-2], i);
-            break;
         case F_COMPARE:
             argcount("compare", nargs, 2);
             v = compare(Stack[SP-2], Stack[SP-1]);
@@ -1275,16 +1230,6 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             if (selfevaluating(e)) { SP=saveSP; return e; }
             SP = penv+2;
             goto eval_top;
-        case F_RAISE:
-            argcount("raise", nargs, 1);
-            raise(Stack[SP-1]);
-            break;
-        case F_PROG1:
-            // return first arg
-            if (__unlikely(nargs < 1))
-                lerror(ArgError, "prog1: too few arguments");
-            v = Stack[saveSP+1];
-            break;
         case F_FOR:
             argcount("for", nargs, 3);
             lo = tofixnum(Stack[SP-3], "for");

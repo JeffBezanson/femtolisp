@@ -78,6 +78,12 @@ static value_t fl_memq(value_t *args, u_int32_t nargs)
     return FL_F;
 }
 
+static value_t fl_raise(value_t *args, u_int32_t nargs)
+{
+    argcount("raise", nargs, 1);
+    raise(args[0]);
+}
+
 static value_t fl_exit(value_t *args, u_int32_t nargs)
 {
     if (nargs > 0)
@@ -101,8 +107,8 @@ static value_t fl_setsyntax(value_t *args, u_int32_t nargs)
     argcount("set-syntax!", nargs, 2);
     symbol_t *sym = tosymbol(args[0], "set-syntax!");
     if (sym->syntax && (sym->syntax == TAG_CONST || isspecial(sym->syntax)))
-        lerror(ArgError, "set-syntax!: cannot define syntax for %s",
-               symbol_name(args[0]));
+        lerrorf(ArgError, "set-syntax!: cannot define syntax for %s",
+                symbol_name(args[0]));
     if (args[1] == FL_F) {
         sym->syntax = 0;
     }
@@ -292,7 +298,7 @@ static value_t fl_path_cwd(value_t *args, uint32_t nargs)
     }
     char *ptr = tostring(args[0], "path.cwd");
     if (set_cwd(ptr))
-        lerror(IOError, "path.cwd: could not cd to %s", ptr);
+        lerrorf(IOError, "path.cwd: could not cd to %s", ptr);
     return FL_T;
 }
 
@@ -371,6 +377,7 @@ static builtinspec_t builtin_info[] = {
     { "symbol-syntax", fl_symbolsyntax },
     { "environment", fl_global_env },
     { "constant?", fl_constantp },
+    { "raise", fl_raise },
 
     { "exit", fl_exit },
     { "intern", fl_intern },

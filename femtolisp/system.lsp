@@ -184,8 +184,6 @@
 (define (abs x)   (if (< x 0) (- x) x))
 (define (identity x) x)
 (define (char? x) (eq? (typeof x) 'wchar))
-(define K prog1)  ; K combinator ;)
-(define begin0 prog1)
 
 (define (caar x) (car (car x)))
 (define (cdar x) (cdr (car x)))

@@ -200,9 +200,9 @@ value_t cvalue_string(size_t sz)
     return cvalue(stringtype, sz);
 }
 
-value_t cvalue_static_cstring(char *str)
+value_t cvalue_static_cstring(const char *str)
 {
-    return cvalue_from_ref(stringtype, str, strlen(str), NIL);
+    return cvalue_from_ref(stringtype, (char*)str, strlen(str), NIL);
 }
 
 value_t string_from_cstrn(char *str, size_t n)
@@ -899,12 +899,21 @@ value_t cbuiltin(char *name, builtin_t f)
     */
 }
 
+static value_t fl_logand(value_t *args, u_int32_t nargs);
+static value_t fl_logior(value_t *args, u_int32_t nargs);
+static value_t fl_logxor(value_t *args, u_int32_t nargs);
+static value_t fl_ash(value_t *args, u_int32_t nargs);
+
 static builtinspec_t cvalues_builtin_info[] = {
     { "c-value", cvalue_new },
     { "typeof", cvalue_typeof },
     { "sizeof", cvalue_sizeof },
     { "builtin", fl_builtin },
     { "copy", fl_copy },
+    { "logand", fl_logand },
+    { "logior", fl_logior },
+    { "logxor", fl_logxor },
+    { "ash", fl_ash },
     // todo: autorelease
     { NULL, NULL }
 };
@@ -1321,40 +1330,6 @@ static value_t fl_bitwise_not(value_t a)
     return NIL;
 }
 
-static value_t fl_ash(value_t a, int n)
-{
-    cprim_t *cp;
-    int ta;
-    void *aptr;
-    if (iscprim(a)) {
-        if (n == 0) return a;
-        cp = (cprim_t*)ptr(a);
-        ta = cp_numtype(cp);
-        aptr = cp_data(cp);
-        if (n < 0) {
-            n = -n;
-            switch (ta) {
-            case T_INT8:   return fixnum((*(int8_t *)aptr) >> n);
-            case T_UINT8:  return fixnum((*(uint8_t *)aptr) >> n);
-            case T_INT16:  return fixnum((*(int16_t *)aptr) >> n);
-            case T_UINT16: return fixnum((*(uint16_t*)aptr) >> n);
-            case T_INT32:  return mk_int32((*(int32_t *)aptr) >> n);
-            case T_UINT32: return mk_uint32((*(uint32_t*)aptr) >> n);
-            case T_INT64:  return mk_int64((*(int64_t *)aptr) >> n);
-            case T_UINT64: return mk_uint64((*(uint64_t*)aptr) >> n);
-            }
-        }
-        else {
-            if (ta == T_UINT64)
-                return return_from_uint64((*(uint64_t*)aptr)<<n);
-            int64_t i64 = conv_to_int64(aptr, ta);
-            return return_from_int64(i64<<n);
-        }
-    }
-    type_error("ash", "integer", a);
-    return NIL;
-}
-
 static value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)
 {
     int_t ai, bi;
@@ -1423,5 +1398,110 @@ static value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)
     }
     }
     assert(0);
+    return NIL;
+}
+
+static value_t fl_logand(value_t *args, u_int32_t nargs)
+{
+    value_t v, e;
+    int i;
+    if (nargs == 0)
+        return fixnum(-1);
+    v = args[0];
+    i = 1;
+    while (i < (int)nargs) {
+        e = args[i];
+        if (bothfixnums(v, e))
+            v = v & e;
+        else
+            v = fl_bitwise_op(v, e, 0, "logand");
+        i++;
+    }
+    return v;
+}
+
+static value_t fl_logior(value_t *args, u_int32_t nargs)
+{
+    value_t v, e;
+    int i;
+    if (nargs == 0)
+        return fixnum(0);
+    v = args[0];
+    i = 1;
+    while (i < (int)nargs) {
+        e = args[i];
+        if (bothfixnums(v, e))
+            v = v | e;
+        else
+            v = fl_bitwise_op(v, e, 1, "logior");
+        i++;
+    }
+    return v;
+}
+
+static value_t fl_logxor(value_t *args, u_int32_t nargs)
+{
+    value_t v, e;
+    int i;
+    if (nargs == 0)
+        return fixnum(0);
+    v = args[0];
+    i = 1;
+    while (i < (int)nargs) {
+        e = args[i];
+        if (bothfixnums(v, e))
+            v = fixnum(numval(v) ^ numval(e));
+        else
+            v = fl_bitwise_op(v, e, 2, "logxor");
+        i++;
+    }
+    return v;
+}
+
+static value_t fl_ash(value_t *args, u_int32_t nargs)
+{
+    fixnum_t n;
+    int64_t accum;
+    argcount("ash", nargs, 2);
+    value_t a = args[0];
+    n = tofixnum(args[1], "ash");
+    if (isfixnum(a)) {
+        if (n <= 0)
+            return fixnum(numval(a)>>(-n));
+        accum = ((int64_t)numval(a))<<n;
+        if (fits_fixnum(accum))
+            return fixnum(accum);
+        else
+            return return_from_int64(accum);
+    }
+    cprim_t *cp;
+    int ta;
+    void *aptr;
+    if (iscprim(a)) {
+        if (n == 0) return a;
+        cp = (cprim_t*)ptr(a);
+        ta = cp_numtype(cp);
+        aptr = cp_data(cp);
+        if (n < 0) {
+            n = -n;
+            switch (ta) {
+            case T_INT8:   return fixnum((*(int8_t *)aptr) >> n);
+            case T_UINT8:  return fixnum((*(uint8_t *)aptr) >> n);
+            case T_INT16:  return fixnum((*(int16_t *)aptr) >> n);
+            case T_UINT16: return fixnum((*(uint16_t*)aptr) >> n);
+            case T_INT32:  return mk_int32((*(int32_t *)aptr) >> n);
+            case T_UINT32: return mk_uint32((*(uint32_t*)aptr) >> n);
+            case T_INT64:  return mk_int64((*(int64_t *)aptr) >> n);
+            case T_UINT64: return mk_uint64((*(uint64_t*)aptr) >> n);
+            }
+        }
+        else {
+            if (ta == T_UINT64)
+                return return_from_uint64((*(uint64_t*)aptr)<<n);
+            int64_t i64 = conv_to_int64(aptr, ta);
+            return return_from_int64(i64<<n);
+        }
+    }
+    type_error("ash", "integer", a);
     return NIL;
 }
