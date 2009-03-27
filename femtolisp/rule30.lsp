@@ -36,5 +36,5 @@
 (for-each (lambda (n)
 	    (begin
 	      (princ (bin-draw (pad0 (number->string n 2) 63)))
-	      (terpri)))
+	      (newline)))
 	  (nestlist rule30-step (uint64 0x0000000080000000) 32))

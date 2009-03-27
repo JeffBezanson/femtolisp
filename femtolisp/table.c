@@ -83,11 +83,14 @@ static htable_t *totable(value_t v, char *fname)
 
 value_t fl_table(value_t *args, uint32_t nargs)
 {
-    if (nargs & 1)
+    size_t cnt = (size_t)nargs;
+    if (nargs > MAX_ARGS)
+        cnt += llength(args[MAX_ARGS]);
+    if (cnt & 1)
         lerror(ArgError, "table: arguments must come in pairs");
     value_t nt;
     // prevent small tables from being added to finalizer list
-    if (nargs <= HT_N_INLINE) {
+    if (cnt <= HT_N_INLINE) {
         tabletype->vtable->finalize = NULL;
         nt = cvalue(tabletype, sizeof(htable_t));
         tabletype->vtable->finalize = free_htable;
@@ -96,10 +99,15 @@ value_t fl_table(value_t *args, uint32_t nargs)
         nt = cvalue(tabletype, 2*sizeof(void*));
     }
     htable_t *h = (htable_t*)cv_data((cvalue_t*)ptr(nt));
-    htable_new(h, nargs/2);
+    htable_new(h, cnt/2);
     uint32_t i;
-    for(i=0; i < nargs; i+=2)
-        equalhash_put(h, (void*)args[i], (void*)args[i+1]);
+    value_t k=NIL, arg=NIL;
+    FOR_ARGS(i,0,arg,args) {
+        if (i&1)
+            equalhash_put(h, (void*)k, (void*)arg);
+        else
+            k = arg;
+    }
     return nt;
 }
 

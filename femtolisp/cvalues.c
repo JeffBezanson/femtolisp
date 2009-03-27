@@ -382,16 +382,6 @@ value_t cvalue_enum(value_t *args, u_int32_t nargs)
     return cv;
 }
 
-static void array_init_fromargs(char *dest, value_t *vals, size_t cnt,
-                                fltype_t *eltype, size_t elsize)
-{
-    size_t i;
-    for(i=0; i < cnt; i++) {
-        cvalue_init(eltype, vals[i], dest);
-        dest += elsize;
-    }
-}
-
 static int isarray(value_t v)
 {
     return iscvalue(v) && cv_class((cvalue_t*)ptr(v))->eltype != NULL;
@@ -428,23 +418,23 @@ static int cvalue_array_init(fltype_t *ft, value_t arg, void *dest)
     sz = elsize * cnt;
 
     if (isvector(arg)) {
-        array_init_fromargs((char*)dest, &vector_elt(arg,0), cnt,
-                            eltype, elsize);
+        for(i=0; i < cnt; i++) {
+            cvalue_init(eltype, vector_elt(arg,i), dest);
+            dest += elsize;
+        }
         return 0;
     }
     else if (iscons(arg) || arg==NIL) {
         i = 0;
         while (iscons(arg)) {
-            if (SP >= N_STACK)
-                break;
-            PUSH(car_(arg));
+            if (i == cnt) { i++; break; } // trigger error
+            cvalue_init(eltype, car_(arg), dest);
             i++;
+            dest += elsize;
             arg = cdr_(arg);
         }
         if (i != cnt)
             lerror(ArgError, "array: size mismatch");
-        array_init_fromargs((char*)dest, &Stack[SP-i], i, eltype, elsize);
-        POPN(i);
         return 0;
     }
     else if (iscvalue(arg)) {
@@ -473,19 +463,25 @@ static int cvalue_array_init(fltype_t *ft, value_t arg, void *dest)
 
 value_t cvalue_array(value_t *args, u_int32_t nargs)
 {
-    size_t elsize, cnt, sz;
+    size_t elsize, cnt, sz, i;
+    value_t arg;
 
     if (nargs < 1)
         argcount("array", nargs, 1);
 
     cnt = nargs - 1;
+    if (nargs > MAX_ARGS)
+        cnt += llength(args[MAX_ARGS]);
     fltype_t *type = get_array_type(args[0]);
     elsize = type->elsz;
     sz = elsize * cnt;
 
     value_t cv = cvalue(type, sz);
-    array_init_fromargs(cv_data((cvalue_t*)ptr(cv)), &args[1], cnt,
-                        type->eltype, elsize);
+    char *dest = cv_data((cvalue_t*)ptr(cv));
+    FOR_ARGS(i,1,arg,args) {
+        cvalue_init(type->eltype, arg, dest);
+        dest += elsize;
+    }
     return cv;
 }
 
@@ -1040,14 +1036,15 @@ static value_t fl_add_any(value_t *args, u_int32_t nargs, fixnum_t carryIn)
     int64_t Saccum = carryIn;
     double Faccum=0;
     uint32_t i;
+    value_t arg=NIL;
 
-    for(i=0; i < nargs; i++) {
-        if (isfixnum(args[i])) {
-            Saccum += numval(args[i]);
+    FOR_ARGS(i,0,arg,args) {
+        if (isfixnum(arg)) {
+            Saccum += numval(arg);
             continue;
         }
-        else if (iscprim(args[i])) {
-            cprim_t *cp = (cprim_t*)ptr(args[i]);
+        else if (iscprim(arg)) {
+            cprim_t *cp = (cprim_t*)ptr(arg);
             void *a = cp_data(cp);
             int64_t i64;
             switch(cp_numtype(cp)) {
@@ -1073,7 +1070,7 @@ static value_t fl_add_any(value_t *args, u_int32_t nargs, fixnum_t carryIn)
             continue;
         }
     add_type_error:
-        type_error("+", "number", args[i]);
+        type_error("+", "number", arg);
     }
     if (Faccum != 0) {
         Faccum += Uaccum;
@@ -1146,14 +1143,15 @@ static value_t fl_mul_any(value_t *args, u_int32_t nargs, int64_t Saccum)
     uint64_t Uaccum=1;
     double Faccum=1;
     uint32_t i;
+    value_t arg=NIL;
 
-    for(i=0; i < nargs; i++) {
-        if (isfixnum(args[i])) {
-            Saccum *= numval(args[i]);
+    FOR_ARGS(i,0,arg,args) {
+        if (isfixnum(arg)) {
+            Saccum *= numval(arg);
             continue;
         }
-        else if (iscprim(args[i])) {
-            cprim_t *cp = (cprim_t*)ptr(args[i]);
+        else if (iscprim(arg)) {
+            cprim_t *cp = (cprim_t*)ptr(arg);
             void *a = cp_data(cp);
             int64_t i64;
             switch(cp_numtype(cp)) {
@@ -1179,7 +1177,7 @@ static value_t fl_mul_any(value_t *args, u_int32_t nargs, int64_t Saccum)
             continue;
         }
     mul_type_error:
-        type_error("*", "number", args[i]);
+        type_error("*", "number", arg);
     }
     if (Faccum != 1) {
         Faccum *= Uaccum;
@@ -1408,14 +1406,11 @@ static value_t fl_logand(value_t *args, u_int32_t nargs)
     if (nargs == 0)
         return fixnum(-1);
     v = args[0];
-    i = 1;
-    while (i < (int)nargs) {
-        e = args[i];
+    FOR_ARGS(i,1,e,args) {
         if (bothfixnums(v, e))
             v = v & e;
         else
             v = fl_bitwise_op(v, e, 0, "logand");
-        i++;
     }
     return v;
 }
@@ -1427,14 +1422,11 @@ static value_t fl_logior(value_t *args, u_int32_t nargs)
     if (nargs == 0)
         return fixnum(0);
     v = args[0];
-    i = 1;
-    while (i < (int)nargs) {
-        e = args[i];
+    FOR_ARGS(i,1,e,args) {
         if (bothfixnums(v, e))
             v = v | e;
         else
             v = fl_bitwise_op(v, e, 1, "logior");
-        i++;
     }
     return v;
 }
@@ -1446,14 +1438,11 @@ static value_t fl_logxor(value_t *args, u_int32_t nargs)
     if (nargs == 0)
         return fixnum(0);
     v = args[0];
-    i = 1;
-    while (i < (int)nargs) {
-        e = args[i];
+    FOR_ARGS(i,1,e,args) {
         if (bothfixnums(v, e))
             v = fixnum(numval(v) ^ numval(e));
         else
             v = fl_bitwise_op(v, e, 2, "logxor");
-        i++;
     }
     return v;
 }

@@ -153,6 +153,12 @@ bugs:
 * prettyprint size measuring is not utf-8 correct
 - stack is too limited. possibly allocate user frames with alloca so the
   only limit is the process stack size.
+* argument list length is too limited.
+  need to fix it for: +,-,*,/,&,|,$,list,vector,apply,string,array
+  . for builtins, make Nth argument list of rest args
+  . write a function to evaluate directly from list to list, use it for
+    Nth arg and for user function rest args
+  . modify vararg builtins accordingly
 
 
 femtoLisp3...with symbolic C interface

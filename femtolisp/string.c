@@ -107,11 +107,12 @@ value_t fl_string(value_t *args, u_int32_t nargs)
 {
     if (nargs == 1 && isstring(args[0]))
         return args[0];
-    value_t buf = fl_buffer(NULL, 0);
+    value_t arg, buf = fl_buffer(NULL, 0);
     ios_t *s = value2c(ios_t*,buf);
     uint32_t i;
-    for (i=0; i < nargs; i++)
+    FOR_ARGS(i,0,arg,args) {
         print(s, args[i], 1);
+    }
     PUSH(buf);
     value_t outp = stream_to_string(&Stack[SP-1]);
     (void)POP();

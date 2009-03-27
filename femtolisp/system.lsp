@@ -486,9 +486,9 @@
 	,expr
 	(princ "Elapsed time: " (- (time.now) ,t0) " seconds\n")))))
 
-(define (terpri) (princ *linefeed*))
+(define (newline) (princ *linefeed*))
 (define (display x) (princ x) #t)
-(define (println . args) (prog1 (apply print args) (terpri)))
+(define (println . args) (prog1 (apply print args) (newline)))
 
 (define (vu8 . elts) (apply array (cons 'uint8 elts)))
 
@@ -591,12 +591,12 @@
 	     (set! that V)
 	     #t))))
   (define (reploop)
-    (when (trycatch (and (prompt) (terpri))
+    (when (trycatch (and (prompt) (newline))
 		    print-exception)
-	  (begin (terpri)
+	  (begin (newline)
 		 (reploop))))
   (reploop)
-  (terpri))
+  (newline))
 
 (define (print-exception e)
   (cond ((and (pair? e)

@@ -99,6 +99,21 @@ extern uint32_t SP;
 #define POP()   (Stack[--SP])
 #define POPN(n) (SP-=(n))
 
+// maximum number of explicit arguments. the 128th arg is a list of rest args.
+// the largest value nargs can have is MAX_ARGS+1
+#define MAX_ARGS 127
+
+// utility for iterating over all arguments in a builtin
+// i=index, i0=start index, arg = var for each arg, args = arg array
+// assumes "nargs" is the argument count
+// modifies args[MAX_ARGS] when nargs==MAX_ARGS+1
+#define FOR_ARGS(i, i0, arg, args)                                      \
+    for(i=i0; (((size_t)i<nargs ||                                      \
+                (i>MAX_ARGS && iscons(args[MAX_ARGS]))) &&              \
+               ((i>=MAX_ARGS?(arg=car_(args[MAX_ARGS]),                 \
+                              args[MAX_ARGS]=cdr_(args[MAX_ARGS])) :    \
+                 (arg = args[i])) || 1)); i++)
+
 enum {
     // special forms
     F_QUOTE=0, F_COND, F_IF, F_AND, F_OR, F_WHILE, F_LAMBDA,

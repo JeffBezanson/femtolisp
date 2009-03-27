@@ -51,6 +51,8 @@
 (assert (= (/ 2) 0))
 (assert (= (/ 2.0) 0.5))
 
+(assert (= (- 4999950000 4999941999) 8001))
+
 ; tricky cases involving INT_MIN
 (assert (< (- #uint32(0x80000000)) 0))
 (assert (> (- #int32(0x80000000)) 0))
@@ -69,6 +71,9 @@
 
 ; this crashed once
 (for 1 10 (lambda (i) 0))
+
+; long argument lists
+(assert (= (apply + (iota 100000)) 4999950000))
 
 ; ok, a couple end-to-end tests as well
 (define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))
