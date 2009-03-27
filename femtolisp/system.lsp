@@ -111,6 +111,10 @@
 	      (if f
 		  (macroexpand-in (apply f (cdr e)) env)
 		  (cond ((eq (car e) 'quote) e)
+			((eq (car e) 'lambda)
+			 (nlist* 'lambda (cadr e)
+				 (macroexpand-in (caddr e) env)
+				 (cdddr e)))
 			((eq (car e) 'let-syntax)
 			 (let ((binds (cadr e))
 			       (body  (f-body (cddr e))))
