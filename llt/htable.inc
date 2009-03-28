@@ -7,7 +7,7 @@
 #define hash_size(h) ((h)->size/2)
 
 // compute empirical max-probe for a given size
-#define max_probe(size) ((size)<=HT_N_INLINE/2 ? HT_N_INLINE/2 : (size)>>5)
+#define max_probe(size) ((size)<=(HT_N_INLINE*2) ? (HT_N_INLINE/2) : (size)>>3)
 
 #define HTIMPL(HTNAME, HFUNC, EQFUNC)                                   \
 static void **HTNAME##_lookup_bp(htable_t *h, void *key)                \
@@ -47,7 +47,7 @@ static void **HTNAME##_lookup_bp(htable_t *h, void *key)                \
     /* lots of time rehashing all the keys over and over. */            \
     sz = h->size;                                                       \
     ol = h->table;                                                      \
-    if (sz >= (1<<19))                                                  \
+    if (sz >= (1<<19) || (sz <= (1<<8)))                                \
         newsz = sz<<1;                                                  \
     else if (sz <= HT_N_INLINE)                                         \
         newsz = 32;                                                     \

@@ -8,7 +8,7 @@
 
 (define Instructions
   (make-enum-table
-   [:nop :dup :pop :popn :call :jmp :brf :brt :jmp.s :brf.s :brt.s :ret
+   [:nop :dup :pop :popn :call :jmp :brf :brt :jmp.l :brf.l :brt.l :ret
 
     :eq? :eqv? :equal? :atom? :not :null? :boolean? :symbol?
     :number? :bound? :pair? :builtin? :vector? :fixnum?
@@ -20,9 +20,9 @@
 
     :vector :aref :aset :length :for
 
-    :loadt :loadf :loadnil :load0 :load1 :loadv :loadv.s
+    :loadt :loadf :loadnil :load0 :load1 :loadv :loadv.l
     :loadg :loada :loadc
-    :setg  :seta  :setc  :loadg.s :setg.s
+    :setg  :seta  :setc  :loadg.l :setg.l
 
     :closure :trycatch]))
 
@@ -41,21 +41,38 @@
 			      (- nconst 1)))))
 	(aset! e 2 nconst)
 	(set! args (list vind))
-	(if (< vind 256)
+	(if (>= vind 256)
 	    (set! inst (case inst
-			 (:loadv :loadv.s)
-			 (:loadg :loadg.s)
-			 (:setg  :setg.s))))))
+			 (:loadv :loadv.l)
+			 (:loadg :loadg.l)
+			 (:setg  :setg.l))))))
   (aset! e 0 (nreconc (cons inst args) (aref e 0)))
   e)
 
 (define (make-label e)   (gensym))
 (define (mark-label e l) (emit e :label l))
 
+(define (count- f l n)
+  (if (null? l)
+      n
+      (count- f (cdr l) (if (f (car l))
+			    (+ n 1)
+			    n))))
+(define (count f l) (count- f l 0))
+
+(define (peephole c) c)
+
 ; convert symbolic bytecode representation to a byte array.
 ; labels are fixed-up.
 (define (encode-byte-code e)
-  (let ((v (list->vector (nreverse e))))
+  (let* ((cl (peephole (nreverse e)))
+	 (long? (>= (+ (length cl)
+		       (* 3 (count (lambda (i)
+				     (memq i '(:loadv :loadg :setg
+						      :jmp :brt :brf)))
+				   cl)))
+		    65536))
+	 (v  (list->vector cl)))
     (let ((n              (length v))
 	  (i              0)
 	  (label-to-loc   (table))
@@ -69,16 +86,25 @@
 	      (begin (put! label-to-loc (aref v (+ i 1)) (sizeof bcode))
 		     (set! i (+ i 2)))
 	      (begin
-		(io.write bcode (byte (get Instructions vi)))
+		(io.write bcode
+			  (byte
+			   (get Instructions
+				(if (and long?
+					 (memq vi '(:jmp :brt :brf)))
+				    (case vi
+				      (:jmp :jmp.l)
+				      (:brt :brt.l)
+				      (:brf :brf.l))
+				    vi))))
 		(set! i (+ i 1))
 		(if (< i n)
 		    (let ((nxt (aref v i)))
 		      (case vi
-			((:loadv :loadg :setg)
+			((:loadv.l :loadg.l :setg.l)
 			 (io.write bcode (uint32 nxt))
 			 (set! i (+ i 1)))
 			
-			((:loada :seta :call :loadv.s :loadg.s :setg.s :popn)
+			((:loada :seta :call :loadv :loadg :setg :popn)
 			 (io.write bcode (uint8 nxt))
 			 (set! i (+ i 1)))
 			
@@ -89,27 +115,16 @@
 			 (set! i (+ i 1)))
 			
 			((:jmp :brf :brt)
-			 (let ((dest (get label-to-loc nxt #uint32(-1))))
-			   (if (< dest 256)
-			       (begin (io.seek bcode (1- (sizeof bcode)))
-				      (io.write bcode
-						(byte
-						 (get Instructions
-						      (case vi
-							(:jmp :jmp.s)
-							(:brt :brt.s)
-							(:brf :brf.s)))))
-				      (io.write bcode (uint8 dest)))
-			       (begin
-				 (put! fixup-to-label (sizeof bcode) nxt)
-				 (io.write bcode (uint32 0)))))
+			 (put! fixup-to-label (sizeof bcode) nxt)
+			 (io.write bcode ((if long? uint32 uint16) 0))
 			 (set! i (+ i 1)))
 			
 			(else #f))))))))
       (table.foreach
        (lambda (addr labl)
 	 (begin (io.seek bcode addr)
-		(io.write bcode (uint32 (get label-to-loc labl)))))
+		(io.write bcode ((if long? uint32 uint16)
+				 (get label-to-loc labl)))))
        fixup-to-label)
       (io.tostring! bcode))))
 
@@ -169,9 +184,11 @@
   (if (atom? lst)
       lst
     (let ((clause (car lst)))
-      `(if ,(car clause)
-           ,(cons 'begin (cdr clause))
-         ,(cond-clauses->if (cdr lst))))))
+      (if (eq? (car clause) 'else)
+	  (cons 'begin (cdr clause))
+	  `(if ,(car clause)
+	       ,(cons 'begin (cdr clause))
+	       ,(cond-clauses->if (cdr lst)))))))
 
 (define (compile-if g x env)
   (let ((elsel (make-label g))
@@ -306,6 +323,10 @@
      (ash (aref a (+ i 2)) 16)
      (ash (aref a (+ i 3)) 24)))
 
+(define (ref-uint16-LE a i)
+  (+ (ash (aref a (+ i 0)) 0)
+     (ash (aref a (+ i 1)) 8)))
+
 (define (hex5 n)
   (pad-l (number->string n 16) 5 #\0))
 
@@ -330,11 +351,11 @@
 			  (string.tail (string inst) 1) "\t")
 		   (set! i (+ i 1))
 		   (case inst
-		     ((:loadv :loadg :setg)
+		     ((:loadv.l :loadg.l :setg.l)
 		      (print-val (aref vals (ref-uint32-LE code i)))
 		      (set! i (+ i 4)))
 
-		     ((:loadv.s :loadg.s :setg.s)
+		     ((:loadv :loadg :setg)
 		      (print-val (aref vals (aref code i)))
 		      (set! i (+ i 1)))
 
@@ -349,12 +370,12 @@
 		      (set! i (+ i 1)))
 
 		     ((:jmp :brf :brt)
+		      (princ "@" (hex5 (ref-uint16-LE code i)))
+		      (set! i (+ i 2)))
+
+		     ((:jmp.l :brf.l :brt.l)
 		      (princ "@" (hex5 (ref-uint32-LE code i)))
 		      (set! i (+ i 4)))
-
-		     ((:jmp.s :brf.s :brt.s)
-		      (princ "@" (hex5 (aref code i)))
-		      (set! i (+ i 1)))
 
 		     (else #f))))))))
 
