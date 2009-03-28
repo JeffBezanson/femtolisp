@@ -302,6 +302,8 @@ todo:
 
 * handle dotted arglists in lambda
 
+- optimize constant functions, e.g. (funcall/cc-0 #:g65 (lambda (#:g58) 'done))
+
 - implement CPS version of apply
 
 - use fewer gensyms

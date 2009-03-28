@@ -5,7 +5,7 @@
 
 ; convert a sequence of body statements to a single expression.
 ; this allows define, defun, defmacro, let, etc. to contain multiple
-; body expressions as in Common Lisp.
+; body expressions.
 (set! f-body (lambda (e)
                (cond ((atom? e)       #f)
                      ((eq (cdr e) ()) (car e))
@@ -21,12 +21,7 @@
       (list 'set! form (car body))
       (list 'set! (car form) (list 'lambda (cdr form) (f-body body)))))
 
-(define *output-stream* *stdout*)
-(define *input-stream*  *stdin*)
-(define (print . args)
-  (apply io.print (cons *output-stream* args)))
-(define (princ . args)
-  (apply io.princ (cons *output-stream* args)))
+(define-macro (body . forms) (f-body forms))
 
 (define (set s v) (eval (list 'set! s (list 'quote v))))
 
@@ -55,6 +50,8 @@
 	(map (lambda (c) (if (pair? c) (cadr c) #f)) binds))))
    #f))
 
+; standard procedures ---------------------------------------------------------
+
 (define (append . lsts)
   (cond ((null? lsts) ())
         ((null? (cdr lsts)) (car lsts))
@@ -82,95 +79,6 @@
 	((eqv?       (caar lst) item) (car lst))
 	(#t          (assv item (cdr lst)))))
 
-(define (macrocall? e) (and (symbol? (car e))
-			    (symbol-syntax (car e))))
-
-(define (function? x)
-  (or (builtin? x)
-      (and (pair? x) (eq (car x) 'lambda))))
-(define procedure? function?)
-
-(define (macroexpand-1 e)
-  (if (atom? e) e
-      (let ((f (macrocall? e)))
-	(if f (apply f (cdr e))
-	    e))))
-
-(define (cadr x) (car (cdr x)))
-(define (cddr x) (cdr (cdr x)))
-(define (caddr x) (car (cdr (cdr x))))
-
-(define (macroexpand e) (macroexpand-in e ()))
-
-(define (macroexpand-in e env)
-  (if (atom? e) e
-      (let ((f (assq (car e) env)))
-	(if f
-	    (macroexpand-in (apply (cadr f) (cdr e)) (caddr f))
-	    (let ((f (macrocall? e)))
-	      (if f
-		  (macroexpand-in (apply f (cdr e)) env)
-		  (cond ((eq (car e) 'quote) e)
-			((eq (car e) 'lambda)
-			 (nlist* 'lambda (cadr e)
-				 (macroexpand-in (caddr e) env)
-				 (cdddr e)))
-			((eq (car e) 'let-syntax)
-			 (let ((binds (cadr e))
-			       (body  (f-body (cddr e))))
-			   (macroexpand-in
-			    body
-			    (nconc
-			     (map (lambda (bind)
-				    (list (car bind)
-					  (macroexpand-in (cadr bind) env)
-					  env))
-				  binds)
-			     env))))
-			(else
-			 (map (lambda (x) (macroexpand-in x env)) e)))))))))
-
-(define (delete-duplicates lst)
-  (if (atom? lst)
-      lst
-      (let ((elt  (car lst))
-	    (tail (cdr lst)))
-	(if (member elt tail)
-	    (delete-duplicates tail)
-	    (cons elt
-		  (delete-duplicates tail))))))
-
-(define (get-defined-vars- expr)
-  (cond ((atom? expr) ())
-	((and (eq? (car expr) 'define)
-	      (pair? (cdr expr)))
-	 (or (and (symbol? (cadr expr))
-		  (list (cadr expr)))
-	     (and (pair? (cadr expr))
-		  (symbol? (caadr expr))
-		  (list (caadr expr)))
-	     ()))
-	((eq? (car expr) 'begin)
-	 (apply append (map get-defined-vars- (cdr expr))))
-	(else ())))
-(define (get-defined-vars expr)
-  (delete-duplicates (get-defined-vars- expr)))
-
-; redefine f-body to support internal defines
-(define f-body- f-body)
-(define (f-body e)
-  ((lambda (B)
-     ((lambda (V)
-	(if (null? V)
-	    B
-	    (cons (list 'lambda V B) (map (lambda (x) #f) V))))
-      (get-defined-vars B)))
-   (f-body- e)))
-
-(define-macro (body . forms) (f-body forms))
-
-(define (expand x) (macroexpand x))
-
 (define =   eqv?)
 (define (/= a b) (not (eqv? a b)))
 (define (>  a b) (< b a))
@@ -188,17 +96,26 @@
 (define (abs x)   (if (< x 0) (- x) x))
 (define (identity x) x)
 (define (char? x) (eq? (typeof x) 'wchar))
+(define (function? x)
+  (or (builtin? x)
+      (and (pair? x) (eq (car x) 'lambda))))
+(define procedure? function?)
 
 (define (caar x) (car (car x)))
+(define (cadr x) (car (cdr x)))
 (define (cdar x) (cdr (car x)))
+(define (cddr x) (cdr (cdr x)))
 (define (caaar x) (car (car (car x))))
 (define (caadr x) (car (car (cdr x))))
 (define (cadar x) (car (cdr (car x))))
-(define (cadddr x) (car (cdr (cdr (cdr x)))))
+(define (caddr x) (car (cdr (cdr x))))
 (define (cdaar x) (cdr (car (car x))))
 (define (cdadr x) (cdr (car (cdr x))))
 (define (cddar x) (cdr (cdr (car x))))
 (define (cdddr x) (cdr (cdr (cdr x))))
+(define (cadddr x) (car (cdr (cdr (cdr x)))))
+
+; list utilities --------------------------------------------------------------
 
 (define (every pred lst)
   (or (atom? lst)
@@ -250,6 +167,11 @@
         (#t               (last (cdr l)))))
 (define last-pair last)
 
+(define (to-proper l)
+  (cond ((null? l) l)
+	((atom? l) (list l))
+	(else (cons (car l) (to-proper (cdr l))))))
+
 (define (map! f lst)
   (prog1 lst
 	 (while (pair? lst)
@@ -283,6 +205,10 @@
         (#t
          (separate- pred (cdr lst) yes (cons (car lst) no)))))
 
+(define (nestlist f zero n)
+  (if (<= n 0) ()
+      (cons zero (nestlist f (f zero) (- n 1)))))
+
 (define (foldr f zero lst)
   (if (null? lst) zero
     (f (car lst) (foldr f zero (cdr lst)))))
@@ -310,28 +236,47 @@
 					     (set! prev l))))))
     prev))
 
-(define-macro (let* binds . body)
-  (cons (list 'lambda (map car binds)
-              (f-body
-	       (nconc (map (lambda (b) (cons 'set! b)) binds)
-		      body)))
-        (map (lambda (x) #f) binds)))
-(set-syntax! 'letrec (symbol-syntax 'let*))
+(define (delete-duplicates lst)
+  (if (atom? lst)
+      lst
+      (let ((elt  (car lst))
+	    (tail (cdr lst)))
+	(if (member elt tail)
+	    (delete-duplicates tail)
+	    (cons elt
+		  (delete-duplicates tail))))))
 
-(define-macro (when   c . body) (list 'if c (f-body body) #f))
-(define-macro (unless c . body) (list 'if c #f (f-body body)))
+(define (get-defined-vars- expr)
+  (cond ((atom? expr) ())
+	((and (eq? (car expr) 'define)
+	      (pair? (cdr expr)))
+	 (or (and (symbol? (cadr expr))
+		  (list (cadr expr)))
+	     (and (pair? (cadr expr))
+		  (symbol? (caadr expr))
+		  (list (caadr expr)))
+	     ()))
+	((eq? (car expr) 'begin)
+	 (apply append (map get-defined-vars- (cdr expr))))
+	(else ())))
+(define (get-defined-vars expr)
+  (delete-duplicates (get-defined-vars- expr)))
+
+; redefine f-body to support internal define
+(define f-body- f-body)
+(define (f-body e)
+  ((lambda (B)
+     ((lambda (V)
+	(if (null? V)
+	    B
+	    (cons (list 'lambda V B) (map (lambda (x) #f) V))))
+      (get-defined-vars B)))
+   (f-body- e)))
+
+; backquote -------------------------------------------------------------------
 
 (define (revappend l1 l2) (nconc (reverse l1) l2))
 (define (nreconc   l1 l2) (nconc (nreverse l1) l2))
-
-(define (list->vector l) (apply vector l))
-(define (vector->list v)
-  (let ((n (length v))
-        (l ()))
-    (for 1 n
-         (lambda (i)
-           (set! l (cons (aref v (- n i)) l))))
-    l))
 
 (define (self-evaluating? x)
   (or (and (atom? x)
@@ -339,7 +284,6 @@
       (and (constant? x)
            (eq x (eval x)))))
 
-; backquote
 (define-macro (backquote x) (bq-process x))
 
 (define (splice-form? x)
@@ -390,10 +334,23 @@
       (cadr x)
       (bq-process x)))
 
+; standard macros -------------------------------------------------------------
+
 (define (quote-value v)
   (if (self-evaluating? v)
       v
       (list 'quote v)))
+
+(define-macro (let* binds . body)
+  (cons (list 'lambda (map car binds)
+              (f-body
+	       (nconc (map (lambda (b) (cons 'set! b)) binds)
+		      body)))
+        (map (lambda (x) #f) binds)))
+(set-syntax! 'letrec (symbol-syntax 'let*))
+
+(define-macro (when   c . body) (list 'if c (f-body body) #f))
+(define-macro (unless c . body) (list 'if c #f (f-body body)))
 
 (define-macro (case key . clauses)
   (define (vals->cond key v)
@@ -455,6 +412,8 @@
 	     (for-each f (cdr l)))
       #t))
 
+; exceptions ------------------------------------------------------------------
+
 (define (error . args) (raise (cons 'error args)))
 
 (define-macro (throw tag value) `(raise (list 'thrown-value ,tag ,value)))
@@ -473,15 +432,33 @@
                       (lambda (,e) (begin ,finally (raise ,e))))
 	    ,finally)))
 
-(if (or (eq? *os-name* 'win32)
-	(eq? *os-name* 'win64)
-	(eq? *os-name* 'windows))
-    (begin (define *directory-separator* "\\")
-	   (define *linefeed* "\r\n"))
-    (begin (define *directory-separator* "/")
-	   (define *linefeed* "\n")))
+; debugging utilities ---------------------------------------------------------
 
 (define-macro (assert expr) `(if ,expr #t (raise '(assert-failed ,expr))))
+
+(define (trace sym)
+  (let* ((lam  (eval sym))
+	 (args (cadr lam))
+	 (al   (to-proper args)))
+    (if (not (eq? (car lam) 'trace-lambda))
+	(set sym
+	     `(trace-lambda ,args
+	        (begin
+		  (princ "(")
+		  (print ',sym)
+		  ,@(map (lambda (a)
+			   `(begin (princ " ")
+				   (print ,a)))
+			 al)
+		  (princ ")\n")
+		  (',lam ,@al))))))
+  'ok)
+
+(define (untrace sym)
+  (let ((lam  (eval sym)))
+    (if (eq? (car lam) 'trace-lambda)
+	(set sym
+	     (cadr (caar (last (caddr lam))))))))
 
 (define-macro (time expr)
   (let ((t0 (gensym)))
@@ -490,9 +467,37 @@
 	,expr
 	(princ "Elapsed time: " (- (time.now) ,t0) " seconds\n")))))
 
+; text I/O --------------------------------------------------------------------
+
+(if (or (eq? *os-name* 'win32)
+	(eq? *os-name* 'win64)
+	(eq? *os-name* 'windows))
+    (begin (define *directory-separator* "\\")
+	   (define *linefeed* "\r\n"))
+    (begin (define *directory-separator* "/")
+	   (define *linefeed* "\n")))
+
+(define *output-stream* *stdout*)
+(define *input-stream*  *stdin*)
+(define (print . args) (apply io.print (cons *output-stream* args)))
+(define (princ . args) (apply io.princ (cons *output-stream* args)))
+
 (define (newline) (princ *linefeed*))
 (define (display x) (princ x) #t)
 (define (println . args) (prog1 (apply print args) (newline)))
+
+(define (io.readline s) (io.readuntil s #\x0a))
+
+; vector functions ------------------------------------------------------------
+
+(define (list->vector l) (apply vector l))
+(define (vector->list v)
+  (let ((n (length v))
+        (l ()))
+    (for 1 n
+         (lambda (i)
+           (set! l (cons (aref v (- n i)) l))))
+    l))
 
 (define (vu8 . elts) (apply array (cons 'uint8 elts)))
 
@@ -503,6 +508,8 @@
          (lambda (i)
            (aset! nv i (f (aref v i)))))
     nv))
+
+; table functions -------------------------------------------------------------
 
 (define (table.pairs t)
   (table.foldl (lambda (k v z) (cons (cons k v) z))
@@ -518,33 +525,18 @@
     (table.foldl (lambda (k v z) (put! nt k v))
                  () t)
     nt))
+(define (table.invert t)
+  (let ((nt (table)))
+    (table.foldl (lambda (k v z) (put! nt v k))
+		 () t)
+    nt))
+(define (table.foreach f t)
+  (table.foldl (lambda (k v z) (begin (f k v) #t)) () t))
 
-(define (load filename)
-  (let ((F (file filename :read)))
-    (trycatch
-     (let next (prev E v)
-       (if (not (io.eof? F))
-	   (next (read F)
-                 prev
-		 (eval (expand E)))
-	   (begin (io.close F)
-		  ; evaluate last form in almost-tail position
-		  (eval (expand E)))))
-     (lambda (e)
-       (begin
-	 (io.close F)
-	 (raise `(load-error ,filename ,e)))))))
+; string functions ------------------------------------------------------------
 
 (define (string.tail s n)
   (string.sub s (string.inc s 0 n) (sizeof s)))
-
-(define *banner* (string.tail "
-;  _
-; |_ _ _ |_ _ |  . _ _
-; | (-||||_(_)|__|_)|_)
-;-------------------|----------------------------------------------------------
-
-" 1))
 
 (define *whitespace*
   (string.encode #array(wchar 9 10 11 12 13 32 133 160 5760 6158 8192
@@ -576,12 +568,89 @@
 		    (set! i (#.string.inc s i)))))
     (io.tostring! b)))
 
+(define (string.rep s k)
+  (cond ((< k 4)
+	 (cond ((<= k 0) "")
+	       ((=  k 1) (string s))
+	       ((=  k 2) (string s s))
+	       (else     (string s s s))))
+	((odd? k) (string s (string.rep s (- k 1))))
+	(else     (string.rep (string s s) (/ k 2)))))
+
+(define (pad-l s n c) (string (string.rep c (- n (length s))) s))
+(define (pad-r s n c) (string s (string.rep c (- n (length s)))))
+
 (define (print-to-string v)
   (let ((b (buffer)))
     (io.print b v)
     (io.tostring! b)))
 
-(define (io.readline s) (io.readuntil s #byte(0xA)))
+; toplevel --------------------------------------------------------------------
+
+(define (macrocall? e) (and (symbol? (car e))
+			    (symbol-syntax (car e))))
+
+(define (macroexpand-1 e)
+  (if (atom? e) e
+      (let ((f (macrocall? e)))
+	(if f (apply f (cdr e))
+	    e))))
+
+(define (macroexpand e) (macroexpand-in e ()))
+
+(define (macroexpand-in e env)
+  (if (atom? e) e
+      (let ((f (assq (car e) env)))
+	(if f
+	    (macroexpand-in (apply (cadr f) (cdr e)) (caddr f))
+	    (let ((f (macrocall? e)))
+	      (if f
+		  (macroexpand-in (apply f (cdr e)) env)
+		  (cond ((eq (car e) 'quote) e)
+			((eq (car e) 'lambda)
+			 (nlist* 'lambda (cadr e)
+				 (macroexpand-in (caddr e) env)
+				 (cdddr e)))
+			((eq (car e) 'let-syntax)
+			 (let ((binds (cadr e))
+			       (body  (f-body (cddr e))))
+			   (macroexpand-in
+			    body
+			    (nconc
+			     (map (lambda (bind)
+				    (list (car bind)
+					  (macroexpand-in (cadr bind) env)
+					  env))
+				  binds)
+			     env))))
+			(else
+			 (map (lambda (x) (macroexpand-in x env)) e)))))))))
+
+(define (expand x) (macroexpand x))
+
+(define (load filename)
+  (let ((F (file filename :read)))
+    (trycatch
+     (let next (prev E v)
+       (if (not (io.eof? F))
+	   (next (read F)
+                 prev
+		 (eval (expand E)))
+	   (begin (io.close F)
+		  ; evaluate last form in almost-tail position
+		  (eval (expand E)))))
+     (lambda (e)
+       (begin
+	 (io.close F)
+	 (raise `(load-error ,filename ,e)))))))
+
+(define *banner* (string.tail "
+;  _
+; |_ _ _ |_ _ |  . _ _
+; | (-||||_(_)|__|_)|_)
+;-------------------|----------------------------------------------------------
+
+" 1))
 
 (define (repl)
   (define (prompt)
