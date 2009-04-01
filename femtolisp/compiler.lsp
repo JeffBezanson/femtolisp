@@ -104,7 +104,8 @@
 			 (io.write bcode (uint32 nxt))
 			 (set! i (+ i 1)))
 			
-			((:loada :seta :call :loadv :loadg :setg :popn)
+			((:loada :seta :call :loadv :loadg :setg :popn
+				 :list :+ :- :* :/ :vector)
 			 (io.write bcode (uint8 nxt))
 			 (set! i (+ i 1)))
 			
@@ -254,15 +255,45 @@
 	   (compile-or g (cdr forms) env)
 	   (mark-label g end)))))
 
-;; TODO support long argument lists
-(define (compile-args g lst env)
+(define MAX_ARGS 127)
+
+(define (list-part- l n  i subl acc)
+  (cond ((atom? l) (if (> i 0)
+		       (cons (nreverse subl) acc)
+		       acc))
+	((>= i n)  (list-part- l n 0 () (cons (nreverse subl) acc)))
+	(else      (list-part- (cdr l) n (+ 1 i) (cons (car l) subl) acc))))
+(define (list-partition l n)
+  (if (<= n 0)
+      (error "list-partition: invalid count")
+      (nreverse (list-part- l n 0 () ()))))
+
+(define (length> lst n)
+  (cond ((< n 0)     lst)
+	((= n 0)     (and (pair? lst) lst))
+	((null? lst) (< n 0))
+	(else        (length> (cdr lst) (- n 1)))))
+
+(define (just-compile-args g lst env)
   (for-each (lambda (a)
 	      (compile-in g a env))
 	    lst))
 
+(define (compile-arglist g lst env)
+  (let ((argtail (length> lst MAX_ARGS)))
+    (if argtail
+	(begin (just-compile-args g (list-head lst MAX_ARGS) env)
+	       (let ((rest
+		      (cons nconc
+			    (map (lambda (l) (cons list l))
+				 (list-partition argtail MAX_ARGS)))))
+		 (compile-in g rest env))
+	       (+ MAX_ARGS 1))
+	(begin (just-compile-args g lst env)
+	       (length lst)))))
+
 (define (compile-app g x env)
-  (let ((head  (car x))
-	(nargs (length (cdr x))))
+  (let ((head  (car x)))
     (let ((head
 	   (if (and (symbol? head)
 		    (not (in-env? head env))
@@ -275,10 +306,12 @@
 		    (builtin->instruction head))))
 	(if (not b)
 	    (compile-in g head env))
-	(compile-args g (cdr x) env)
-	(if b  ;; TODO check arg count
-	    (emit g b)
-	    (emit g :call nargs))))))
+	(let ((nargs (compile-arglist g (cdr x) env)))
+	  (if b  ;; TODO check arg count
+	      (if (memq b '(:list :+ :- :* :/ :vector))
+		  (emit g b nargs)
+		  (emit g b))
+	      (emit g :call nargs)))))))
 
 (define (compile-in g x env)
   (cond ((symbol? x) (compile-sym g x env [:loada :loadc :loadg]))
@@ -300,7 +333,7 @@
 			    (emit g :closure)))
 	   (and      (compile-and g (cdr x) env))
 	   (or       (compile-or  g (cdr x) env))
-	   (while    (compile-while g (car x) (cadr x) env))
+	   (while    (compile-while g (cadr x) (caddr x) env))
 	   (set!     (compile-in g (caddr x) env)
 		     (compile-sym g (cadr x) env [:seta :setc :setg]))
 	   (trycatch (compile-in g `(lambda () ,(cadr x)) env)
@@ -315,7 +348,7 @@
     `(compiled-lambda ,(cadr f) ,(bytecode g))))
 
 (define (compile x)
-  (compile-in (make-code-emitter) x ()))
+  (bytecode (compile-in (make-code-emitter) x ())))
 
 (define (ref-uint32-LE a i)
   (+ (ash (aref a (+ i 0)) 0)
@@ -359,7 +392,7 @@
 		      (print-val (aref vals (aref code i)))
 		      (set! i (+ i 1)))
 
-		     ((:loada :seta :call :popn)
+		     ((:loada :seta :call :popn :list :+ :- :* :/ :vector)
 		      (princ (number->string (aref code i)))
 		      (set! i (+ i 1)))
 
@@ -379,6 +412,6 @@
 
 		     (else #f))))))))
 
-(define (disassemble b) (disassemble- b 0))
+(define (disassemble b) (disassemble- b 0) (newline))
 
 #t

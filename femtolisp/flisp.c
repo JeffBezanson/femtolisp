@@ -73,9 +73,19 @@ static char *builtin_names[] =
       "vector", "aref", "aset!", "length", "for",
       "", "", "" };
 
-#define N_STACK 131072
-value_t Stack[N_STACK];
+#define N_STACK 262144
+value_t StaticStack[N_STACK];
+value_t *Stack = StaticStack;
 uint32_t SP = 0;
+
+typedef struct _stackseg_t {
+    value_t *Stack;
+    uint32_t SP;
+    struct _stackseg_t *prev;
+} stackseg_t;
+
+stackseg_t stackseg0 = { StaticStack, 0, NULL };
+stackseg_t *current_stack_seg = &stackseg0;
 
 value_t NIL, FL_T, FL_F, LAMBDA, QUOTE, IF, TRYCATCH;
 value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT;
@@ -85,7 +95,7 @@ value_t conssym, symbolsym, fixnumsym, vectorsym, builtinsym;
 value_t definesym, defmacrosym, forsym, labelsym, printprettysym, setqsym;
 value_t printwidthsym, tsym, Tsym, fsym, Fsym, booleansym, nullsym, elsesym;
 
-static value_t eval_sexpr(value_t e, uint32_t penv, int tail);
+static value_t eval_sexpr(value_t e, value_t *penv, int tail);
 static value_t *alloc_words(int n);
 static value_t relocate(value_t v);
 
@@ -465,12 +475,18 @@ void gc(int mustgrow)
     void *temp;
     uint32_t i;
     readstate_t *rs;
+    stackseg_t *ss;
 
     curheap = tospace;
     lim = curheap+heapsize-sizeof(cons_t);
 
-    for (i=0; i < SP; i++)
-        Stack[i] = relocate(Stack[i]);
+    ss = current_stack_seg;
+    ss->SP = SP;
+    while (ss) {
+        for (i=0; i < ss->SP; i++)
+            ss->Stack[i] = relocate(ss->Stack[i]);
+        ss = ss->prev;
+    }
     trace_globals(symtab);
     relocate_typetable();
     rs = readstate;
@@ -640,7 +656,6 @@ static void list(value_t *pv, uint32_t nargs, value_t *plastcdr)
         (c-2)->cdr = (c-1)->car;
     else
         (c-1)->cdr = *plastcdr;
-    POPN(nargs);
 }
 
 #define eval(e)         (selfevaluating(e) ? (e) : eval_sexpr((e),penv,0))
@@ -650,7 +665,7 @@ static void list(value_t *pv, uint32_t nargs, value_t *plastcdr)
     else { e=(xpr); goto eval_top; } } while (0)
 
 /* eval a list of expressions, giving a list of the results */
-static value_t evlis(value_t *pv, uint32_t penv)
+static value_t evlis(value_t *pv, value_t *penv)
 {
     PUSH(NIL);
     PUSH(NIL);
@@ -675,7 +690,42 @@ static value_t evlis(value_t *pv, uint32_t penv)
     return POP();
 }
 
-static value_t do_trycatch(value_t expr, uint32_t penv)
+/*
+  If we start to run out of space on the lisp value stack, we allocate
+  a new stack array and put it on the top of the chain. The new stack
+  is active until this function returns. Any return past this function
+  must free the new segment.
+*/
+static value_t new_stackseg(value_t e, value_t *penv, int tail)
+{
+    stackseg_t s;
+
+    s.prev = current_stack_seg;
+    s.Stack = (value_t*)malloc(N_STACK * sizeof(value_t));
+    if (s.Stack == NULL)
+        lerror(MemoryError, "eval: stack overflow");
+    current_stack_seg->SP = SP;
+    current_stack_seg = &s;
+    SP = 0;
+    Stack = s.Stack;
+    value_t v = NIL;
+    int err = 0;
+    FL_TRY {
+        v = eval_sexpr(e, penv, tail);
+    }
+    FL_CATCH {
+        err = 1;
+        v = lasterror;
+    }
+    free(s.Stack);
+    current_stack_seg = s.prev;
+    SP = current_stack_seg->SP;
+    Stack = current_stack_seg->Stack;
+    if (err) raise(v);
+    return v;
+}
+
+static value_t do_trycatch(value_t expr, value_t *penv)
 {
     value_t v;
 
@@ -710,18 +760,14 @@ static value_t do_trycatch(value_t expr, uint32_t penv)
  of the stack from LL through CLO.
  There might be zero values, in which case LL is NIL.
 
- Stack[penv-1] is the size of the whole environment (as a fixnum)
-
- if tail==1, you are allowed (indeed encouraged) to overwrite this
- environment, otherwise you have to put any new environment on the top
- of the stack.
+ penv[-1] tells you the environment size, from LL through CLO, as a fixnum.
 */
-static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
+static value_t eval_sexpr(value_t e, value_t *penv, int tail)
 {
-    value_t f, v, *pv, *argsyms, *body;
+    value_t f, v, *pv, *lenv;
     cons_t *c;
     symbol_t *sym;
-    uint32_t saveSP, envsz, lenv, nargs;
+    uint32_t saveSP, envsz, nargs;
     int i, noeval=0;
     fixnum_t s, lo, hi;
     cvalue_t *cv;
@@ -731,26 +777,25 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
     if (issymbol(e)) {
         sym = (symbol_t*)ptr(e);
         if (sym->syntax == TAG_CONST) return sym->binding;
-        pv = &Stack[penv];
         while (1) {
-            v = *pv++;
+            v = *penv++;
             while (iscons(v)) {
-                if (car_(v)==e) return *pv;
-                v = cdr_(v); pv++;
+                if (car_(v)==e) return *penv;
+                v = cdr_(v); penv++;
             }
             if (v != NIL) {
-                if (v == e) return *pv;  // dotted list
-                pv++;
+                if (v == e) return *penv;  // dotted list
+                penv++;
             }
-            if (*pv == NIL) break;
-            pv = &vector_elt(*pv, 0);
+            if (*penv == NIL) break;
+            penv = &vector_elt(*penv, 0);
         }
         if (__unlikely((v = sym->binding) == UNBOUND))
             raise(list2(UnboundError, e));
         return v;
     }
-    if (__unlikely(SP >= (N_STACK-MAX_ARGS)))
-        lerror(MemoryError, "eval: stack overflow");
+    if (__unlikely(SP >= (N_STACK-MAX_ARGS-4)))
+        return new_stackseg(e, penv, tail);
     saveSP = SP;
     v = car_(e);
     PUSH(cdr_(e));
@@ -761,27 +806,32 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             goto apply_special;
         else if (f == TAG_CONST)
             f = ((symbol_t*)ptr(v))->binding;
-        else
+        else {
             noeval = 2;
+            PUSH(f);
+            v = Stack[saveSP];
+            goto move_args;
+        }
     }
     else f = eval(v);
+    PUSH(f);
     v = Stack[saveSP];
+    // evaluate argument list, placing arguments on stack
+    while (iscons(v)) {
+        if (SP-saveSP-2 == MAX_ARGS) {
+            v = evlis(&Stack[saveSP], penv);
+            PUSH(v);
+            break;
+        }
+        v = car_(v);
+        v = eval(v);
+        PUSH(v);
+        v = Stack[saveSP] = cdr_(Stack[saveSP]);
+    }
+ do_apply:
+    nargs = SP - saveSP - 2;
     if (isbuiltinish(f)) {
         // handle builtin function
-        // evaluate argument list, placing arguments on stack
-        while (iscons(v)) {
-            if (SP-saveSP-1 == MAX_ARGS) {
-                v = evlis(&Stack[saveSP], penv);
-                PUSH(v);
-                break;
-            }
-            v = car_(v);
-            v = eval(v);
-            PUSH(v);
-            v = Stack[saveSP] = cdr_(Stack[saveSP]);
-        }
-    apply_builtin:
-        nargs = SP - saveSP - 1;
     apply_special:
         switch (uintval(f)) {
         // special forms
@@ -794,27 +844,26 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             e = car(Stack[saveSP]);
             v = car(cdr_(Stack[saveSP]));
             v = eval(v);
-            pv = &Stack[penv];
             while (1) {
-                f = *pv++;
+                f = *penv++;
                 while (iscons(f)) {
                     if (car_(f)==e) {
-                        *pv = v;
+                        *penv = v;
                         SP = saveSP;
                         return v;
                     }
-                    f = cdr_(f); pv++;
+                    f = cdr_(f); penv++;
                 }
                 if (f != NIL) {
                     if (f == e) {
-                        *pv = v;
+                        *penv = v;
                         SP = saveSP;
                         return v;
                     }
-                    pv++;
+                    penv++;
                 }
-                if (*pv == NIL) break;
-                pv = &vector_elt(*pv, 0);
+                if (*penv == NIL) break;
+                penv = &vector_elt(*penv, 0);
             }
             sym = tosymbol(e, "set!");
             if (sym->syntax != TAG_CONST)
@@ -822,23 +871,23 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             break;
         case F_LAMBDA:
             // build a closure (lambda args body . env)
-            if (Stack[penv] != NIL) {
+            if (*penv != NIL) {
                 // save temporary environment to the heap
                 lenv = penv;
-                envsz = numval(Stack[penv-1]);
+                envsz = numval(penv[-1]);
                 pv = alloc_words(envsz + 1);
                 PUSH(tagptr(pv, TAG_VECTOR));
                 pv[0] = fixnum(envsz);
                 pv++;
                 while (envsz--)
-                    *pv++ = Stack[penv++];
+                    *pv++ = *penv++;
                 // environment representation changed; install
                 // the new representation so everybody can see it
-                Stack[lenv]   = NIL;
-                Stack[lenv+1] = Stack[SP-1];
+                lenv[0] = NIL;
+                lenv[1] = Stack[SP-1];
             }
             else {
-                PUSH(Stack[penv+1]); // env has already been captured; share
+                PUSH(penv[1]); // env has already been captured; share
             }
             c = (cons_t*)ptr(v=cons_reserve(3));
             e = Stack[saveSP];
@@ -917,17 +966,17 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             break;
         case F_WHILE:
             PUSH(cdr(Stack[saveSP]));
-            body = &Stack[SP-1];
-            PUSH(*body);
+            lenv = &Stack[SP-1];
+            PUSH(*lenv);
             Stack[saveSP] = car_(Stack[saveSP]);
             value_t *cond = &Stack[saveSP];
             PUSH(FL_F);
             pv = &Stack[SP-1];
             while (eval(*cond) != FL_F) {
-                *body = Stack[SP-2];
-                while (iscons(*body)) {
-                    *pv = eval(car_(*body));
-                    *body = cdr_(*body);
+                *lenv = Stack[SP-2];
+                while (iscons(*lenv)) {
+                    *pv = eval(car_(*lenv));
+                    *lenv = cdr_(*lenv);
                 }
             }
             v = *pv;
@@ -1016,7 +1065,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             }
             else i = 0;
             v = alloc_vector(nargs+i, 0);
-            memcpy(&vector_elt(v,0), &Stack[saveSP+1], nargs*sizeof(value_t));
+            memcpy(&vector_elt(v,0), &Stack[saveSP+2], nargs*sizeof(value_t));
             if (i > 0) {
                 e = Stack[SP-1];
                 while (iscons(e)) {
@@ -1136,7 +1185,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             break;
         case F_ADD:
             s = 0;
-            i = saveSP+1;
+            i = saveSP+2;
             if (nargs > MAX_ARGS) goto add_ovf;
             for (; i < (int)SP; i++) {
                 if (__likely(isfixnum(Stack[i]))) {
@@ -1157,7 +1206,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             break;
         case F_SUB:
             if (__unlikely(nargs < 1)) lerror(ArgError, "-: too few arguments");
-            i = saveSP+1;
+            i = saveSP+2;
             if (nargs == 1) {
                 if (__likely(isfixnum(Stack[i])))
                     v = fixnum(-numval(Stack[i]));
@@ -1190,7 +1239,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             break;
         case F_MUL:
             accum = 1;
-            i = saveSP+1;
+            i = saveSP+2;
             if (nargs > MAX_ARGS) goto mul_ovf;
             for (; i < (int)SP; i++) {
                 if (__likely(isfixnum(Stack[i]))) {
@@ -1210,7 +1259,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             break;
         case F_DIV:
             if (__unlikely(nargs < 1)) lerror(ArgError, "/: too few arguments");
-            i = saveSP+1;
+            i = saveSP+2;
             if (nargs == 1) {
                 v = fl_div2(fixnum(1), Stack[i]);
             }
@@ -1276,25 +1325,25 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             v = Stack[SP-1];
             if (selfevaluating(v)) { SP=saveSP; return v; }
             if (tail) {
-                Stack[penv-1] = fixnum(2);
-                Stack[penv] = NIL;
-                Stack[penv+1] = NIL;
-                SP = penv + 2;
+                assert((ulong_t)(penv-Stack)<N_STACK);
+                penv[-1] = fixnum(2);
+                penv[0] = NIL;
+                penv[1] = NIL;
+                SP = (penv-Stack) + 2;
                 e=v;
                 goto eval_top;
             }
             else {
-                PUSH(fixnum(2));
                 PUSH(NIL);
                 PUSH(NIL);
-                v = eval_sexpr(v, SP-2, 1);
+                v = eval_sexpr(v, &Stack[SP-2], 1);
             }
             break;
         case F_EVALSTAR:
             argcount("eval*", nargs, 1);
             e = Stack[SP-1];
             if (selfevaluating(e)) { SP=saveSP; return e; }
-            SP = penv+2;
+            POPN(3);
             goto eval_top;
         case F_FOR:
             argcount("for", nargs, 3);
@@ -1315,117 +1364,85 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                 Stack[SP-3] = car_(f);     // lambda list
                 Stack[SP-2] = fixnum(s);   // argument value
                 v = car_(cdr_(f));
-                if (!selfevaluating(v)) v = eval_sexpr(v, SP-3, 0);
+                if (!selfevaluating(v)) v = eval_sexpr(v, &Stack[SP-3], 0);
             }
             break;
         case F_SPECIAL_APPLY:
-            v = Stack[saveSP-4];
-            f = Stack[saveSP-5];
+            f = Stack[saveSP-4];
+            v = Stack[saveSP-3];
             PUSH(f);
             PUSH(v);
             nargs = 2;
             // falls through!!
         case F_APPLY:
             argcount("apply", nargs, 2);
-            v = Stack[saveSP] = Stack[SP-1];  // second arg is new arglist
-            f = Stack[SP-2];            // first arg is new function
+            v = Stack[saveSP]   = Stack[SP-1]; // second arg is new arglist
+            f = Stack[saveSP+1] = Stack[SP-2]; // first arg is new function
             POPN(2);                    // pop apply's args
-            if (isbuiltinish(f)) {
-                assert(!isspecial(f));
-                // unpack arglist onto the stack
-                while (iscons(v)) {
-                    if (SP-saveSP-1 == MAX_ARGS) {
-                        PUSH(v);
-                        break;
-                    }
-                    PUSH(car_(v));
-                    v = cdr_(v);
+        move_args:
+            while (iscons(v)) {
+                if (SP-saveSP-2 == MAX_ARGS) {
+                    PUSH(v);
+                    break;
                 }
-                goto apply_builtin;
+                PUSH(car_(v));
+                v = cdr_(v);
             }
-            noeval = 1;
-            goto apply_lambda;
+            goto do_apply;
         case F_TRUE:
         case F_FALSE:
         case F_NIL:
             goto apply_type_error;
         default:
             // function pointer tagged as a builtin
-            v = ((builtin_t)ptr(f))(&Stack[saveSP+1], nargs);
+            v = ((builtin_t)ptr(f))(&Stack[saveSP+2], nargs);
         }
         SP = saveSP;
         return v;
     }
- apply_lambda:
     if (__likely(iscons(f))) {
         // apply lambda expression
-        f = cdr_(f);
-        PUSH(f);
+        f = Stack[saveSP+1];
+        f = Stack[saveSP+1] = cdr_(f);
         if (!iscons(f)) goto notpair;
-        PUSH(car_(f)); // arglist
-        argsyms = &Stack[SP-1];
-        // build a calling environment for the lambda
-        // the environment is the argument binds on top of the captured
-        // environment
-        if (noeval) {
-            while (iscons(v)) {
-                // bind args
-                if (!iscons(*argsyms)) {
-                    if (__unlikely(*argsyms == NIL))
-                        lerror(ArgError, "apply: too many arguments");
-                    break;
-                }
-                PUSH(car_(v));
-                *argsyms = cdr_(*argsyms);
-                v = cdr_(v);
-            }
-            if (*argsyms != NIL && issymbol(*argsyms))
-                PUSH(v);
+        v = car_(f); // arglist
+        i = nargs;
+        while (iscons(v)) {
+            if (i == 0)
+                lerror(ArgError, "apply: too few arguments");
+            i--;
+            v = cdr_(v);
+        }
+        if (v == NIL) {
+            if (i > 0)
+                lerror(ArgError, "apply: too many arguments");
         }
         else {
-            while (iscons(v)) {
-                // bind args
-                if (!iscons(*argsyms)) {
-                    if (__unlikely(*argsyms == NIL))
-                        lerror(ArgError, "apply: too many arguments");
-                    break;
+            if (i > 0) {
+                list(&v, i, &NIL);
+                if (nargs > MAX_ARGS) {
+                    c = (cons_t*)curheap;
+                    (c-2)->cdr = (c-1)->car;
                 }
-                v = car_(v);
-                v = eval(v);
-                PUSH(v);
-                *argsyms = cdr_(*argsyms);
-                v = Stack[saveSP] = cdr_(Stack[saveSP]);
+                Stack[SP-i] = v;
+                SP -= (i-1);
             }
-            if (*argsyms != NIL && issymbol(*argsyms)) {
-                PUSH(Stack[saveSP]);
-                // this version uses collective allocation. about 7-10%
-                // faster for lists with > 2 elements, but uses more
-                // stack space
-                i = SP;
-                while (iscons(Stack[saveSP])) {
-                    v = car_(Stack[saveSP]);
-                    v = eval(v);
-                    PUSH(v);
-                    Stack[saveSP] = cdr_(Stack[saveSP]);
-                }
-                if (SP > (uint32_t)i)
-                    list(&Stack[i-1], SP-i, &Stack[saveSP]);
+            else {
+                PUSH(NIL);
             }
-        }
-        if (__unlikely(iscons(*argsyms))) {
-            lerror(ArgError, "apply: too few arguments");
         }
         f = cdr_(Stack[saveSP+1]);
         if (!iscons(f)) goto notpair;
         e = car_(f);
         if (selfevaluating(e)) { SP=saveSP; return(e); }
         PUSH(cdr_(f));                     // add closed environment
-        *argsyms = car_(Stack[saveSP+1]);  // put lambda list
+        Stack[saveSP+1] = car_(Stack[saveSP+1]);  // put lambda list
+        envsz = SP - saveSP - 1;
 
         if (noeval == 2) {
             // macro: evaluate body in lambda environment
-            Stack[saveSP+1] = fixnum(SP-saveSP-2);
-            e = eval_sexpr(e, saveSP+2, 1);
+            Stack[saveSP] = fixnum(envsz);
+            e = eval_sexpr(e, &Stack[saveSP+1], 1);
             SP = saveSP;
             if (selfevaluating(e)) return(e);
             noeval = 0;
@@ -1433,19 +1450,17 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             goto eval_top;
         }
         else {
-            envsz = SP - saveSP - 2;
             if (tail) {
-                noeval = 0;
                 // ok to overwrite environment
+                penv[-1] = fixnum(envsz);
                 for(i=0; i < (int)envsz; i++)
-                    Stack[penv+i] = Stack[saveSP+2+i];
-                SP = penv+envsz;
-                Stack[penv-1] = fixnum(envsz);
+                    penv[i] = Stack[saveSP+1+i];
+                SP = (penv-Stack)+envsz;
                 goto eval_top;
             }
             else {
-                Stack[saveSP+1] = fixnum(envsz);
-                v = eval_sexpr(e, saveSP+2, 1);
+                Stack[saveSP] = fixnum(envsz);
+                v = eval_sexpr(e, &Stack[saveSP+1], 1);
                 SP = saveSP;
                 return v;
             }
@@ -1575,10 +1590,9 @@ value_t toplevel_eval(value_t expr)
 {
     value_t v;
     uint32_t saveSP = SP;
-    PUSH(fixnum(2));
     PUSH(NIL);
     PUSH(NIL);
-    v = topeval(expr, SP-2);
+    v = topeval(expr, &Stack[SP-2]);
     SP = saveSP;
     return v;
 }

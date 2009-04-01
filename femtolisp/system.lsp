@@ -135,6 +135,11 @@
       (nthcdr (cdr lst) (- n 1))))
 (define list-tail nthcdr)
 
+(define (list-head lst n)
+  (if (<= n 0) ()
+      (cons (car lst)
+	    (list-head (cdr lst) (- n 1)))))
+
 (define (list-ref lst n)
   (car (nthcdr lst n)))
 
@@ -482,7 +487,7 @@
 (define (print . args) (apply io.print (cons *output-stream* args)))
 (define (princ . args) (apply io.princ (cons *output-stream* args)))
 
-(define (newline) (princ *linefeed*))
+(define (newline) (princ *linefeed*) #t)
 (define (display x) (princ x) #t)
 (define (println . args) (prog1 (apply print args) (newline)))
 

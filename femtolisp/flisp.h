@@ -93,7 +93,7 @@ typedef struct _symbol_t {
                       (((unsigned char*)ptr(v)) < fromspace+heapsize))
 #define isgensym(x)  (issymbol(x) && ismanaged(x))
 
-extern value_t Stack[];
+extern value_t *Stack;
 extern uint32_t SP;
 #define PUSH(v) (Stack[SP++] = (v))
 #define POP()   (Stack[--SP])
