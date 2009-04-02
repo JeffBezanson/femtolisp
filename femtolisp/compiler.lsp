@@ -8,7 +8,7 @@
 
 (define Instructions
   (make-enum-table
-   [:nop :dup :pop :popn :call :jmp :brf :brt :jmp.l :brf.l :brt.l :ret
+   [:nop :dup :pop :call :jmp :brf :brt :jmp.l :brf.l :brt.l :ret
 
     :eq? :eqv? :equal? :atom? :not :null? :boolean? :symbol?
     :number? :bound? :pair? :builtin? :vector? :fixnum?
@@ -16,13 +16,13 @@
     :cons :list :car :cdr :set-car! :set-cdr!
     :eval :eval* :apply
 
-    :+ :- :* :/ :< :lognot :compare
+    :+ :- :* :/ :< :compare
 
     :vector :aref :aset! :length :for
 
     :loadt :loadf :loadnil :load0 :load1 :loadv :loadv.l
-    :loadg :loada :loadc
-    :setg  :seta  :setc  :loadg.l :setg.l
+    :loadg :loada :loadc :loadg.l
+    :setg  :seta  :setc  :setg.l
 
     :closure :trycatch :tcall :tapply]))
 
@@ -38,10 +38,9 @@
 	 :cdr      1      :set-car! 2
 	 :set-cdr! 2      :eval     1
 	 :eval*    1      :apply    2
-	 :<        2      :lognot   1
+	 :<        2      :for      3
 	 :compare  2      :aref     2
-	 :aset!    3      :length   1
-	 :for      3))
+	 :aset!    3      :length   1))
 
 (define 1/Instructions (table.invert Instructions))
 
@@ -121,7 +120,7 @@
 			 (io.write bcode (uint32 nxt))
 			 (set! i (+ i 1)))
 			
-			((:loada :seta :call :tcall :loadv :loadg :setg :popn
+			((:loada :seta :call :tcall :loadv :loadg :setg
 				 :list :+ :- :* :/ :vector)
 			 (io.write bcode (uint8 nxt))
 			 (set! i (+ i 1)))
@@ -168,7 +167,7 @@
 
 (define (in-env? s env)
   (and (pair? env)
-       (or (index-of s (car env) 0)
+       (or (memq s (car env))
 	   (in-env? s (cdr env)))))
 
 (define (lookup-sym s env lev arg?)
@@ -411,8 +410,7 @@
 		      (print-val (aref vals (aref code i)))
 		      (set! i (+ i 1)))
 
-		     ((:loada :seta :call :tcall :popn :list :+ :- :* :/
-			      :vector)
+		     ((:loada :seta :call :tcall :list :+ :- :* :/ :vector)
 		      (princ (number->string (aref code i)))
 		      (set! i (+ i 1)))
 

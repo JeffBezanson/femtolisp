@@ -67,7 +67,7 @@ static char *builtin_names[] =
       "eval", "eval*", "apply",
 
       // arithmetic
-      "+", "-", "*", "/", "<", "lognot", "compare",
+      "+", "-", "*", "/", "<", "compare",
 
       // sequences
       "vector", "aref", "aset!", "length", "for",
@@ -1272,13 +1272,6 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
                 }
                 v = fl_div2(Stack[i], Stack[i+1]);
             }
-            break;
-        case F_BNOT:
-            argcount("lognot", nargs, 1);
-            if (isfixnum(Stack[SP-1]))
-                v = fixnum(~numval(Stack[SP-1]));
-            else
-                v = fl_bitwise_not(Stack[SP-1]);
             break;
         case F_COMPARE:
             argcount("compare", nargs, 2);
