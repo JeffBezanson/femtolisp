@@ -18,13 +18,30 @@
 
     :+ :- :* :/ :< :lognot :compare
 
-    :vector :aref :aset :length :for
+    :vector :aref :aset! :length :for
 
     :loadt :loadf :loadnil :load0 :load1 :loadv :loadv.l
     :loadg :loada :loadc
     :setg  :seta  :setc  :loadg.l :setg.l
 
-    :closure :trycatch]))
+    :closure :trycatch :tcall :tapply]))
+
+(define arg-counts
+  (table :eq?      2      :eqv?     2
+	 :equal?   2      :atom?    1
+	 :not      1      :null?    1
+	 :boolean? 1      :symbol?  1
+	 :number?  1      :bound?   1
+	 :pair?    1      :builtin? 1
+	 :vector?  1      :fixnum?  1
+	 :cons     2      :car      1
+	 :cdr      1      :set-car! 2
+	 :set-cdr! 2      :eval     1
+	 :eval*    1      :apply    2
+	 :<        2      :lognot   1
+	 :compare  2      :aref     2
+	 :aset!    3      :length   1
+	 :for      3))
 
 (define 1/Instructions (table.invert Instructions))
 
@@ -104,7 +121,7 @@
 			 (io.write bcode (uint32 nxt))
 			 (set! i (+ i 1)))
 			
-			((:loada :seta :call :loadv :loadg :setg :popn
+			((:loada :seta :call :tcall :loadv :loadg :setg :popn
 				 :list :+ :- :* :/ :vector)
 			 (io.write bcode (uint8 nxt))
 			 (set! i (+ i 1)))
@@ -168,7 +185,7 @@
 			(if (null? curr) lev (+ lev 1))
 			#f)))))
 
-(define (compile-sym g s env Is)
+(define (compile-sym g env s Is)
   (let ((loc (lookup-sym s env 0 #t)))
     (case (car loc)
       (arg     (emit g (aref Is 0) (cadr loc)))
@@ -191,69 +208,64 @@
 	       ,(cons 'begin (cdr clause))
 	       ,(cond-clauses->if (cdr lst)))))))
 
-(define (compile-if g x env)
+(define (compile-if g env tail? x)
   (let ((elsel (make-label g))
 	(endl  (make-label g)))
-    (compile-in g (cadr x) env)
+    (compile-in g env #f (cadr x))
     (emit g :brf elsel)
-    (compile-in g (caddr x) env)
-    (emit g :jmp endl)
+    (compile-in g env tail? (caddr x))
+    (if tail?
+	(emit g :ret)
+	(emit g :jmp endl))
     (mark-label g elsel)
-    (compile-in g (if (pair? (cdddr x))
-		      (cadddr x)
-		      #f)
-		env)
+    (compile-in g env tail?
+		(if (pair? (cdddr x))
+		    (cadddr x)
+		    #f))
     (mark-label g endl)))
 
-(define (compile-begin g forms env)
-  (cond ((atom? forms) (compile-in g #f env))
+(define (compile-begin g env tail? forms)
+  (cond ((atom? forms) (compile-in g env tail? #f))
 	((atom? (cdr forms))
-	 (compile-in g (car forms) env))
+	 (compile-in g env tail? (car forms)))
 	(else
-	 (compile-in g (car forms) env)
+	 (compile-in g env #f (car forms))
 	 (emit g :pop)
-	 (compile-begin g (cdr forms) env))))
+	 (compile-begin g env tail? (cdr forms)))))
 
-(define (compile-prog1 g x env)
-  (compile-in g (cadr x) env)
+(define (compile-prog1 g env x)
+  (compile-in g env #f (cadr x))
   (if (pair? (cddr x))
-      (begin (compile-begin g (cddr x) env)
+      (begin (compile-begin g env #f (cddr x))
 	     (emit g :pop))))
 
-(define (compile-while g cond body env)
+(define (compile-while g env cond body)
   (let ((top  (make-label g))
 	(end  (make-label g)))
     (mark-label g top)
-    (compile-in g cond env)
+    (compile-in g env #f cond)
     (emit g :brf end)
-    (compile-in g body env)
+    (compile-in g env #f body)
     (emit g :pop)
     (emit g :jmp top)
     (mark-label g end)))
 
-(define (compile-and g forms env)
-  (cond ((atom? forms)        (compile-in g #t env))
-	((atom? (cdr forms))  (compile-in g (car forms) env))
+(define (compile-short-circuit g env tail? forms default branch)
+  (cond ((atom? forms)        (compile-in g env tail? default))
+	((atom? (cdr forms))  (compile-in g env tail? (car forms)))
 	(else
 	 (let ((end  (make-label g)))
-	   (compile-in g (car forms) env)
+	   (compile-in g env #f (car forms))
 	   (emit g :dup)
-	   (emit g :brf end)
+	   (emit g branch end)
 	   (emit g :pop)
-	   (compile-and g (cdr forms) env)
+	   (compile-short-circuit g env tail? (cdr forms) default branch)
 	   (mark-label g end)))))
 
-(define (compile-or g forms env)
-  (cond ((atom? forms)        (compile-in g #f env))
-	((atom? (cdr forms))  (compile-in g (car forms) env))
-	(else
-	 (let ((end  (make-label g)))
-	   (compile-in g (car forms) env)
-	   (emit g :dup)
-	   (emit g :brt end)
-	   (emit g :pop)
-	   (compile-or g (cdr forms) env)
-	   (mark-label g end)))))
+(define (compile-and g env tail? forms)
+  (compile-short-circuit g env tail? forms #t :brf))
+(define (compile-or g env tail? forms)
+  (compile-short-circuit g env tail? forms #f :brt))
 
 (define MAX_ARGS 127)
 
@@ -276,10 +288,10 @@
 
 (define (just-compile-args g lst env)
   (for-each (lambda (a)
-	      (compile-in g a env))
+	      (compile-in g env #f a))
 	    lst))
 
-(define (compile-arglist g lst env)
+(define (compile-arglist g env lst)
   (let ((argtail (length> lst MAX_ARGS)))
     (if argtail
 	(begin (just-compile-args g (list-head lst MAX_ARGS) env)
@@ -287,12 +299,12 @@
 		      (cons nconc
 			    (map (lambda (l) (cons list l))
 				 (list-partition argtail MAX_ARGS)))))
-		 (compile-in g rest env))
+		 (compile-in g env #f rest))
 	       (+ MAX_ARGS 1))
 	(begin (just-compile-args g lst env)
 	       (length lst)))))
 
-(define (compile-app g x env)
+(define (compile-app g env tail? x)
   (let ((head  (car x)))
     (let ((head
 	   (if (and (symbol? head)
@@ -305,16 +317,23 @@
       (let ((b (and (builtin? head)
 		    (builtin->instruction head))))
 	(if (not b)
-	    (compile-in g head env))
-	(let ((nargs (compile-arglist g (cdr x) env)))
-	  (if b  ;; TODO check arg count
-	      (if (memq b '(:list :+ :- :* :/ :vector))
-		  (emit g b nargs)
-		  (emit g b))
-	      (emit g :call nargs)))))))
+	    (compile-in g env #f head))
+	(let ((nargs (compile-arglist g env (cdr x))))
+	  (if b
+	      (let ((count (get arg-counts b #f)))
+		(if (and count
+			 (not (length= (cdr x) count)))
+		    (error (string "compile error: " head " expects " count
+				   (if (= count 1)
+				       " argument."
+				       " arguments."))))
+		(if (memq b '(:list :+ :- :* :/ :vector))
+		    (emit g b nargs)
+		    (emit g (if (and tail? (eq? b :apply)) :tapply b))))
+	      (emit g (if tail? :tcall :call) nargs)))))))
 
-(define (compile-in g x env)
-  (cond ((symbol? x) (compile-sym g x env [:loada :loadc :loadg]))
+(define (compile-in g env tail? x)
+  (cond ((symbol? x) (compile-sym g env x [:loada :loadc :loadg]))
 	((atom? x)
 	 (cond ((eq? x 0)  (emit g :load0))
 	       ((eq? x 1)  (emit g :load1))
@@ -325,30 +344,30 @@
 	(else
 	 (case (car x)
 	   (quote    (emit g :loadv (cadr x)))
-	   (cond     (compile-in g (cond->if x) env))
-	   (if       (compile-if g x env))
-	   (begin    (compile-begin g (cdr x) env))
-	   (prog1    (compile-prog1 g x env))
-	   (lambda   (begin (emit g :loadv (compile-f x env))
+	   (cond     (compile-in g env tail? (cond->if x)))
+	   (if       (compile-if g env tail? x))
+	   (begin    (compile-begin g env tail? (cdr x)))
+	   (prog1    (compile-prog1 g env tail? x))
+	   (lambda   (begin (emit g :loadv (compile-f env x))
 			    (emit g :closure)))
-	   (and      (compile-and g (cdr x) env))
-	   (or       (compile-or  g (cdr x) env))
-	   (while    (compile-while g (cadr x) (caddr x) env))
-	   (set!     (compile-in g (caddr x) env)
-		     (compile-sym g (cadr x) env [:seta :setc :setg]))
-	   (trycatch (compile-in g `(lambda () ,(cadr x)) env)
-		     (compile-in g (caddr x))
+	   (and      (compile-and g env tail? (cdr x)))
+	   (or       (compile-or  g env tail? (cdr x)))
+	   (while    (compile-while g env (cadr x) (caddr x)))
+	   (set!     (compile-in g env #f (caddr x))
+		     (compile-sym g env (cadr x) [:seta :setc :setg]))
+	   (trycatch (compile-in g env #f `(lambda () ,(cadr x)))
+		     (compile-in g env #f (caddr x))
 		     (emit g :trycatch))
-	   (else   (compile-app g x env))))))
+	   (else   (compile-app g env tail? x))))))
 
-(define (compile-f f env)
+(define (compile-f env f)
   (let ((g (make-code-emitter)))
-    (compile-in g (caddr f) (cons (to-proper (cadr f)) env))
+    (compile-in g (cons (to-proper (cadr f)) env) #t (caddr f))
     (emit g :ret)
     `(compiled-lambda ,(cadr f) ,(bytecode g))))
 
 (define (compile x)
-  (bytecode (compile-in (make-code-emitter) x ())))
+  (bytecode (compile-in (make-code-emitter) () #t x)))
 
 (define (ref-uint32-LE a i)
   (+ (ash (aref a (+ i 0)) 0)
@@ -392,7 +411,8 @@
 		      (print-val (aref vals (aref code i)))
 		      (set! i (+ i 1)))
 
-		     ((:loada :seta :call :popn :list :+ :- :* :/ :vector)
+		     ((:loada :seta :call :tcall :popn :list :+ :- :* :/
+			      :vector)
 		      (princ (number->string (aref code i)))
 		      (set! i (+ i 1)))
 

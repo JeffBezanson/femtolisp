@@ -93,12 +93,20 @@ size_t u8_toucs(u_int32_t *dest, size_t sz, const char *src, size_t srcsz)
         return 0;
 
     while (i < sz) {
+        if (!isutf(*src)) {     // invalid sequence
+            dest[i++] = 0xFFFD;
+            src++;
+            if (src >= src_end) break;
+            continue;
+        }
         nb = trailingBytesForUTF8[(unsigned char)*src];
         if (src + nb >= src_end)
             break;
         ch = 0;
         switch (nb) {
             /* these fall through deliberately */
+        case 5: ch += (unsigned char)*src++; ch <<= 6;
+        case 4: ch += (unsigned char)*src++; ch <<= 6;
         case 3: ch += (unsigned char)*src++; ch <<= 6;
         case 2: ch += (unsigned char)*src++; ch <<= 6;
         case 1: ch += (unsigned char)*src++; ch <<= 6;
@@ -242,17 +250,20 @@ size_t u8_strwidth(const char *s)
             if (sc) tot++;
         }
         else {
+            if (!isutf(sc)) { tot++; s++; continue; }
             nb = trailingBytesForUTF8[(unsigned char)sc];
             ch = 0;
             switch (nb) {
                 /* these fall through deliberately */
+            case 5: ch += (unsigned char)*s++; ch <<= 6;
+            case 4: ch += (unsigned char)*s++; ch <<= 6;
             case 3: ch += (unsigned char)*s++; ch <<= 6;
             case 2: ch += (unsigned char)*s++; ch <<= 6;
             case 1: ch += (unsigned char)*s++; ch <<= 6;
             case 0: ch += (unsigned char)*s++;
             }
             ch -= offsetsFromUTF8[nb];
-            w = wcwidth(ch);
+            w = wcwidth(ch);  // might return -1
             if (w > 0) tot += w;
         }
     }
