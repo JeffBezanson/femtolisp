@@ -660,8 +660,8 @@ static void list(value_t *pv, uint32_t nargs, value_t *plastcdr)
 
 #define eval(e)         (selfevaluating(e) ? (e) : eval_sexpr((e),penv,0))
 #define topeval(e, env) (selfevaluating(e) ? (e) : eval_sexpr((e),env,1))
-#define tail_eval(xpr) do { SP = saveSP;  \
-    if (selfevaluating(xpr)) { return (xpr); }  \
+#define tail_eval(xpr) do {  \
+    if (selfevaluating(xpr)) { SP=saveSP; return (xpr); }  \
     else { e=(xpr); goto eval_top; } } while (0)
 
 /* eval a list of expressions, giving a list of the results */
@@ -767,24 +767,30 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
     value_t f, v, *pv, *lenv;
     cons_t *c;
     symbol_t *sym;
-    uint32_t saveSP, envsz, nargs;
+    uint32_t saveSP, bp, envsz, nargs;
     int i, noeval=0;
     fixnum_t s, lo, hi;
     cvalue_t *cv;
     int64_t accum;
 
+    /*
+    ios_printf(ios_stdout, "eval "); print(ios_stdout, e, 0);
+    ios_printf(ios_stdout, " in ");  print(ios_stdout, penv[0], 0);
+    ios_printf(ios_stdout, "\n");
+    */
+    saveSP = SP;
  eval_top:
     if (issymbol(e)) {
         sym = (symbol_t*)ptr(e);
-        if (sym->syntax == TAG_CONST) return sym->binding;
+        if (sym->syntax == TAG_CONST) { SP=saveSP; return sym->binding; }
         while (1) {
             v = *penv++;
             while (iscons(v)) {
-                if (car_(v)==e) return *penv;
+                if (car_(v)==e) { SP=saveSP; return *penv; }
                 v = cdr_(v); penv++;
             }
             if (v != NIL) {
-                if (v == e) return *penv;  // dotted list
+                if (v == e) { SP=saveSP; return *penv; } // dotted list
                 penv++;
             }
             if (*penv == NIL) break;
@@ -792,11 +798,15 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
         }
         if (__unlikely((v = sym->binding) == UNBOUND))
             raise(list2(UnboundError, e));
+        SP = saveSP;
         return v;
     }
-    if (__unlikely(SP >= (N_STACK-MAX_ARGS-4)))
-        return new_stackseg(e, penv, tail);
-    saveSP = SP;
+    if (__unlikely(SP >= (N_STACK-MAX_ARGS-4))) {
+        v = new_stackseg(e, penv, tail);
+        SP = saveSP;
+        return v;
+    }
+    bp = SP;
     v = car_(e);
     PUSH(cdr_(e));
     if (selfevaluating(v)) f=v;
@@ -809,40 +819,40 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
         else {
             noeval = 2;
             PUSH(f);
-            v = Stack[saveSP];
+            v = Stack[bp];
             goto move_args;
         }
     }
     else f = eval(v);
     PUSH(f);
-    v = Stack[saveSP];
+    v = Stack[bp];
     // evaluate argument list, placing arguments on stack
     while (iscons(v)) {
-        if (SP-saveSP-2 == MAX_ARGS) {
-            v = evlis(&Stack[saveSP], penv);
+        if (SP-bp-2 == MAX_ARGS) {
+            v = evlis(&Stack[bp], penv);
             PUSH(v);
             break;
         }
         v = car_(v);
         v = eval(v);
         PUSH(v);
-        v = Stack[saveSP] = cdr_(Stack[saveSP]);
+        v = Stack[bp] = cdr_(Stack[bp]);
     }
  do_apply:
-    nargs = SP - saveSP - 2;
+    nargs = SP - bp - 2;
     if (isbuiltinish(f)) {
         // handle builtin function
     apply_special:
         switch (uintval(f)) {
         // special forms
         case F_QUOTE:
-            if (__unlikely(!iscons(Stack[saveSP])))
+            if (__unlikely(!iscons(Stack[bp])))
                 lerror(ArgError, "quote: expected argument");
-            v = car_(Stack[saveSP]);
+            v = car_(Stack[bp]);
             break;
         case F_SETQ:
-            e = car(Stack[saveSP]);
-            v = car(cdr_(Stack[saveSP]));
+            e = car(Stack[bp]);
+            v = car(cdr_(Stack[bp]));
             v = eval(v);
             while (1) {
                 f = *penv++;
@@ -890,7 +900,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
                 PUSH(penv[1]); // env has already been captured; share
             }
             c = (cons_t*)ptr(v=cons_reserve(3));
-            e = Stack[saveSP];
+            e = Stack[bp];
             if (!iscons(e)) goto notpair;
             c->car = LAMBDA;
             c->cdr = tagptr(c+1, TAG_CONS); c++;
@@ -901,15 +911,15 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             c->cdr = Stack[SP-1];  //env
             break;
         case F_IF:
-            if (!iscons(Stack[saveSP])) goto notpair;
-            v = car_(Stack[saveSP]);
+            if (!iscons(Stack[bp])) goto notpair;
+            v = car_(Stack[bp]);
             if (eval(v) != FL_F) {
-                v = cdr_(Stack[saveSP]);
+                v = cdr_(Stack[bp]);
                 if (!iscons(v)) goto notpair;
                 v = car_(v);
             }
             else {
-                v = cdr_(Stack[saveSP]);
+                v = cdr_(Stack[bp]);
                 if (!iscons(v)) goto notpair;
                 if (!iscons(v=cdr_(v))) v = FL_F;  // allow 2-arg form
                 else v = car_(v);
@@ -917,7 +927,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             tail_eval(v);
             break;
         case F_COND:
-            pv = &Stack[saveSP]; v = FL_F;
+            pv = &Stack[bp]; v = FL_F;
             while (iscons(*pv)) {
                 c = tocons(car_(*pv), "cond");
                 v = c->car;
@@ -941,7 +951,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             }
             break;
         case F_AND:
-            pv = &Stack[saveSP]; v = FL_T;
+            pv = &Stack[bp]; v = FL_T;
             if (iscons(*pv)) {
                 while (iscons(cdr_(*pv))) {
                     if ((v=eval(car_(*pv))) == FL_F) {
@@ -953,7 +963,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             }
             break;
         case F_OR:
-            pv = &Stack[saveSP]; v = FL_F;
+            pv = &Stack[bp]; v = FL_F;
             if (iscons(*pv)) {
                 while (iscons(cdr_(*pv))) {
                     if ((v=eval(car_(*pv))) != FL_F) {
@@ -965,11 +975,11 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             }
             break;
         case F_WHILE:
-            PUSH(cdr(Stack[saveSP]));
+            PUSH(cdr(Stack[bp]));
             lenv = &Stack[SP-1];
             PUSH(*lenv);
-            Stack[saveSP] = car_(Stack[saveSP]);
-            value_t *cond = &Stack[saveSP];
+            Stack[bp] = car_(Stack[bp]);
+            value_t *cond = &Stack[bp];
             PUSH(FL_F);
             pv = &Stack[SP-1];
             while (eval(*cond) != FL_F) {
@@ -983,7 +993,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             break;
         case F_BEGIN:
             // return last arg
-            pv = &Stack[saveSP];
+            pv = &Stack[bp];
             if (iscons(*pv)) {
                 while (iscons(cdr_(*pv))) {
                     v = car_(*pv);
@@ -996,7 +1006,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             break;
         case F_PROG1:
             // return first arg
-            pv = &Stack[saveSP];
+            pv = &Stack[bp];
             if (__unlikely(!iscons(*pv)))
                 lerror(ArgError, "prog1: too few arguments");
             PUSH(eval(car_(*pv)));
@@ -1008,7 +1018,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             v = POP();
             break;
         case F_TRYCATCH:
-            v = do_trycatch(car(Stack[saveSP]), penv);
+            v = do_trycatch(car(Stack[bp]), penv);
             break;
 
         // ordinary functions
@@ -1033,8 +1043,8 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             break;
         case F_LIST:
             if (nargs) {
-                Stack[saveSP] = v;
-                list(&v, nargs, &Stack[saveSP]);
+                Stack[bp] = v;
+                list(&v, nargs, &Stack[bp]);
             }
             // else v is already set to the final cdr, which is the result
             break;
@@ -1065,7 +1075,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             }
             else i = 0;
             v = alloc_vector(nargs+i, 0);
-            memcpy(&vector_elt(v,0), &Stack[saveSP+2], nargs*sizeof(value_t));
+            memcpy(&vector_elt(v,0), &Stack[bp+2], nargs*sizeof(value_t));
             if (i > 0) {
                 e = Stack[SP-1];
                 while (iscons(e)) {
@@ -1185,7 +1195,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             break;
         case F_ADD:
             s = 0;
-            i = saveSP+2;
+            i = bp+2;
             if (nargs > MAX_ARGS) goto add_ovf;
             for (; i < (int)SP; i++) {
                 if (__likely(isfixnum(Stack[i]))) {
@@ -1206,7 +1216,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             break;
         case F_SUB:
             if (__unlikely(nargs < 1)) lerror(ArgError, "-: too few arguments");
-            i = saveSP+2;
+            i = bp+2;
             if (nargs == 1) {
                 if (__likely(isfixnum(Stack[i])))
                     v = fixnum(-numval(Stack[i]));
@@ -1239,7 +1249,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             break;
         case F_MUL:
             accum = 1;
-            i = saveSP+2;
+            i = bp+2;
             if (nargs > MAX_ARGS) goto mul_ovf;
             for (; i < (int)SP; i++) {
                 if (__likely(isfixnum(Stack[i]))) {
@@ -1259,7 +1269,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             break;
         case F_DIV:
             if (__unlikely(nargs < 1)) lerror(ArgError, "/: too few arguments");
-            i = saveSP+2;
+            i = bp+2;
             if (nargs == 1) {
                 v = fl_div2(fixnum(1), Stack[i]);
             }
@@ -1361,20 +1371,20 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             }
             break;
         case F_SPECIAL_APPLY:
-            f = Stack[saveSP-4];
-            v = Stack[saveSP-3];
+            f = Stack[bp-4];
+            v = Stack[bp-3];
             PUSH(f);
             PUSH(v);
             nargs = 2;
             // falls through!!
         case F_APPLY:
             argcount("apply", nargs, 2);
-            v = Stack[saveSP]   = Stack[SP-1]; // second arg is new arglist
-            f = Stack[saveSP+1] = Stack[SP-2]; // first arg is new function
+            v = Stack[bp]   = Stack[SP-1]; // second arg is new arglist
+            f = Stack[bp+1] = Stack[SP-2]; // first arg is new function
             POPN(2);                    // pop apply's args
         move_args:
             while (iscons(v)) {
-                if (SP-saveSP-2 == MAX_ARGS) {
+                if (SP-bp-2 == MAX_ARGS) {
                     PUSH(v);
                     break;
                 }
@@ -1388,15 +1398,15 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             goto apply_type_error;
         default:
             // function pointer tagged as a builtin
-            v = ((builtin_t)ptr(f))(&Stack[saveSP+2], nargs);
+            v = ((builtin_t)ptr(f))(&Stack[bp+2], nargs);
         }
         SP = saveSP;
         return v;
     }
     if (__likely(iscons(f))) {
         // apply lambda expression
-        f = Stack[saveSP+1];
-        f = Stack[saveSP+1] = cdr_(f);
+        f = Stack[bp+1];
+        f = Stack[bp+1] = cdr_(f);
         if (!iscons(f)) goto notpair;
         v = car_(f); // arglist
         i = nargs;
@@ -1424,20 +1434,19 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
                 PUSH(NIL);
             }
         }
-        f = cdr_(Stack[saveSP+1]);
+        f = cdr_(Stack[bp+1]);
         if (!iscons(f)) goto notpair;
         e = car_(f);
         if (selfevaluating(e)) { SP=saveSP; return(e); }
         PUSH(cdr_(f));                     // add closed environment
-        Stack[saveSP+1] = car_(Stack[saveSP+1]);  // put lambda list
-        envsz = SP - saveSP - 1;
+        Stack[bp+1] = car_(Stack[bp+1]);  // put lambda list
+        envsz = SP - bp - 1;
 
         if (noeval == 2) {
             // macro: evaluate body in lambda environment
-            Stack[saveSP] = fixnum(envsz);
-            e = eval_sexpr(e, &Stack[saveSP+1], 1);
-            SP = saveSP;
-            if (selfevaluating(e)) return(e);
+            Stack[bp] = fixnum(envsz);
+            e = eval_sexpr(e, &Stack[bp+1], 1);
+            if (selfevaluating(e)) { SP=saveSP; return(e); }
             noeval = 0;
             // macro: evaluate expansion in calling environment
             goto eval_top;
@@ -1447,15 +1456,15 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
                 // ok to overwrite environment
                 penv[-1] = fixnum(envsz);
                 for(i=0; i < (int)envsz; i++)
-                    penv[i] = Stack[saveSP+1+i];
+                    penv[i] = Stack[bp+1+i];
                 SP = (penv-Stack)+envsz;
                 goto eval_top;
             }
             else {
-                Stack[saveSP] = fixnum(envsz);
-                v = eval_sexpr(e, &Stack[saveSP+1], 1);
-                SP = saveSP;
-                return v;
+                Stack[bp] = fixnum(envsz);
+                penv = &Stack[bp+1];
+                tail = 1;
+                goto eval_top;
             }
         }
         // not reached
