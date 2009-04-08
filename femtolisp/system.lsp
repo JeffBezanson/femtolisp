@@ -21,8 +21,6 @@
       (list 'set! form (car body))
       (list 'set! (car form) (list 'lambda (cdr form) (f-body body)))))
 
-(define-macro (body . forms) (f-body forms))
-
 (define (set s v) (eval (list 'set! s (list 'quote v))))
 
 (define (map f lst)
@@ -50,16 +48,25 @@
 	(map (lambda (c) (if (pair? c) (cadr c) #f)) binds))))
    #f))
 
+(define-macro (letrec binds . body)
+  (cons (list 'lambda (map car binds)
+              (f-body
+	       (nconc (map (lambda (b) (cons 'set! b)) binds)
+		      body)))
+        (map (lambda (x) #f) binds)))
+
 ; standard procedures ---------------------------------------------------------
+
+(define (append2 l d)
+  (if (null? l) d
+      (cons (car l)
+	    (append2 (cdr l) d))))
 
 (define (append . lsts)
   (cond ((null? lsts) ())
-        ((null? (cdr lsts)) (car lsts))
-        (#t ((label append2 (lambda (l d)
-			      (if (null? l) d
-				  (cons (car l)
-					(append2 (cdr l) d)))))
-	     (car lsts) (apply append (cdr lsts))))))
+	((null? (cdr lsts)) (car lsts))
+	(#t (append2 (car lsts)
+		     (apply append (cdr lsts))))))
 
 (define (member item lst)
   (cond ((atom? lst) #f)
@@ -130,10 +137,9 @@
 (define (listp a) (or (null? a) (pair? a)))
 (define (list? a) (or (null? a) (and (pair? a) (list? (cdr a)))))
 
-(define (nthcdr lst n)
+(define (list-tail lst n)
   (if (<= n 0) lst
-      (nthcdr (cdr lst) (- n 1))))
-(define list-tail nthcdr)
+      (list-tail (cdr lst) (- n 1))))
 
 (define (list-head lst n)
   (if (<= n 0) ()
@@ -141,7 +147,7 @@
 	    (list-head (cdr lst) (- n 1)))))
 
 (define (list-ref lst n)
-  (car (nthcdr lst n)))
+  (car (list-tail lst n)))
 
 ; bounded length test
 ; use this instead of (= (length lst) n), since it avoids unnecessary
@@ -166,11 +172,10 @@
   (if (atom? l) l
       (lastcdr (cdr l))))
 
-(define (last l)
+(define (last-pair l)
   (cond ((atom? l)        l)
         ((atom? (cdr l))  l)
-        (#t               (last (cdr l)))))
-(define last-pair last)
+        (#t               (last-pair (cdr l)))))
 
 (define (to-proper l)
   (cond ((null? l) l)
@@ -183,32 +188,36 @@
 		(set-car! lst (f (car lst)))
 		(set! lst (cdr lst)))))
 
-(define (mapcar f . lsts)
-  ((label mapcar-
+(letrec ((mapcar-
           (lambda (f lsts)
-            (cond ((null? lsts) (f))
-                  ((atom? (car lsts)) (car lsts))
-                  (#t (cons (apply   f (map car lsts))
-			    (mapcar- f (map cdr lsts)))))))
-   f lsts))
+	    (cond ((null? lsts) (f))
+		  ((atom? (car lsts)) (car lsts))
+		  (#t (cons (apply   f (map car lsts))
+			    (mapcar- f (map cdr lsts))))))))
+  (set! mapcar
+	(lambda (f . lsts) (mapcar- f lsts))))
 
 (define (transpose M) (apply mapcar (cons list M)))
 
-(define (filter pred lst) (filter- pred lst ()))
-(define (filter- pred lst accum)
-  (cond ((null? lst) accum)
-        ((pred (car lst))
-         (filter- pred (cdr lst) (cons (car lst) accum)))
-        (#t
-         (filter- pred (cdr lst) accum))))
+(letrec ((filter-
+	  (lambda (pred lst accum)
+	    (cond ((null? lst) accum)
+		  ((pred (car lst))
+		   (filter- pred (cdr lst) (cons (car lst) accum)))
+		  (#t
+		   (filter- pred (cdr lst) accum))))))
+  (set! filter
+	(lambda (pred lst) (filter- pred lst ()))))
 
-(define (separate pred lst) (separate- pred lst () ()))
-(define (separate- pred lst yes no)
-  (cond ((null? lst) (cons yes no))
-        ((pred (car lst))
-         (separate- pred (cdr lst) (cons (car lst) yes) no))
-        (#t
-         (separate- pred (cdr lst) yes (cons (car lst) no)))))
+(letrec ((separate-
+	  (lambda (pred lst yes no)
+	    (cond ((null? lst) (cons yes no))
+		  ((pred (car lst))
+		   (separate- pred (cdr lst) (cons (car lst) yes) no))
+		  (#t
+		   (separate- pred (cdr lst) yes (cons (car lst) no)))))))
+  (set! separate
+	(lambda (pred lst) (separate- pred lst () ()))))
 
 (define (nestlist f zero n)
   (if (<= n 0) ()
@@ -251,32 +260,34 @@
 	    (cons elt
 		  (delete-duplicates tail))))))
 
-(define (get-defined-vars- expr)
-  (cond ((atom? expr) ())
-	((and (eq? (car expr) 'define)
-	      (pair? (cdr expr)))
-	 (or (and (symbol? (cadr expr))
-		  (list (cadr expr)))
-	     (and (pair? (cadr expr))
-		  (symbol? (caadr expr))
-		  (list (caadr expr)))
-	     ()))
-	((eq? (car expr) 'begin)
-	 (apply append (map get-defined-vars- (cdr expr))))
-	(else ())))
-(define (get-defined-vars expr)
-  (delete-duplicates (get-defined-vars- expr)))
+(letrec ((get-defined-vars-
+	  (lambda (expr)
+	    (cond ((atom? expr) ())
+		  ((and (eq? (car expr) 'define)
+			(pair? (cdr expr)))
+		   (or (and (symbol? (cadr expr))
+			    (list (cadr expr)))
+		       (and (pair? (cadr expr))
+			    (symbol? (caadr expr))
+			    (list (caadr expr)))
+		       ()))
+		  ((eq? (car expr) 'begin)
+		   (apply append (map get-defined-vars- (cdr expr))))
+		  (else ())))))
+  (set! get-defined-vars
+	(lambda (expr) (delete-duplicates (get-defined-vars- expr)))))
 
 ; redefine f-body to support internal define
-(define f-body- f-body)
-(define (f-body e)
-  ((lambda (B)
-     ((lambda (V)
-	(if (null? V)
-	    B
-	    (cons (list 'lambda V B) (map (lambda (x) #f) V))))
-      (get-defined-vars B)))
-   (f-body- e)))
+(let ((f-body- f-body))
+  (set! f-body
+	(lambda (e)
+	  ((lambda (B)
+	     ((lambda (V)
+		(if (null? V)
+		    B
+		    (cons (list 'lambda V B) (map (lambda (x) #f) V))))
+	      (get-defined-vars B)))
+	   (f-body- e)))))
 
 ; backquote -------------------------------------------------------------------
 
@@ -351,13 +362,6 @@
       `((lambda (,(caar binds))
 	  (let* ,(cdr binds) ,@body))
 	,(cadar binds))))
-
-(define-macro (letrec binds . body)
-  (cons (list 'lambda (map car binds)
-              (f-body
-	       (nconc (map (lambda (b) (cons 'set! b)) binds)
-		      body)))
-        (map (lambda (x) #f) binds)))
 
 (define-macro (when   c . body) (list 'if c (f-body body) #f))
 (define-macro (unless c . body) (list 'if c #f (f-body body)))
@@ -468,7 +472,7 @@
   (let ((lam  (eval sym)))
     (if (eq? (car lam) 'trace-lambda)
 	(set sym
-	     (cadr (caar (last (caddr lam))))))))
+	     (cadr (caar (last-pair (caddr lam))))))))
 
 (define-macro (time expr)
   (let ((t0 (gensym)))
@@ -555,27 +559,27 @@
 
 (define (string.trim s at-start at-end)
   (define (trim-start s chars i L)
-    (if (and (#.< i L)
-	     (#.string.find chars (#.string.char s i)))
-	(trim-start s chars (#.string.inc s i) L)
+    (if (and (< i L)
+	     (string.find chars (string.char s i)))
+	(trim-start s chars (string.inc s i) L)
 	i))
   (define (trim-end s chars i)
     (if (and (> i 0)
-	     (#.string.find chars (#.string.char s (#.string.dec s i))))
-	(trim-end s chars (#.string.dec s i))
+	     (string.find chars (string.char s (string.dec s i))))
+	(trim-end s chars (string.dec s i))
 	i))
-  (let ((L (#.length s)))
+  (let ((L (length s)))
     (string.sub s
 		(trim-start s at-start 0 L)
 		(trim-end   s at-end   L))))
 
 (define (string.map f s)
   (let ((b (buffer))
-	(n (#.length s)))
+	(n (length s)))
     (let ((i 0))
-      (while (#.< i n)
-	     (begin (#.io.putc b (f (#.string.char s i)))
-		    (set! i (#.string.inc s i)))))
+      (while (< i n)
+	     (begin (io.putc b (f (string.char s i)))
+		    (set! i (string.inc s i)))))
     (io.tostring! b)))
 
 (define (string.rep s k)

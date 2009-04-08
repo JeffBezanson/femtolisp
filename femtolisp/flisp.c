@@ -1337,6 +1337,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
                 goto eval_top;
             }
             else {
+                PUSH(fixnum(2));
                 PUSH(NIL);
                 PUSH(NIL);
                 v = eval_sexpr(v, &Stack[SP-2], 1);
@@ -1371,8 +1372,8 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             }
             break;
         case F_SPECIAL_APPLY:
-            f = Stack[bp-4];
-            v = Stack[bp-3];
+            f = Stack[bp-5];
+            v = Stack[bp-4];
             PUSH(f);
             PUSH(v);
             nargs = 2;
@@ -1592,6 +1593,7 @@ value_t toplevel_eval(value_t expr)
 {
     value_t v;
     uint32_t saveSP = SP;
+    PUSH(fixnum(2));
     PUSH(NIL);
     PUSH(NIL);
     v = topeval(expr, &Stack[SP-2]);
