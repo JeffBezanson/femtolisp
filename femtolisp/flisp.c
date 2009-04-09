@@ -1469,12 +1469,12 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
 */
 static value_t apply_cl(uint32_t nargs)
 {
-    uint32_t i, n, ip, bp;
+    uint32_t i, n, ip, bp, envsz;
     fixnum_t s;
     int64_t accum;
     uint8_t op, *code;
     value_t func, v, bcode, x, e, ftl;
-    value_t *penv, *pvals;
+    value_t *penv, *pvals, *lenv, *pv;
     symbol_t *sym;
     cons_t *c;
 
@@ -1919,7 +1919,7 @@ static value_t apply_cl(uint32_t nargs)
         case OP_LOADC:
         case OP_SETC:
             s = code[ip++];
-            i = code[ip++];
+            i = code[ip++]+1;
             if (penv[0]==NIL) {
                 if (nargs > 0) {
                     // current frame has been captured
@@ -1928,7 +1928,7 @@ static value_t apply_cl(uint32_t nargs)
                 v = penv[1];
             }
             else {
-                v = penv[numval(penv[-1])-1];
+                v = penv[nargs+1];
             }
             while (s--)
                 v = vector_elt(v, vector_size(v)-1);
@@ -1939,6 +1939,40 @@ static value_t apply_cl(uint32_t nargs)
             break;
 
         case OP_CLOSURE:
+            // build a closure (lambda args body . env)
+            if (penv[0] != NIL) {
+                // save temporary environment to the heap
+                lenv = penv;
+                envsz = nargs+2;
+                pv = alloc_words(envsz + 1);
+                PUSH(tagptr(pv, TAG_VECTOR));
+                pv[0] = fixnum(envsz);
+                pv++;
+                while (envsz--)
+                    *pv++ = *lenv++;
+                // environment representation changed; install
+                // the new representation so everybody can see it
+                penv[0] = NIL;
+                penv[1] = Stack[SP-1];
+            }
+            else {
+                PUSH(penv[1]); // env has already been captured; share
+            }
+            c = (cons_t*)ptr(v=cons_reserve(3));
+            e = cdr_(Stack[SP-2]);  // closure to copy
+            //if (!iscons(e)) goto notpair;
+            c->car = COMPILEDLAMBDA;
+            c->cdr = tagptr(c+1, TAG_CONS); c++;
+            c->car = car_(e);      //argsyms
+            c->cdr = tagptr(c+1, TAG_CONS); c++;
+            e = cdr_(e);
+            //if (!iscons(e=cdr_(e))) goto notpair;
+            c->car = car_(e);      //body
+            c->cdr = Stack[SP-1];  //env
+            POP();
+            Stack[SP-1] = v;
+            break;
+
         case OP_TRYCATCH:
             break;
         }
