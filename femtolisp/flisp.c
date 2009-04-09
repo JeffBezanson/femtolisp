@@ -50,6 +50,7 @@
 #include <math.h>
 #include "llt.h"
 #include "flisp.h"
+#include "opcodes.h"
 
 static char *builtin_names[] =
     { // special forms
@@ -70,7 +71,7 @@ static char *builtin_names[] =
       "+", "-", "*", "/", "<", "compare",
 
       // sequences
-      "vector", "aref", "aset!", "length", "for",
+      "vector", "aref", "aset!", "for",
       "", "", "" };
 
 #define N_STACK 262144
@@ -88,7 +89,7 @@ stackseg_t stackseg0 = { StaticStack, 0, NULL };
 stackseg_t *current_stack_seg = &stackseg0;
 
 value_t NIL, FL_T, FL_F, LAMBDA, QUOTE, IF, TRYCATCH;
-value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT;
+value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT, COMPILEDLAMBDA;
 value_t IOError, ParseError, TypeError, ArgError, UnboundError, MemoryError;
 value_t DivideError, BoundsError, Error, KeyError, EnumerationError;
 value_t conssym, symbolsym, fixnumsym, vectorsym, builtinsym;
@@ -96,6 +97,7 @@ value_t definesym, defmacrosym, forsym, labelsym, printprettysym, setqsym;
 value_t printwidthsym, tsym, Tsym, fsym, Fsym, booleansym, nullsym, elsesym;
 
 static value_t eval_sexpr(value_t e, value_t *penv, int tail);
+static value_t apply_cl(uint32_t nargs);
 static value_t *alloc_words(int n);
 static value_t relocate(value_t v);
 
@@ -770,7 +772,6 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
     uint32_t saveSP, bp, envsz, nargs;
     int i, noeval=0;
     fixnum_t s, lo, hi;
-    cvalue_t *cv;
     int64_t accum;
 
     /*
@@ -1085,38 +1086,6 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
                 }
             }
             break;
-        case F_LENGTH:
-            argcount("length", nargs, 1);
-            if (isvector(Stack[SP-1])) {
-                v = fixnum(vector_size(Stack[SP-1]));
-                break;
-            }
-            else if (iscprim(Stack[SP-1])) {
-                cv = (cvalue_t*)ptr(Stack[SP-1]);
-                if (cp_class(cv) == bytetype) {
-                    v = fixnum(1);
-                    break;
-                }
-                else if (cp_class(cv) == wchartype) {
-                    v = fixnum(u8_charlen(*(uint32_t*)cp_data((cprim_t*)cv)));
-                    break;
-                }
-            }
-            else if (iscvalue(Stack[SP-1])) {
-                cv = (cvalue_t*)ptr(Stack[SP-1]);
-                if (cv_class(cv)->eltype != NULL) {
-                    v = size_wrap(cvalue_arraylen(Stack[SP-1]));
-                    break;
-                }
-            }
-            else if (Stack[SP-1] == NIL) {
-                v = fixnum(0); break;
-            }
-            else if (iscons(Stack[SP-1])) {
-                v = fixnum(llength(Stack[SP-1])); break;
-            }
-            type_error("length", "sequence", Stack[SP-1]);
-            break;
         case F_AREF:
             argcount("aref", nargs, 2);
             v = Stack[SP-2];
@@ -1152,7 +1121,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             break;
         case F_ATOM:
             argcount("atom?", nargs, 1);
-            v = ((!iscons(Stack[SP-1])) ? FL_T : FL_F);
+            v = (iscons(Stack[SP-1]) ? FL_F : FL_T);
             break;
         case F_CONSP:
             argcount("pair?", nargs, 1);
@@ -1325,24 +1294,23 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
             break;
         case F_EVAL:
             argcount("eval", nargs, 1);
-            v = Stack[SP-1];
-            if (selfevaluating(v)) { SP=saveSP; return v; }
+            e = Stack[SP-1];
+            if (selfevaluating(e)) { SP=saveSP; return e; }
             if (tail) {
                 assert((ulong_t)(penv-Stack)<N_STACK);
                 penv[-1] = fixnum(2);
                 penv[0] = NIL;
                 penv[1] = NIL;
                 SP = (penv-Stack) + 2;
-                e=v;
-                goto eval_top;
             }
             else {
                 PUSH(fixnum(2));
                 PUSH(NIL);
                 PUSH(NIL);
-                v = eval_sexpr(v, &Stack[SP-2], 1);
+                tail = 1;
+                penv = &Stack[SP-2];
             }
-            break;
+            goto eval_top;
         case F_EVALSTAR:
             argcount("eval*", nargs, 1);
             e = Stack[SP-1];
@@ -1404,9 +1372,14 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
         SP = saveSP;
         return v;
     }
+    f = Stack[bp+1];
     if (__likely(iscons(f))) {
+        if (car_(f) == COMPILEDLAMBDA) {
+            v = apply_cl(nargs);
+            SP = saveSP;
+            return v;
+        }
         // apply lambda expression
-        f = Stack[bp+1];
         f = Stack[bp+1] = cdr_(f);
         if (!iscons(f)) goto notpair;
         v = car_(f); // arglist
@@ -1422,18 +1395,16 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
                 lerror(ArgError, "apply: too many arguments");
         }
         else {
+            v = NIL;
             if (i > 0) {
                 list(&v, i, &NIL);
                 if (nargs > MAX_ARGS) {
                     c = (cons_t*)curheap;
                     (c-2)->cdr = (c-1)->car;
                 }
-                Stack[SP-i] = v;
-                SP -= (i-1);
             }
-            else {
-                PUSH(NIL);
-            }
+            Stack[SP-i] = v;
+            SP -= (i-1);
         }
         f = cdr_(Stack[bp+1]);
         if (!iscons(f)) goto notpair;
@@ -1477,6 +1448,503 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail)
     return NIL;
 }
 
+/*
+  stack on entry: <func>  <args...>
+  caller's responsibility:
+  - put the stack in this state
+  - provide arg count
+  - respect tail position
+  - call correct entry point (either eval_sexpr or apply_cl)
+
+  callee's responsibility:
+  - check arg counts
+  - allocate vararg array
+  - push closed env, set up new environment
+
+  ** need 'copyenv' instruction that moves env to heap, installs
+     heap version as the current env, and pushes the result vector.
+     this can be used to implement the copy-closure op in terms of
+     other ops. and it can be the first instruction in lambdas in
+     head position (let optimization).
+*/
+static value_t apply_cl(uint32_t nargs)
+{
+    uint32_t i, n, ip, bp;
+    fixnum_t s;
+    int64_t accum;
+    uint8_t op, *code;
+    value_t func, v, bcode, x, e, ftl;
+    value_t *penv, *pvals;
+    symbol_t *sym;
+    cons_t *c;
+
+ apply_cl_top:
+    func = Stack[SP-nargs-1];
+    ftl = cdr_(cdr_(func));
+    bcode = car_(ftl);
+    code = cv_data((cvalue_t*)ptr(car_(bcode)));
+    i = code[1];
+    if (nargs < i)
+        lerror(ArgError, "apply: too few arguments");
+    if (code[0] == OP_VARGC) {
+        s = (fixnum_t)nargs - (fixnum_t)i;
+        v = NIL;
+        if (s > 0) {
+            list(&v, s, &NIL);
+            if (nargs > MAX_ARGS) {
+                c = (cons_t*)curheap;
+                (c-2)->cdr = (c-1)->car;
+            }
+            // reload movable pointers
+            func = Stack[SP-nargs-1];
+            ftl = cdr_(cdr_(func));
+            bcode = car_(ftl);
+            code = cv_data((cvalue_t*)ptr(car_(bcode)));
+        }
+        Stack[SP-s] = v;
+        SP -= (s-1);
+        nargs = i+1;
+    }
+    else if (nargs > i) {
+        lerror(ArgError, "apply: too many arguments");
+    }
+
+    bp = SP-nargs;
+    x = cdr_(ftl);   // cloenv
+    Stack[bp-1] = car_(cdr_(func));  // lambda list
+    penv = &Stack[bp-1];
+    PUSH(x);
+    PUSH(cdr_(bcode));
+    pvals = &Stack[SP-1];
+
+    ip = 2;
+    while (1) {
+        op = code[ip++];
+        switch (op) {
+        case OP_NOP: break;
+        case OP_DUP: v = Stack[SP-1]; PUSH(v); break;
+        case OP_POP: (void)POP(); break;
+        case OP_TCALL:
+        case OP_CALL:
+            i = code[ip++];  // nargs
+        do_call:
+            s = SP;
+            func = Stack[SP-i-1];
+            if (isbuiltinish(func)) {
+                if (uintval(func) > N_BUILTINS) {
+                    v = ((builtin_t)ptr(func))(&Stack[SP-i], i);
+                }
+            }
+            else {
+                if (iscons(func) && car_(func) == COMPILEDLAMBDA) {
+                    if (op == OP_TCALL) {
+                        for(s=-1; s < (fixnum_t)i; s++)
+                            Stack[bp+s] = Stack[SP-i+s];
+                        SP = bp+i;
+                        nargs = i;
+                        goto apply_cl_top;
+                    }
+                    else {
+                        v = apply_cl(i);
+                    }
+                }
+            }
+            SP = s-i-1;
+            PUSH(v);
+            break;
+        case OP_JMP: ip = (uint32_t)*(uint16_t*)&code[ip]; break;
+        case OP_BRF:
+            v = POP();
+            if (v == FL_F) ip = (uint32_t)*(uint16_t*)&code[ip];
+            else ip += 2;
+            break;
+        case OP_BRT:
+            v = POP();
+            if (v != FL_F) ip = (uint32_t)*(uint16_t*)&code[ip];
+            else ip += 2;
+            break;
+        case OP_JMPL: ip = *(uint32_t*)&code[ip]; break;
+        case OP_BRFL:
+            v = POP();
+            if (v == FL_F) ip = *(uint32_t*)&code[ip];
+            else ip += 4;
+            break;
+        case OP_BRTL:
+            v = POP();
+            if (v != FL_F) ip = *(uint32_t*)&code[ip];
+            else ip += 4;
+            break;
+        case OP_RET: v = POP(); return v;
+
+        case OP_EQ:
+            Stack[SP-2] = ((Stack[SP-2] == Stack[SP-1]) ? FL_T : FL_F);
+            POP(); break;
+        case OP_EQV:
+            if (Stack[SP-2] == Stack[SP-1]) {
+                v = FL_T;
+            }
+            else if (!leafp(Stack[SP-2]) || !leafp(Stack[SP-1])) {
+                v = FL_F;
+            }
+            else {
+                v = (numval(compare(Stack[SP-2], Stack[SP-1]))==0) ?
+                    FL_T : FL_F;
+            }
+            Stack[SP-2] = v; POP();
+            break;
+        case OP_EQUAL:
+            if (Stack[SP-2] == Stack[SP-1]) {
+                v = FL_T;
+            }
+            else if (eq_comparable(Stack[SP-2],Stack[SP-1])) {
+                v = FL_F;
+            }
+            else {
+                v = (numval(compare(Stack[SP-2], Stack[SP-1]))==0) ?
+                    FL_T : FL_F;
+            }
+            Stack[SP-2] = v; POP();
+            break;
+        case OP_PAIRP:
+            Stack[SP-1] = (iscons(Stack[SP-1]) ? FL_T : FL_F); break;
+        case OP_ATOMP:
+            Stack[SP-1] = (iscons(Stack[SP-1]) ? FL_F : FL_T); break;
+        case OP_NOT:
+            Stack[SP-1] = ((Stack[SP-1]==FL_F) ? FL_T : FL_F); break;
+        case OP_NULLP:
+            Stack[SP-1] = ((Stack[SP-1]==NIL) ? FL_T : FL_F); break;
+        case OP_BOOLEANP:
+            v = Stack[SP-1];
+            Stack[SP-1] = ((v == FL_T || v == FL_F) ? FL_T : FL_F); break;
+        case OP_SYMBOLP:
+            Stack[SP-1] = (issymbol(Stack[SP-1]) ? FL_T : FL_F); break;
+        case OP_NUMBERP:
+            v = Stack[SP-1];
+            Stack[SP-1] = (isfixnum(v) || iscprim(v) ? FL_T : FL_F); break;
+        case OP_FIXNUMP:
+            Stack[SP-1] = (isfixnum(Stack[SP-1]) ? FL_T : FL_F); break;
+        case OP_BOUNDP:
+            sym = tosymbol(Stack[SP-1], "bound?");
+            Stack[SP-1] = ((sym->binding == UNBOUND) ? FL_F : FL_T);
+            break;
+        case OP_BUILTINP:
+            v = Stack[SP-1];
+            Stack[SP-1] = ((isbuiltinish(v) && v!=FL_F && v!=FL_T && v!=NIL)
+                           ? FL_T : FL_F);
+            break;
+        case OP_VECTORP:
+            Stack[SP-1] = (isvector(Stack[SP-1]) ? FL_T : FL_F); break;
+
+        case OP_CONS:
+            if (curheap > lim)
+                gc(0);
+            c = (cons_t*)curheap;
+            curheap += sizeof(cons_t);
+            c->car = Stack[SP-2];
+            c->cdr = Stack[SP-1];
+            Stack[SP-2] = tagptr(c, TAG_CONS);
+            POP(); break;
+        case OP_CAR:
+            c = tocons(Stack[SP-1], "car");
+            Stack[SP-1] = c->car;
+            break;
+        case OP_CDR:
+            c = tocons(Stack[SP-1], "cdr");
+            Stack[SP-1] = c->cdr;
+            break;
+        case OP_SETCAR:
+            car(Stack[SP-2]) = Stack[SP-1];
+            POP(); break;
+        case OP_SETCDR:
+            cdr(Stack[SP-2]) = Stack[SP-1];
+            POP(); break;
+        case OP_LIST:
+            i = code[ip++];
+            list(&v, i, &NIL);
+            POPN(i);
+            PUSH(v);
+            break;
+        case OP_EVAL:
+            v = toplevel_eval(POP());
+            PUSH(v);
+            break;
+        case OP_EVALSTAR:
+
+        case OP_TAPPLY:
+        case OP_APPLY:
+            v = POP();  // arglist
+            i = SP;
+            while (iscons(v)) {
+                if (SP-i == MAX_ARGS) {
+                    PUSH(v);
+                    break;
+                }
+                PUSH(car_(v));
+                v = cdr_(v);
+            }
+            i = SP-i;
+            if (op==OP_TAPPLY) op = OP_TCALL;
+            goto do_call;
+
+        case OP_ADD:
+            s = 0;
+            n = code[ip++];
+            i = SP-n;
+            if (n > MAX_ARGS) goto add_ovf;
+            for (; i < (int)SP; i++) {
+                if (__likely(isfixnum(Stack[i]))) {
+                    s += numval(Stack[i]);
+                    if (__unlikely(!fits_fixnum(s))) {
+                        i++;
+                        goto add_ovf;
+                    }
+                }
+                else {
+                add_ovf:
+                    v = fl_add_any(&Stack[i], SP-i, s);
+                    break;
+                }
+            }
+            if (i==SP)
+                v = fixnum(s);
+            POPN(n);
+            PUSH(v);
+            break;
+        case OP_SUB:
+            n = code[ip++];
+            if (__unlikely(n < 1)) lerror(ArgError, "-: too few arguments");
+            i = SP-n;
+            if (n == 1) {
+                if (__likely(isfixnum(Stack[i])))
+                    Stack[SP-1] = fixnum(-numval(Stack[i]));
+                else
+                    Stack[SP-1] = fl_neg(Stack[i]);
+                break;
+            }
+            if (n == 2) {
+                if (__likely(bothfixnums(Stack[i], Stack[i+1]))) {
+                    s = numval(Stack[i]) - numval(Stack[i+1]);
+                    if (__likely(fits_fixnum(s))) {
+                        POP();
+                        Stack[SP-1] = fixnum(s);
+                        break;
+                    }
+                    Stack[i+1] = fixnum(-numval(Stack[i+1]));
+                }
+                else {
+                    Stack[i+1] = fl_neg(Stack[i+1]);
+                }
+            }
+            else {
+                // we need to pass the full arglist on to fl_add_any
+                // so it can handle rest args properly
+                PUSH(Stack[i]);
+                Stack[i] = fixnum(0);
+                Stack[i+1] = fl_neg(fl_add_any(&Stack[i], n, 0));
+                Stack[i] = POP();
+            }
+            v = fl_add_any(&Stack[i], 2, 0);
+            POPN(n);
+            PUSH(v);
+            break;
+        case OP_MUL:
+            accum = 1;
+            n = code[ip++];
+            i = SP-n;
+            if (n > MAX_ARGS) goto mul_ovf;
+            for (; i < (int)SP; i++) {
+                if (__likely(isfixnum(Stack[i]))) {
+                    accum *= numval(Stack[i]);
+                }
+                else {
+                mul_ovf:
+                    v = fl_mul_any(&Stack[i], SP-i, accum);
+                    break;
+                }
+            }
+            if (i == SP) {
+                if (__likely(fits_fixnum(accum)))
+                    v = fixnum(accum);
+                else
+                    v = return_from_int64(accum);
+            }
+            POPN(n);
+            PUSH(v);
+            break;
+        case OP_DIV:
+            n = code[ip++];
+            if (__unlikely(n < 1)) lerror(ArgError, "/: too few arguments");
+            i = SP-n;
+            if (n == 1) {
+                Stack[SP-1] = fl_div2(fixnum(1), Stack[i]);
+            }
+            else {
+                if (n > 2) {
+                    PUSH(Stack[i]);
+                    Stack[i] = fixnum(1);
+                    Stack[i+1] = fl_mul_any(&Stack[i], n, 1);
+                    Stack[i] = POP();
+                }
+                v = fl_div2(Stack[i], Stack[i+1]);
+                POPN(n);
+                PUSH(v);
+            }
+            break;
+        case OP_LT:
+            if (bothfixnums(Stack[SP-2], Stack[SP-1])) {
+                v = (numval(Stack[SP-2]) < numval(Stack[SP-1])) ? FL_T : FL_F;
+            }
+            else {
+                v = (numval(compare(Stack[SP-2], Stack[SP-1])) < 0) ?
+                    FL_T : FL_F;
+            }
+            POP();
+            Stack[SP-1] = v;
+            break;
+        case OP_COMPARE:
+            Stack[SP-2] = compare(Stack[SP-2], Stack[SP-1]);
+            POP();
+            break;
+
+        case OP_VECTOR:
+            n = code[ip++];
+            if (n > MAX_ARGS) {
+                i = llength(Stack[SP-1]);
+                n--;
+            }
+            else i = 0;
+            v = alloc_vector(n+i, 0);
+            memcpy(&vector_elt(v,0), &Stack[SP-n], n*sizeof(value_t));
+            if (i > 0) {
+                e = POP();
+                POPN(n);
+                while (iscons(e)) {
+                    vector_elt(v,n) = car_(e);
+                    n++;
+                    e = cdr_(e);
+                }
+            }
+            PUSH(v);
+            break;
+
+        case OP_AREF:
+            v = Stack[SP-2];
+            if (isvector(v)) {
+                i = tofixnum(Stack[SP-1], "aref");
+                if (__unlikely((unsigned)i >= vector_size(v)))
+                    bounds_error("aref", v, Stack[SP-1]);
+                v = vector_elt(v, i);
+            }
+            else if (isarray(v)) {
+                v = cvalue_array_aref(&Stack[SP-2]);
+            }
+            else {
+                type_error("aref", "sequence", v);
+            }
+            POP();
+            Stack[SP-1] = v;
+            break;
+        case OP_ASET:
+            e = Stack[SP-3];
+            if (isvector(e)) {
+                i = tofixnum(Stack[SP-2], "aset!");
+                if (__unlikely((unsigned)i >= vector_size(e)))
+                    bounds_error("aset!", v, Stack[SP-1]);
+                vector_elt(e, i) = (v=Stack[SP-1]);
+            }
+            else if (isarray(e)) {
+                v = cvalue_array_aset(&Stack[SP-3]);
+            }
+            else {
+                type_error("aset!", "sequence", e);
+            }
+            POPN(2);
+            Stack[SP-1] = v;
+            break;
+        case OP_FOR:
+
+        case OP_LOADT: PUSH(FL_T); break;
+        case OP_LOADF: PUSH(FL_F); break;
+        case OP_LOADNIL: PUSH(NIL); break;
+        case OP_LOAD0: PUSH(fixnum(0)); break;
+        case OP_LOAD1: PUSH(fixnum(1)); break;
+        case OP_LOADV:
+            v = vector_elt(*pvals, code[ip]); ip++;
+            PUSH(v);
+            break;
+        case OP_LOADVL:
+            v = vector_elt(*pvals, *(uint32_t*)code[ip]); ip+=4;
+            PUSH(v);
+            break;
+        case OP_LOADGL:
+            v = vector_elt(*pvals, *(uint32_t*)code[ip]); ip+=4;
+            goto do_loadg;
+        case OP_LOADG:
+            v = vector_elt(*pvals, code[ip]); ip++;
+        do_loadg:
+            sym = (symbol_t*)ptr(v);
+            if (sym->binding == UNBOUND)
+                raise(list2(UnboundError, v));
+            PUSH(sym->binding);
+            break;
+
+        case OP_SETGL:
+            v = vector_elt(*pvals, *(uint32_t*)code[ip]); ip+=4;
+            goto do_setg;
+        case OP_SETG:
+            v = vector_elt(*pvals, code[ip]); ip++;
+        do_setg:
+            sym = (symbol_t*)ptr(v);
+            v = Stack[SP-1];
+            if (sym->syntax != TAG_CONST)
+                sym->binding = v;
+            break;
+
+        case OP_LOADA:
+            i = code[ip++];
+            if (penv[0] == NIL)
+                v = vector_elt(penv[1], i+1);
+            else
+                v = Stack[bp+i];
+            PUSH(v);
+            break;
+        case OP_SETA:
+            v = Stack[SP-1];
+            i = code[ip++];
+            if (penv[0] == NIL)
+                vector_elt(penv[1], i+1) = v;
+            else
+                Stack[bp+i] = v;
+            break;
+        case OP_LOADC:
+        case OP_SETC:
+            s = code[ip++];
+            i = code[ip++];
+            if (penv[0]==NIL) {
+                if (nargs > 0) {
+                    // current frame has been captured
+                    s++;
+                }
+                v = penv[1];
+            }
+            else {
+                v = penv[numval(penv[-1])-1];
+            }
+            while (s--)
+                v = vector_elt(v, vector_size(v)-1);
+            if (op == OP_SETC)
+                vector_elt(v, i) = Stack[SP-1];
+            else
+                PUSH(vector_elt(v, i));
+            break;
+
+        case OP_CLOSURE:
+        case OP_TRYCATCH:
+            break;
+        }
+    }
+}
+
 // initialization -------------------------------------------------------------
 
 extern void builtins_init();
@@ -1510,6 +1978,7 @@ static void lisp_init(void)
     FL_T = builtin(F_TRUE);
     FL_F = builtin(F_FALSE);
     LAMBDA = symbol("lambda");
+    COMPILEDLAMBDA = symbol("compiled-lambda");
     QUOTE = symbol("quote");
     TRYCATCH = symbol("trycatch");
     BACKQUOTE = symbol("backquote");

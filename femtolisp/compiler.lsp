@@ -18,13 +18,13 @@
 
     :+ :- :* :/ :< :compare
 
-    :vector :aref :aset! :length :for
+    :vector :aref :aset! :for
 
     :loadt :loadf :loadnil :load0 :load1 :loadv :loadv.l
     :loadg :loada :loadc :loadg.l
     :setg  :seta  :setc  :setg.l
 
-    :closure :trycatch :tcall :tapply]))
+    :closure :trycatch :tcall :tapply :argc :vargc]))
 
 (define arg-counts
   (table :eq?      2      :eqv?     2
@@ -40,7 +40,7 @@
 	 :eval*    1      :apply    2
 	 :<        2      :for      3
 	 :compare  2      :aref     2
-	 :aset!    3      :length   1))
+	 :aset!    3))
 
 (define 1/Instructions (table.invert Instructions))
 
@@ -121,7 +121,7 @@
 			 (set! i (+ i 1)))
 			
 			((:loada :seta :call :tcall :loadv :loadg :setg
-				 :list :+ :- :* :/ :vector)
+				 :list :+ :- :* :/ :vector :argc :vargc)
 			 (io.write bcode (uint8 nxt))
 			 (set! i (+ i 1)))
 			
@@ -154,7 +154,7 @@
       cvec)))
 
 (define (bytecode g)
-  (cons (encode-byte-code (aref g 0))
+  (cons (cvalue.pin (encode-byte-code (aref g 0)))
 	(const-to-idx-vec g)))
 
 (define (bytecode:code b) (car b))
@@ -185,7 +185,7 @@
 			#f)))))
 
 (define (compile-sym g env s Is)
-  (let ((loc (lookup-sym s env 0 #t)))
+  (let ((loc (lookup-sym s env -1 #t)))
     (case (car loc)
       (arg     (emit g (aref Is 0) (cadr loc)))
       (closed  (emit g (aref Is 1) (cadr loc) (caddr loc)))
@@ -303,6 +303,14 @@
 	(begin (just-compile-args g lst env)
 	       (length lst)))))
 
+(define (emit-nothing g) g)
+
+(define (argc-error head count)
+  (error (string "compile error: " head " expects " count
+		 (if (= count 1)
+		     " argument."
+		     " arguments."))))
+  
 (define (compile-app g env tail? x)
   (let ((head  (car x)))
     (let ((head
@@ -322,13 +330,24 @@
 	      (let ((count (get arg-counts b #f)))
 		(if (and count
 			 (not (length= (cdr x) count)))
-		    (error (string "compile error: " head " expects " count
-				   (if (= count 1)
-				       " argument."
-				       " arguments."))))
-		(if (memq b '(:list :+ :- :* :/ :vector))
-		    (emit g b nargs)
-		    (emit g (if (and tail? (eq? b :apply)) :tapply b))))
+		    (argc-error head count))
+		(case b  ; handle special cases of vararg builtins
+		  (:list (if (= nargs 0) (emit g :loadnil) (emit g b nargs)))
+		  (:+    (if (= nargs 0) (emit g :load0)
+			     (if (= nargs 1) (emit-nothing g)
+				 (emit g b nargs))))
+		  (:-    (if (= nargs 0)
+			     (argc-error head 1)
+			     (emit g b nargs)))
+		  (:*    (if (= nargs 0) (emit g :load1)
+			     (if (= nargs 1) (emit-nothing g)
+				 (emit g b nargs))))
+		  (:/    (if (= nargs 0)
+			     (argc-error head 1)
+			     (emit g b nargs)))
+		  (:vector   (emit g b nargs))
+		  (else
+		   (emit g (if (and tail? (eq? b :apply)) :tapply b)))))
 	      (emit g (if tail? :tcall :call) nargs)))))))
 
 (define (compile-in g env tail? x)
@@ -360,10 +379,14 @@
 	   (else   (compile-app g env tail? x))))))
 
 (define (compile-f env f)
-  (let ((g (make-code-emitter)))
-    (compile-in g (cons (to-proper (cadr f)) env) #t (caddr f))
+  (let ((g    (make-code-emitter))
+	(args (cadr f)))
+    (if (null? (lastcdr args))
+	(emit g :argc  (length args))
+	(emit g :vargc (length args)))
+    (compile-in g (cons (to-proper args) env) #t (caddr f))
     (emit g :ret)
-    `(compiled-lambda ,(cadr f) ,(bytecode g))))
+    `(compiled-lambda ,args ,(bytecode g))))
 
 (define (compile x)
   (bytecode (compile-in (make-code-emitter) () #t x)))
@@ -410,7 +433,8 @@
 		      (print-val (aref vals (aref code i)))
 		      (set! i (+ i 1)))
 
-		     ((:loada :seta :call :tcall :list :+ :- :* :/ :vector)
+		     ((:loada :seta :call :tcall :list :+ :- :* :/ :vector
+		       :argc :vargc)
 		      (princ (number->string (aref code i)))
 		      (set! i (+ i 1)))
 

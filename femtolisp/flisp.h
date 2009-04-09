@@ -127,9 +127,9 @@ enum {
     F_EVAL, F_EVALSTAR, F_APPLY,
     F_ADD, F_SUB, F_MUL, F_DIV, F_LT, F_COMPARE,
 
-    F_VECTOR, F_AREF, F_ASET, F_LENGTH, F_FOR,
+    F_VECTOR, F_AREF, F_ASET, F_FOR,
     F_TRUE, F_FALSE, F_NIL,
-    N_BUILTINS,
+    N_BUILTINS
 };
 #define isspecial(v) (uintval(v) <= (unsigned int)F_BEGIN)
 
@@ -274,6 +274,7 @@ extern fltype_t *builtintype;
 value_t cvalue(fltype_t *type, size_t sz);
 void add_finalizer(cvalue_t *cv);
 void cv_autorelease(cvalue_t *cv);
+void cv_pin(cvalue_t *cv);
 size_t ctype_sizeof(value_t type, int *palign);
 value_t cvalue_copy(value_t v);
 value_t cvalue_from_data(fltype_t *type, void *data, size_t sz);

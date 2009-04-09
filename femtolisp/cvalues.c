@@ -223,26 +223,17 @@ int isstring(value_t v)
 }
 
 // convert to malloc representation (fixed address)
-/*
-static void cv_pin(cvalue_t *cv)
+void cv_pin(cvalue_t *cv)
 {
-    if (!cv->flags.inlined)
+    if (!isinlined(cv))
         return;
-    size_t sz = cv->flags.inllen;
+    size_t sz = cv_len(cv);
+    if (cv_isstr(cv)) sz++;
     void *data = malloc(sz);
-    cv->flags.inlined = 0;
-    // TODO: handle flags.cstring
-    if (cv->flags.prim) {
-        memcpy(data, (void*)(&((cprim_t*)cv)->data), sz);
-        ((cprim_t*)cv)->data = data;
-    }
-    else {
-        memcpy(data, (void*)(&cv->data), sz);
-        cv->data = data;
-    }
+    memcpy(data, cv_data(cv), sz);
+    cv->data = data;
     autorelease(cv);
 }
-*/
 
 #define num_init(ctype, cnvt, tag)                              \
 static int cvalue_##ctype##_init(fltype_t *type, value_t arg,   \
@@ -703,6 +694,15 @@ value_t fl_copy(value_t *args, u_int32_t nargs)
     return cvalue_copy(args[0]);
 }
 
+value_t fl_cv_pin(value_t *args, u_int32_t nargs)
+{
+    argcount("cvalue.pin", nargs, 1);
+    if (!iscvalue(args[0]))
+        lerror(ArgError, "cvalue.pin: must be a byte array");
+    cv_pin((cvalue_t*)ptr(args[0]));
+    return args[0];
+}
+
 static void cvalue_init(fltype_t *type, value_t v, void *dest)
 {
     cvinitfunc_t f=type->init;
@@ -907,6 +907,7 @@ static builtinspec_t cvalues_builtin_info[] = {
     { "sizeof", cvalue_sizeof },
     { "builtin", fl_builtin },
     { "copy", fl_copy },
+    { "cvalue.pin", fl_cv_pin },
 
     { "logand", fl_logand },
     { "logior", fl_logior },
