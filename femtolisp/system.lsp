@@ -643,7 +643,8 @@
 
 (define (expand x) (macroexpand x))
 
-(define (load-process x) (eval (expand x)))
+(if (not (bound? 'load-process))
+    (define (load-process x) (eval (expand x))))
 
 (define (load filename)
   (let ((F (file filename :read)))

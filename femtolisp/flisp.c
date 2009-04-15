@@ -1563,6 +1563,7 @@ static value_t apply_cl(uint32_t nargs)
                 Stack[bp+i+1] = Stack[bp+nargs];
                 Stack[bp+i+2] = Stack[bp+nargs+1];
                 Stack[bp+i+3] = Stack[bp+nargs+2];
+                pvals = &Stack[bp+nargs+2];
             }
             else {
                 PUSH(NIL);
@@ -1570,6 +1571,7 @@ static value_t apply_cl(uint32_t nargs)
                 Stack[SP-2] = Stack[SP-3];
                 Stack[SP-3] = Stack[SP-4];
                 Stack[SP-4] = NIL;
+                pvals = &Stack[SP-1];
             }
             nargs = i+1;
             break;
