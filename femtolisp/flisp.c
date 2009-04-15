@@ -68,7 +68,7 @@ static char *builtin_names[] =
       "eval", "apply",
 
       // arithmetic
-      "+", "-", "*", "/", "<", "compare",
+      "+", "-", "*", "/", "=", "<", "compare",
 
       // sequences
       "vector", "aref", "aset!", "for",
@@ -647,6 +647,33 @@ static value_t vector_grow(value_t v)
 int isnumber(value_t v)
 {
     return (isfixnum(v) || iscprim(v));
+}
+
+static int numeric_equals(value_t a, value_t b)
+{
+    value_t tmp;
+    if (isfixnum(b)) {
+        tmp=a; a=b; b=tmp;
+    }
+    void *aptr, *bptr;
+    numerictype_t at, bt;
+    if (!iscprim(b)) type_error("=", "number", b);
+    cprim_t *cp = (cprim_t*)ptr(b);
+    fixnum_t fv;
+    bt = cp_numtype(cp);
+    bptr = cp_data(cp);
+    if (isfixnum(a)) {
+        fv = numval(a);
+        at = T_FIXNUM;
+        aptr = &fv;
+    }
+    else if (iscprim(a)) {
+        cp = (cprim_t*)ptr(a);
+        at = cp_numtype(cp);
+        aptr = cp_data(cp);
+    }
+    else type_error("=", "number", a);
+    return cmp_eq(aptr, at, bptr, bt, 0);
 }
 
 // read -----------------------------------------------------------------------
@@ -1289,6 +1316,16 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, uint32_t envsz)
             argcount("compare", nargs, 2);
             v = compare(Stack[SP-2], Stack[SP-1]);
             break;
+        case F_NUMEQ:
+            argcount("=", nargs, 2);
+            v = Stack[SP-2]; e = Stack[SP-1];
+            if (bothfixnums(v, e)) {
+                v = (v == e) ? FL_T : FL_F;
+            }
+            else {
+                v = numeric_equals(v, e) ? FL_T : FL_F;
+            }
+            break;
         case F_LT:
             argcount("<", nargs, 2);
             if (bothfixnums(Stack[SP-2], Stack[SP-1])) {
@@ -1856,6 +1893,17 @@ static value_t apply_cl(uint32_t nargs)
                 POPN(n);
                 PUSH(v);
             }
+            break;
+        case F_NUMEQ:
+            v = Stack[SP-2]; e = Stack[SP-1];
+            if (bothfixnums(v, e)) {
+                v = (v == e) ? FL_T : FL_F;
+            }
+            else {
+                v = numeric_equals(v, e) ? FL_T : FL_F;
+            }
+            POPN(1);
+            Stack[SP-1] = v;
             break;
         case OP_LT:
             if (bothfixnums(Stack[SP-2], Stack[SP-1])) {

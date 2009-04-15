@@ -171,7 +171,6 @@ value_t fl_table_foldl(value_t *args, uint32_t nargs)
     htable_t *h = totable(args[2], "table.foldl");
     size_t i, n = h->size;
     void **table = h->table;
-    value_t c;
     for(i=0; i < n; i+=2) {
         if (table[i+1] != HT_NOTFOUND) {
             args[1] = applyn(3, args[0],

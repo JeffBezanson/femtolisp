@@ -17,7 +17,7 @@
     :cons :list :car :cdr :set-car! :set-cdr!
     :eval :apply
 
-    :+ :- :* :/ :< :compare
+    :+ :- :* :/ := :< :compare
 
     :vector :aref :aset! :for
 
@@ -40,7 +40,8 @@
 	 :set-cdr! 2      :eval     1
 	 :apply    2      :<        2
          :for      3      :compare  2
-         :aref     2      :aset!    3))
+         :aref     2      :aset!    3
+	 :=        2))
 
 (define 1/Instructions (table.invert Instructions))
 

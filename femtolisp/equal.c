@@ -34,17 +34,23 @@ static void eq_union(htable_t *table, value_t a, value_t b,
 }
 
 // a is a fixnum, b is a cprim
-static value_t compare_num_cprim(value_t a, value_t b, int eq)
+static value_t compare_num_cprim(value_t a, value_t b, int eq, int swap)
 {
     cprim_t *bcp = (cprim_t*)ptr(b);
     numerictype_t bt = cp_numtype(bcp);
     fixnum_t ia = numval(a);
     void *bptr = cp_data(bcp);
-    if (cmp_eq(&ia, T_FIXNUM, bptr, bt))
+    if (cmp_eq(&ia, T_FIXNUM, bptr, bt, 1))
         return fixnum(0);
     if (eq) return fixnum(1);
-    if (cmp_lt(&ia, T_FIXNUM, bptr, bt))
-        return fixnum(-1);
+    if (swap) {
+        if (cmp_lt(bptr, bt, &ia, T_FIXNUM))
+            return fixnum(-1);
+    }
+    else {
+        if (cmp_lt(&ia, T_FIXNUM, bptr, bt))
+            return fixnum(-1);
+    }
     return fixnum(1);
 }
 
@@ -87,7 +93,7 @@ static value_t bounded_compare(value_t a, value_t b, int bound, int eq)
             return (numval(a) < numval(b)) ? fixnum(-1) : fixnum(1);
         }
         if (iscprim(b)) {
-            return compare_num_cprim(a, b, eq);
+            return compare_num_cprim(a, b, eq, 0);
         }
         return fixnum(-1);
     case TAG_SYM:
@@ -104,7 +110,7 @@ static value_t bounded_compare(value_t a, value_t b, int bound, int eq)
             cprim_t *acp=(cprim_t*)ptr(a), *bcp=(cprim_t*)ptr(b);
             numerictype_t at=cp_numtype(acp), bt=cp_numtype(bcp);
             void *aptr=cp_data(acp), *bptr=cp_data(bcp);
-            if (cmp_eq(aptr, at, bptr, bt))
+            if (cmp_eq(aptr, at, bptr, bt, 1))
                 return fixnum(0);
             if (eq) return fixnum(1);
             if (cmp_lt(aptr, at, bptr, bt))
@@ -112,7 +118,7 @@ static value_t bounded_compare(value_t a, value_t b, int bound, int eq)
             return fixnum(1);
         }
         else if (isfixnum(b)) {
-            return fixnum(-numval(compare_num_cprim(b, a, eq)));
+            return compare_num_cprim(b, a, eq, 1);
         }
         break;
     case TAG_CVALUE:
