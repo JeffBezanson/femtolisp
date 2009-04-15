@@ -168,18 +168,16 @@ value_t fl_table_del(value_t *args, uint32_t nargs)
 value_t fl_table_foldl(value_t *args, uint32_t nargs)
 {
     argcount("table.foldl", nargs, 3);
-    PUSH(listn(3, NIL, NIL, NIL));
     htable_t *h = totable(args[2], "table.foldl");
     size_t i, n = h->size;
     void **table = h->table;
     value_t c;
     for(i=0; i < n; i+=2) {
         if (table[i+1] != HT_NOTFOUND) {
-            c = Stack[SP-1];
-            car_(c) = (value_t)table[i];
-            car_(cdr_(c)) = (value_t)table[i+1];
-            car_(cdr_(cdr_(c))) = args[1];
-            args[1] = apply(args[0], c);
+            args[1] = applyn(3, args[0],
+                             (value_t)table[i],
+                             (value_t)table[i+1],
+                             args[1]);
             // reload pointer
             h = (htable_t*)cv_data((cvalue_t*)ptr(args[2]));
             if (h->size != n)
@@ -187,7 +185,6 @@ value_t fl_table_foldl(value_t *args, uint32_t nargs)
             table = h->table;
         }
     }
-    (void)POP();
     return args[1];
 }
 

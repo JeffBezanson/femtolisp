@@ -105,7 +105,8 @@
 (define (char? x) (eq? (typeof x) 'wchar))
 (define (function? x)
   (or (builtin? x)
-      (and (pair? x) (eq (car x) 'lambda))))
+      (and (pair? x) (or (eq (car x) 'lambda)
+			 (eq (car x) 'compiled-lambda)))))
 (define procedure? function?)
 
 (define (caar x) (car (car x)))
@@ -642,6 +643,8 @@
 
 (define (expand x) (macroexpand x))
 
+(define (load-process x) (eval (expand x)))
+
 (define (load filename)
   (let ((F (file filename :read)))
     (trycatch
@@ -649,14 +652,17 @@
        (if (not (io.eof? F))
 	   (next (read F)
                  prev
-		 (eval (expand E)))
+		 (load-process E))
 	   (begin (io.close F)
 		  ; evaluate last form in almost-tail position
-		  (eval (expand E)))))
+		  (load-process E))))
      (lambda (e)
        (begin
 	 (io.close F)
 	 (raise `(load-error ,filename ,e)))))))
+
+;(load (string *install-dir* *directory-separator* "compiler.lsp"))
+;(define (load-process x) ((compile-thunk (expand x))))
 
 (define *banner* (string.tail "
 ;  _
@@ -679,7 +685,7 @@
 	     #t))))
   (define (reploop)
     (when (trycatch (and (prompt) (newline))
-		    print-exception)
+		    (lambda (e) (print-exception e)))
 	  (begin (newline)
 		 (reploop))))
   (reploop)

@@ -117,14 +117,14 @@ extern uint32_t SP;
 enum {
     // special forms
     F_QUOTE=0, F_COND, F_IF, F_AND, F_OR, F_WHILE, F_LAMBDA,
-    F_TRYCATCH, F_SPECIAL_APPLY, F_SETQ, F_PROG1, F_BEGIN,
+    F_TRYCATCH, F_SPECIAL_APPLY, F_SPECIAL_APPLYN, F_SETQ, F_PROG1, F_BEGIN,
 
     // functions
     F_EQ, F_EQV, F_EQUAL, F_ATOM, F_NOT, F_NULL, F_BOOLEANP, F_SYMBOLP,
     F_NUMBERP, F_BOUNDP, F_CONSP, F_BUILTINP, F_VECTORP, F_FIXNUMP,
 
     F_CONS, F_LIST, F_CAR, F_CDR, F_SETCAR, F_SETCDR,
-    F_EVAL, F_EVALSTAR, F_APPLY,
+    F_EVAL, F_APPLY,
     F_ADD, F_SUB, F_MUL, F_DIV, F_LT, F_COMPARE,
 
     F_VECTOR, F_AREF, F_ASET, F_FOR,
@@ -141,6 +141,7 @@ void print(ios_t *f, value_t v, int princ);
 value_t toplevel_eval(value_t expr);
 value_t apply(value_t f, value_t l);
 value_t apply1(value_t f, value_t a0);
+value_t applyn(uint32_t n, value_t f, ...);
 value_t load_file(char *fname);
 
 /* object model manipulation */

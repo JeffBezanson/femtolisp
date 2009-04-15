@@ -1012,3 +1012,20 @@ typedef struct _fltype_t {
     struct _fltype_t *artype;  // (array this)
     int marked;
 } fltype_t;
+
+-----------------------------------------------------------------------------
+
+new evaluator todo:
+
+- need builtin = to handle nans properly, fix equal? on nans
+- builtin quasi-opaque function type
+  fields: signature, maxstack, bcode, vals, cloenv
+  function->vector
+- make (for ...) a special form
+- trycatch should require 2nd arg to be a lambda expression
+- maxstack calculation, replace Stack with C stack, alloca
+  - stack traces and better debugging support
+- lambda lifting
+- let optimization
+- have macroexpand use its own global syntax table
+- be able to create/load an image file

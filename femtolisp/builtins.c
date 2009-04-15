@@ -129,7 +129,7 @@ static value_t fl_intern(value_t *args, u_int32_t nargs)
     return symbol(cvalue_data(args[0]));
 }
 
-extern value_t LAMBDA;
+extern value_t LAMBDA, COMPILEDLAMBDA;
 
 static value_t fl_setsyntax(value_t *args, u_int32_t nargs)
 {
@@ -142,7 +142,8 @@ static value_t fl_setsyntax(value_t *args, u_int32_t nargs)
         sym->syntax = 0;
     }
     else {
-        if (!iscons(args[1]) || car_(args[1])!=LAMBDA)
+        if (!iscons(args[1]) || (car_(args[1])!=LAMBDA &&
+                                 car_(args[1])!=COMPILEDLAMBDA))
             type_error("set-syntax!", "function", args[1]);
         sym->syntax = args[1];
     }
