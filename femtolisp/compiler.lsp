@@ -25,7 +25,7 @@
     :loadg :loada :loadc :loadg.l
     :setg  :seta  :setc  :setg.l
 
-    :closure :trycatch :argc :vargc]))
+    :closure :trycatch :argc :vargc :close :let]))
 
 (define arg-counts
   (table :eq?      2      :eqv?     2
@@ -121,7 +121,7 @@
 			 (set! i (+ i 1)))
 			
 			((:loada :seta :call :tcall :loadv :loadg :setg
-			  :list :+ :- :* :/ :vector :argc :vargc :loadi8)
+			  :list :+ :- :* :/ :vector :argc :vargc :loadi8 :let)
 			 (io.write bcode (uint8 nxt))
 			 (set! i (+ i 1)))
 			
@@ -326,8 +326,26 @@
 		 (if (= count 1)
 		     " argument."
 		     " arguments."))))
-  
+
 (define (compile-app g env tail? x)
+  (let ((head (car x)))
+    (if (and (pair? head)
+	     (eq? (car head) 'lambda)
+	     (list? (cadr head)))
+	(compile-let  g env tail? x)
+	(compile-call g env tail? x))))
+
+(define (compile-let g env tail? x)
+  (let ((head (car x))
+	(args (cdr x)))
+    (unless (length= args (length (cadr head)))
+	    (error (string "apply: incorrect number of arguments to " head)))
+    (emit g :loadv (compile-f env head #t))
+    (let ((nargs (compile-arglist g env args)))
+      (emit g :close)
+      (emit g (if tail? :tcall :call) (+ 1 nargs)))))
+
+(define (compile-call g env tail? x)
   (let ((head  (car x)))
     (let ((head
 	   (if (and (symbol? head)
@@ -400,12 +418,12 @@
 		     (emit g :trycatch))
 	   (else   (compile-app g env tail? x))))))
 
-(define (compile-f env f)
+(define (compile-f env f . let?)
   (let ((g    (make-code-emitter))
 	(args (cadr f)))
-    (if (null? (lastcdr args))
-	(emit g :argc  (length args))
-	(emit g :vargc (if (atom? args) 0 (length args))))
+    (cond ((not (null? let?))     (emit g :let  (1+ (length args))))
+	  ((null? (lastcdr args)) (emit g :argc (length args)))
+	  (else  (emit g :vargc (if (atom? args) 0 (length args)))))
     (compile-in g (cons (to-proper args) env) #t (caddr f))
     (emit g :ret)
     `(compiled-lambda ,args ,(bytecode g))))
@@ -457,7 +475,7 @@
 		      (set! i (+ i 1)))
 
 		     ((:loada :seta :call :tcall :list :+ :- :* :/ :vector
-		       :argc :vargc :loadi8)
+		       :argc :vargc :loadi8 :let)
 		      (princ (number->string (aref code i)))
 		      (set! i (+ i 1)))
 
