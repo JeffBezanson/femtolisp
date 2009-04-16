@@ -33,27 +33,6 @@ static void eq_union(htable_t *table, value_t a, value_t b,
     ptrhash_put(table, (void*)b, (void*)ca);
 }
 
-// a is a fixnum, b is a cprim
-static value_t compare_num_cprim(value_t a, value_t b, int eq, int swap)
-{
-    cprim_t *bcp = (cprim_t*)ptr(b);
-    numerictype_t bt = cp_numtype(bcp);
-    fixnum_t ia = numval(a);
-    void *bptr = cp_data(bcp);
-    if (cmp_eq(&ia, T_FIXNUM, bptr, bt, 1))
-        return fixnum(0);
-    if (eq) return fixnum(1);
-    if (swap) {
-        if (cmp_lt(bptr, bt, &ia, T_FIXNUM))
-            return fixnum(-1);
-    }
-    else {
-        if (cmp_lt(&ia, T_FIXNUM, bptr, bt))
-            return fixnum(-1);
-    }
-    return fixnum(1);
-}
-
 static value_t bounded_compare(value_t a, value_t b, int bound, int eq);
 static value_t cyc_compare(value_t a, value_t b, htable_t *table, int eq);
 
@@ -86,6 +65,7 @@ static value_t bounded_compare(value_t a, value_t b, int bound, int eq)
         return NIL;
     int taga = tag(a);
     int tagb = cmptag(b);
+    int c;
     switch (taga) {
     case TAG_NUM :
     case TAG_NUM1:
@@ -93,7 +73,7 @@ static value_t bounded_compare(value_t a, value_t b, int bound, int eq)
             return (numval(a) < numval(b)) ? fixnum(-1) : fixnum(1);
         }
         if (iscprim(b)) {
-            return compare_num_cprim(a, b, eq, 0);
+            return fixnum(numeric_compare(a, b, eq, 1, NULL));
         }
         return fixnum(-1);
     case TAG_SYM:
@@ -106,20 +86,9 @@ static value_t bounded_compare(value_t a, value_t b, int bound, int eq)
             return bounded_vector_compare(a, b, bound, eq);
         break;
     case TAG_CPRIM:
-        if (iscprim(b)) {
-            cprim_t *acp=(cprim_t*)ptr(a), *bcp=(cprim_t*)ptr(b);
-            numerictype_t at=cp_numtype(acp), bt=cp_numtype(bcp);
-            void *aptr=cp_data(acp), *bptr=cp_data(bcp);
-            if (cmp_eq(aptr, at, bptr, bt, 1))
-                return fixnum(0);
-            if (eq) return fixnum(1);
-            if (cmp_lt(aptr, at, bptr, bt))
-                return fixnum(-1);
-            return fixnum(1);
-        }
-        else if (isfixnum(b)) {
-            return compare_num_cprim(b, a, eq, 1);
-        }
+        c = numeric_compare(a, b, eq, 1, NULL);
+        if (c != 2)
+            return fixnum(c);
         break;
     case TAG_CVALUE:
         if (iscvalue(b))

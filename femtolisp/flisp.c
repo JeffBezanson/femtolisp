@@ -55,7 +55,7 @@
 static char *builtin_names[] =
     { // special forms
       "quote", "cond", "if", "and", "or", "while", "lambda",
-      "trycatch", "%apply", "%applyn", "set!", "prog1", "begin",
+      "trycatch", "%apply", "%applyn", "set!", "prog1", "for", "begin",
 
       // predicates
       "eq?", "eqv?", "equal?", "atom?", "not", "null?", "boolean?", "symbol?",
@@ -71,7 +71,7 @@ static char *builtin_names[] =
       "+", "-", "*", "/", "=", "<", "compare",
 
       // sequences
-      "vector", "aref", "aset!", "for",
+      "vector", "aref", "aset!",
       "", "", "" };
 
 #define N_STACK 262144
@@ -649,33 +649,6 @@ int isnumber(value_t v)
     return (isfixnum(v) || iscprim(v));
 }
 
-static int numeric_equals(value_t a, value_t b)
-{
-    value_t tmp;
-    if (isfixnum(b)) {
-        tmp=a; a=b; b=tmp;
-    }
-    void *aptr, *bptr;
-    numerictype_t at, bt;
-    if (!iscprim(b)) type_error("=", "number", b);
-    cprim_t *cp = (cprim_t*)ptr(b);
-    fixnum_t fv;
-    bt = cp_numtype(cp);
-    bptr = cp_data(cp);
-    if (isfixnum(a)) {
-        fv = numval(a);
-        at = T_FIXNUM;
-        aptr = &fv;
-    }
-    else if (iscprim(a)) {
-        cp = (cprim_t*)ptr(a);
-        at = cp_numtype(cp);
-        aptr = cp_data(cp);
-    }
-    else type_error("=", "number", a);
-    return cmp_eq(aptr, at, bptr, bt, 0);
-}
-
 // read -----------------------------------------------------------------------
 
 #include "read.c"
@@ -1079,6 +1052,35 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, uint32_t envsz)
             }
             v = POP();
             break;
+        case F_FOR:
+            if (!iscons(Stack[bp])) goto notpair;
+            v = car_(Stack[bp]);
+            lo = tofixnum(eval(v), "for");
+            Stack[bp] = cdr_(Stack[bp]);
+            if (!iscons(Stack[bp])) goto notpair;
+            v = car_(Stack[bp]);
+            hi = tofixnum(eval(v), "for");
+            Stack[bp] = cdr_(Stack[bp]);
+            if (!iscons(Stack[bp])) goto notpair;
+            v = car_(Stack[bp]);
+            f = eval(v);
+            v = car(cdr(f));
+            if (!iscons(v) || !iscons(cdr_(cdr_(f))) || cdr_(v) != NIL ||
+                car_(f) != LAMBDA)
+                lerror(ArgError, "for: expected 1 argument lambda");
+            f = cdr_(f);
+            PUSH(f);  // save function cdr
+            SP += 3;  // make space
+            Stack[SP-1] = cdr_(cdr_(f));   // cloenv
+            v = FL_F;
+            for(s=lo; s <= hi; s++) {
+                f = Stack[SP-4];
+                Stack[SP-3] = car_(f);     // lambda list
+                Stack[SP-2] = fixnum(s);   // argument value
+                v = car_(cdr_(f));
+                if (!selfevaluating(v)) v = eval_sexpr(v, &Stack[SP-3], 0, 3);
+            }
+            break;
         case F_TRYCATCH:
             v = do_trycatch(car(Stack[bp]), penv, envsz);
             break;
@@ -1323,7 +1325,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, uint32_t envsz)
                 v = (v == e) ? FL_T : FL_F;
             }
             else {
-                v = numeric_equals(v, e) ? FL_T : FL_F;
+                v = (!numeric_compare(v,e,1,0,"=")) ? FL_T : FL_F;
             }
             break;
         case F_LT:
@@ -1380,28 +1382,6 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, uint32_t envsz)
                 penv = &Stack[SP-2];
             }
             goto eval_top;
-        case F_FOR:
-            argcount("for", nargs, 3);
-            lo = tofixnum(Stack[SP-3], "for");
-            hi = tofixnum(Stack[SP-2], "for");
-            f = Stack[SP-1];
-            v = car(cdr(f));
-            if (!iscons(v) || !iscons(cdr_(cdr_(f))) || cdr_(v) != NIL ||
-                car_(f) != LAMBDA)
-                lerror(ArgError, "for: expected 1 argument lambda");
-            f = cdr_(f);
-            PUSH(f);  // save function cdr
-            SP += 3;  // make space
-            Stack[SP-1] = cdr_(cdr_(f));   // cloenv
-            v = FL_F;
-            for(s=lo; s <= hi; s++) {
-                f = Stack[SP-4];
-                Stack[SP-3] = car_(f);     // lambda list
-                Stack[SP-2] = fixnum(s);   // argument value
-                v = car_(cdr_(f));
-                if (!selfevaluating(v)) v = eval_sexpr(v, &Stack[SP-3], 0, 3);
-            }
-            break;
         case F_SPECIAL_APPLYN:
             POPN(4);
             v = POP();
@@ -1900,7 +1880,7 @@ static value_t apply_cl(uint32_t nargs)
                 v = (v == e) ? FL_T : FL_F;
             }
             else {
-                v = numeric_equals(v, e) ? FL_T : FL_F;
+                v = (!numeric_compare(v,e,1,0,"=")) ? FL_T : FL_F;
             }
             POPN(1);
             Stack[SP-1] = v;
@@ -1996,6 +1976,7 @@ static value_t apply_cl(uint32_t nargs)
         case OP_LOADNIL: PUSH(NIL); break;
         case OP_LOAD0: PUSH(fixnum(0)); break;
         case OP_LOAD1: PUSH(fixnum(1)); break;
+        case OP_LOADI8: s = (int8_t)code[ip++]; PUSH(fixnum(s)); break;
         case OP_LOADV:
             assert(code[ip] < vector_size(*pvals));
             v = vector_elt(*pvals, code[ip]); ip++;

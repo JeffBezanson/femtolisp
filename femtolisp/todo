@@ -1017,12 +1017,13 @@ typedef struct _fltype_t {
 
 new evaluator todo:
 
-- need builtin = to handle nans properly, fix equal? on nans
+* need builtin = to handle nans properly, fix equal? on nans
 - builtin quasi-opaque function type
   fields: signature, maxstack, bcode, vals, cloenv
   function->vector
-- make (for ...) a special form
-- trycatch should require 2nd arg to be a lambda expression
+* make (for ...) a special form
+* trycatch should require 2nd arg to be a lambda expression
+* immediate load int8 instruction
 - maxstack calculation, replace Stack with C stack, alloca
   - stack traces and better debugging support
 - lambda lifting

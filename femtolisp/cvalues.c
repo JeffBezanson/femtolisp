@@ -1204,39 +1204,66 @@ static value_t fl_mul_any(value_t *args, u_int32_t nargs, int64_t Saccum)
     return return_from_uint64(Uaccum);
 }
 
+static int num_to_ptr(value_t a, fixnum_t *pi, numerictype_t *pt, void **pp)
+{
+    cprim_t *cp;
+    if (isfixnum(a)) {
+        *pi = numval(a);
+        *pp = pi;
+        *pt = T_FIXNUM;
+    }
+    else if (iscprim(a)) {
+        cp = (cprim_t*)ptr(a);
+        *pp = cp_data(cp);
+        *pt = cp_numtype(cp);
+    }
+    else {
+        return 0;
+    }
+    return 1;
+}
+
+/*
+  returns -1, 0, or 1 based on ordering of a and b
+  eq: consider equality only, returning 0 or nonzero
+  eqnans: NaNs considered equal to each other
+  fname: if not NULL, throws type errors, else returns 2 for type errors
+*/
+int numeric_compare(value_t a, value_t b, int eq, int eqnans, char *fname)
+{
+    int_t ai, bi;
+    numerictype_t ta, tb;
+    void *aptr, *bptr;
+
+    if (bothfixnums(a,b)) {
+        if (a==b) return 0;
+        if (numval(a) < numval(b)) return -1;
+        return 1;
+    }
+    if (!num_to_ptr(a, &ai, &ta, &aptr)) {
+        if (fname) type_error(fname, "number", a); else return 2;
+    }
+    if (!num_to_ptr(b, &bi, &tb, &bptr)) {
+        if (fname) type_error(fname, "number", b); else return 2;
+    }
+    if (cmp_eq(aptr, ta, bptr, tb, eqnans))
+        return 0;
+    if (eq) return 1;
+    if (cmp_lt(aptr, ta, bptr, tb))
+        return -1;
+    return 1;
+}
+
 static value_t fl_div2(value_t a, value_t b)
 {
     double da, db;
     int_t ai, bi;
-    int ta, tb;
-    void *aptr=NULL, *bptr=NULL;
-    cprim_t *cp;
+    numerictype_t ta, tb;
+    void *aptr, *bptr;
 
-    if (isfixnum(a)) {
-        ai = numval(a);
-        aptr = &ai;
-        ta = T_FIXNUM;
-    }
-    else if (iscprim(a)) {
-        cp = (cprim_t*)ptr(a);
-        ta = cp_numtype(cp);
-        if (ta <= T_DOUBLE)
-            aptr = cp_data(cp);
-    }
-    if (aptr == NULL)
+    if (!num_to_ptr(a, &ai, &ta, &aptr))
         type_error("/", "number", a);
-    if (isfixnum(b)) {
-        bi = numval(b);
-        bptr = &bi;
-        tb = T_FIXNUM;
-    }
-    else if (iscprim(b)) {
-        cp = (cprim_t*)ptr(b);
-        tb = cp_numtype(cp);
-        if (tb <= T_DOUBLE)
-            bptr = cp_data(cp);
-    }
-    if (bptr == NULL)
+    if (!num_to_ptr(b, &bi, &tb, &bptr))
         type_error("/", "number", b);
 
     if (ta == T_FLOAT) {
@@ -1294,43 +1321,18 @@ static value_t fl_div2(value_t a, value_t b)
     lerror(DivideError, "/: division by zero");
 }
 
-static void *int_data_ptr(value_t a, int *pnumtype, char *fname)
-{
-    cprim_t *cp;
-    if (iscprim(a)) {
-        cp = (cprim_t*)ptr(a);
-        *pnumtype = cp_numtype(cp);
-        if (*pnumtype < T_FLOAT)
-            return cp_data(cp);
-    }
-    type_error(fname, "integer", a);
-    return NULL;
-}
-
 static value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)
 {
     int_t ai, bi;
-    int ta, tb, itmp;
+    numerictype_t ta, tb, itmp;
     void *aptr=NULL, *bptr=NULL, *ptmp;
     int64_t b64;
 
-    if (isfixnum(a)) {
-        ta = T_FIXNUM;
-        ai = numval(a);
-        aptr = &ai;
-        bptr = int_data_ptr(b, &tb, fname);
-    }
-    else {
-        aptr = int_data_ptr(a, &ta, fname);
-        if (isfixnum(b)) {
-            tb = T_FIXNUM;
-            bi = numval(b);
-            bptr = &bi;
-        }
-        else {
-            bptr = int_data_ptr(b, &tb, fname);
-        }
-    }
+    if (!num_to_ptr(a, &ai, &ta, &aptr) || ta >= T_FLOAT)
+        type_error(fname, "integer", a);
+    if (!num_to_ptr(b, &bi, &tb, &bptr) || tb >= T_FLOAT)
+        type_error(fname, "integer", b);
+
     if (ta < tb) {
         itmp = ta; ta = tb; tb = itmp;
         ptmp = aptr; aptr = bptr; bptr = ptmp;
@@ -1348,6 +1350,8 @@ static value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)
     case T_UINT32: return mk_uint32(*(uint32_t*)aptr & (uint32_t)b64);
     case T_INT64:  return mk_int64( *(int64_t*)aptr  & (int64_t )b64);
     case T_UINT64: return mk_uint64(*(uint64_t*)aptr & (uint64_t)b64);
+    case T_FLOAT:
+    case T_DOUBLE: assert(0);
     }
     break;
     case 1:
@@ -1360,6 +1364,8 @@ static value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)
     case T_UINT32: return mk_uint32(*(uint32_t*)aptr | (uint32_t)b64);
     case T_INT64:  return mk_int64( *(int64_t*)aptr  | (int64_t )b64);
     case T_UINT64: return mk_uint64(*(uint64_t*)aptr | (uint64_t)b64);
+    case T_FLOAT:
+    case T_DOUBLE: assert(0);
     }
     break;
     case 2:
@@ -1372,6 +1378,8 @@ static value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)
     case T_UINT32: return mk_uint32(*(uint32_t*)aptr ^ (uint32_t)b64);
     case T_INT64:  return mk_int64( *(int64_t*)aptr  ^ (int64_t )b64);
     case T_UINT64: return mk_uint64(*(uint64_t*)aptr ^ (uint64_t)b64);
+    case T_FLOAT:
+    case T_DOUBLE: assert(0);
     }
     }
     assert(0);

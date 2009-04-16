@@ -661,8 +661,8 @@
 	 (io.close F)
 	 (raise `(load-error ,filename ,e)))))))
 
-;(load (string *install-dir* *directory-separator* "compiler.lsp"))
-;(define (load-process x) ((compile-thunk (expand x))))
+(load (string *install-dir* *directory-separator* "compiler.lsp"))
+(define (load-process x) ((compile-thunk (expand x))))
 
 (define *banner* (string.tail "
 ;  _

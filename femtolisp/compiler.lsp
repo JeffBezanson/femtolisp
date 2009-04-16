@@ -9,7 +9,7 @@
 (define Instructions
   (make-enum-table
    [:nop :dup :pop :call :tcall :jmp :brf :brt :jmp.l :brf.l :brt.l :ret
-    :tapply
+    :tapply :for
 
     :eq? :eqv? :equal? :atom? :not :null? :boolean? :symbol?
     :number? :bound? :pair? :builtin? :vector? :fixnum?
@@ -19,9 +19,9 @@
 
     :+ :- :* :/ := :< :compare
 
-    :vector :aref :aset! :for
+    :vector :aref :aset!
 
-    :loadt :loadf :loadnil :load0 :load1 :loadv :loadv.l
+    :loadt :loadf :loadnil :load0 :load1 :loadi8 :loadv :loadv.l
     :loadg :loada :loadc :loadg.l
     :setg  :seta  :setc  :setg.l
 
@@ -39,9 +39,8 @@
 	 :cdr      1      :set-car! 2
 	 :set-cdr! 2      :eval     1
 	 :apply    2      :<        2
-         :for      3      :compare  2
-         :aref     2      :aset!    3
-	 :=        2))
+         :compare  2      :aref     2
+         :aset!    3      :=        2))
 
 (define 1/Instructions (table.invert Instructions))
 
@@ -122,7 +121,7 @@
 			 (set! i (+ i 1)))
 			
 			((:loada :seta :call :tcall :loadv :loadg :setg
-				 :list :+ :- :* :/ :vector :argc :vargc)
+			  :list :+ :- :* :/ :vector :argc :vargc :loadi8)
 			 (io.write bcode (uint8 nxt))
 			 (set! i (+ i 1)))
 			
@@ -251,6 +250,21 @@
     (emit g :jmp top)
     (mark-label g end)))
 
+(define (1arg-lambda? func)
+  (and (pair? func)
+       (eq? (car func) 'lambda)
+       (pair? (cdr func))
+       (pair? (cadr func))
+       (length= (cadr func) 1)))
+
+(define (compile-for g env lo hi func)
+  (if (1arg-lambda? func)
+      (begin (compile-in g env #f lo)
+	     (compile-in g env #f hi)
+	     (compile-in g env #f func)
+	     (emit g :for))
+      (error "for: third form must be a 1-argument lambda")))
+
 (define (compile-short-circuit g env tail? forms default branch)
   (cond ((atom? forms)        (compile-in g env tail? default))
 	((atom? (cdr forms))  (compile-in g env tail? (car forms)))
@@ -360,6 +374,9 @@
 	       ((eq? x #t) (emit g :loadt))
 	       ((eq? x #f) (emit g :loadf))
 	       ((eq? x ()) (emit g :loadnil))
+	       ((and (fixnum? x)
+		     (>= x -128)
+		     (<= x 127)) (emit g :loadi8 x))
 	       (else       (emit g :loadv x))))
 	(else
 	 (case (car x)
@@ -373,9 +390,12 @@
 	   (and      (compile-and g env tail? (cdr x)))
 	   (or       (compile-or  g env tail? (cdr x)))
 	   (while    (compile-while g env (cadr x) (cons 'begin (cddr x))))
+	   (for      (compile-for   g env (cadr x) (caddr x) (cadddr x)))
 	   (set!     (compile-in g env #f (caddr x))
 		     (compile-sym g env (cadr x) [:seta :setc :setg]))
 	   (trycatch (compile-in g env #f `(lambda () ,(cadr x)))
+		     (unless (1arg-lambda? (caddr x))
+			     (error "trycatch: second form must be a 1-argument lambda"))
 		     (compile-in g env #f (caddr x))
 		     (emit g :trycatch))
 	   (else   (compile-app g env tail? x))))))
@@ -437,7 +457,7 @@
 		      (set! i (+ i 1)))
 
 		     ((:loada :seta :call :tcall :list :+ :- :* :/ :vector
-		       :argc :vargc)
+		       :argc :vargc :loadi8)
 		      (princ (number->string (aref code i)))
 		      (set! i (+ i 1)))
 

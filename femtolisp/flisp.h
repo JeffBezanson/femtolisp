@@ -117,7 +117,8 @@ extern uint32_t SP;
 enum {
     // special forms
     F_QUOTE=0, F_COND, F_IF, F_AND, F_OR, F_WHILE, F_LAMBDA,
-    F_TRYCATCH, F_SPECIAL_APPLY, F_SPECIAL_APPLYN, F_SETQ, F_PROG1, F_BEGIN,
+    F_TRYCATCH, F_SPECIAL_APPLY, F_SPECIAL_APPLYN, F_SETQ, F_PROG1, F_FOR,
+    F_BEGIN,
 
     // functions
     F_EQ, F_EQV, F_EQUAL, F_ATOM, F_NOT, F_NULL, F_BOOLEANP, F_SYMBOLP,
@@ -127,7 +128,7 @@ enum {
     F_EVAL, F_APPLY,
     F_ADD, F_SUB, F_MUL, F_DIV, F_NUMEQ, F_LT, F_COMPARE,
 
-    F_VECTOR, F_AREF, F_ASET, F_FOR,
+    F_VECTOR, F_AREF, F_ASET,
     F_TRUE, F_FALSE, F_NIL,
     N_BUILTINS
 };
@@ -292,6 +293,7 @@ int isstring(value_t v);
 int isnumber(value_t v);
 int isiostream(value_t v);
 value_t cvalue_compare(value_t a, value_t b);
+int numeric_compare(value_t a, value_t b, int eq, int eqnans, char *fname);
 
 void to_sized_ptr(value_t v, char *fname, char **pdata, size_t *psz);
 

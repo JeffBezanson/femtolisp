@@ -116,7 +116,7 @@ typedef u_ptrint_t uptrint_t;
 #define LABS(n) (((n)^((n)>>(NBITS-1))) - ((n)>>(NBITS-1)))
 #define NBABS(n,nb) (((n)^((n)>>((nb)-1))) - ((n)>>((nb)-1)))
 #define DFINITE(d) (((*(int64_t*)&(d))&0x7ff0000000000000LL)!=0x7ff0000000000000LL)
-#define DNAN(d) (((*(int64_t*)&(d))&0x7ff8000000000000LL)==0x7ff8000000000000LL)
+#define DNAN(d) ((d)!=(d))
 
 extern double D_PNAN;
 extern double D_NNAN;
