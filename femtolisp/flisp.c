@@ -771,6 +771,7 @@ static value_t do_trycatch(value_t expr, value_t *penv, uint32_t envsz)
 
 static value_t do_trycatch2()
 {
+    uint32_t saveSP = SP;
     value_t v;
     value_t thunk = Stack[SP-2];
     Stack[SP-2] = Stack[SP-1];
@@ -783,6 +784,7 @@ static value_t do_trycatch2()
         Stack[SP-1] = lasterror;
         v = apply_cl(1);
     }
+    SP = saveSP;
     return v;
 }
 
@@ -1426,7 +1428,9 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, uint32_t envsz)
     assert(SP > bp+1);
     if (__likely(iscons(f))) {
         if (car_(f) == COMPILEDLAMBDA) {
+            i = SP;
             e = apply_cl(nargs);
+            SP = i;
             if (noeval == 2) {
                 if (selfevaluating(e)) { SP=saveSP; return(e); }
                 noeval = 0;
@@ -1510,12 +1514,12 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, uint32_t envsz)
   - provide arg count
   - respect tail position
   - call correct entry point (either eval_sexpr or apply_cl)
+  - restore SP
 
   callee's responsibility:
   - check arg counts
   - allocate vararg array
   - push closed env, set up new environment
-  - restore SP
 
   ** need 'copyenv' instruction that moves env to heap, installs
      heap version as the current env, and pushes the result vector.
@@ -1525,34 +1529,31 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, uint32_t envsz)
 */
 static value_t apply_cl(uint32_t nargs)
 {
-    uint32_t i, n, ip, bp, envsz, saveSP=SP;
+    uint32_t i, n, ip, bp, envsz, captured;
     fixnum_t s, lo, hi;
     int64_t accum;
     uint8_t op, *code;
-    value_t func, v, bcode, x, e, ftl;
-    value_t *penv, *pvals, *lenv, *pv;
+    value_t func, v, bcode, x, e;
+    value_t *pvals, *lenv, *pv;
     symbol_t *sym;
     cons_t *c;
 
  apply_cl_top:
+    captured = 0;
     func = Stack[SP-nargs-1];
     assert(iscons(func));
     assert(iscons(cdr_(func)));
     assert(iscons(cdr_(cdr_(func))));
-    ftl = cdr_(cdr_(func));
-    bcode = car_(ftl);
+    x = cdr_(cdr_(func));
+    bcode = car_(x);
     code = cv_data((cvalue_t*)ptr(car_(bcode)));
     assert(!ismanaged((uptrint_t)code));
     if (nargs < code[1])
         lerror(ArgError, "apply: too few arguments");
 
     bp = SP-nargs;
-    x = cdr_(ftl);   // cloenv
-    Stack[bp-1] = car_(cdr_(func));  // lambda list
-    penv = &Stack[bp-1];
+    x = cdr_(x);   // cloenv
     PUSH(x);
-    // must keep a reference to the bcode object while executing it
-    PUSH(bcode);
     PUSH(cdr_(bcode));
     pvals = &Stack[SP-1];
 
@@ -1579,15 +1580,13 @@ static value_t apply_cl(uint32_t nargs)
                 Stack[bp+i] = v;
                 Stack[bp+i+1] = Stack[bp+nargs];
                 Stack[bp+i+2] = Stack[bp+nargs+1];
-                Stack[bp+i+3] = Stack[bp+nargs+2];
-                pvals = &Stack[bp+nargs+2];
+                pvals = &Stack[bp+nargs+1];
             }
             else {
                 PUSH(NIL);
                 Stack[SP-1] = Stack[SP-2];
                 Stack[SP-2] = Stack[SP-3];
-                Stack[SP-3] = Stack[SP-4];
-                Stack[SP-4] = NIL;
+                Stack[SP-3] = NIL;
                 pvals = &Stack[SP-1];
             }
             nargs = i+1;
@@ -1656,7 +1655,7 @@ static value_t apply_cl(uint32_t nargs)
             if (v != FL_F) ip = *(uint32_t*)&code[ip];
             else ip += 4;
             break;
-        case OP_RET: v = POP(); SP = saveSP; return v;
+        case OP_RET: v = POP(); return v;
 
         case OP_EQ:
             Stack[SP-2] = ((Stack[SP-2] == Stack[SP-1]) ? FL_T : FL_F);
@@ -1962,10 +1961,12 @@ static value_t apply_cl(uint32_t nargs)
             //f = Stack[SP-1];
             v = FL_F;
             SP += 2;
+            i = SP;
             for(s=lo; s <= hi; s++) {
                 Stack[SP-2] = Stack[SP-3];
                 Stack[SP-1] = fixnum(s);
                 v = apply_cl(1);
+                SP = i;
             }
             POPN(4);
             Stack[SP-1] = v;
@@ -2017,10 +2018,11 @@ static value_t apply_cl(uint32_t nargs)
         case OP_LOADA:
             assert(nargs > 0);
             i = code[ip++];
-            if (penv[0] == NIL) {
-                assert(isvector(penv[1]));
-                assert(i+1 < vector_size(penv[1]));
-                v = vector_elt(penv[1], i+1);
+            if (captured) {
+                x = Stack[bp];
+                assert(isvector(x));
+                assert(i < vector_size(x));
+                v = vector_elt(x, i);
             }
             else {
                 assert(bp+i < SP);
@@ -2032,10 +2034,11 @@ static value_t apply_cl(uint32_t nargs)
             assert(nargs > 0);
             v = Stack[SP-1];
             i = code[ip++];
-            if (penv[0] == NIL) {
-                assert(isvector(penv[1]));
-                assert(i+1 < vector_size(penv[1]));
-                vector_elt(penv[1], i+1) = v;
+            if (captured) {
+                x = Stack[bp];
+                assert(isvector(x));
+                assert(i < vector_size(x));
+                vector_elt(x, i) = v;
             }
             else {
                 assert(bp+i < SP);
@@ -2045,16 +2048,16 @@ static value_t apply_cl(uint32_t nargs)
         case OP_LOADC:
         case OP_SETC:
             s = code[ip++];
-            i = code[ip++]+1;
-            if (penv[0]==NIL) {
+            i = code[ip++];
+            if (captured) {
                 if (nargs > 0) {
                     // current frame has been captured
                     s++;
                 }
-                v = penv[1];
+                v = Stack[bp];
             }
             else {
-                v = penv[nargs+1];
+                v = Stack[bp+nargs];
             }
             while (s--)
                 v = vector_elt(v, vector_size(v)-1);
@@ -2068,10 +2071,10 @@ static value_t apply_cl(uint32_t nargs)
 
         case OP_CLOSURE:
             // build a closure (lambda args body . env)
-            if (penv[0] != NIL) {
+            if (nargs > 0 && !captured) {
                 // save temporary environment to the heap
-                lenv = penv;
-                envsz = nargs+2;
+                lenv = &Stack[bp];
+                envsz = nargs+1;
                 pv = alloc_words(envsz + 1);
                 PUSH(tagptr(pv, TAG_VECTOR));
                 pv[0] = fixnum(envsz);
@@ -2080,11 +2083,11 @@ static value_t apply_cl(uint32_t nargs)
                     *pv++ = *lenv++;
                 // environment representation changed; install
                 // the new representation so everybody can see it
-                penv[0] = NIL;
-                penv[1] = Stack[SP-1];
+                captured = 1;
+                Stack[bp] = Stack[SP-1];
             }
             else {
-                PUSH(penv[1]); // env has already been captured; share
+                PUSH(Stack[bp]); // env has already been captured; share
             }
             c = (cons_t*)ptr(v=cons_reserve(3));
             e = cdr_(Stack[SP-2]);  // closure to copy
