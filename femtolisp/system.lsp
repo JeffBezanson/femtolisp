@@ -21,8 +21,6 @@
       (list 'set! form (car body))
       (list 'set! (car form) (list 'lambda (cdr form) (f-body body)))))
 
-(define (set s v) (eval (list 'set! s (list 'quote v))))
-
 (define (map f lst)
   (if (atom? lst) lst
       (cons (f (car lst)) (map f (cdr lst)))))
@@ -298,7 +296,8 @@
   (or (and (atom? x)
            (not (symbol? x)))
       (and (constant? x)
-           (eq x (eval x)))))
+	   (symbol? x)
+           (eq x (top-level-value x)))))
 
 (define-macro (backquote x) (bq-process x))
 
@@ -451,11 +450,11 @@
 (define-macro (assert expr) `(if ,expr #t (raise '(assert-failed ,expr))))
 
 (define (trace sym)
-  (let* ((lam  (eval sym))
+  (let* ((lam  (top-level-value sym))
 	 (args (cadr lam))
 	 (al   (to-proper args)))
     (if (not (eq? (car lam) 'trace-lambda))
-	(set sym
+	(set-top-level-value! sym
 	     `(trace-lambda ,args
 	        (begin
 		  (princ "(")
@@ -469,9 +468,9 @@
   'ok)
 
 (define (untrace sym)
-  (let ((lam  (eval sym)))
+  (let ((lam  (top-level-value sym)))
     (if (eq? (car lam) 'trace-lambda)
-	(set sym
+	(set-top-level-value! sym
 	     (cadr (caar (last-pair (caddr lam))))))))
 
 (define-macro (time expr)
@@ -679,7 +678,7 @@
 		       (lambda (e) (begin (io.discardbuffer *input-stream*)
 					  (raise e))))))
       (and (not (io.eof? *input-stream*))
-	   (let ((V (eval (expand v))))
+	   (let ((V (load-process v)))
 	     (print V)
 	     (set! that V)
 	     #t))))

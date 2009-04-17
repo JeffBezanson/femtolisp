@@ -129,6 +129,24 @@ static value_t fl_intern(value_t *args, u_int32_t nargs)
     return symbol(cvalue_data(args[0]));
 }
 
+static value_t fl_top_level_value(value_t *args, u_int32_t nargs)
+{
+    argcount("top-level-value", nargs, 1);
+    symbol_t *sym = tosymbol(args[0], "top-level-value");
+    if (sym->binding == UNBOUND)
+        raise(list2(UnboundError, args[0]));
+    return sym->binding;
+}
+
+static value_t fl_set_top_level_value(value_t *args, u_int32_t nargs)
+{
+    argcount("set-top-level-value!", nargs, 2);
+    symbol_t *sym = tosymbol(args[0], "set-top-level-value!");
+    if (sym->syntax != TAG_CONST)
+        sym->binding = args[1];
+    return args[1];
+}
+
 extern value_t LAMBDA, COMPILEDLAMBDA;
 
 static value_t fl_setsyntax(value_t *args, u_int32_t nargs)
@@ -202,9 +220,9 @@ static value_t fl_constantp(value_t *args, u_int32_t nargs)
     return FL_T;
 }
 
-static value_t fl_integerp(value_t *args, u_int32_t nargs)
+static value_t fl_integer_valuedp(value_t *args, u_int32_t nargs)
 {
-    argcount("integer?", nargs, 1);
+    argcount("integer-valued?", nargs, 1);
     value_t v = args[0];
     if (isfixnum(v)) {
         return FL_T;
@@ -229,6 +247,14 @@ static value_t fl_integerp(value_t *args, u_int32_t nargs)
         }
     }
     return FL_F;
+}
+
+static value_t fl_integerp(value_t *args, u_int32_t nargs)
+{
+    argcount("integer?", nargs, 1);
+    value_t v = args[0];
+    return (isfixnum(v) ||
+            (iscprim(v) && cp_numtype((cprim_t*)ptr(v)) < T_FLOAT));
 }
 
 static value_t fl_fixnum(value_t *args, u_int32_t nargs)
@@ -407,13 +433,16 @@ static builtinspec_t builtin_info[] = {
     { "symbol-syntax", fl_symbolsyntax },
     { "environment", fl_global_env },
     { "constant?", fl_constantp },
+    { "top-level-value", fl_top_level_value },
+    { "set-top-level-value!", fl_set_top_level_value },
     { "raise", fl_raise },
-
     { "exit", fl_exit },
     { "intern", fl_intern },
+
     { "fixnum", fl_fixnum },
     { "truncate", fl_truncate },
     { "integer?", fl_integerp },
+    { "integer-valued?", fl_integer_valuedp },
     { "nconc", fl_nconc },
     { "assq", fl_assq },
     { "memq", fl_memq },

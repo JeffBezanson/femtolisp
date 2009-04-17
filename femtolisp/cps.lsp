@@ -76,7 +76,7 @@
         (#t           (rest->cps prim->cps form k argsyms))))
 
 (define *top-k* (gensym))
-(set *top-k* identity)
+(set-top-level-value! *top-k* identity)
 
 (define (cps form)
   (η-reduce
