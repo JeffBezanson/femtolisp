@@ -55,7 +55,7 @@
 static char *builtin_names[] =
     { // special forms
       "quote", "cond", "if", "and", "or", "while", "lambda",
-      "trycatch", "%apply", "%applyn", "set!", "prog1", "for", "begin",
+      "trycatch", "%apply", "set!", "prog1", "for", "begin",
 
       // predicates
       "eq?", "eqv?", "equal?", "atom?", "not", "null?", "boolean?", "symbol?",
@@ -73,6 +73,16 @@ static char *builtin_names[] =
       // sequences
       "vector", "aref", "aset!",
       "", "", "" };
+
+#define ANYARGS -10000
+
+static short builtin_arg_counts[] =
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+      2, ANYARGS, 1, 1, 2, 2,
+      1, 2,
+      ANYARGS, -1, ANYARGS, -1, 2, 2, 2,
+      ANYARGS, 2, 3 };
 
 #define N_STACK 262144
 value_t StaticStack[N_STACK];
@@ -467,7 +477,7 @@ static void trace_globals(symbol_t *root)
     }
 }
 
-static value_t special_apply_form, special_applyn_form;
+static value_t special_apply_form;
 static value_t apply1_args;
 static value_t memory_exception_value;
 
@@ -502,7 +512,6 @@ void gc(int mustgrow)
     }
     lasterror = relocate(lasterror);
     special_apply_form = relocate(special_apply_form);
-    special_applyn_form = relocate(special_applyn_form);
     apply1_args = relocate(apply1_args);
     memory_exception_value = relocate(memory_exception_value);
 
@@ -541,22 +550,32 @@ void gc(int mustgrow)
 
 // utils ----------------------------------------------------------------------
 
-value_t apply(value_t f, value_t l)
+#define topeval(e, env) (selfevaluating(e) ? (e) : eval_sexpr((e),env,1,2))
+
+// apply function with n args on the stack
+static value_t _applyn(uint32_t n)
 {
-    PUSH(f);
-    PUSH(l);
-    value_t v = toplevel_eval(special_apply_form);
-    POPN(2);
-    return v;
+    PUSH(fixnum(n));
+    return topeval(special_apply_form, NULL);
 }
 
-value_t apply1(value_t f, value_t a0)
+value_t apply(value_t f, value_t l)
 {
+    value_t v = l;
+    uint32_t n = SP;
+
     PUSH(f);
-    PUSH(a0);
-    PUSH(fixnum(1));
-    value_t v = toplevel_eval(special_applyn_form);
-    POPN(3);
+    while (iscons(v)) {
+        if (n == MAX_ARGS) {
+            PUSH(v);
+            break;
+        }
+        PUSH(car_(v));
+        v = cdr_(v);
+    }
+    n = SP - n - 1;
+    v = _applyn(n);
+    POPN(n+1);
     return v;
 }
 
@@ -571,9 +590,8 @@ value_t applyn(uint32_t n, value_t f, ...)
         value_t a = va_arg(ap, value_t);
         PUSH(a);
     }
-    PUSH(fixnum(n));
-    value_t v = toplevel_eval(special_applyn_form);
-    POPN(n+2);
+    value_t v = _applyn(n);
+    POPN(n+1);
     return v;
 }
 
@@ -682,7 +700,6 @@ static value_t list(value_t *args, uint32_t nargs)
 }
 
 #define eval(e)         (selfevaluating(e) ? (e) : eval_sexpr((e),penv,0,envsz))
-#define topeval(e, env) (selfevaluating(e) ? (e) : eval_sexpr((e),env,1,2))
 #define tail_eval(xpr) do {  \
     if (selfevaluating(xpr)) { SP=saveSP; return (xpr); }  \
     else { e=(xpr); goto eval_top; } } while (0)
@@ -763,7 +780,7 @@ static value_t do_trycatch(value_t expr, value_t *penv, uint32_t envsz)
         else {
             v = car_(v);
             Stack[SP-1] = eval(v);
-            v = apply1(Stack[SP-1], lasterror);
+            v = applyn(1, Stack[SP-1], lasterror);
         }
     }
     return v;
@@ -1387,21 +1404,15 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, uint32_t envsz)
                 penv = &Stack[SP-2];
             }
             goto eval_top;
-        case F_SPECIAL_APPLYN:
-            POPN(4);
+        case F_SPECIAL_APPLY:
+            POPN(2);
             v = POP();
+            saveSP = SP;
             nargs = numval(v);
             bp = SP-nargs-2;
             f = Stack[bp+1];
             penv = &Stack[bp+1];
             goto do_apply;
-        case F_SPECIAL_APPLY:
-            f = Stack[bp-4];
-            v = Stack[bp-3];
-            PUSH(f);
-            PUSH(v);
-            nargs = 2;
-            // falls through!!
         case F_APPLY:
             argcount("apply", nargs, 2);
             v = Stack[SP-1];               // second arg is new arglist
@@ -1429,7 +1440,7 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, uint32_t envsz)
         return v;
     }
     f = Stack[bp+1];
-    assert(SP > bp+1);
+    assert((signed)SP > (signed)bp+1);
     if (__likely(iscons(f))) {
         if (car_(f) == COMPILEDLAMBDA) {
             i = SP;
@@ -1535,10 +1546,10 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, uint32_t envsz)
 */
 static value_t apply_cl(uint32_t nargs)
 {
-    uint32_t i, n, ip, bp, envsz, captured;
+    uint32_t i, n, ip, bp, envsz, captured, op;
     fixnum_t s, lo, hi;
     int64_t accum;
-    uint8_t op, *code;
+    uint8_t *code;
     value_t func, v, bcode, x, e;
     value_t *pvals, *lenv, *pv;
     symbol_t *sym;
@@ -1615,12 +1626,31 @@ static value_t apply_cl(uint32_t nargs)
             s = SP;
             func = Stack[SP-i-1];
             if (isbuiltinish(func)) {
-                if (uintval(func) > N_BUILTINS) {
+                op = uintval(func);
+                if (op > N_BUILTINS) {
                     v = ((builtin_t)ptr(func))(&Stack[SP-i], i);
                 }
                 else {
-                    PUSH(fixnum(i));
-                    v = toplevel_eval(special_applyn_form);
+                    s = builtin_arg_counts[op];
+                    if (s >= 0)
+                        argcount(builtin_names[op], i, s);
+                    else if (s != ANYARGS && (signed)i < -s)
+                        argcount(builtin_names[op], i, -s);
+                    // remove function arg
+                    for(s=SP-i-1; s < (int)SP-1; s++)
+                        Stack[s] = Stack[s+1];
+                    SP--;
+                    n = i;
+                    switch (op) {
+                    case OP_LIST:   goto apply_list;
+                    case OP_ADD:    goto apply_add;
+                    case OP_SUB:    goto apply_sub;
+                    case OP_MUL:    goto apply_mul;
+                    case OP_DIV:    goto apply_div;
+                    case OP_VECTOR: goto apply_vector;
+                    default:
+                        goto dispatch;
+                    }
                 }
             }
             else if (iscons(func)) {
@@ -1637,8 +1667,7 @@ static value_t apply_cl(uint32_t nargs)
                     }
                 }
                 else {
-                    PUSH(fixnum(i));
-                    v = toplevel_eval(special_applyn_form);
+                    v = _applyn(i);
                 }
             }
             else {
@@ -1755,6 +1784,7 @@ static value_t apply_cl(uint32_t nargs)
             POPN(1); break;
         case OP_LIST:
             i = code[ip++];
+        apply_list:
             if (i > 0)
                 v = list(&Stack[SP-i], i);
             else
@@ -1784,8 +1814,9 @@ static value_t apply_cl(uint32_t nargs)
             goto do_call;
 
         case OP_ADD:
-            s = 0;
             n = code[ip++];
+        apply_add:
+            s = 0;
             i = SP-n;
             if (n > MAX_ARGS) goto add_ovf;
             for (; i < SP; i++) {
@@ -1809,6 +1840,7 @@ static value_t apply_cl(uint32_t nargs)
             break;
         case OP_SUB:
             n = code[ip++];
+        apply_sub:
             if (__unlikely(n < 1)) lerror(ArgError, "-: too few arguments");
             i = SP-n;
             if (n == 1) {
@@ -1845,8 +1877,9 @@ static value_t apply_cl(uint32_t nargs)
             PUSH(v);
             break;
         case OP_MUL:
-            accum = 1;
             n = code[ip++];
+        apply_mul:
+            accum = 1;
             i = SP-n;
             if (n > MAX_ARGS) goto mul_ovf;
             for (; i < SP; i++) {
@@ -1870,6 +1903,7 @@ static value_t apply_cl(uint32_t nargs)
             break;
         case OP_DIV:
             n = code[ip++];
+        apply_div:
             if (__unlikely(n < 1)) lerror(ArgError, "/: too few arguments");
             i = SP-n;
             if (n == 1) {
@@ -1916,19 +1950,20 @@ static value_t apply_cl(uint32_t nargs)
 
         case OP_VECTOR:
             n = code[ip++];
+        apply_vector:
             if (n > MAX_ARGS) {
-                i = llength(Stack[SP-1]);
-                n--;
+                i = llength(Stack[SP-1])-1;
             }
             else i = 0;
             v = alloc_vector(n+i, 0);
             memcpy(&vector_elt(v,0), &Stack[SP-n], n*sizeof(value_t));
-            if (i > 0) {
-                e = POP();
-                POPN(n);
+            e = POP();
+            POPN(n-1);
+            if (n > MAX_ARGS) {
+                i = n-1;
                 while (iscons(e)) {
-                    vector_elt(v,n) = car_(e);
-                    n++;
+                    vector_elt(v,i) = car_(e);
+                    i++;
                     e = cdr_(e);
                 }
             }
@@ -2200,11 +2235,10 @@ static void lisp_init(void)
     set(printwidthsym=symbol("*print-width*"), fixnum(SCR_WIDTH));
     lasterror = NIL;
     special_apply_form = fl_cons(builtin(F_SPECIAL_APPLY), NIL);
-    special_applyn_form = fl_cons(builtin(F_SPECIAL_APPLYN), NIL);
     apply1_args = fl_cons(NIL, NIL);
     i = 0;
     while (isspecial(builtin(i))) {
-        if (i != F_SPECIAL_APPLY && i != F_SPECIAL_APPLYN)
+        if (i != F_SPECIAL_APPLY)
             ((symbol_t*)ptr(symbol(builtin_names[i])))->syntax = builtin(i);
         i++;
     }
@@ -2304,7 +2338,7 @@ int main(int argc, char *argv[])
 
         PUSH(symbol_value(symbol("__start")));
         PUSH(argv_list(argc, argv));
-        (void)toplevel_eval(special_apply_form);
+        (void)_applyn(1);
     }
     FL_CATCH {
         ios_puts("fatal error during bootstrap:\n", ios_stderr);

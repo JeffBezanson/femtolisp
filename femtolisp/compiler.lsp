@@ -9,7 +9,7 @@
 (define Instructions
   (make-enum-table
    [:nop :dup :pop :call :tcall :jmp :brf :brt :jmp.l :brf.l :brt.l :ret
-    :tapply :for
+    :tapply
 
     :eq? :eqv? :equal? :atom? :not :null? :boolean? :symbol?
     :number? :bound? :pair? :builtin? :vector? :fixnum?
@@ -25,7 +25,7 @@
     :loadg :loada :loadc :loadg.l
     :setg  :seta  :setc  :setg.l
 
-    :closure :trycatch :argc :vargc :close :let]))
+    :closure :trycatch :argc :vargc :close :let :for]))
 
 (define arg-counts
   (table :eq?      2      :eqv?     2

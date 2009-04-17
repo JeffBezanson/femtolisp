@@ -117,8 +117,7 @@ extern uint32_t SP;
 enum {
     // special forms
     F_QUOTE=0, F_COND, F_IF, F_AND, F_OR, F_WHILE, F_LAMBDA,
-    F_TRYCATCH, F_SPECIAL_APPLY, F_SPECIAL_APPLYN, F_SETQ, F_PROG1, F_FOR,
-    F_BEGIN,
+    F_TRYCATCH, F_SPECIAL_APPLY, F_SETQ, F_PROG1, F_FOR, F_BEGIN,
 
     // functions
     F_EQ, F_EQV, F_EQUAL, F_ATOM, F_NOT, F_NULL, F_BOOLEANP, F_SYMBOLP,
@@ -141,7 +140,6 @@ value_t read_sexpr(value_t f);
 void print(ios_t *f, value_t v, int princ);
 value_t toplevel_eval(value_t expr);
 value_t apply(value_t f, value_t l);
-value_t apply1(value_t f, value_t a0);
 value_t applyn(uint32_t n, value_t f, ...);
 value_t load_file(char *fname);
 

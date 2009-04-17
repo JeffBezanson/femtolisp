@@ -735,7 +735,7 @@
 	    (lambda (e) (begin (print-exception e)
 			       (exit 1)))))
 
-(define (__start . argv)
+(define (__start argv)
   ; reload this file with our new definition of load
   (load (string *install-dir* *directory-separator* "system.lsp"))
   (if (pair? (cdr argv))
