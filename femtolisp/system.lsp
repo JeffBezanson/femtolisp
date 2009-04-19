@@ -102,8 +102,8 @@
 (define (char? x) (eq? (typeof x) 'wchar))
 (define (function? x)
   (or (builtin? x)
-      (and (pair? x) (or (eq (car x) 'lambda)
-			 (eq (car x) 'compiled-lambda)))))
+      (eq (typeof x) 'function)
+      (and (pair? x) (eq (car x) 'lambda))))
 (define procedure? function?)
 
 (define (caar x) (car (car x)))

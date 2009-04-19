@@ -551,8 +551,10 @@ static value_t do_read_sexpr(value_t label)
         }
         PUSH(NIL);
         read_list(&Stack[SP-1], UNBOUND);
-        v = POP();
-        return apply(toplevel_eval(sym), v);
+        v = symbol_value(sym);
+        if (v == UNBOUND)
+            raise(list2(UnboundError, sym));
+        return apply(v, POP());
     case TOK_OPENB:
         return read_vector(label, TOK_CLOSEB);
     case TOK_SHARPOPEN:

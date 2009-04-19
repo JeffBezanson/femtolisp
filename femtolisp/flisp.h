@@ -93,6 +93,8 @@ typedef struct _symbol_t {
                       (((unsigned char*)ptr(v)) < fromspace+heapsize))
 #define isgensym(x)  (issymbol(x) && ismanaged(x))
 
+#define isfunction(x) (iscvalue(x) && (cv_class((cvalue_t*)ptr(x))==functiontype))
+
 extern value_t *Stack;
 extern uint32_t SP;
 #define PUSH(v) (Stack[SP++] = (v))
@@ -222,6 +224,12 @@ typedef struct {
     fltype_t *type;
     char _space[1];
 } cprim_t;
+
+typedef struct {
+    value_t bcode;
+    value_t vals;
+    value_t env;
+} function_t;
 
 #define CPRIM_NWORDS 2
 #define MAX_INL_SIZE 96

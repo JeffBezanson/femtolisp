@@ -99,12 +99,13 @@ stackseg_t stackseg0 = { StaticStack, 0, NULL };
 stackseg_t *current_stack_seg = &stackseg0;
 
 value_t NIL, FL_T, FL_F, LAMBDA, QUOTE, IF, TRYCATCH;
-value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT, COMPILEDLAMBDA;
+value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT, FUNCTION;
 value_t IOError, ParseError, TypeError, ArgError, UnboundError, MemoryError;
 value_t DivideError, BoundsError, Error, KeyError, EnumerationError;
 value_t conssym, symbolsym, fixnumsym, vectorsym, builtinsym;
 value_t definesym, defmacrosym, forsym, labelsym, printprettysym, setqsym;
 value_t printwidthsym, tsym, Tsym, fsym, Fsym, booleansym, nullsym, elsesym;
+static fltype_t *functiontype;
 
 static value_t eval_sexpr(value_t e, value_t *penv, int tail, uint32_t envsz);
 static value_t apply_cl(uint32_t nargs);
@@ -470,7 +471,7 @@ static void trace_globals(symbol_t *root)
     while (root != NULL) {
         if (root->binding != UNBOUND)
             root->binding = relocate(root->binding);
-        if (iscons(root->syntax))
+        if (iscons(root->syntax) || iscvalue(root->syntax))
             root->syntax = relocate(root->syntax);
         trace_globals(root->left);
         root = root->right;
@@ -1441,21 +1442,21 @@ static value_t eval_sexpr(value_t e, value_t *penv, int tail, uint32_t envsz)
     }
     f = Stack[bp+1];
     assert((signed)SP > (signed)bp+1);
-    if (__likely(iscons(f))) {
-        if (car_(f) == COMPILEDLAMBDA) {
-            i = SP;
-            e = apply_cl(nargs);
-            SP = i;
-            if (noeval == 2) {
-                if (selfevaluating(e)) { SP=saveSP; return(e); }
-                noeval = 0;
-                goto eval_top;
-            }
-            else {
-                SP = saveSP;
-                return e;
-            }
+    if (isfunction(f)) {
+        i = SP;
+        e = apply_cl(nargs);
+        SP = i;
+        if (noeval == 2) {
+            if (selfevaluating(e)) { SP=saveSP; return(e); }
+            noeval = 0;
+            goto eval_top;
         }
+        else {
+            SP = saveSP;
+            return e;
+        }
+    }
+    else if (__likely(iscons(f))) {
         // apply lambda expression
         f = Stack[bp+1] = cdr_(f);
         if (!iscons(f)) goto notpair;
@@ -1550,7 +1551,8 @@ static value_t apply_cl(uint32_t nargs)
     fixnum_t s, lo, hi;
     int64_t accum;
     uint8_t *code;
-    value_t func, v, bcode, x, e;
+    value_t func, v, x, e;
+    function_t *fn;
     value_t *pvals, *lenv, *pv;
     symbol_t *sym;
     cons_t *c;
@@ -1558,20 +1560,17 @@ static value_t apply_cl(uint32_t nargs)
  apply_cl_top:
     captured = 0;
     func = Stack[SP-nargs-1];
-    assert(iscons(func));
-    assert(iscons(cdr_(func)));
-    assert(iscons(cdr_(cdr_(func))));
-    x = cdr_(cdr_(func));
-    bcode = car_(x);
-    code = cv_data((cvalue_t*)ptr(car_(bcode)));
+    fn = value2c(function_t*,func);
+    code = cv_data((cvalue_t*)ptr(fn->bcode));
     assert(!ismanaged((uptrint_t)code));
+    assert(ismanaged(func));
+    assert(ismanaged(fn->bcode));
     if (nargs < code[1])
         lerror(ArgError, "apply: too few arguments");
 
     bp = SP-nargs;
-    x = cdr_(x);   // cloenv
-    PUSH(x);
-    PUSH(cdr_(bcode));
+    PUSH(fn->env);
+    PUSH(fn->vals);
     pvals = &Stack[SP-1];
 
     ip = 0;
@@ -1653,22 +1652,20 @@ static value_t apply_cl(uint32_t nargs)
                     }
                 }
             }
-            else if (iscons(func)) {
-                if (car_(func) == COMPILEDLAMBDA) {
-                    if (op == OP_TCALL) {
-                        for(s=-1; s < (fixnum_t)i; s++)
-                            Stack[bp+s] = Stack[SP-i+s];
-                        SP = bp+i;
-                        nargs = i;
-                        goto apply_cl_top;
-                    }
-                    else {
-                        v = apply_cl(i);
-                    }
+            else if (isfunction(func)) {
+                if (op == OP_TCALL) {
+                    for(s=-1; s < (fixnum_t)i; s++)
+                        Stack[bp+s] = Stack[SP-i+s];
+                    SP = bp+i;
+                    nargs = i;
+                    goto apply_cl_top;
                 }
                 else {
-                    v = _applyn(i);
+                    v = apply_cl(i);
                 }
+            }
+            else if (iscons(func)) {
+                v = _applyn(i);
             }
             else {
                 type_error("apply", "function", func);
@@ -2140,19 +2137,20 @@ static value_t apply_cl(uint32_t nargs)
                 PUSH(Stack[bp]); // env has already been captured; share
             }
             if (op == OP_CLOSURE) {
-              c = (cons_t*)ptr(v=cons_reserve(3));
-              e = cdr_(Stack[SP-2]);  // closure to copy
-              //if (!iscons(e)) goto notpair;
-              c->car = COMPILEDLAMBDA;
-              c->cdr = tagptr(c+1, TAG_CONS); c++;
-              c->car = car_(e);      //argsyms
-              c->cdr = tagptr(c+1, TAG_CONS); c++;
-              e = cdr_(e);
-              //if (!iscons(e=cdr_(e))) goto notpair;
-              c->car = car_(e);      //body
-              c->cdr = Stack[SP-1];  //env
-              POPN(1);
-              Stack[SP-1] = v;
+                pv = alloc_words(6);
+                x = Stack[SP-2];  // closure to copy
+                assert(isfunction(x));
+                pv[0] = ((value_t*)ptr(x))[0];
+                assert(pv[0] == functiontype);
+                pv[1] = (value_t)&pv[3];
+                pv[2] = ((value_t*)ptr(x))[2];
+                pv[3] = ((value_t*)ptr(x))[3];
+                assert(isstring(pv[3]));
+                pv[4] = ((value_t*)ptr(x))[4];
+                assert(isvector(pv[4]));
+                pv[5] = Stack[SP-1];  // env
+                POPN(1);
+                Stack[SP-1] = tagptr(pv, TAG_CVALUE);
             }
             break;
 
@@ -2180,6 +2178,80 @@ void assign_global_builtins(builtinspec_t *b)
     }
 }
 
+static void print_function(value_t v, ios_t *f, int princ)
+{
+    (void)princ;
+    function_t *fn = value2c(function_t*,v);
+    outs("#function(", f);
+    int newindent = HPOS;
+    fl_print_child(f, fn->bcode, 0); outindent(newindent, f);
+    fl_print_child(f, fn->vals, 0);  outindent(newindent, f);
+    fl_print_child(f, fn->env, 0);
+    outc(')', f);
+}
+
+static void print_traverse_function(value_t v)
+{
+    function_t *fn = value2c(function_t*,v);
+    print_traverse(fn->bcode);
+    print_traverse(fn->vals);
+    print_traverse(fn->env);
+}
+
+static void relocate_function(value_t oldv, value_t newv)
+{
+    (void)oldv;
+    function_t *fn = value2c(function_t*,newv);
+    fn->bcode = relocate(fn->bcode);
+    fn->vals = relocate(fn->vals);
+    fn->env = relocate(fn->env);
+}
+
+static value_t fl_function(value_t *args, uint32_t nargs)
+{
+    if (nargs != 3)
+        argcount("function", nargs, 2);
+    if (!isstring(args[0]))
+        type_error("function", "string", args[0]);
+    if (!isvector(args[1]))
+        type_error("function", "vector", args[1]);
+    cv_pin((cvalue_t*)ptr(args[0]));
+    value_t fv = cvalue(functiontype, sizeof(function_t));
+    function_t *fn = value2c(function_t*,fv);
+    fn->bcode = args[0];
+    fn->vals = args[1];
+    if (nargs == 3)
+        fn->env = args[2];
+    else
+        fn->env = NIL;
+    return fv;
+}
+
+static value_t fl_function2vector(value_t *args, uint32_t nargs)
+{
+    argcount("function->vector", nargs, 1);
+    value_t v = args[0];
+    if (!iscvalue(v) || cv_class((cvalue_t*)ptr(v)) != functiontype)
+        type_error("function->vector", "function", v);
+    value_t vec = alloc_vector(3, 0);
+    function_t *fn = value2c(function_t*,args[0]);
+    vector_elt(vec,0) = fn->bcode;
+    vector_elt(vec,1) = fn->vals;
+    vector_elt(vec,2) = fn->env;
+    return vec;
+}
+
+static cvtable_t function_vtable = { print_function, relocate_function,
+                                     NULL, print_traverse_function };
+
+static builtinspec_t core_builtin_info[] = {
+    { "function", fl_function },
+    { "function->vector", fl_function2vector },
+    { "gensym", gensym },
+    { "hash", fl_hash },
+    { NULL, NULL }
+};
+
 static void lisp_init(void)
 {
     int i;
@@ -2198,7 +2270,7 @@ static void lisp_init(void)
     FL_T = builtin(F_TRUE);
     FL_F = builtin(F_FALSE);
     LAMBDA = symbol("lambda");
-    COMPILEDLAMBDA = symbol("compiled-lambda");
+    FUNCTION = symbol("function");
     QUOTE = symbol("quote");
     TRYCATCH = symbol("trycatch");
     BACKQUOTE = symbol("backquote");
@@ -2259,8 +2331,6 @@ static void lisp_init(void)
 #endif
 
     cvalues_init();
-    set(symbol("gensym"), cbuiltin("gensym", gensym));
-    set(symbol("hash"), cbuiltin("hash", fl_hash));
 
     char buf[1024];
     char *exename = get_exename(buf, sizeof(buf));
@@ -2272,6 +2342,11 @@ static void lisp_init(void)
 
     memory_exception_value = list2(MemoryError,
                                    cvalue_static_cstring("out of memory"));
+
+    functiontype = define_opaque_type(FUNCTION, sizeof(function_t),
+                                      &function_vtable, NULL);
+
+    assign_global_builtins(core_builtin_info);
 
     builtins_init();
 }

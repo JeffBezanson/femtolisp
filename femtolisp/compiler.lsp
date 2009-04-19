@@ -153,13 +153,6 @@
 		     const-to-idx)
       cvec)))
 
-(define (bytecode g)
-  (cons (cvalue.pin (encode-byte-code (aref g 0)))
-	(const-to-idx-vec g)))
-
-(define (bytecode:code b) (car b))
-(define (bytecode:vals b) (cdr b))
-
 (define (index-of item lst start)
   (cond ((null? lst) #f)
 	((eq item (car lst)) start)
@@ -426,7 +419,8 @@
 	  (else  (emit g :vargc (if (atom? args) 0 (length args)))))
     (compile-in g (cons (to-proper args) env) #t (caddr f))
     (emit g :ret)
-    `(compiled-lambda ,args ,(bytecode g))))
+    (function (encode-byte-code (aref g 0))
+	      (const-to-idx-vec g))))
 
 (define (compile f) (compile-f () f))
 
@@ -445,56 +439,54 @@
 (define (hex5 n)
   (pad-l (number->string n 16) 5 #\0))
 
-(define (disassemble- b lev)
-  (if (and (pair? b)
-	   (eq? (car b) 'compiled-lambda))
-      (disassemble- (caddr b) lev)
-      (let ((code (bytecode:code b))
-	    (vals (bytecode:vals b)))
-	(define (print-val v)
-	  (if (and (pair? v) (eq? (car v) 'compiled-lambda))
-	      (begin (princ "\n")
-		     (disassemble- v (+ lev 1)))
-	      (print v)))
-	(let ((i 0)
-	      (N (length code)))
-	  (while (< i N)
-		 (let ((inst (get 1/Instructions (aref code i))))
-		   (if (> i 0) (newline))
-		   (dotimes (xx lev) (princ "\t"))
-		   (princ (hex5 i) ":  "
-			  (string.tail (string inst) 1) "\t")
-		   (set! i (+ i 1))
-		   (case inst
-		     ((:loadv.l :loadg.l :setg.l)
-		      (print-val (aref vals (ref-uint32-LE code i)))
-		      (set! i (+ i 4)))
+(define (disassemble- f lev)
+  (let ((fvec (function->vector f)))
+    (let ((code (aref fvec 0))
+	  (vals (aref fvec 1)))
+      (define (print-val v)
+	(if (and (pair? v) (eq? (car v) 'compiled-lambda))
+	    (begin (princ "\n")
+		   (disassemble- v (+ lev 1)))
+	    (print v)))
+      (let ((i 0)
+	    (N (length code)))
+	(while (< i N)
+	       (let ((inst (get 1/Instructions (aref code i))))
+		 (if (> i 0) (newline))
+		 (dotimes (xx lev) (princ "\t"))
+		 (princ (hex5 i) ":  "
+			(string.tail (string inst) 1) "\t")
+		 (set! i (+ i 1))
+		 (case inst
+		   ((:loadv.l :loadg.l :setg.l)
+		    (print-val (aref vals (ref-uint32-LE code i)))
+		    (set! i (+ i 4)))
+		   
+		   ((:loadv :loadg :setg)
+		    (print-val (aref vals (aref code i)))
+		    (set! i (+ i 1)))
+		   
+		   ((:loada :seta :call :tcall :list :+ :- :* :/ :vector
+			    :argc :vargc :loadi8 :let)
+		    (princ (number->string (aref code i)))
+		    (set! i (+ i 1)))
+		   
+		   ((:loadc :setc)
+		    (princ (number->string (aref code i)) " ")
+		    (set! i (+ i 1))
+		    (princ (number->string (aref code i)))
+		    (set! i (+ i 1)))
+		   
+		   ((:jmp :brf :brt)
+		    (princ "@" (hex5 (ref-uint16-LE code i)))
+		    (set! i (+ i 2)))
+		   
+		   ((:jmp.l :brf.l :brt.l)
+		    (princ "@" (hex5 (ref-uint32-LE code i)))
+		    (set! i (+ i 4)))
+		   
+		   (else #f))))))))
 
-		     ((:loadv :loadg :setg)
-		      (print-val (aref vals (aref code i)))
-		      (set! i (+ i 1)))
-
-		     ((:loada :seta :call :tcall :list :+ :- :* :/ :vector
-		       :argc :vargc :loadi8 :let)
-		      (princ (number->string (aref code i)))
-		      (set! i (+ i 1)))
-
-		     ((:loadc :setc)
-		      (princ (number->string (aref code i)) " ")
-		      (set! i (+ i 1))
-		      (princ (number->string (aref code i)))
-		      (set! i (+ i 1)))
-
-		     ((:jmp :brf :brt)
-		      (princ "@" (hex5 (ref-uint16-LE code i)))
-		      (set! i (+ i 2)))
-
-		     ((:jmp.l :brf.l :brt.l)
-		      (princ "@" (hex5 (ref-uint32-LE code i)))
-		      (set! i (+ i 4)))
-
-		     (else #f))))))))
-
-(define (disassemble b) (disassemble- b 0) (newline))
+(define (disassemble f) (disassemble- f 0) (newline))
 
 #t

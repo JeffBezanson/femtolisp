@@ -1018,7 +1018,7 @@ typedef struct _fltype_t {
 new evaluator todo:
 
 * need builtin = to handle nans properly, fix equal? on nans
-- builtin quasi-opaque function type
+* builtin quasi-opaque function type
   fields: signature, maxstack, bcode, vals, cloenv
   function->vector
 * make (for ...) a special form

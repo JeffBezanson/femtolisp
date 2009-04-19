@@ -78,6 +78,9 @@ static void sweep_finalizers()
                 t->vtable->finalize(tagptr(tmp, TAG_CVALUE));
             }
             if (!isinlined(tmp) && owned(tmp)) {
+#ifndef NDEBUG
+                memset(cv_data(tmp), 0xbb, cv_len(tmp));
+#endif
                 free(cv_data(tmp));
             }
             ndel++;
@@ -709,15 +712,6 @@ value_t fl_podp(value_t *args, u_int32_t nargs)
         FL_T : FL_F;
 }
 
-value_t fl_cv_pin(value_t *args, u_int32_t nargs)
-{
-    argcount("cvalue.pin", nargs, 1);
-    if (!iscvalue(args[0]))
-        lerror(ArgError, "cvalue.pin: must be a byte array");
-    cv_pin((cvalue_t*)ptr(args[0]));
-    return args[0];
-}
-
 static void cvalue_init(fltype_t *type, value_t v, void *dest)
 {
     cvinitfunc_t f=type->init;
@@ -922,7 +916,6 @@ static builtinspec_t cvalues_builtin_info[] = {
     { "sizeof", cvalue_sizeof },
     { "builtin", fl_builtin },
     { "copy", fl_copy },
-    { "cvalue.pin", fl_cv_pin },
     { "plain-old-data?", fl_podp },
 
     { "logand", fl_logand },
