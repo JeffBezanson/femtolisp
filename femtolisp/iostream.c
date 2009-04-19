@@ -9,7 +9,7 @@
 
 static value_t iostreamsym, rdsym, wrsym, apsym, crsym, truncsym;
 static value_t instrsym, outstrsym;
-static fltype_t *iostreamtype;
+fltype_t *iostreamtype;
 
 void print_iostream(value_t v, ios_t *f, int princ)
 {

@@ -236,6 +236,7 @@ typedef struct {
 #define cv_type(cv)    (cv_class(cv)->type)
 #define cv_data(cv)    ((cv)->data)
 #define cv_isstr(cv)   (cv_class(cv)->eltype == bytetype)
+#define cv_isPOD(cv)   (cv_class(cv)->init != NULL)
 
 #define cvalue_data(v) cv_data((cvalue_t*)ptr(v))
 #define value2c(type, v) ((type)cv_data((cvalue_t*)ptr(v)))

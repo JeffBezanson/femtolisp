@@ -583,27 +583,32 @@ size_t ctype_sizeof(value_t type, int *palign)
     return 0;
 }
 
+extern fltype_t *iostreamtype;
+
 // get pointer and size for any plain-old-data value
 void to_sized_ptr(value_t v, char *fname, char **pdata, size_t *psz)
 {
-    if (isiostream(v) && (value2c(ios_t*,v)->bm == bm_mem)) {
-        ios_t *x = value2c(ios_t*,v);
-        *pdata = x->buf;
-        *psz = x->size;
-    }
-    else if (iscvalue(v)) {
+    if (iscvalue(v)) {
         cvalue_t *pcv = (cvalue_t*)ptr(v);
-        *pdata = cv_data(pcv);
-        *psz = cv_len(pcv);
+        ios_t *x = value2c(ios_t*,v);
+        if (cv_class(pcv) == iostreamtype && (x->bm == bm_mem)) {
+            *pdata = x->buf;
+            *psz = x->size;
+            return;
+        }
+        else if (cv_isPOD(pcv)) {
+            *pdata = cv_data(pcv);
+            *psz = cv_len(pcv);
+            return;
+        }
     }
     else if (iscprim(v)) {
         cprim_t *pcp = (cprim_t*)ptr(v);
         *pdata = cp_data(pcp);
         *psz = cp_class(pcp)->size;
+        return;
     }
-    else {
-        type_error(fname, "bytes", v);
-    }
+    type_error(fname, "plain-old-data", v);
 }
 
 value_t cvalue_sizeof(value_t *args, u_int32_t nargs)
@@ -691,7 +696,17 @@ value_t fl_copy(value_t *args, u_int32_t nargs)
         lerror(ArgError, "copy: argument must be a leaf atom");
     if (!iscvalue(args[0]))
         return args[0];
+    if (!cv_isPOD((cvalue_t*)ptr(args[0])))
+        lerror(ArgError, "copy: argument must be a plain-old-data type");
     return cvalue_copy(args[0]);
+}
+
+value_t fl_podp(value_t *args, u_int32_t nargs)
+{
+    argcount("plain-old-data?", nargs, 1);
+    return (iscprim(args[0]) ||
+            (iscvalue(args[0]) && cv_isPOD((cvalue_t*)ptr(args[0])))) ?
+        FL_T : FL_F;
 }
 
 value_t fl_cv_pin(value_t *args, u_int32_t nargs)
@@ -908,6 +923,7 @@ static builtinspec_t cvalues_builtin_info[] = {
     { "builtin", fl_builtin },
     { "copy", fl_copy },
     { "cvalue.pin", fl_cv_pin },
+    { "plain-old-data?", fl_podp },
 
     { "logand", fl_logand },
     { "logior", fl_logior },

@@ -598,6 +598,15 @@
     (io.print b v)
     (io.tostring! b)))
 
+(define (string.join strlist sep)
+  (if (null? strlist) ""
+      (let ((b (buffer)))
+	(io.write b (car strlist))
+	(for-each (lambda (s) (begin (io.write b sep)
+				     (io.write b s)))
+		  (cdr strlist))
+	(io.tostring! b))))
+
 ; toplevel --------------------------------------------------------------------
 
 (define (macrocall? e) (and (symbol? (car e))
