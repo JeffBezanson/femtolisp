@@ -1,0 +1,1014 @@
+* setf
+* plists
+* backquote
+* symbol< (make < generic), generic compare function
+? (cdr nil) should be nil
+* multiple-argument mapcar
+? multi-argument apply. for builtins, just push them. for lambdas, must
+  cons together the evaluated arguments.
+? option *print-shared*. if nil, it still handles circular references
+  but does not specially print non-circular shared structure
+? option *print-circle*
+* read support for #' for compatibility
+* #\c read character as code (including UTF-8 support!)
+* #| |# block comments
+? here-data for binary serialization. proposed syntax:
+  #>size:data, e.g. #>6:000000
+? better read syntax for packed arrays, e.g. #double[3 1 4]
+* use syntax environment concept for user-defined macros to plug
+  that hole in the semantics
+* make more builtins generic. if typecheck fails, call out to the
+  generic version to try supporting more types.
+  compare/equal
+  +-*/<       for all numeric types
+  length      for all sequences
+  ? aref/aset for all sequences (vector, list, c-array)
+  ? copy
+* fixnump, all numeric types should pass numberp
+- make sure all uses of symbols don't assume symbols are unmovable without
+  checking ismanaged()
+* eliminate compiler warnings
+* fix printing nan and inf
+* move to "2.5-bit" type tags
+? builtin abs()
+- try adding optional arguments, (lambda (x (opt 0)) ...), see if performance
+  is acceptable
+* (syntax-environment) to return it as an assoc list
+* (environment) for variables, constantp
+* prettier printing
+
+* readable gensyms and #:
+  . #:n reads similar to #n=#.(gensym) the first time, and #n# after
+* circular equal
+* integer/truncate function
+? car-circularp, cdr-circularp, circularp
+- hashtable. plan as equal-hash, over three stages:
+  1. first support symbol and fixnum keys, use ptrhash. only values get
+     relocated on GC.
+  2. create a version of ptrhash that uses equal() and hash(). if a key is
+     inserted requiring this, switch vtable pointer to use these functions.
+     both keys and values get relocated on GC.
+  3. write hash() for pairs and vectors. now everything works.
+- expose eq-hashtable to user
+- other backquote optimizations:
+  * (nconc x) => x  for any x
+  . (copy-list (list|append|nconc ...)) => (list|append|nconc ...)
+  * (apply vector (list ...)) => (vector ...)
+  . (nconc (cons x nil) y) => (cons x y)
+* let form without initializers (let (a b) ...), defaults to nil
+* print (quote a) as 'a, same for ` etc.
+
+- template keyword arguments. you write
+(template (:test eq) (:key caar)
+  (defun assoc (item lst)
+    (cond ((atom lst) ())
+          ((:test (:key lst) item) (car lst))
+          (t (assoc item (cdr lst))))))
+
+This writes assoc as a macro that produces a call to a pre-specialized
+version of the function. For example
+  (assoc x l :test equal)
+first tries to look up the variant '(equal caar) in the dictionary for assoc.
+If it doesn't exist it gets generated and stored. The result is a lambda
+expression.
+The macro returns ((lambda (item lst) <code for assoc>) x l).
+We might have to require different syntax for template invocations inside
+template definitions, such as
+  ((t-instance assoc eq :key) item lst)
+which passes along the same key but always uses eq.
+Alternatively, we could use the keysyms without colons to name the values
+of the template arguments, so the keysyms are always used as markers and
+never appear to have values:
+(template (:test eq) (:key caar)
+  (defun assoc? (item lst)
+    (cond ((atom lst) ())
+          ((test (key lst) item) ...
+          ...
+           (assoc x y :test test :key key)
+This would be even easier if the keyword syntax were something like
+  (: test eq)
+
+
+possible optimizations:
+* delay environment creation. represent environment on the stack as
+  alternating symbols/values, or if cons instead of symbol then traverse
+  as assoc list. only explicitly cons the whole thing when making a closure
+* cons_reserve(n) interface, guarantees n conses available without gc.
+  it could even link them together for you more efficiently
+* assoc builtin
+* special check for constant symbol when evaluating head since that's likely
+* remove the loop from cons_reserve. move all initialization to the loops
+  that follow calls to cons_reserve.
+- case of lambda expression in head (as produced by let), can just modify
+  env in-place in tail position
+- allocate memory by mmap'ing a large uncommitted block that we cut
+  in half. then each half heap can be grown without moving addresses.
+* try making (list ...) a builtin by moving the list-building code to
+  a static function, see if vararg call performance is affected.
+- try making foldl a builtin, implement table iterator as table.foldl
+  . not great, since then it can't be CPS converted
+* represent lambda environment as a vector (in lispv)
+x setq builtin (didn't help)
+* list builtin, to use cons_reserve
+(- let builtin, to further avoid env consing)
+unconventional interpreter builtins that can be used as a compilation
+target without moving away from s-expressions:
+- (*global* . a)  ; special form, don't look in local env first
+- (*local* . 2)   ; direct stackframe access
+for internal use:
+* a special version of apply that takes arguments on the stack, to avoid
+  consing when implementing "call-with" style primitives like trycatch,
+  hashtable-foreach, or the fl_apply API
+- partial_apply, reapply interface so other iterators can use the same
+  fast mechanism as for
+* try this environment representation:
+ for all kinds of functions (except maybe builtin special forms) push
+ all arguments on the stack, either evaluated or not.
+ for lambdas, push the lambda list and next-env pointers.
+ to capture, save the n+2 pointers to a vector
+ . this uses n+2 heap or stack words per environment instead of 2n+1 words
+ . argument handling is more uniform which could lead to simplifications,
+   and a more efficient apply() entry point
+ . disadvantage is looking through the lambda list on every lookup. maybe
+   improve by making lambda lists vectors somehow?
+* fast builtin bounded iteration construct (for lo hi (lambda (x) ...))
+* represent guest function as a tagged function pointer; allocate nothing
+- when an instance of (array type n) is requested, use (array type)
+  instead, unless the value is part of an aggregate (e.g. struct).
+  . this avoids allocating a new type for every size.
+  . and/or add function array.alloc
+x preallocate all byte,int8,uint8 values, and some wchars (up to 0x31B7?)
+  . this made no difference in a string.map microbenchmark
+
+bugs:
+* with the fully recursive (simpler) relocate(), the size of cons chains
+  is limited by the process stack size. with the iterative version we can
+  have unlimited cdr-deep structures.
+* in #n='e, the case that makes the cons for 'e needs to use label fixup
+* symbol token |.| does not work
+* ltable realloc not multiplying by sizeof(unsigned long)
+* not relocating final cdr in iterative version if it is a vector
+- (setf (car x) y) doesn't return y
+* reader needs to check errno in isnumtok
+* prettyprint size measuring is not utf-8 correct
+- stack is too limited. possibly allocate user frames with alloca so the
+  only limit is the process stack size.
+* argument list length is too limited.
+  need to fix it for: +,-,*,/,&,|,$,list,vector,apply,string,array
+  . for builtins, make Nth argument list of rest args
+  . write a function to evaluate directly from list to list, use it for
+    Nth arg and for user function rest args
+  . modify vararg builtins accordingly
+
+
+femtoLisp3...with symbolic C interface
+
+c values are builtins with value > N_BUILTINS
+((u_int32_t*)cvalue)[0] & 0x3 must always be 2 to distinguish from vectors
+
+typedef struct _cvtable_t {
+	void (*relocate)(struct _cvalue_t *);
+	void (*free)(struct _cvalue_t *);
+	void (*print)(struct _cvalue_t *, FILE *);
+} cvtable_t;
+
+c type representations:
+symbols void, [u]int[8,16,32,64], float, double, [u]char, [u]short,
+[u]int, [u]long, lispvalue
+(c-function ret-type (argtype ...))
+(array type[ N])
+(struct ((name type) (name type) ...))
+(union ((name type) (name type) ...))
+(mlayout ((name type offset) (name type offset) ...))
+(enum (name1 name2 ...))
+(pointer type)
+
+constructors:
+([u]int[8,16] n)
+([u]int32 hi lo)
+([u]int64 b3 b2 b1 b0)
+(float hi lo) or (float "3.14")
+(double b3 b2 b1 b0) or (double "3.14")
+(array ctype val ...)
+(struct ((name type) ...) val ...)
+(pointer ctype)      ; null pointer
+(pointer cvalue)     ; constructs pointer to the given value
+                     ; same as (pointer (typeof x) x)
+(pointer ctype cvalue)  ; pointer of given type, to given value
+(pointer ctype cvalue addr)  ; (ctype*)((char*)cvalue + addr)
+(c-function ret-type (argtype ...) ld-symbol-name)
+
+? struct/enum tag:
+  (struct 'tag <initializer>) or (pointer (struct tag))
+  where tag is a global var with a value ((name type) ...)
+
+
+representing c data from lisp is the tricky part to make really elegant and
+efficient. the most elegant but too inefficient option is not to have opaque
+C values at all and always marshal to/from native lisp values like #int16[10].
+the next option is to have opaque values "sometimes", for example returning
+them from C functions but printing them using their lisp representations.
+the next option is to relax the idea that C values of a certain type have a
+specific lisp structure, and use a coercion system that "tries" to translate
+a lisp value to a specified C type. for example [0 1 2], (0 1 2),
+#string[0 1 2], etc. might all be accepted by a C function taking int8_t*.
+you could say (c-coerce <lispvalue> <typedesc>) and get a cvalue back or
+an error if the conversion fails.
+
+the final option is to have cvalues be the only officially-sanctioned
+representation of c data, and make them via constructors, like
+(int32 hi lo) returns an int32 cvalue
+(struct '((name type) (name type) ...) a b ...) makes a struct
+there is a constructor function for each primitive C type.
+you can print these by brute force as e.g. #.(int32 hi lo)
+then all checking just looks like functions checking their arguments
+
+this option seems almost ideal. what's wrong with it?
+. to construct cvalues from lisp you have to build code instead of data
+. it seems like it should take more explicit advantage of tagged vectors
+. should you accept multiple forms? for example
+  (array 'int8 0 1 2) or (array 'int8 [0 1 2])
+  if you're going to be that permissive, why not allow [0 1 2] to be passed
+  directly to a function that expects int8_t* and do the conversion
+  implicitly?
+  . even if these c-primitive-constructor functions exist, you can still
+    write things like c-coerce (in lisp, even) and hack in implicit
+    conversion attempts when something other than a cvalue is passed.
+. the printing code is annoying, because it's not enough to print readably,
+  you have to print evaluably.
+  . solution: constructor notation, #int32(hi lo)
+
+in any case, "opaque" cvalues will not really be opaque because we want to
+know their types and be able to take them apart on the byte level from lisp.
+C code can get references to lisp values and manipulate them using lisp
+operations like car, so to be fair it should work vice-versa; give
+c references to lisp code and let it use c operations like * on them.
+you can write lisp in c and c in lisp, though of course you don't usually
+want to. however, c written in lisp can be generated by a macro, printed,
+and fed to TCC for compilation.
+
+
+for a struct the names and types are parameters of the type, not the
+constructor, so it seems more correct to do
+
+((struct (name type) (name type) ...) (val val ...))
+
+where struct returns a constructor. but this isn't practical because it
+can't be printed in constructor notation and the type is a lambda rather
+than a more sensible expression.
+
+
+notice constructor calls and type representations are "similar". they
+should be related formally:
+
+(define (new type)
+  (if (symbolp type) (apply (eval type) ())
+    (apply (eval (car type)) (cdr type))))
+
+NOTE: this relationship is no longer true. we don't want to have to
+construct 1 cvalue from 1 lisp value every time, since that could
+require allocating a totally redundant list or vector. it should be
+possible to make a cvalue from a series of lisp arguments. for
+example there are now 2 different ways to make an array:
+
+1) from series of arguments: (array type val0 val1 ...)
+2) from 1 (optional) value: (c-value '(array int8[ size])[ V])
+
+constructors will internally use the second form to initialize elements
+of aggregates. e.g. 'array' in the first case will conceptually call
+  (c-value type val0)
+  (c-value type val1)
+  ...
+
+
+for aggregate types, you can keep a variable referring to the relevant
+piece:
+
+(setq point '((x int) (y int)))
+(struct point 2 3)   ; looks like c declaration 'struct point x;'
+
+a type is a function, so something similar to typedef is achieved by:
+
+(define (point_t vals) (struct point vals))
+
+design points:
+. type constructors will all be able to take 1 or 0 arguments, so i could say
+  (new (typeof val))   ; construct similar
+  (define (new type)
+    (if (symbolp type) (apply (eval type) ())
+      (apply (eval (car type)) (cdr type))))
+. values can be marked as autorelease (1) if user says so, (2) if we can
+  prove that it's ok (e.g. we only allocated the value using malloc because
+  it is too large to move on every GC).
+  in the future you should be able to specify an arbitrary finalization
+  function, not just free().
+. when calling a C function, a value of type_t can be passed to something
+  expecting a type_t* by taking the address of the representation. BUT
+  this is dangerous if the C function might save a reference.
+  a type_t* can be passed as a type_t by copying the representation.
+. you can use (pointer v) to switch v to "malloc'd representation", in
+  which case the value is no longer autoreleased, but you can do whatever
+  you want with the pointer. (other option is to COPY v when making a
+  pointer to it, but this still doesn't prevent C from holding a reference
+  too long)
+
+
+add a cfunction binding to symbols. you register in C simply by setting
+this binding to a function pointer, then
+
+(defun open (path flags)
+    ; could insert type checks here
+    (ccall 'int32 'open path flags))
+
+(setq fd (open "path" 0))
+
+using libdl you could even omit the registration step and extra binding
+
+this is possible:
+(defun malloc (size)
+    (ccall `(array int8 ,size) 'malloc   size))
+           ;ret type          ;f name   ; . args
+
+
+vtable:
+we'd like to be able to define new lisp "types", like vectors
+and hash tables, using this. there needs to be a standard value interface
+you can implement in C and attach a vtable to some c values.
+interface: relocate, finalize, print(, copy)
+
+implementation plan:
+- write cvalue constructors
+- if a head evaluates to a cvalue, call the pointer directly with the arg array
+  . this is the "guest function" interface, a C function written specifically
+    to the femtolisp API. its type must be
+    '(c-function lispvalue ((pointer lispvalue) uint32))
+    which corresponds to
+    value_t func(value_t *args, u_int32_t nargs);
+  . this interface is useful for writing additional builtins, types,
+    interpreter extensions, etc. more efficient.
+  . one of these functions could also be called with
+    (defun func args
+      (ccall 'func 'lispvalue (array 'lispvalue args) (length args)))
+  - these functions are effectively builtins and should have names so they
+    can be printed as such.
+    . have a registration function
+      void guest_function(value_t (*f)(value_t*,u_int32_t), const char *name);
+      so at least the function type can be checked from C
+    . set a flags bit for functions registered this way so we can identify
+      them quickly
+
+- ccall lisp builtin, (ccall rettype name . args). if name has no cfunc
+  binding, looks it up lazily with dlsym and stores the result.
+  this is a guest function that handles type checking, translation, and
+  invocation of foreign c functions.
+
+- you could register builtins from lisp like this:
+  (defun dlopen (name flags) (ccall '(pointer void) 'dlopen name flags))
+  (defun dlsym (handle name type) (ccall type 'dlsym handle name))
+  (define lisp-process (dlopen nil 0))
+  (define vector-sym
+    (dlsym lisp-process 'int_vector
+           '(function lispvalue (pointer lispvalue) uint32)))
+  (ccall 'void 'guest_function vector-sym 'vector)
+
+- write c extensions cref, cset, typeof, sizeof, cvaluep
+* read, print, vectorp methods for vectors
+- quoted string "" reading, produces #(c c c c ...)
+* get rid of primitive builtins read,print,princ,load,exit,
+  implement using ccall
+
+
+other possible design:
+- just add two builtins, call and ccall.
+  (call 'name arg arg arg)  lisp guest function interface
+  we can say e.g.
+  (defmacro vector args `(call 'vector ,.args))
+- basically the question is whether to introduce a new kind of callable
+  object or to do everything through the existing builtin mechanism
+  . macros cannot be applied, so without a new kind of callable 'vector'
+    would have to be a lisp function, entailing argument consing...
+  (defun builtin (name)
+    (guest-function name
+      (dlsym lisp-process name '(function value (pointer value) uint32))))
+  then you can print a guest function as e.g.
+  #.(builtin 'vector)
+
+#name(x y z) reads as a tagged vector
+#(x y z) is the same as #vector(x y z)
+should be internally the same as well, so non-taggedness does not formally
+exist.
+
+
+then we can write the vector clause in backquote as e.g.
+
+(if (vectorp x)
+    (let ((body (bq-process (vector-to-list x))))
+      (if (eq (tag x) 'vector)
+          (list 'list-to-vector body)
+        (list 'apply 'tagged-vector
+              (list cons (list quote (tag x)) body))))
+  (list quote x))
+
+
+setup plan:
+* create source directory and svn repository, move llt sources into it
+* write femtolisp.h, definitions for extensions to #include
+- add fl_ prefix to all exported functions
+* port read and print to llt iostreams
+* get rid of flutils; use ptrhash instead
+* builtinp needs to be a builtin ;) to distinguish lisp builtins from cvalues
+* allocation and gc for cvalues
+- interface functions fl_list(...), fl_apply
+  e.g. fl_apply(fl_eval(fl_symbol("+")), fl_list(fl_number(2),fl_number(3)))
+  and fl_symval("+"), fl_cons, etc.
+
+-----------------------------------------------------------------------------
+
+vector todo:
+* compare for vectors
+- (aref v i j k) does (reduce aref v '(i j k)); therefore (aref v) => v
+- (aref v ... [1 2 3] ...) vectorized indexing
+- make (setf (aref v i j k) x) expand to (aset (aref v i j) k x)
+these should be done using the ccall interface:
+- concatenate
+- copy-vec
+- (range i j step) to make integer ranges
+- (rref v start stop), plus make it settable! (rset v start stop rhs)
+lower priority:
+- find (strstr)
+
+functions to be generic over vec/list:
+* compare, equal, length
+
+constructor notation:
+
+#func(a b c)  does (apply func '(a b c))
+
+-----------------------------------------------------------------------------
+
+how we will allocate cvalues
+
+a vector's size will be a lisp-value number. we will set bit 0x2 to indicate
+a resize request, and bit 0x1 to indicate that it's actually a cvalue.
+
+every cvalue will have the following fields, followed by some number of
+words according to how much space is needed:
+
+    value_t size;  // | 0x2
+    cvtable_t *vtable;
+    struct {
+#ifdef BITS64
+        unsigned pad:32;
+#endif
+        unsigned whatever:27;
+        unsigned mark:1;
+        unsigned hasparent:1;
+        unsigned islispfunction:1;
+        unsigned autorelease:1;
+        unsigned inlined:1;
+    } flags;
+    value_t type;
+    size_t len;      // length of *data in bytes
+    //void *data;      // present if !inlined
+    //value_t parent;  // present if hasparent
+
+size/vtable have the same meaning as vector size/elt[0] for relocation
+obviously we only relocate parent and type. if vtable->relocate is present,
+we call it at the end of the relocate process, and it must touch every
+lisp value reachable from it.
+
+when a cvalue is created with a finalizer, its address is added to a special
+list. before GC, everything in that list has its mark bit set. when
+we relocate a cvalue, clear the bit. then go through the list to call
+finalizers on dead values. this is O(n+m) where n is amt of live data and m
+is # of values needing finalization. we expect m << heapsize.
+
+-----------------------------------------------------------------------------
+
+Goal: bootstrap a lisp system where we can do "anything" purely in lisp
+starting with the minimal builtins needed for successive levels of
+completeness:
+
+1. Turing completeness
+quote, if, lambda, eq, atom, cons, car, cdr
+
+2. Naming
+set
+
+3. Control flow
+progn, prog1, apply, eval
+call/cc needed for true completeness, but we'll have attempt, raise
+
+4. Predicate completeness
+symbolp, numberp, builtinp
+
+5. Syntax
+macro
+
+6. I/O completeness
+read, print
+
+7. Mutable state
+rplaca, rplacd
+
+8. Arithmetic completeness
++, -, *, /, <
+
+9. The missing data structure(s): vector
+alloc, aref, aset, vectorp, length
+
+10. Real-world completeness (escape hatch)
+ccall
+
+---
+11. Misc unnecessary
+while, label, cond, and, or, not, boundp, vector
+
+-----------------------------------------------------------------------------
+
+exception todo:
+
+* silence 'in file' errors when user frame active
+* add more useful data to builtin exception types:
+  (UnboundError x)
+  (BoundsError vec index)
+  (TypeError fname expected got)
+  (Error v1 v2 v3 ...)
+* attempt/raise, rewrite (error) in lisp
+* more intelligent exception printers in toplevel handler
+
+-----------------------------------------------------------------------------
+
+lisp variant ideas
+
+- get rid of separate predicates and give every value the same structure
+  ala mathematica
+  . (tag 'a) => symbol
+    (tag '(a b)) => a
+    (tag 'symbol 'a) => a
+    (tag 'blah 3) => (blah 3)
+- have only vectors, not cons cells (sort of like julia)
+  . could have a separate tag field as above
+
+- easiest way to add vectors:
+  . allocate in same heap with conses, have a tag, size, then elements
+    (each elt must be touched on GC for relocation anyway, so might as well
+     copy collect it)
+  . tag pointers as builtins, we identify them as builtins with big values
+  . write (vector) in C, use it from read and eval
+
+8889314663  comcast net #
+
+-----------------------------------------------------------------------------
+
+cvalues reserves the following global symbols:
+
+int8, uint8, int16, uint16, int32, uint32, int64, uint64
+char, uchar, wchar, short, ushort, int, uint, long, ulong
+float, double
+struct, array, enum, union, function, void, pointer, lispvalue
+
+it defines (but doesn't reserve) the following:
+
+typeof, sizeof, autorelease, guestfunction, ccall
+
+
+user-defined types and typedefs:
+
+the rule is that a type should be viewed as a self-evaluating constant
+like a number. if i define a complex_t type of two doubles, then
+'complex_t is not a type any more than the symbol 'x could be added to
+something just because it happened to have the value 2.
+
+; typedefs from lisp
+(define wchar_t 'uint32)
+(define complex_t '(struct ((re double) (im double))))
+
+; use them
+(new complex_t)
+(new `(array ,complex_t 10))
+(array complex_t 10)
+
+BUT
+
+(array 'int32 10)
+
+because the primitive types *are* symbols. the fact that they have values is
+just a convenient coincidence that lets you do e.g. (int32 0)
+
+
+; size-annotate a pointer
+(setq p  (ccall #c-function((pointer void) (ulong) malloc) n)
+(setq a (deref p `(array int8 ,n)))
+
+cvalues todo:
+
+* use uint32_t instead of wchar_t in C code
+- make sure empty arrays and 0-byte types really work
+* allow int constructors to accept other int cvalues
+* array constructor should accept any cvalue of the right size
+* make sure cvalues participate well in circular printing
+* float, double
+- struct, union (may want to start with more general layout type)
+- pointer type, function type
+* finalizers
+- functions autorelease, guestfunction
+- cref/cset/byteref/byteset
+* wchar type, wide character strings as (array wchar)
+* printing and reading strings
+- ccall
+- anonymous unions
+* fix princ for cvalues
+* make header size for primitives <= 8 bytes, even on 64-bit arch
+- more efficient read for #array(), so it doesn't need to build a pairlist
+? lispvalue type
+  . keep track of whether a cvalue leads to any lispvalues, so they can
+    be automatically relocated (?)
+
+* string constructor/concatenator:
+(string 'sym #char(65) #wchar(945) "blah" 23)
+   ; gives "symA\u03B1blah23"
+"ccc"  reads to (array char)
+
+low-level functions:
+; these are type/bounds-checked accesses
+- (cref cvalue key)         ; key is field name or index. access by reference.
+- (aref cvalue key)         ; access by value, returns fixnums where possible
+- (cset cvalue key value)   ; key is field name, index, or struct offset
+  . write&use conv_from_long to put fixnums into typed locations
+  . aset is the same
+* (copy cv)
+- (offset type|cvalue field [field ...])
+- (eltype type field [field ...])
+- (memcpy dest-cv src-cv)
+- (memcpy dest doffs src soffs nbytes)
+- (c2lisp cvalue)  ; convert to sexpr form
+* (typeof cvalue)
+* (sizeof cvalue|type)
+- (autorelease cvalue)     ; mark cvalue as free-on-gc
+- (deref pointer[, type])  ; convert an arbitrary pointer to a cvalue
+                           ; this is the unsafe operation
+
+; (sizeof '(pointer type)) == sizeof(void*)
+; (sizeof '(array type N)) == N * sizeof(type)
+
+(define (reinterpret-cast cv type)
+  (if (= (sizeof cv) (sizeof type))
+      (deref (pointer 'void cv) type)
+      (error "Invalid cast")))
+
+a[n].x looks like (cref (cref a n) 'x), (reduce cref head subs)
+
+things you can do with cvalues:
+
+. call native C functions from lisp code without wrappers
+. wrap C functions in pure lisp, automatically inheriting some degree
+  of type safety
+. use lisp functions as callbacks from C code
+. use the lisp garbage collector to reclaim malloc'd storage
+. annotate C pointers with size information for bounds checking
+. attach symbolic type information to a C data structure, allowing it to
+  inherit lisp services such as printing a readable representation
+. add datatypes like strings to lisp
+. use more efficient represenations for your lisp programs' data
+
+
+family of cvalue representations.
+relevant attributes:
+  . large   -- needs full size_t to represent size
+  . inline  -- allocated along with metadata
+  . prim    -- no stored type; uses primtype bits in flags
+  . hasdeps -- depends on other values to stay alive
+
+these attributes have the following dependencies:
+  . large -> !inline
+  . prim -> !hasdeps && !large
+
+so we have the following possibilities:
+
+large   inline   prim   hasdeps   rep#
+  0        0       0       0       0
+  0        0       0       1       1
+
+  0        0       1       0       2
+  0        1       0       0       3
+  0        1       0       1       4
+  0        1       1       0       5
+
+  1        0       0       0       6
+  1        0       0       1       7
+
+we need to be able to un-inline data, so we need:
+change 3 -> 0  (easy; write pointer over data)
+change 4 -> 1
+change 5 -> 2  (also easy)
+
+
+rep#0&1:   (!large && !inline && !prim)
+typedef struct {
+    cvflags_t flags;
+    value_t type;
+    value_t deps;
+    void *data;   /* points to malloc'd buffer */
+} cvalue_t;
+
+rep#3&4:   (!large &&  inline && !prim)
+typedef struct {
+    cvflags_t flags;
+    value_t type;
+    value_t deps;
+    /* data goes here inlined */
+} cvalue_t;
+
+
+rep#2:     (prim && !inline)
+typedef struct {
+    cvflags_t flags;
+    void *data;   /* points to (tiny!) malloc'd buffer */
+} cvalue_t;
+
+rep#5:     (prim &&  inline)
+typedef struct {
+    cvflags_t flags;
+    /* data goes here inlined */
+} cvalue_t;
+
+
+rep#6&7:   (large)
+typedef struct {
+    cvflags_t flags;
+    value_t type;
+    value_t deps;
+    void *data;   /* points to malloc'd buffer */
+    size_t len;
+} cvalue_t;
+
+-----------------------------------------------------------------------------
+
+times for lispv:
+
+color 2.286s
+sort  0.181s
+fib34 5.205s
+mexpa 0.329s
+
+-----------------------------------------------------------------------------
+
+finalization algorithm that allows finalizers written in lisp:
+
+right after GC, go through finalization list (a weak list) and find objects
+that didn't move. relocate them (bring them back to life) and push them
+all onto the stack. remove all from finalization list.
+
+call finalizer for each value.
+
+optional: after calling a finalizer, make sure the object didn't get put
+back on the finalization list, remove if it did.
+if you don't do this, you can make an unkillable object by registering a
+finalizer that re-registers itself. this could be considered a feature though.
+
+pop dead values off stack.
+
+
+-----------------------------------------------------------------------------
+
+femtolisp semantics
+
+eval* is an internal procedure of 2 arguments, expr and env, invoked
+implicitly on input.
+The user-visible procedure eval performs eval*  e  Env ()
+
+eval*  Symbol s  E     =>  lookup* s E
+eval*  Atom a  E       =>  a
+... special forms ... quote arg, if a b c, other symbols from syntax env.
+eval*  Cons f args  E  =>
+
+First the head expression, f, is evaluated, yielding f-.
+Then control is passed to #.apply f- args
+  #.apply is the user-visible apply procedure.
+  (here we imagine there is a user-invisible environment where f- is
+   bound to the value of the car and args is bound to the cdr of the input)
+
+
+Now (apply b lst) where b is a procedure (i.e. satisfies functionp) is
+identical to
+(eval (map (lambda (e) `',e) (cons b lst)))
+
+-----------------------------------------------------------------------------
+
+design of new toplevel
+
+system.lsp contains definitions of (load) and (toplevel) and is loaded
+from *install-dir* by a bootstrap loader in C. at the end of system.lsp,
+we check whether (load) is builtin. if it is, we redefine it and reload
+system.lsp with the new loader. the C code then invokes (toplevel).
+
+(toplevel) either runs a script or a repl using (while T (trycatch ...))
+
+(load) reads and evaluates every form, keeping track of defined functions
+and macros (at the top level), and grabs a (main ...) form if it sees
+one. it applies optimizations to every definition, then invokes main.
+
+an error E during load should rethrow `(load-error ,filename ,E)
+such exceptions can be printed recursively
+
+lerror() should make a lisp string S from the result of sprintf, then
+raise `(,e ,S). first argument e should be a symbol.
+
+
+new expansion process:
+
+get rid of macroexpanding versions of define and define-macro
+macroexpand doesn't expand (define ...)
+  macroexpand implements let-syntax
+add lambda-expand which applies f-body to the bodies of lambdas, then
+  converts defines to set!
+call expand on every form before evaluating
+  (define (expand x) (lambda-expand (macroexpand x)))
+(define (eval x) (%eval (expand x)))
+reload system.lsp with the new eval
+
+-----------------------------------------------------------------------------
+
+String API
+
+*string         - append/construct
+*string.inc     - (string.inc s i [nchars])
+*string.dec
+*string.count   - # of chars between 2 byte offsets
+*string.char    - char at byte offset
+*string.sub     - substring between 2 byte offsets
+*string.split   - (string.split s sep-chars)
+*string.trim    - (string.trim s chars-at-start chars-at-end)
+*string.reverse
+*string.find    - (string.find s str|char [offs]), or nil if not found
+ string.rfind
+*string.encode  - to utf8
+*string.decode  - from utf8 to UCS
+ string.width   - # columns
+*string.map     - (string.map f s)
+
+
+IOStream API
+
+*read             - (read[ stream]) ; get next sexpr from stream
+*print
+*princ
+*file
+ iostream         - (stream[ cvalue-as-bytestream])
+*buffer
+ fifo
+ socket
+*io.eof?
+*io.flush
+*io.close
+*io.discardbuffer
+*io.write     - (io.write s cvalue)
+*io.read      - (io.read s ctype [len])
+*io.getc      - get utf8 character
+*io.putc
+*io.readline
+*io.readuntil
+ io.copy      - (io.copy to from [nbytes])
+ io.copyuntil - (io.copy to from byte)
+ io.pos       - (io.pos s [set-pos])
+ io.seek      - (io.seek s offset)
+ io.seekend   - move to end of stream
+ io.trunc
+ io.read!     - destructively take data
+*io.tostring!
+ io.readlines
+ io.readall
+ print-to-string
+ princ-to-string
+
+
+ path.combine
+ path.parts
+ path.absolute
+ path.simplify
+ path.tempdir
+ path.tempname
+ path.homedir
+*path.cwd
+
+
+*time.now
+ time.parts
+ time.fromparts
+*time.string
+ time.fromstring
+
+
+*os.name
+*os.getenv
+*os.setenv
+ os.execv
+
+
+*rand
+*randn
+*rand.uint32
+*rand.uint64
+*rand.double
+*rand.float
+
+-----------------------------------------------------------------------------
+
+  * new print algorithm
+     1. traverse & tag all conses to be printed. when you encounter a cons
+        that is already tagged, add it to a table to give it a #n# index
+     2. untag a cons when printing it. if cons is in the table, print
+        "#n=" before it in the car, " . #n=" in the cdr. if cons is in the
+        table but already untagged, print #n# in car or " . #n#" in the cdr.
+  * read macros for #n# and #n= using the same kind of table
+    * also need a table of read labels to translate from input indexes to
+      normalized indexes (0 for first label, 1 for next, etc.)
+  * read macro #. for eval-when-read. use for printing builtins, e.g. "#.eq"
+
+-----------------------------------------------------------------------------
+
+prettyprint notes
+
+* if head of list causes VPOS to increase and HPOS is a bit large, then
+switch to miser mode, otherwise default is ok, for example:
+
+> '((lambda (x y) (if (< x y) x y)) (a b c) (d e f) 2 3 (r t y))
+((lambda (x y)
+   (if (< x y) x y)) (a b c)
+                     (d e f) 2 3
+                     (r t y))
+
+* (if a b c) should always put newlines before b and c
+
+* write try_predict_len that gives a length for easy cases like
+  symbols, else -1. use it to avoid wrapping symbols around lines
+
+* print defun, defmacro, label, for more like lambda (2 spaces)
+
+* *print-pretty* to control it
+
+- if indent gets too large, dedent back to left edge
+
+-----------------------------------------------------------------------------
+
+consolidated todo list as of 8/30:
+* new cvalues, types representation
+* use the unused tag for TAG_PRIM, add smaller prim representation
+* finalizers in gc
+* hashtable
+* generic aref/aset
+* expose io stream object
+* new toplevel
+
+* make raising a memory error non-consing
+- eliminate string copy in lerror() when possible
+* fix printing lists of short strings
+
+- remaining c types
+- remaining cvalues functions
+- finish ios
+
+- special efficient reader for #array
+- reimplement vectors as (array lispvalue)
+- implement fast subvectors and subarrays
+
+-----------------------------------------------------------------------------
+
+cvalues redesign
+
+goals:
+. allow custom types with vtables
+. use less space, share types more
+. simplify access to important metadata like length
+. unify vectors and arrays
+
+typedef struct {
+    fltype_t *type;
+    void *data;
+    size_t len;      // length of *data in bytes
+    union {
+        value_t parent;    // optional
+        char _space[1];    // variable size
+    };
+} cvalue_t;
+
+#define owned(cv)      ((cv)->type & 0x1)
+#define hasparent(cv)  ((cv)->type & 0x2)
+#define isinlined(cv)  ((cv)->data == &(cv)->_space[0])
+#define cv_class(cv)   ((fltype_t*)(((uptrint_t)(cv)->type)&~3))
+#define cv_type(cv)    (cv_class(cv)->type)
+#define cv_len(cv)     ((cv)->len)
+#define cv_data(cv)    ((cv)->data)
+#define cv_numtype(cv) (cv_class(cv)->numtype)
+
+typedef struct _fltype_t {
+    value_t type;
+    int numtype;
+    size_t sz;
+    size_t elsz;
+    cvtable_t *vtable;
+    struct _fltype_t *eltype;  // for arrays
+    struct _fltype_t *artype;  // (array this)
+    int marked;
+} fltype_t;

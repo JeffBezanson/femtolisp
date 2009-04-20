@@ -1,0 +1,443 @@
+value_t eval_sexpr(value_t e, value_t *penv)
+{
+    value_t f, v, bind, headsym, asym, labl=0, *pv, *argsyms, *body, *lenv;
+    value_t *rest;
+    cons_t *c;
+    symbol_t *sym;
+    u_int32_t saveSP;
+    int i, nargs, noeval=0;
+    number_t s, n;
+
+ eval_top:
+    if (issymbol(e)) {
+        sym = (symbol_t*)ptr(e);
+        if (sym->constant != UNBOUND) return sym->constant;
+        v = *penv;
+        while (iscons(v)) {
+            bind = car_(v);
+            if (iscons(bind) && car_(bind) == e)
+                return cdr_(bind);
+            v = cdr_(v);
+        }
+        if ((v = sym->binding) == UNBOUND)
+            lerror("eval: error: variable %s has no value\n", sym->name);
+        return v;
+    }
+    if ((unsigned)(char*)&nargs < (unsigned)stack_bottom || SP>=(N_STACK-100))
+        lerror("eval: error: stack overflow\n");
+    saveSP = SP;
+    PUSH(e);
+    PUSH(*penv);
+    f = eval(car_(e), penv);
+    *penv = Stack[saveSP+1];
+    if (isbuiltin(f)) {
+        // handle builtin function
+        if (!isspecial(f)) {
+            // evaluate argument list, placing arguments on stack
+            v = Stack[saveSP] = cdr_(Stack[saveSP]);
+            while (iscons(v)) {
+                v = eval(car_(v), penv);
+                *penv = Stack[saveSP+1];
+                PUSH(v);
+                v = Stack[saveSP] = cdr_(Stack[saveSP]);
+            }
+        }
+    apply_builtin:
+        nargs = SP - saveSP - 2;
+        switch (intval(f)) {
+        // special forms
+        case F_QUOTE:
+            v = cdr_(Stack[saveSP]);
+            if (!iscons(v))
+                lerror("quote: error: expected argument\n");
+            v = car_(v);
+            break;
+        case F_MACRO:
+        case F_LAMBDA:
+            v = Stack[saveSP];
+            if (*penv != NIL) {
+                // build a closure (lambda args body . env)
+                v = cdr_(v);
+                PUSH(car(v));
+                argsyms = &Stack[SP-1];
+                PUSH(car(cdr_(v)));
+                body = &Stack[SP-1];
+                v = cons_(intval(f)==F_LAMBDA ? &LAMBDA : &MACRO,
+                          cons(argsyms, cons(body, penv)));
+            }
+            break;
+        case F_LABEL:
+            v = Stack[saveSP];
+            if (*penv != NIL) {
+                v = cdr_(v);
+                PUSH(car(v));        // name
+                pv = &Stack[SP-1];
+                PUSH(car(cdr_(v)));  // function
+                body = &Stack[SP-1];
+                *body = eval(*body, penv);  // evaluate lambda
+                v = cons_(&LABEL, cons(pv, cons(body, &NIL)));
+            }
+            break;
+        case F_IF:
+            v = car(cdr_(Stack[saveSP]));
+            if (eval(v, penv) != NIL)
+                v = car(cdr_(cdr_(Stack[saveSP])));
+            else
+                v = car(cdr(cdr_(cdr_(Stack[saveSP]))));
+            tail_eval(v, Stack[saveSP+1]);
+            break;
+        case F_COND:
+            Stack[saveSP] = cdr_(Stack[saveSP]);
+            pv = &Stack[saveSP]; v = NIL;
+            while (iscons(*pv)) {
+                c = tocons(car_(*pv), "cond");
+                v = eval(c->car, penv);
+                *penv = Stack[saveSP+1];
+                if (v != NIL) {
+                    *pv = cdr_(car_(*pv));
+                    // evaluate body forms
+                    if (iscons(*pv)) {
+                        while (iscons(cdr_(*pv))) {
+                            v = eval(car_(*pv), penv);
+                            *penv = Stack[saveSP+1];
+                            *pv = cdr_(*pv);
+                        }
+                        tail_eval(car_(*pv), *penv);
+                    }
+                    break;
+                }
+                *pv = cdr_(*pv);
+            }
+            break;
+        case F_AND:
+            Stack[saveSP] = cdr_(Stack[saveSP]);
+            pv = &Stack[saveSP]; v = T;
+            if (iscons(*pv)) {
+                while (iscons(cdr_(*pv))) {
+                    if ((v=eval(car_(*pv), penv)) == NIL) {
+                        SP = saveSP; return NIL;
+                    }
+                    *penv = Stack[saveSP+1];
+                    *pv = cdr_(*pv);
+                }
+                tail_eval(car_(*pv), *penv);
+            }
+            break;
+        case F_OR:
+            Stack[saveSP] = cdr_(Stack[saveSP]);
+            pv = &Stack[saveSP]; v = NIL;
+            if (iscons(*pv)) {
+                while (iscons(cdr_(*pv))) {
+                    if ((v=eval(car_(*pv), penv)) != NIL) {
+                        SP = saveSP; return v;
+                    }
+                    *penv = Stack[saveSP+1];
+                    *pv = cdr_(*pv);
+                }
+                tail_eval(car_(*pv), *penv);
+            }
+            break;
+        case F_WHILE:
+            PUSH(car(cdr(cdr_(Stack[saveSP]))));
+            body = &Stack[SP-1];
+            Stack[saveSP] = car_(cdr_(Stack[saveSP]));
+            value_t *cond = &Stack[saveSP];
+            PUSH(NIL); pv = &Stack[SP-1];
+            while (eval(*cond, penv) != NIL) {
+                *penv = Stack[saveSP+1];
+                *pv = eval(*body, penv);
+                *penv = Stack[saveSP+1];
+            }
+            v = *pv;
+            break;
+        case F_PROGN:
+            // return last arg
+            Stack[saveSP] = cdr_(Stack[saveSP]);
+            pv = &Stack[saveSP]; v = NIL;
+            if (iscons(*pv)) {
+                while (iscons(cdr_(*pv))) {
+                    v = eval(car_(*pv), penv);
+                    *penv = Stack[saveSP+1];
+                    *pv = cdr_(*pv);
+                }
+                tail_eval(car_(*pv), *penv);
+            }
+            break;
+
+        // ordinary functions
+        case F_SET:
+            argcount("set", nargs, 2);
+            e = Stack[SP-2];
+            v = *penv;
+            while (iscons(v)) {
+                bind = car_(v);
+                if (iscons(bind) && car_(bind) == e) {
+                    cdr_(bind) = (v=Stack[SP-1]);
+                    SP=saveSP; return v;
+                }
+                v = cdr_(v);
+            }
+            tosymbol(e, "set")->binding = (v=Stack[SP-1]);
+            break;
+        case F_BOUNDP:
+            argcount("boundp", nargs, 1);
+            if (tosymbol(Stack[SP-1], "boundp")->binding == UNBOUND)
+                v = NIL;
+            else
+                v = T;
+            break;
+        case F_EQ:
+            argcount("eq", nargs, 2);
+            v = ((Stack[SP-2] == Stack[SP-1]) ? T : NIL);
+            break;
+        case F_CONS:
+            argcount("cons", nargs, 2);
+            v = mk_cons();
+            car_(v) = Stack[SP-2];
+            cdr_(v) = Stack[SP-1];
+            break;
+        case F_CAR:
+            argcount("car", nargs, 1);
+            v = car(Stack[SP-1]);
+            break;
+        case F_CDR:
+            argcount("cdr", nargs, 1);
+            v = cdr(Stack[SP-1]);
+            break;
+        case F_RPLACA:
+            argcount("rplaca", nargs, 2);
+            car(v=Stack[SP-2]) = Stack[SP-1];
+            break;
+        case F_RPLACD:
+            argcount("rplacd", nargs, 2);
+            cdr(v=Stack[SP-2]) = Stack[SP-1];
+            break;
+        case F_ATOM:
+            argcount("atom", nargs, 1);
+            v = ((!iscons(Stack[SP-1])) ? T : NIL);
+            break;
+        case F_CONSP:
+            argcount("consp", nargs, 1);
+            v = (iscons(Stack[SP-1]) ? T : NIL);
+            break;
+        case F_SYMBOLP:
+            argcount("symbolp", nargs, 1);
+            v = ((issymbol(Stack[SP-1])) ? T : NIL);
+            break;
+        case F_NUMBERP:
+            argcount("numberp", nargs, 1);
+            v = ((isnumber(Stack[SP-1])) ? T : NIL);
+            break;
+        case F_ADD:
+            s = 0;
+            for (i=saveSP+2; i < (int)SP; i++) {
+                n = tonumber(Stack[i], "+");
+                s += n;
+            }
+            v = number(s);
+            break;
+        case F_SUB:
+            if (nargs < 1)
+                lerror("-: error: too few arguments\n");
+            i = saveSP+2;
+            s = (nargs==1) ? 0 : tonumber(Stack[i++], "-");
+            for (; i < (int)SP; i++) {
+                n = tonumber(Stack[i], "-");
+                s -= n;
+            }
+            v = number(s);
+            break;
+        case F_MUL:
+            s = 1;
+            for (i=saveSP+2; i < (int)SP; i++) {
+                n = tonumber(Stack[i], "*");
+                s *= n;
+            }
+            v = number(s);
+            break;
+        case F_DIV:
+            if (nargs < 1)
+                lerror("/: error: too few arguments\n");
+            i = saveSP+2;
+            s = (nargs==1) ? 1 : tonumber(Stack[i++], "/");
+            for (; i < (int)SP; i++) {
+                n = tonumber(Stack[i], "/");
+                if (n == 0)
+                    lerror("/: error: division by zero\n");
+                s /= n;
+            }
+            v = number(s);
+            break;
+        case F_LT:
+            argcount("<", nargs, 2);
+            if (tonumber(Stack[SP-2],"<") < tonumber(Stack[SP-1],"<"))
+                v = T;
+            else
+                v = NIL;
+            break;
+        case F_NOT:
+            argcount("not", nargs, 1);
+            v = ((Stack[SP-1] == NIL) ? T : NIL);
+            break;
+        case F_EVAL:
+            argcount("eval", nargs, 1);
+            v = Stack[SP-1];
+            tail_eval(v, NIL);
+            break;
+        case F_PRINT:
+            for (i=saveSP+2; i < (int)SP; i++)
+                print(stdout, v=Stack[i], 0);
+            fprintf(stdout, "\n");
+            break;
+        case F_PRINC:
+            for (i=saveSP+2; i < (int)SP; i++)
+                print(stdout, v=Stack[i], 1);
+            break;
+        case F_READ:
+            argcount("read", nargs, 0);
+            v = read_sexpr(stdin);
+            break;
+        case F_LOAD:
+            argcount("load", nargs, 1);
+            v = load_file(tosymbol(Stack[SP-1], "load")->name);
+            break;
+        case F_EXIT:
+            exit(0);
+            break;
+        case F_ERROR:
+            for (i=saveSP+2; i < (int)SP; i++)
+                print(stderr, Stack[i], 1);
+            lerror("\n");
+            break;
+        case F_PROG1:
+            // return first arg
+            if (nargs < 1)
+                lerror("prog1: error: too few arguments\n");
+            v = Stack[saveSP+2];
+            break;
+        case F_APPLY:
+            argcount("apply", nargs, 2);
+            v = Stack[saveSP] = Stack[SP-1];  // second arg is new arglist
+            f = Stack[SP-2];            // first arg is new function
+            POPN(2);                    // pop apply's args
+            if (isbuiltin(f)) {
+                if (isspecial(f))
+                    lerror("apply: error: cannot apply special operator "
+                           "%s\n", builtin_names[intval(f)]);
+                // unpack arglist onto the stack
+                while (iscons(v)) {
+                    PUSH(car_(v));
+                    v = cdr_(v);
+                }
+                goto apply_builtin;
+            }
+            noeval = 1;
+            goto apply_lambda;
+        }
+        SP = saveSP;
+        return v;
+    }
+    else {
+        v = Stack[saveSP] = cdr_(Stack[saveSP]);
+    }
+ apply_lambda:
+    if (iscons(f)) {
+        headsym = car_(f);
+        if (headsym == LABEL) {
+            // (label name (lambda ...)) behaves the same as the lambda
+            // alone, except with name bound to the whole label expression
+            labl = f;
+            f = car(cdr(cdr_(labl)));
+            headsym = car(f);
+        }
+        // apply lambda or macro expression
+        PUSH(cdr(cdr(cdr_(f))));
+        lenv = &Stack[SP-1];
+        PUSH(car_(cdr_(f)));
+        argsyms = &Stack[SP-1];
+        PUSH(car_(cdr_(cdr_(f))));
+        body = &Stack[SP-1];
+        if (labl) {
+            // add label binding to environment
+            PUSH(labl);
+            PUSH(car_(cdr_(labl)));
+            *lenv = cons_(cons(&Stack[SP-1], &Stack[SP-2]), lenv);
+            POPN(3);
+            v = Stack[saveSP]; // refetch arglist
+        }
+        if (headsym == MACRO)
+            noeval = 1;
+        else if (headsym != LAMBDA)
+            lerror("apply: error: head must be lambda, macro, or label\n");
+        // build a calling environment for the lambda
+        // the environment is the argument binds on top of the captured
+        // environment
+        while (iscons(v)) {
+            // bind args
+            if (!iscons(*argsyms)) {
+                if (*argsyms == NIL)
+                    lerror("apply: error: too many arguments\n");
+                break;
+            }
+            asym = car_(*argsyms);
+            if (!issymbol(asym))
+                lerror("apply: error: formal argument not a symbol\n");
+            v = car_(v);
+            if (!noeval) {
+                v = eval(v, penv);
+                *penv = Stack[saveSP+1];
+            }
+            PUSH(v);
+            *lenv = cons_(cons(&asym, &Stack[SP-1]), lenv);
+            POPN(2);
+            *argsyms = cdr_(*argsyms);
+            v = Stack[saveSP] = cdr_(Stack[saveSP]);
+        }
+        if (*argsyms != NIL) {
+            if (issymbol(*argsyms)) {
+                if (noeval) {
+                    *lenv = cons_(cons(argsyms, &Stack[saveSP]), lenv);
+                }
+                else {
+                    PUSH(NIL);
+                    PUSH(NIL);
+                    rest = &Stack[SP-1];
+                    // build list of rest arguments
+                    // we have to build it forwards, which is tricky
+                    while (iscons(v)) {
+                        v = eval(car_(v), penv);
+                        *penv = Stack[saveSP+1];
+                        PUSH(v);
+                        v = cons_(&Stack[SP-1], &NIL);
+                        POP();
+                        if (iscons(*rest))
+                            cdr_(*rest) = v;
+                        else
+                            Stack[SP-2] = v;
+                        *rest = v;
+                        v = Stack[saveSP] = cdr_(Stack[saveSP]);
+                    }
+                    *lenv = cons_(cons(argsyms, &Stack[SP-2]), lenv);
+                }
+            }
+            else if (iscons(*argsyms)) {
+                lerror("apply: error: too few arguments\n");
+            }
+        }
+        noeval = 0;
+        // macro: evaluate expansion in the calling environment
+        if (headsym == MACRO) {
+            SP = saveSP;
+            PUSH(*lenv);
+            lenv = &Stack[SP-1];
+            v = eval(*body, lenv);
+            tail_eval(v, *penv);
+        }
+        else {
+            tail_eval(*body, *lenv);
+        }
+        // not reached
+    }
+    type_error("apply", "function", f);
+    return NIL;
+}
