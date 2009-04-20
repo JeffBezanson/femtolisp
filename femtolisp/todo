@@ -151,8 +151,8 @@ bugs:
 - (setf (car x) y) doesn't return y
 * reader needs to check errno in isnumtok
 * prettyprint size measuring is not utf-8 correct
-* stack is too limited.
-  . add extra heap-allocated stack segments as needed.
+- stack is too limited. possibly allocate user frames with alloca so the
+  only limit is the process stack size.
 * argument list length is too limited.
   need to fix it for: +,-,*,/,&,|,$,list,vector,apply,string,array
   . for builtins, make Nth argument list of rest args
@@ -1012,21 +1012,3 @@ typedef struct _fltype_t {
     struct _fltype_t *artype;  // (array this)
     int marked;
 } fltype_t;
-
------------------------------------------------------------------------------
-
-new evaluator todo:
-
-* need builtin = to handle nans properly, fix equal? on nans
-* builtin quasi-opaque function type
-  fields: signature, maxstack, bcode, vals, cloenv
-  function->vector
-* make (for ...) a special form
-* trycatch should require 2nd arg to be a lambda expression
-* immediate load int8 instruction
-- maxstack calculation, replace Stack with C stack, alloca
-  - stack traces and better debugging support
-- lambda lifting
-- let optimization
-- have macroexpand use its own global syntax table
-- be able to create/load an image file

@@ -78,9 +78,6 @@ static void sweep_finalizers()
                 t->vtable->finalize(tagptr(tmp, TAG_CVALUE));
             }
             if (!isinlined(tmp) && owned(tmp)) {
-#ifndef NDEBUG
-                memset(cv_data(tmp), 0xbb, cv_len(tmp));
-#endif
                 free(cv_data(tmp));
             }
             ndel++;
@@ -226,17 +223,26 @@ int isstring(value_t v)
 }
 
 // convert to malloc representation (fixed address)
-void cv_pin(cvalue_t *cv)
+/*
+static void cv_pin(cvalue_t *cv)
 {
-    if (!isinlined(cv))
+    if (!cv->flags.inlined)
         return;
-    size_t sz = cv_len(cv);
-    if (cv_isstr(cv)) sz++;
+    size_t sz = cv->flags.inllen;
     void *data = malloc(sz);
-    memcpy(data, cv_data(cv), sz);
-    cv->data = data;
+    cv->flags.inlined = 0;
+    // TODO: handle flags.cstring
+    if (cv->flags.prim) {
+        memcpy(data, (void*)(&((cprim_t*)cv)->data), sz);
+        ((cprim_t*)cv)->data = data;
+    }
+    else {
+        memcpy(data, (void*)(&cv->data), sz);
+        cv->data = data;
+    }
     autorelease(cv);
 }
+*/
 
 #define num_init(ctype, cnvt, tag)                              \
 static int cvalue_##ctype##_init(fltype_t *type, value_t arg,   \
@@ -586,32 +592,27 @@ size_t ctype_sizeof(value_t type, int *palign)
     return 0;
 }
 
-extern fltype_t *iostreamtype;
-
 // get pointer and size for any plain-old-data value
 void to_sized_ptr(value_t v, char *fname, char **pdata, size_t *psz)
 {
-    if (iscvalue(v)) {
-        cvalue_t *pcv = (cvalue_t*)ptr(v);
+    if (isiostream(v) && (value2c(ios_t*,v)->bm == bm_mem)) {
         ios_t *x = value2c(ios_t*,v);
-        if (cv_class(pcv) == iostreamtype && (x->bm == bm_mem)) {
-            *pdata = x->buf;
-            *psz = x->size;
-            return;
-        }
-        else if (cv_isPOD(pcv)) {
-            *pdata = cv_data(pcv);
-            *psz = cv_len(pcv);
-            return;
-        }
+        *pdata = x->buf;
+        *psz = x->size;
+    }
+    else if (iscvalue(v)) {
+        cvalue_t *pcv = (cvalue_t*)ptr(v);
+        *pdata = cv_data(pcv);
+        *psz = cv_len(pcv);
     }
     else if (iscprim(v)) {
         cprim_t *pcp = (cprim_t*)ptr(v);
         *pdata = cp_data(pcp);
         *psz = cp_class(pcp)->size;
-        return;
     }
-    type_error(fname, "plain-old-data", v);
+    else {
+        type_error(fname, "bytes", v);
+    }
 }
 
 value_t cvalue_sizeof(value_t *args, u_int32_t nargs)
@@ -699,17 +700,7 @@ value_t fl_copy(value_t *args, u_int32_t nargs)
         lerror(ArgError, "copy: argument must be a leaf atom");
     if (!iscvalue(args[0]))
         return args[0];
-    if (!cv_isPOD((cvalue_t*)ptr(args[0])))
-        lerror(ArgError, "copy: argument must be a plain-old-data type");
     return cvalue_copy(args[0]);
-}
-
-value_t fl_podp(value_t *args, u_int32_t nargs)
-{
-    argcount("plain-old-data?", nargs, 1);
-    return (iscprim(args[0]) ||
-            (iscvalue(args[0]) && cv_isPOD((cvalue_t*)ptr(args[0])))) ?
-        FL_T : FL_F;
 }
 
 static void cvalue_init(fltype_t *type, value_t v, void *dest)
@@ -907,7 +898,6 @@ value_t cbuiltin(char *name, builtin_t f)
 static value_t fl_logand(value_t *args, u_int32_t nargs);
 static value_t fl_logior(value_t *args, u_int32_t nargs);
 static value_t fl_logxor(value_t *args, u_int32_t nargs);
-static value_t fl_lognot(value_t *args, u_int32_t nargs);
 static value_t fl_ash(value_t *args, u_int32_t nargs);
 
 static builtinspec_t cvalues_builtin_info[] = {
@@ -916,12 +906,9 @@ static builtinspec_t cvalues_builtin_info[] = {
     { "sizeof", cvalue_sizeof },
     { "builtin", fl_builtin },
     { "copy", fl_copy },
-    { "plain-old-data?", fl_podp },
-
     { "logand", fl_logand },
     { "logior", fl_logior },
     { "logxor", fl_logxor },
-    { "lognot", fl_lognot },
     { "ash", fl_ash },
     // todo: autorelease
     { NULL, NULL }
@@ -1213,66 +1200,39 @@ static value_t fl_mul_any(value_t *args, u_int32_t nargs, int64_t Saccum)
     return return_from_uint64(Uaccum);
 }
 
-static int num_to_ptr(value_t a, fixnum_t *pi, numerictype_t *pt, void **pp)
-{
-    cprim_t *cp;
-    if (isfixnum(a)) {
-        *pi = numval(a);
-        *pp = pi;
-        *pt = T_FIXNUM;
-    }
-    else if (iscprim(a)) {
-        cp = (cprim_t*)ptr(a);
-        *pp = cp_data(cp);
-        *pt = cp_numtype(cp);
-    }
-    else {
-        return 0;
-    }
-    return 1;
-}
-
-/*
-  returns -1, 0, or 1 based on ordering of a and b
-  eq: consider equality only, returning 0 or nonzero
-  eqnans: NaNs considered equal to each other
-  fname: if not NULL, throws type errors, else returns 2 for type errors
-*/
-int numeric_compare(value_t a, value_t b, int eq, int eqnans, char *fname)
-{
-    int_t ai, bi;
-    numerictype_t ta, tb;
-    void *aptr, *bptr;
-
-    if (bothfixnums(a,b)) {
-        if (a==b) return 0;
-        if (numval(a) < numval(b)) return -1;
-        return 1;
-    }
-    if (!num_to_ptr(a, &ai, &ta, &aptr)) {
-        if (fname) type_error(fname, "number", a); else return 2;
-    }
-    if (!num_to_ptr(b, &bi, &tb, &bptr)) {
-        if (fname) type_error(fname, "number", b); else return 2;
-    }
-    if (cmp_eq(aptr, ta, bptr, tb, eqnans))
-        return 0;
-    if (eq) return 1;
-    if (cmp_lt(aptr, ta, bptr, tb))
-        return -1;
-    return 1;
-}
-
 static value_t fl_div2(value_t a, value_t b)
 {
     double da, db;
     int_t ai, bi;
-    numerictype_t ta, tb;
-    void *aptr, *bptr;
+    int ta, tb;
+    void *aptr=NULL, *bptr=NULL;
+    cprim_t *cp;
 
-    if (!num_to_ptr(a, &ai, &ta, &aptr))
+    if (isfixnum(a)) {
+        ai = numval(a);
+        aptr = &ai;
+        ta = T_FIXNUM;
+    }
+    else if (iscprim(a)) {
+        cp = (cprim_t*)ptr(a);
+        ta = cp_numtype(cp);
+        if (ta <= T_DOUBLE)
+            aptr = cp_data(cp);
+    }
+    if (aptr == NULL)
         type_error("/", "number", a);
-    if (!num_to_ptr(b, &bi, &tb, &bptr))
+    if (isfixnum(b)) {
+        bi = numval(b);
+        bptr = &bi;
+        tb = T_FIXNUM;
+    }
+    else if (iscprim(b)) {
+        cp = (cprim_t*)ptr(b);
+        tb = cp_numtype(cp);
+        if (tb <= T_DOUBLE)
+            bptr = cp_data(cp);
+    }
+    if (bptr == NULL)
         type_error("/", "number", b);
 
     if (ta == T_FLOAT) {
@@ -1330,18 +1290,68 @@ static value_t fl_div2(value_t a, value_t b)
     lerror(DivideError, "/: division by zero");
 }
 
+static void *int_data_ptr(value_t a, int *pnumtype, char *fname)
+{
+    cprim_t *cp;
+    if (iscprim(a)) {
+        cp = (cprim_t*)ptr(a);
+        *pnumtype = cp_numtype(cp);
+        if (*pnumtype < T_FLOAT)
+            return cp_data(cp);
+    }
+    type_error(fname, "integer", a);
+    return NULL;
+}
+
+static value_t fl_bitwise_not(value_t a)
+{
+    cprim_t *cp;
+    int ta;
+    void *aptr;
+
+    if (iscprim(a)) {
+        cp = (cprim_t*)ptr(a);
+        ta = cp_numtype(cp);
+        aptr = cp_data(cp);
+        switch (ta) {
+        case T_INT8:   return fixnum(~*(int8_t *)aptr);
+        case T_UINT8:  return fixnum(~*(uint8_t *)aptr);
+        case T_INT16:  return fixnum(~*(int16_t *)aptr);
+        case T_UINT16: return fixnum(~*(uint16_t*)aptr);
+        case T_INT32:  return mk_int32(~*(int32_t *)aptr);
+        case T_UINT32: return mk_uint32(~*(uint32_t*)aptr);
+        case T_INT64:  return mk_int64(~*(int64_t *)aptr);
+        case T_UINT64: return mk_uint64(~*(uint64_t*)aptr);
+        }
+    }
+    type_error("~", "integer", a);
+    return NIL;
+}
+
 static value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)
 {
     int_t ai, bi;
-    numerictype_t ta, tb, itmp;
+    int ta, tb, itmp;
     void *aptr=NULL, *bptr=NULL, *ptmp;
     int64_t b64;
 
-    if (!num_to_ptr(a, &ai, &ta, &aptr) || ta >= T_FLOAT)
-        type_error(fname, "integer", a);
-    if (!num_to_ptr(b, &bi, &tb, &bptr) || tb >= T_FLOAT)
-        type_error(fname, "integer", b);
-
+    if (isfixnum(a)) {
+        ta = T_FIXNUM;
+        ai = numval(a);
+        aptr = &ai;
+        bptr = int_data_ptr(b, &tb, fname);
+    }
+    else {
+        aptr = int_data_ptr(a, &ta, fname);
+        if (isfixnum(b)) {
+            tb = T_FIXNUM;
+            bi = numval(b);
+            bptr = &bi;
+        }
+        else {
+            bptr = int_data_ptr(b, &tb, fname);
+        }
+    }
     if (ta < tb) {
         itmp = ta; ta = tb; tb = itmp;
         ptmp = aptr; aptr = bptr; bptr = ptmp;
@@ -1359,8 +1369,6 @@ static value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)
     case T_UINT32: return mk_uint32(*(uint32_t*)aptr & (uint32_t)b64);
     case T_INT64:  return mk_int64( *(int64_t*)aptr  & (int64_t )b64);
     case T_UINT64: return mk_uint64(*(uint64_t*)aptr & (uint64_t)b64);
-    case T_FLOAT:
-    case T_DOUBLE: assert(0);
     }
     break;
     case 1:
@@ -1373,8 +1381,6 @@ static value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)
     case T_UINT32: return mk_uint32(*(uint32_t*)aptr | (uint32_t)b64);
     case T_INT64:  return mk_int64( *(int64_t*)aptr  | (int64_t )b64);
     case T_UINT64: return mk_uint64(*(uint64_t*)aptr | (uint64_t)b64);
-    case T_FLOAT:
-    case T_DOUBLE: assert(0);
     }
     break;
     case 2:
@@ -1387,8 +1393,6 @@ static value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)
     case T_UINT32: return mk_uint32(*(uint32_t*)aptr ^ (uint32_t)b64);
     case T_INT64:  return mk_int64( *(int64_t*)aptr  ^ (int64_t )b64);
     case T_UINT64: return mk_uint64(*(uint64_t*)aptr ^ (uint64_t)b64);
-    case T_FLOAT:
-    case T_DOUBLE: assert(0);
     }
     }
     assert(0);
@@ -1443,34 +1447,6 @@ static value_t fl_logxor(value_t *args, u_int32_t nargs)
     return v;
 }
 
-static value_t fl_lognot(value_t *args, u_int32_t nargs)
-{
-    argcount("lognot", nargs, 1);
-    value_t a = args[0];
-    if (isfixnum(a))
-        return fixnum(~numval(a));
-    cprim_t *cp;
-    int ta;
-    void *aptr;
-
-    if (iscprim(a)) {
-        cp = (cprim_t*)ptr(a);
-        ta = cp_numtype(cp);
-        aptr = cp_data(cp);
-        switch (ta) {
-        case T_INT8:   return fixnum(~*(int8_t *)aptr);
-        case T_UINT8:  return fixnum(~*(uint8_t *)aptr);
-        case T_INT16:  return fixnum(~*(int16_t *)aptr);
-        case T_UINT16: return fixnum(~*(uint16_t*)aptr);
-        case T_INT32:  return mk_int32(~*(int32_t *)aptr);
-        case T_UINT32: return mk_uint32(~*(uint32_t*)aptr);
-        case T_INT64:  return mk_int64(~*(int64_t *)aptr);
-        case T_UINT64: return mk_uint64(~*(uint64_t*)aptr);
-        }
-    }
-    type_error("lognot", "integer", a);
-}
-
 static value_t fl_ash(value_t *args, u_int32_t nargs)
 {
     fixnum_t n;
@@ -1511,10 +1487,8 @@ static value_t fl_ash(value_t *args, u_int32_t nargs)
         else {
             if (ta == T_UINT64)
                 return return_from_uint64((*(uint64_t*)aptr)<<n);
-            else if (ta < T_FLOAT) {
-                int64_t i64 = conv_to_int64(aptr, ta);
-                return return_from_int64(i64<<n);
-            }
+            int64_t i64 = conv_to_int64(aptr, ta);
+            return return_from_int64(i64<<n);
         }
     }
     type_error("ash", "integer", a);

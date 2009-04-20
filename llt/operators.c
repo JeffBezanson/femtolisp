@@ -235,21 +235,16 @@ int cmp_lt(void *a, numerictype_t atag, void *b, numerictype_t btag)
     return 0;
 }
 
-int cmp_eq(void *a, numerictype_t atag, void *b, numerictype_t btag,
-           int equalnans)
+int cmp_eq(void *a, numerictype_t atag, void *b, numerictype_t btag)
 {
-    if (atag==btag && !equalnans)
+    if (atag==btag)
         return cmp_same_eq(a, b, atag);
 
     double da = conv_to_double(a, atag);
     double db = conv_to_double(b, btag);
 
-    if ((int)atag >= T_FLOAT && (int)btag >= T_FLOAT) {
-        if (equalnans && DNAN(da)) {
-            return *(uint64_t*)&da == *(uint64_t*)&db;
-        }
+    if ((int)atag >= T_FLOAT && (int)btag >= T_FLOAT)
         return (da == db);
-    }
 
     if (da != db)
         return 0;
@@ -344,8 +339,8 @@ void test_operators()
     assert(cmp_lt(&d, T_DOUBLE, &i64, T_INT64));
     assert(!cmp_lt(&i64, T_INT64, &d, T_DOUBLE));
 
-    assert(!cmp_eq(&d, T_DOUBLE, &i64, T_INT64, 0));
+    assert(!cmp_eq(&d, T_DOUBLE, &i64, T_INT64));
     i64 = DBL_MAXINT;
-    assert(cmp_eq(&d, T_DOUBLE, &i64, T_INT64, 0));
+    assert(cmp_eq(&d, T_DOUBLE, &i64, T_INT64));
 }
 #endif

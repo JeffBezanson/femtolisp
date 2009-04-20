@@ -93,11 +93,11 @@ void llt_init()
     ios_init_stdstreams();
 
     D_PNAN = strtod("+NaN",NULL);
-    D_NNAN = -strtod("+NaN",NULL);
+    D_NNAN = strtod("-NaN",NULL);
     D_PINF = strtod("+Inf",NULL);
     D_NINF = strtod("-Inf",NULL);
     F_PNAN = strtof("+NaN",NULL);
-    F_NNAN = -strtof("+NaN",NULL);
+    F_NNAN = strtof("-NaN",NULL);
     F_PINF = strtof("+Inf",NULL);
     F_NINF = strtof("-Inf",NULL);
 }

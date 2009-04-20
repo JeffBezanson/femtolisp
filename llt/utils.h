@@ -75,8 +75,7 @@ uint32_t conv_to_uint32(void *data, numerictype_t tag);
 int cmp_same_lt(void *a, void *b, numerictype_t tag);
 int cmp_same_eq(void *a, void *b, numerictype_t tag);
 int cmp_lt(void *a, numerictype_t atag, void *b, numerictype_t btag);
-int cmp_eq(void *a, numerictype_t atag, void *b, numerictype_t btag,
-           int equalnans);
+int cmp_eq(void *a, numerictype_t atag, void *b, numerictype_t btag);
 
 #ifdef ARCH_X86_64
 #  define LEGACY_REGS "=Q"

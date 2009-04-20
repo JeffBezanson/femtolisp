@@ -21,6 +21,10 @@
       (list 'set! form (car body))
       (list 'set! (car form) (list 'lambda (cdr form) (f-body body)))))
 
+(define-macro (body . forms) (f-body forms))
+
+(define (set s v) (eval (list 'set! s (list 'quote v))))
+
 (define (map f lst)
   (if (atom? lst) lst
       (cons (f (car lst)) (map f (cdr lst)))))
@@ -46,25 +50,16 @@
 	(map (lambda (c) (if (pair? c) (cadr c) #f)) binds))))
    #f))
 
-(define-macro (letrec binds . body)
-  (cons (list 'lambda (map car binds)
-              (f-body
-	       (nconc (map (lambda (b) (cons 'set! b)) binds)
-		      body)))
-        (map (lambda (x) #f) binds)))
-
 ; standard procedures ---------------------------------------------------------
-
-(define (append2 l d)
-  (if (null? l) d
-      (cons (car l)
-	    (append2 (cdr l) d))))
 
 (define (append . lsts)
   (cond ((null? lsts) ())
-	((null? (cdr lsts)) (car lsts))
-	(#t (append2 (car lsts)
-		     (apply append (cdr lsts))))))
+        ((null? (cdr lsts)) (car lsts))
+        (#t ((label append2 (lambda (l d)
+			      (if (null? l) d
+				  (cons (car l)
+					(append2 (cdr l) d)))))
+	     (car lsts) (apply append (cdr lsts))))))
 
 (define (member item lst)
   (cond ((atom? lst) #f)
@@ -84,10 +79,11 @@
 	((eqv?       (caar lst) item) (car lst))
 	(#t          (assv item (cdr lst)))))
 
-(define (/= a b) (not (= a b)))
+(define =   eqv?)
+(define (/= a b) (not (eqv? a b)))
 (define (>  a b) (< b a))
-(define (<= a b) (or (< a b) (= a b)))
-(define (>= a b) (or (< b a) (= a b)))
+(define (<= a b) (not (< b a)))
+(define (>= a b) (not (< a b)))
 (define (negative? x) (< x 0))
 (define (zero? x)     (= x 0))
 (define (positive? x) (> x 0))
@@ -102,7 +98,6 @@
 (define (char? x) (eq? (typeof x) 'wchar))
 (define (function? x)
   (or (builtin? x)
-      (eq (typeof x) 'function)
       (and (pair? x) (eq (car x) 'lambda))))
 (define procedure? function?)
 
@@ -135,17 +130,13 @@
 (define (listp a) (or (null? a) (pair? a)))
 (define (list? a) (or (null? a) (and (pair? a) (list? (cdr a)))))
 
-(define (list-tail lst n)
+(define (nthcdr lst n)
   (if (<= n 0) lst
-      (list-tail (cdr lst) (- n 1))))
-
-(define (list-head lst n)
-  (if (<= n 0) ()
-      (cons (car lst)
-	    (list-head (cdr lst) (- n 1)))))
+      (nthcdr (cdr lst) (- n 1))))
+(define list-tail nthcdr)
 
 (define (list-ref lst n)
-  (car (list-tail lst n)))
+  (car (nthcdr lst n)))
 
 ; bounded length test
 ; use this instead of (= (length lst) n), since it avoids unnecessary
@@ -170,10 +161,11 @@
   (if (atom? l) l
       (lastcdr (cdr l))))
 
-(define (last-pair l)
+(define (last l)
   (cond ((atom? l)        l)
         ((atom? (cdr l))  l)
-        (#t               (last-pair (cdr l)))))
+        (#t               (last (cdr l)))))
+(define last-pair last)
 
 (define (to-proper l)
   (cond ((null? l) l)
@@ -186,36 +178,32 @@
 		(set-car! lst (f (car lst)))
 		(set! lst (cdr lst)))))
 
-(letrec ((mapcar-
+(define (mapcar f . lsts)
+  ((label mapcar-
           (lambda (f lsts)
-	    (cond ((null? lsts) (f))
-		  ((atom? (car lsts)) (car lsts))
-		  (#t (cons (apply   f (map car lsts))
-			    (mapcar- f (map cdr lsts))))))))
-  (set! mapcar
-	(lambda (f . lsts) (mapcar- f lsts))))
+            (cond ((null? lsts) (f))
+                  ((atom? (car lsts)) (car lsts))
+                  (#t (cons (apply   f (map car lsts))
+			    (mapcar- f (map cdr lsts)))))))
+   f lsts))
 
 (define (transpose M) (apply mapcar (cons list M)))
 
-(letrec ((filter-
-	  (lambda (pred lst accum)
-	    (cond ((null? lst) accum)
-		  ((pred (car lst))
-		   (filter- pred (cdr lst) (cons (car lst) accum)))
-		  (#t
-		   (filter- pred (cdr lst) accum))))))
-  (set! filter
-	(lambda (pred lst) (filter- pred lst ()))))
+(define (filter pred lst) (filter- pred lst ()))
+(define (filter- pred lst accum)
+  (cond ((null? lst) accum)
+        ((pred (car lst))
+         (filter- pred (cdr lst) (cons (car lst) accum)))
+        (#t
+         (filter- pred (cdr lst) accum))))
 
-(letrec ((separate-
-	  (lambda (pred lst yes no)
-	    (cond ((null? lst) (cons yes no))
-		  ((pred (car lst))
-		   (separate- pred (cdr lst) (cons (car lst) yes) no))
-		  (#t
-		   (separate- pred (cdr lst) yes (cons (car lst) no)))))))
-  (set! separate
-	(lambda (pred lst) (separate- pred lst () ()))))
+(define (separate pred lst) (separate- pred lst () ()))
+(define (separate- pred lst yes no)
+  (cond ((null? lst) (cons yes no))
+        ((pred (car lst))
+         (separate- pred (cdr lst) (cons (car lst) yes) no))
+        (#t
+         (separate- pred (cdr lst) yes (cons (car lst) no)))))
 
 (define (nestlist f zero n)
   (if (<= n 0) ()
@@ -258,34 +246,32 @@
 	    (cons elt
 		  (delete-duplicates tail))))))
 
-(letrec ((get-defined-vars-
-	  (lambda (expr)
-	    (cond ((atom? expr) ())
-		  ((and (eq? (car expr) 'define)
-			(pair? (cdr expr)))
-		   (or (and (symbol? (cadr expr))
-			    (list (cadr expr)))
-		       (and (pair? (cadr expr))
-			    (symbol? (caadr expr))
-			    (list (caadr expr)))
-		       ()))
-		  ((eq? (car expr) 'begin)
-		   (apply append (map get-defined-vars- (cdr expr))))
-		  (else ())))))
-  (set! get-defined-vars
-	(lambda (expr) (delete-duplicates (get-defined-vars- expr)))))
+(define (get-defined-vars- expr)
+  (cond ((atom? expr) ())
+	((and (eq? (car expr) 'define)
+	      (pair? (cdr expr)))
+	 (or (and (symbol? (cadr expr))
+		  (list (cadr expr)))
+	     (and (pair? (cadr expr))
+		  (symbol? (caadr expr))
+		  (list (caadr expr)))
+	     ()))
+	((eq? (car expr) 'begin)
+	 (apply append (map get-defined-vars- (cdr expr))))
+	(else ())))
+(define (get-defined-vars expr)
+  (delete-duplicates (get-defined-vars- expr)))
 
 ; redefine f-body to support internal define
-(let ((f-body- f-body))
-  (set! f-body
-	(lambda (e)
-	  ((lambda (B)
-	     ((lambda (V)
-		(if (null? V)
-		    B
-		    (cons (list 'lambda V B) (map (lambda (x) #f) V))))
-	      (get-defined-vars B)))
-	   (f-body- e)))))
+(define f-body- f-body)
+(define (f-body e)
+  ((lambda (B)
+     ((lambda (V)
+	(if (null? V)
+	    B
+	    (cons (list 'lambda V B) (map (lambda (x) #f) V))))
+      (get-defined-vars B)))
+   (f-body- e)))
 
 ; backquote -------------------------------------------------------------------
 
@@ -296,8 +282,7 @@
   (or (and (atom? x)
            (not (symbol? x)))
       (and (constant? x)
-	   (symbol? x)
-           (eq x (top-level-value x)))))
+           (eq x (eval x)))))
 
 (define-macro (backquote x) (bq-process x))
 
@@ -357,10 +342,12 @@
       (list 'quote v)))
 
 (define-macro (let* binds . body)
-  (if (atom? binds) (f-body body)
-      `((lambda (,(caar binds))
-	  (let* ,(cdr binds) ,@body))
-	,(cadar binds))))
+  (cons (list 'lambda (map car binds)
+              (f-body
+	       (nconc (map (lambda (b) (cons 'set! b)) binds)
+		      body)))
+        (map (lambda (x) #f) binds)))
+(set-syntax! 'letrec (symbol-syntax 'let*))
 
 (define-macro (when   c . body) (list 'if c (f-body body) #f))
 (define-macro (unless c . body) (list 'if c #f (f-body body)))
@@ -450,11 +437,11 @@
 (define-macro (assert expr) `(if ,expr #t (raise '(assert-failed ,expr))))
 
 (define (trace sym)
-  (let* ((lam  (top-level-value sym))
+  (let* ((lam  (eval sym))
 	 (args (cadr lam))
 	 (al   (to-proper args)))
     (if (not (eq? (car lam) 'trace-lambda))
-	(set-top-level-value! sym
+	(set sym
 	     `(trace-lambda ,args
 	        (begin
 		  (princ "(")
@@ -468,10 +455,10 @@
   'ok)
 
 (define (untrace sym)
-  (let ((lam  (top-level-value sym)))
+  (let ((lam  (eval sym)))
     (if (eq? (car lam) 'trace-lambda)
-	(set-top-level-value! sym
-	     (cadr (caar (last-pair (caddr lam))))))))
+	(set sym
+	     (cadr (caar (last (caddr lam))))))))
 
 (define-macro (time expr)
   (let ((t0 (gensym)))
@@ -495,7 +482,7 @@
 (define (print . args) (apply io.print (cons *output-stream* args)))
 (define (princ . args) (apply io.princ (cons *output-stream* args)))
 
-(define (newline) (princ *linefeed*) #t)
+(define (newline) (princ *linefeed*))
 (define (display x) (princ x) #t)
 (define (println . args) (prog1 (apply print args) (newline)))
 
@@ -558,27 +545,27 @@
 
 (define (string.trim s at-start at-end)
   (define (trim-start s chars i L)
-    (if (and (< i L)
-	     (string.find chars (string.char s i)))
-	(trim-start s chars (string.inc s i) L)
+    (if (and (#.< i L)
+	     (#.string.find chars (#.string.char s i)))
+	(trim-start s chars (#.string.inc s i) L)
 	i))
   (define (trim-end s chars i)
     (if (and (> i 0)
-	     (string.find chars (string.char s (string.dec s i))))
-	(trim-end s chars (string.dec s i))
+	     (#.string.find chars (#.string.char s (#.string.dec s i))))
+	(trim-end s chars (#.string.dec s i))
 	i))
-  (let ((L (length s)))
+  (let ((L (#.length s)))
     (string.sub s
 		(trim-start s at-start 0 L)
 		(trim-end   s at-end   L))))
 
 (define (string.map f s)
   (let ((b (buffer))
-	(n (length s)))
+	(n (#.length s)))
     (let ((i 0))
-      (while (< i n)
-	     (begin (io.putc b (f (string.char s i)))
-		    (set! i (string.inc s i)))))
+      (while (#.< i n)
+	     (begin (#.io.putc b (f (#.string.char s i)))
+		    (set! i (#.string.inc s i)))))
     (io.tostring! b)))
 
 (define (string.rep s k)
@@ -597,15 +584,6 @@
   (let ((b (buffer)))
     (io.print b v)
     (io.tostring! b)))
-
-(define (string.join strlist sep)
-  (if (null? strlist) ""
-      (let ((b (buffer)))
-	(io.write b (car strlist))
-	(for-each (lambda (s) (begin (io.write b sep)
-				     (io.write b s)))
-		  (cdr strlist))
-	(io.tostring! b))))
 
 ; toplevel --------------------------------------------------------------------
 
@@ -650,9 +628,6 @@
 
 (define (expand x) (macroexpand x))
 
-(if (not (bound? 'load-process))
-    (define (load-process x) (eval (expand x))))
-
 (define (load filename)
   (let ((F (file filename :read)))
     (trycatch
@@ -660,17 +635,14 @@
        (if (not (io.eof? F))
 	   (next (read F)
                  prev
-		 (load-process E))
+		 (eval (expand E)))
 	   (begin (io.close F)
 		  ; evaluate last form in almost-tail position
-		  (load-process E))))
+		  (eval (expand E)))))
      (lambda (e)
        (begin
 	 (io.close F)
 	 (raise `(load-error ,filename ,e)))))))
-
-(load (string *install-dir* *directory-separator* "compiler.lsp"))
-(define (load-process x) ((compile-thunk (expand x))))
 
 (define *banner* (string.tail "
 ;  _
@@ -687,13 +659,13 @@
 		       (lambda (e) (begin (io.discardbuffer *input-stream*)
 					  (raise e))))))
       (and (not (io.eof? *input-stream*))
-	   (let ((V (load-process v)))
+	   (let ((V (eval (expand v))))
 	     (print V)
 	     (set! that V)
 	     #t))))
   (define (reploop)
     (when (trycatch (and (prompt) (newline))
-		    (lambda (e) (print-exception e)))
+		    print-exception)
 	  (begin (newline)
 		 (reploop))))
   (reploop)
@@ -743,7 +715,7 @@
 	    (lambda (e) (begin (print-exception e)
 			       (exit 1)))))
 
-(define (__start argv)
+(define (__start . argv)
   ; reload this file with our new definition of load
   (load (string *install-dir* *directory-separator* "system.lsp"))
   (if (pair? (cdr argv))

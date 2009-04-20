@@ -93,9 +93,7 @@ typedef struct _symbol_t {
                       (((unsigned char*)ptr(v)) < fromspace+heapsize))
 #define isgensym(x)  (issymbol(x) && ismanaged(x))
 
-#define isfunction(x) (iscvalue(x) && (cv_class((cvalue_t*)ptr(x))==functiontype))
-
-extern value_t *Stack;
+extern value_t Stack[];
 extern uint32_t SP;
 #define PUSH(v) (Stack[SP++] = (v))
 #define POP()   (Stack[--SP])
@@ -119,19 +117,19 @@ extern uint32_t SP;
 enum {
     // special forms
     F_QUOTE=0, F_COND, F_IF, F_AND, F_OR, F_WHILE, F_LAMBDA,
-    F_TRYCATCH, F_SPECIAL_APPLY, F_SETQ, F_PROG1, F_FOR, F_BEGIN,
+    F_TRYCATCH, F_SPECIAL_APPLY, F_SETQ, F_PROG1, F_BEGIN,
 
     // functions
     F_EQ, F_EQV, F_EQUAL, F_ATOM, F_NOT, F_NULL, F_BOOLEANP, F_SYMBOLP,
     F_NUMBERP, F_BOUNDP, F_CONSP, F_BUILTINP, F_VECTORP, F_FIXNUMP,
 
     F_CONS, F_LIST, F_CAR, F_CDR, F_SETCAR, F_SETCDR,
-    F_EVAL, F_APPLY,
-    F_ADD, F_SUB, F_MUL, F_DIV, F_NUMEQ, F_LT, F_COMPARE,
+    F_EVAL, F_EVALSTAR, F_APPLY,
+    F_ADD, F_SUB, F_MUL, F_DIV, F_LT, F_BNOT, F_COMPARE,
 
-    F_VECTOR, F_AREF, F_ASET,
+    F_VECTOR, F_AREF, F_ASET, F_LENGTH, F_FOR,
     F_TRUE, F_FALSE, F_NIL,
-    N_BUILTINS
+    N_BUILTINS,
 };
 #define isspecial(v) (uintval(v) <= (unsigned int)F_BEGIN)
 
@@ -142,7 +140,7 @@ value_t read_sexpr(value_t f);
 void print(ios_t *f, value_t v, int princ);
 value_t toplevel_eval(value_t expr);
 value_t apply(value_t f, value_t l);
-value_t applyn(uint32_t n, value_t f, ...);
+value_t apply1(value_t f, value_t a0);
 value_t load_file(char *fname);
 
 /* object model manipulation */
@@ -173,7 +171,6 @@ void raise(value_t e) __attribute__ ((__noreturn__));
 void type_error(char *fname, char *expected, value_t got) __attribute__ ((__noreturn__));
 void bounds_error(char *fname, value_t arr, value_t ind) __attribute__ ((__noreturn__));
 extern value_t ArgError, IOError, KeyError, MemoryError, EnumerationError;
-extern value_t UnboundError;
 static inline void argcount(char *fname, uint32_t nargs, uint32_t c)
 {
     if (__unlikely(nargs != c))
@@ -225,12 +222,6 @@ typedef struct {
     char _space[1];
 } cprim_t;
 
-typedef struct {
-    value_t bcode;
-    value_t vals;
-    value_t env;
-} function_t;
-
 #define CPRIM_NWORDS 2
 #define MAX_INL_SIZE 96
 
@@ -244,7 +235,6 @@ typedef struct {
 #define cv_type(cv)    (cv_class(cv)->type)
 #define cv_data(cv)    ((cv)->data)
 #define cv_isstr(cv)   (cv_class(cv)->eltype == bytetype)
-#define cv_isPOD(cv)   (cv_class(cv)->init != NULL)
 
 #define cvalue_data(v) cv_data((cvalue_t*)ptr(v))
 #define value2c(type, v) ((type)cv_data((cvalue_t*)ptr(v)))
@@ -284,7 +274,6 @@ extern fltype_t *builtintype;
 value_t cvalue(fltype_t *type, size_t sz);
 void add_finalizer(cvalue_t *cv);
 void cv_autorelease(cvalue_t *cv);
-void cv_pin(cvalue_t *cv);
 size_t ctype_sizeof(value_t type, int *palign);
 value_t cvalue_copy(value_t v);
 value_t cvalue_from_data(fltype_t *type, void *data, size_t sz);
@@ -301,7 +290,6 @@ int isstring(value_t v);
 int isnumber(value_t v);
 int isiostream(value_t v);
 value_t cvalue_compare(value_t a, value_t b);
-int numeric_compare(value_t a, value_t b, int eq, int eqnans, char *fname);
 
 void to_sized_ptr(value_t v, char *fname, char **pdata, size_t *psz);
 

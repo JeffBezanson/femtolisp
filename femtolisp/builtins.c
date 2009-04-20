@@ -78,35 +78,6 @@ static value_t fl_memq(value_t *args, u_int32_t nargs)
     return FL_F;
 }
 
-static value_t fl_length(value_t *args, u_int32_t nargs)
-{
-    argcount("length", nargs, 1);
-    value_t a = args[0];
-    cvalue_t *cv;
-    if (isvector(a)) {
-        return fixnum(vector_size(a));
-    }
-    else if (iscprim(a)) {
-        cv = (cvalue_t*)ptr(a);
-        if (cp_class(cv) == bytetype)
-            return fixnum(1);
-        else if (cp_class(cv) == wchartype)
-            return fixnum(u8_charlen(*(uint32_t*)cp_data((cprim_t*)cv)));
-    }
-    else if (iscvalue(a)) {
-        cv = (cvalue_t*)ptr(a);
-        if (cv_class(cv)->eltype != NULL)
-            return size_wrap(cvalue_arraylen(a));
-    }
-    else if (a == NIL) {
-        return fixnum(0);
-    }
-    else if (iscons(a)) {
-        return fixnum(llength(a));
-    }
-    type_error("length", "sequence", a);
-}
-
 static value_t fl_raise(value_t *args, u_int32_t nargs)
 {
     argcount("raise", nargs, 1);
@@ -129,24 +100,6 @@ static value_t fl_intern(value_t *args, u_int32_t nargs)
     return symbol(cvalue_data(args[0]));
 }
 
-static value_t fl_top_level_value(value_t *args, u_int32_t nargs)
-{
-    argcount("top-level-value", nargs, 1);
-    symbol_t *sym = tosymbol(args[0], "top-level-value");
-    if (sym->binding == UNBOUND)
-        raise(list2(UnboundError, args[0]));
-    return sym->binding;
-}
-
-static value_t fl_set_top_level_value(value_t *args, u_int32_t nargs)
-{
-    argcount("set-top-level-value!", nargs, 2);
-    symbol_t *sym = tosymbol(args[0], "set-top-level-value!");
-    if (sym->syntax != TAG_CONST)
-        sym->binding = args[1];
-    return args[1];
-}
-
 extern value_t LAMBDA;
 
 static value_t fl_setsyntax(value_t *args, u_int32_t nargs)
@@ -160,8 +113,7 @@ static value_t fl_setsyntax(value_t *args, u_int32_t nargs)
         sym->syntax = 0;
     }
     else {
-        if (!iscvalue(args[1]) &&
-            (!iscons(args[1]) || car_(args[1])!=LAMBDA))
+        if (!iscons(args[1]) || car_(args[1])!=LAMBDA)
             type_error("set-syntax!", "function", args[1]);
         sym->syntax = args[1];
     }
@@ -220,9 +172,9 @@ static value_t fl_constantp(value_t *args, u_int32_t nargs)
     return FL_T;
 }
 
-static value_t fl_integer_valuedp(value_t *args, u_int32_t nargs)
+static value_t fl_integerp(value_t *args, u_int32_t nargs)
 {
-    argcount("integer-valued?", nargs, 1);
+    argcount("integer?", nargs, 1);
     value_t v = args[0];
     if (isfixnum(v)) {
         return FL_T;
@@ -247,14 +199,6 @@ static value_t fl_integer_valuedp(value_t *args, u_int32_t nargs)
         }
     }
     return FL_F;
-}
-
-static value_t fl_integerp(value_t *args, u_int32_t nargs)
-{
-    argcount("integer?", nargs, 1);
-    value_t v = args[0];
-    return (isfixnum(v) ||
-            (iscprim(v) && cp_numtype((cprim_t*)ptr(v)) < T_FLOAT));
 }
 
 static value_t fl_fixnum(value_t *args, u_int32_t nargs)
@@ -433,20 +377,16 @@ static builtinspec_t builtin_info[] = {
     { "symbol-syntax", fl_symbolsyntax },
     { "environment", fl_global_env },
     { "constant?", fl_constantp },
-    { "top-level-value", fl_top_level_value },
-    { "set-top-level-value!", fl_set_top_level_value },
     { "raise", fl_raise },
+
     { "exit", fl_exit },
     { "intern", fl_intern },
-
     { "fixnum", fl_fixnum },
     { "truncate", fl_truncate },
     { "integer?", fl_integerp },
-    { "integer-valued?", fl_integer_valuedp },
     { "nconc", fl_nconc },
     { "assq", fl_assq },
     { "memq", fl_memq },
-    { "length", fl_length },
 
     { "vector.alloc", fl_vector_alloc },
 

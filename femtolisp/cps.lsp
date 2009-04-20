@@ -8,7 +8,7 @@
   (cond-clauses->if (cdr form)))
 (define (cond-clauses->if lst)
   (if (atom? lst)
-      #f
+      lst
     (let ((clause (car lst)))
       `(if ,(car clause)
            ,(cond-body (cdr clause))
@@ -22,13 +22,13 @@
 				   ,(begin->cps (cdr forms) k)))))))
 
 (define-macro (lambda/cc args body)
-  `(cons 'lambda/cc (lambda ,args ,body)))
+  `(set-car! (lambda ,args ,body) 'lambda/cc))
 
 ; a utility used at run time to dispatch a call with or without
 ; the continuation argument, depending on the function
 (define (funcall/cc f k . args)
   (if (and (pair? f) (eq (car f) 'lambda/cc))
-      (apply (cdr f) (cons k args))
+      (apply f (cons k args))
       (k (apply f args))))
 (define *funcall/cc-names*
   (list->vector
@@ -38,7 +38,7 @@
   (let ((name (aref *funcall/cc-names* (length args))))
     `(define (,name f k ,@args)
        (if (and (pair? f) (eq (car f) 'lambda/cc))
-           ((cdr f) k ,@args)
+           (f k ,@args)
 	   (k (f ,@args))))))
 (def-funcall/cc-n ())
 (def-funcall/cc-n (a0))
@@ -76,7 +76,7 @@
         (#t           (rest->cps prim->cps form k argsyms))))
 
 (define *top-k* (gensym))
-(set-top-level-value! *top-k* identity)
+(set *top-k* identity)
 
 (define (cps form)
   (η-reduce
