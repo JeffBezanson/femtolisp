@@ -557,6 +557,10 @@ static value_t do_read_sexpr(value_t label)
         }
         PUSH(NIL);
         read_list(&Stack[SP-1], UNBOUND);
+        if (sym == vu8sym) {
+            sym = arraysym;
+            Stack[SP-1] = fl_cons(uint8sym, Stack[SP-1]);
+        }
         v = symbol_value(sym);
         if (v == UNBOUND)
             raise(list2(UnboundError, sym));

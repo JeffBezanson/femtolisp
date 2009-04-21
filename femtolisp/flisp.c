@@ -91,7 +91,7 @@ value_t NIL, FL_T, FL_F, LAMBDA, QUOTE, IF, TRYCATCH;
 value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT, FUNCTION;
 value_t IOError, ParseError, TypeError, ArgError, UnboundError, MemoryError;
 value_t DivideError, BoundsError, Error, KeyError, EnumerationError;
-value_t conssym, symbolsym, fixnumsym, vectorsym, builtinsym;
+value_t conssym, symbolsym, fixnumsym, vectorsym, builtinsym, vu8sym;
 value_t definesym, defmacrosym, forsym, labelsym, printprettysym, setqsym;
 value_t printwidthsym, tsym, Tsym, fsym, Fsym, booleansym, nullsym, evalsym;
 static fltype_t *functiontype;
@@ -1365,13 +1365,12 @@ static void print_function(value_t v, ios_t *f, int princ)
     (void)princ;
     function_t *fn = value2c(function_t*,v);
     outs("#function(", f);
-    /*
     char *data = cvalue_data(fn->bcode);
     size_t sz = cvalue_len(fn->bcode);
     outc('"', f);
     size_t i; uint8_t c;
     for(i=0; i < sz; i++) {
-        c = data[i];
+        c = data[i]+48;
         if (c == '\\')
             outsn("\\\\", f, 2);
         else if (c == '"')
@@ -1382,9 +1381,8 @@ static void print_function(value_t v, ios_t *f, int princ)
             ios_printf(f, "\\x%02x", c);
     }
     outsn("\" ", f, 2);
-    */
-    fl_print_child(f, fn->bcode, 0);
-    outc(' ', f);
+    //fl_print_child(f, fn->bcode, 0);
+    //outc(' ', f);
     fl_print_child(f, fn->vals, 0);
     if (fn->env != NIL) {
         outc(' ', f);
@@ -1416,10 +1414,15 @@ static value_t fl_function(value_t *args, uint32_t nargs)
         argcount("function", nargs, 2);
     if (!isvector(args[1]))
         type_error("function", "vector", args[1]);
-    fltype_t *uint8array = get_array_type(uint8sym);
     cvalue_t *arr = (cvalue_t*)ptr(args[0]);
-    arr->type = uint8array;
     cv_pin(arr);
+    char *data = cv_data(arr);
+    if (data[0] >= N_OPCODES) {
+        // read syntax, shifted 48 for compact text representation
+        size_t i, sz = cv_len(arr);
+        for(i=0; i < sz; i++)
+            data[i] -= 48;
+    }
     value_t fv = cvalue(functiontype, sizeof(function_t));
     function_t *fn = value2c(function_t*,fv);
     fn->bcode = args[0];
@@ -1505,6 +1508,7 @@ static void lisp_init(void)
     labelsym = symbol("label");
     setqsym = symbol("set!");
     evalsym = symbol("eval");
+    vu8sym = symbol("vu8");
     tsym = symbol("t"); Tsym = symbol("T");
     fsym = symbol("f"); Fsym = symbol("F");
     set(printprettysym=symbol("*print-pretty*"), FL_T);

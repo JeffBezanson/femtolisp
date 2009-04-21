@@ -591,10 +591,15 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             }
             size_t i;
             if (!weak) {
-                outsn("#array(", f, 7);
-                fl_print_child(f, eltype, princ);
-                if (cnt > 0)
-                    outc(' ', f);
+                if (eltype == uint8sym) {
+                    outsn("#vu8(", f, 5);
+                }
+                else {
+                    outsn("#array(", f, 7);
+                    fl_print_child(f, eltype, princ);
+                    if (cnt > 0)
+                        outc(' ', f);
+                }
             }
             else {
                 outc('[', f);
