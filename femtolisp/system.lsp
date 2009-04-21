@@ -342,12 +342,17 @@
       (list 'quote v)))
 
 (define-macro (let* binds . body)
+  (if (atom? binds) (f-body body)
+      `((lambda (,(caar binds))
+	  (let* ,(cdr binds) ,@body))
+	,(cadar binds))))
+
+(define-macro (letrec binds . body)
   (cons (list 'lambda (map car binds)
               (f-body
 	       (nconc (map (lambda (b) (cons 'set! b)) binds)
 		      body)))
         (map (lambda (x) #f) binds)))
-(set-syntax! 'letrec (symbol-syntax 'let*))
 
 (define-macro (when   c . body) (list 'if c (f-body body) #f))
 (define-macro (unless c . body) (list 'if c #f (f-body body)))
