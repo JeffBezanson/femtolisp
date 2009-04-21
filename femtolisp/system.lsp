@@ -731,11 +731,13 @@
   #t)
 
 (define (make-system-image fname)
-  (let ((f (file fname :write :create :truncate)))
+  (let ((f (file fname :write :create :truncate))
+	(excludes '(*linefeed* *directory-separator* *argv* that)))
     (for-each (lambda (s)
 		(if (and (bound? s)
 			 (not (constant? s))
 			 (not (builtin? (top-level-value s)))
+			 (not (memq s excludes))
 			 (not (iostream? (top-level-value s))))
 		    (begin
 		      (io.print f s) (io.write f "\n")

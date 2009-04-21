@@ -1,478 +1,512 @@
 zero?
-#function(">\x015\x00/&\x0b" [])
+#function(#array(uint8 62 1 53 0 47 38 11) [])
 vector.map
-#function(">\x022\x004\x015\x01\x03\x01@\x04\x02\x0b" [#function("A\x022\x004\x015\x00\x03\x01@\x04\x02\x0b" [#function("A\x02/6\x00\x000#\x022\x00<B\x025\x00\x0b" [#function(">\x016\x00\x005\x006\x02\x006\x02\x015\x00*\x03\x01+\x0b" [])])
-				      vector.alloc]) length])
+#function(#array(uint8 62 2 50 0 52 1 53 1 3 1 64 4 2 11) [#function(#array(uint8 65 2 50 0 52 1 53 0 3 1 64 4 2 11) [#function(#array(uint8 65 2 47 54 0 0 48 35 2 50 0 60 66 2 53 0 11) [#function(#array(uint8 62 1 54 0 0 53 0 54 2 0 54 2 1 53 0 42 3 1 43 11) [])])
+  vector.alloc]) length])
 vector->list
-#function(">\x012\x004\x015\x00\x03\x01.@\x04\x03\x0b" [#function("A\x0305\x002\x00<B\x025\x01\x0b" [#function(">\x016\x01\x006\x00\x005\x00#\x02*6\x00\x01\x1b:\x00\x01\x0b" [])]) length])
+#function(#array(uint8 62 1 50 0 52 1 53 0 3 1 46 64 4 3 11) [#function(#array(uint8 65 3 48 53 0 50 0 60 66 2 53 1 11) [#function(#array(uint8 62 1 54 1 0 54 0 0 53 0 35 2 42 54 0 1 27 58 0 1 11) [])])
+							      length])
 untrace
-#function(">\x012\x004\x015\x00\x03\x01@\x04\x02\x0b" [#function("A\x025\x00\x1d2\x00\x0d\x06%\x004\x016\x00\x004\x024\x034\x044\x055\x00\x03\x01\x03\x01\x03\x01\x03\x01\x04\x02\x0b-\x0b" [trace-lambda set-top-level-value!
-					     cadr caar last-pair caddr])
-		   top-level-value])
-trace
-#function(">\x012\x004\x015\x00\x03\x01@\x03\x02\x022\x02\x0b" [#function("A\x022\x004\x015\x00\x03\x01@\x04\x02\x0b" [#function("A\x022\x004\x015\x00\x03\x01@\x04\x02\x0b" [#function("A\x026\x01\x00\x1d2\x00\x0d\x11\x06c\x004\x016\x02\x002\x006\x00\x004\x022\x03\x1c\x012\x042\x05\x1c\x02\x1c\x012\x062\x076\x02\x00\x1c\x02\x1c\x02\x1c\x014\x084\x092\x0a<5\x00\x03\x02\x03\x012\x042\x0b\x1c\x02\x1c\x014\x022\x076\x01\x00\x1c\x02\x1c\x014\x085\x00\x03\x01\x03\x02\x1c\x01\x03\x06\x1c\x03\x04\x02\x0b-\x0b" [trace-lambda
-  set-top-level-value! nconc begin princ "(" print quote copy-list map #function(">\x012\x002\x012\x02\x1c\x022\x035\x00\x1c\x02\x1c\x03\x0b" [begin
-  princ " " print]) ")\n"]) to-proper]) cadr]) top-level-value ok])
+#function(#array(uint8 62 1 50 0 52 1 53 0 3 1 64 4 2 11) [#function(#array(uint8 65 2 53 0 29 50 0 13 6 37 0 52 1 54 0 0 52 2 52 3 52 4 52 5 53 0 3 1 3 1 3 1 3 1 4 2 11 45 11) [trace-lambda
+  set-top-level-value! cadr caar last-pair caddr]) top-level-value])
 transpose
-#function(">\x014\x004\x015\x00\x1b\x0c\x0b" [mapcar list])
+#function(#array(uint8 62 1 52 0 52 1 53 0 27 12 11) [mapcar list])
+trace
+#function(#array(uint8 62 1 50 0 52 1 53 0 3 1 64 3 2 2 50 2 11) [#function(#array(uint8 65 2 50 0 52 1 53 0 3 1 64 4 2 11) [#function(#array(uint8 65 2 50 0 52 1 53 0 3 1 64 4 2 11) [#function(#array(uint8 65 2 54 1 0 29 50 0 13 17 6 99 0 52 1 54 2 0 50 0 54 0 0 52 2 50 3 28 1 50 4 50 5 28 2 28 1 50 6 50 7 54 2 0 28 2 28 2 28 1 52 8 52 9 50 10 60 53 0 3 2 3 1 50 4 50 11 28 2 28 1 52 2 50 7 54 1 0 28 2 28 1 52 8 53 0 3 1 3 2 28 1 3 6 28 3 4 2 11 45 11) [trace-lambda
+  set-top-level-value! nconc begin princ "(" print quote copy-list map #function(#array(uint8 62 1 50 0 50 1 50 2 28 2 50 3 53 0 28 2 28 3 11) [begin
+  princ " " print]) ")\n"]) to-proper]) cadr]) top-level-value ok])
 to-proper
-#function(">\x015\x00\x12\x06\x0b\x005\x00\x0b5\x00\x10\x06\x16\x005\x00\x1c\x01\x0b5\x00\x1d4\x005\x00\x1e\x03\x01\x1b\x0b" [to-proper])
+#function(#array(uint8 62 1 53 0 18 6 11 0 53 0 11 53 0 16 6 22 0 53 0 28 1 11 53 0 29 52 0 53 0 30 3 1 27 11) [to-proper])
 table.values
-#function(">\x014\x002\x01<.5\x00\x04\x03\x0b" [table.foldl #function(">\x035\x015\x02\x1b\x0b" [])])
+#function(#array(uint8 62 1 52 0 50 1 60 46 53 0 4 3 11) [table.foldl #function(#array(uint8 62 3 53 1 53 2 27 11) [])])
 table.foreach
-#function(">\x024\x002\x01<.5\x01\x04\x03\x0b" [table.foldl #function(">\x036\x00\x005\x005\x01\x03\x02\x02,\x0b" [])])
+#function(#array(uint8 62 2 52 0 50 1 60 46 53 1 4 3 11) [table.foldl #function(#array(uint8 62 3 54 0 0 53 0 53 1 3 2 2 44 11) [])])
 table.invert
-#function(">\x012\x004\x01\x03\x00@\x04\x02\x0b" [#function("A\x024\x002\x01<.6\x00\x00\x03\x03\x025\x00\x0b" [table.foldl #function(">\x034\x006\x00\x005\x015\x00\x04\x03\x0b" [put!])])
-		  table])
+#function(#array(uint8 62 1 50 0 52 1 3 0 64 4 2 11) [#function(#array(uint8 65 2 52 0 50 1 60 46 54 0 0 3 3 2 53 0 11) [table.foldl
+  #function(#array(uint8 62 3 52 0 54 0 0 53 1 53 0 4 3 11) [put!])]) table])
 table.keys
-#function(">\x014\x002\x01<.5\x00\x04\x03\x0b" [table.foldl #function(">\x035\x005\x02\x1b\x0b" [])])
+#function(#array(uint8 62 1 52 0 50 1 60 46 53 0 4 3 11) [table.foldl #function(#array(uint8 62 3 53 0 53 2 27 11) [])])
 table.pairs
-#function(">\x014\x002\x01<.5\x00\x04\x03\x0b" [table.foldl #function(">\x035\x005\x01\x1b5\x02\x1b\x0b" [])])
+#function(#array(uint8 62 1 52 0 50 1 60 46 53 0 4 3 11) [table.foldl #function(#array(uint8 62 3 53 0 53 1 27 53 2 27 11) [])])
 table.clone
-#function(">\x012\x004\x01\x03\x00@\x04\x02\x0b" [#function("A\x024\x002\x01<.6\x00\x00\x03\x03\x025\x00\x0b" [table.foldl #function(">\x034\x006\x00\x005\x005\x01\x04\x03\x0b" [put!])])
-		  table])
+#function(#array(uint8 62 1 50 0 52 1 3 0 64 4 2 11) [#function(#array(uint8 65 2 52 0 50 1 60 46 54 0 0 3 3 2 53 0 11) [table.foldl
+  #function(#array(uint8 62 3 52 0 54 0 0 53 0 53 1 4 3 11) [put!])]) table])
 symbol-syntax
-#function(">\x014\x004\x015\x00-\x04\x03\x0b" [get *syntax-environment*])
+#function(#array(uint8 62 1 52 0 52 1 53 0 45 4 3 11) [get *syntax-environment*])
 string.trim
-#function(">\x032\x00--@\x04\x03\x0b" [#function("A\x032\x00<9\x00\x022\x01<9\x01\x022\x024\x036\x00\x00\x03\x01@\x04\x02\x0b" [#function(">\x045\x025\x03'\x01\x06\x1a\x00\x024\x005\x014\x015\x005\x02\x03\x02\x03\x02\x061\x006\x00\x005\x005\x014\x025\x005\x02\x03\x025\x03\x04\x04\x0b5\x02\x0b" [string.find
-  string.char string.inc]) #function(">\x034\x005\x02/\x03\x02\x01\x06\"\x00\x024\x015\x014\x025\x004\x035\x005\x02\x03\x02\x03\x02\x03\x02\x067\x006\x00\x015\x005\x014\x035\x005\x02\x03\x02\x04\x03\x0b5\x02\x0b" [> string.find
-							      string.char
-							      string.dec])
-					    #function("A\x024\x006\x01\x006\x00\x006\x01\x006\x01\x01/5\x00\x03\x046\x00\x016\x01\x006\x01\x025\x00\x03\x03\x04\x03\x0b" [string.sub])
-					    length])])
+#function(#array(uint8 62 3 50 0 45 45 64 4 3 11) [#function(#array(uint8 65 3 50 0 60 57 0 2 50 1 60 57 1 2 50 2 52 3 54 0 0 3 1 64 4 2 11) [#function(#array(uint8 62 4 53 2 53 3 39 1 6 26 0 2 52 0 53 1 52 1 53 0 53 2 3 2 3 2 6 49 0 54 0 0 53 0 53 1 52 2 53 0 53 2 3 2 53 3 4 4 11 53 2 11) [string.find
+  string.char string.inc]) #function(#array(uint8 62 3 52 0 53 2 47 3 2 1 6 34 0 2 52 1 53 1 52 2 53 0 52 3 53 0 53 2 3 2 3 2 3 2 6 55 0 54 0 1 53 0 53 1 52 3 53 0 53 2 3 2 4 3 11 53 2 11) [>
+  string.find string.char string.dec]) #function(#array(uint8 65 2 52 0 54 1 0 54 0 0 54 1 0 54 1 1 47 53 0 3 4 54 0 1 54 1 0 54 1 2 53 0 3 3 4 3 11) [string.sub])
+  length])])
 string.tail
-#function(">\x024\x005\x004\x015\x00/5\x01\x03\x034\x025\x00\x03\x01\x04\x03\x0b" [string.sub string.inc sizeof])
+#function(#array(uint8 62 2 52 0 53 0 52 1 53 0 47 53 1 3 3 52 2 53 0 3 1 4 3 11) [string.sub
+  string.inc sizeof])
 string.rep
-#function(">\x025\x011\x04'\x06A\x004\x005\x01/\x03\x02\x06\x17\x002\x01\x0b5\x010&\x06%\x004\x025\x00\x04\x01\x0b5\x011\x02&\x066\x004\x025\x005\x00\x04\x02\x0b4\x025\x005\x005\x00\x04\x03\x0b4\x035\x01\x03\x01\x06\\\x004\x025\x004\x045\x005\x010#\x02\x03\x02\x04\x02\x0b4\x044\x025\x005\x00\x03\x025\x011\x02%\x02\x04\x02\x0b" [<= "" string odd?
-							  string.rep])
+#function(#array(uint8 62 2 53 1 49 4 39 6 65 0 52 0 53 1 47 3 2 6 23 0 50 1 11 53 1 48 38 6 37 0 52 2 53 0 4 1 11 53 1 49 2 38 6 54 0 52 2 53 0 53 0 4 2 11 52 2 53 0 53 0 53 0 4 3 11 52 3 53 1 3 1 6 92 0 52 2 53 0 52 4 53 0 53 1 48 35 2 3 2 4 2 11 52 4 52 2 53 0 53 0 3 2 53 1 49 2 37 2 4 2 11) [<=
+  "" string odd? string.rep])
 string.join
-#function(">\x025\x00\x12\x06\x0b\x002\x00\x0b2\x014\x02\x03\x00@\x04\x02\x0b" ["" #function("A\x024\x005\x006\x00\x00\x1d\x03\x02\x024\x012\x02<6\x00\x00\x1e\x03\x02\x024\x035\x00\x04\x01\x0b" [io.write for-each #function(">\x014\x006\x00\x006\x01\x01\x03\x02\x024\x006\x00\x005\x00\x04\x02\x0b" [io.write])
-					       io.tostring!]) buffer])
+#function(#array(uint8 62 2 53 0 18 6 11 0 50 0 11 50 1 52 2 3 0 64 4 2 11) [""
+  #function(#array(uint8 65 2 52 0 53 0 54 0 0 29 3 2 2 52 1 50 2 60 54 0 0 30 3 2 2 52 3 53 0 4 1 11) [io.write
+  for-each #function(#array(uint8 62 1 52 0 54 0 0 54 1 1 3 2 2 52 0 54 0 0 53 0 4 2 11) [io.write])
+  io.tostring!]) buffer])
 string.map
-#function(">\x022\x004\x01\x03\x004\x025\x01\x03\x01@\x04\x03\x0b" [#function("A\x032\x00/@\x03\x02\x024\x015\x00\x04\x01\x0b" [#function("A\x02-5\x006\x00\x01'\x061\x00\x024\x006\x00\x006\x01\x004\x016\x01\x015\x00\x03\x02\x03\x01\x03\x02\x024\x026\x01\x015\x00\x03\x029\x00\x05\x03\x00\x0b" [io.putc
+#function(#array(uint8 62 2 50 0 52 1 3 0 52 2 53 1 3 1 64 4 3 11) [#function(#array(uint8 65 3 50 0 47 64 3 2 2 52 1 53 0 4 1 11) [#function(#array(uint8 65 2 45 53 0 54 0 1 39 6 49 0 2 52 0 54 0 0 54 1 0 52 1 54 1 1 53 0 3 2 3 1 3 2 2 52 2 54 1 1 53 0 3 2 57 0 5 3 0 11) [io.putc
   string.char string.inc]) io.tostring!]) buffer length])
 splice-form?
-#function(">\x015\x00\x17\x01\x06\x1b\x00\x025\x00\x1d2\x00\x0d\x01\x07\x1b\x00\x025\x00\x1d2\x01\x0d\x01\x07%\x00\x025\x002\x02\x0d\x0b" [*comma-at* *comma-dot* *comma*])
+#function(#array(uint8 62 1 53 0 23 1 6 27 0 2 53 0 29 50 0 13 1 7 27 0 2 53 0 29 50 1 13 1 7 37 0 2 53 0 50 2 13 11) [*comma-at*
+  *comma-dot* *comma*])
 set-syntax!
-#function(">\x024\x004\x015\x005\x01\x04\x03\x0b" [put! *syntax-environment*])
+#function(#array(uint8 62 2 52 0 52 1 53 0 53 1 4 3 11) [put!
+							 *syntax-environment*])
 self-evaluating?
-#function(">\x015\x00\x10\x01\x06\x0e\x00\x025\x00\x14\x11\x01\x07/\x00\x024\x005\x00\x03\x01\x01\x06/\x00\x025\x00\x14\x01\x06/\x00\x025\x004\x015\x00\x03\x01\x0d\x0b" [constant? top-level-value])
+#function(#array(uint8 62 1 53 0 16 1 6 14 0 2 53 0 20 17 1 7 47 0 2 52 0 53 0 3 1 1 6 47 0 2 53 0 20 1 6 47 0 2 53 0 52 1 53 0 3 1 13 11) [constant?
+  top-level-value])
 repl
-#function(">\x002\x00--@\x04\x03\x0b" [#function("A\x032\x00<9\x00\x022\x01<9\x01\x025\x01\x03\x00\x024\x02\x04\x00\x0b" [#function(">\x004\x002\x01\x03\x01\x024\x024\x03\x03\x01\x022\x042\x05<2\x06<=@\x04\x02\x0b" [princ "> "
-								    io.flush
-								    *output-stream*
-								    #function("A\x024\x004\x01\x03\x01\x11\x01\x06\x19\x00\x022\x024\x035\x00\x03\x01@\x04\x02\x0b" [io.eof?
-  *input-stream* #function("A\x024\x005\x00\x03\x01\x025\x008\x01\x02,\x0b" [print that]) load-process])
-								    #function(">\x004\x00\x04\x00\x0b" [read])
-								    #function(">\x014\x004\x01\x03\x01\x024\x025\x00\x04\x01\x0b" [io.discardbuffer
-  *input-stream* raise])]) #function(">\x002\x00<2\x01<=\x06\x17\x004\x02\x03\x00\x026\x00\x01\x04\x00\x0b-\x0b" [#function(">\x006\x00\x00\x03\x00\x01\x06\x10\x00\x024\x00\x04\x00\x0b" [newline])
-						  #function(">\x014\x005\x00\x04\x01\x0b" [print-exception])
-						  newline]) newline])])
-revappend
-#function(">\x024\x004\x015\x00\x03\x015\x01\x04\x02\x0b" [nconc reverse])
-reverse
-#function(">\x014\x004\x01.5\x00\x04\x03\x0b" [foldl cons])
-separate
-#function(">\x026\x00\x005\x005\x01..\x04\x04\x0b" [] #0=[#function(">\x045\x01\x12\x06\x0e\x005\x025\x03\x1b\x0b5\x005\x01\x1d\x03\x01\x06+\x006\x00\x005\x005\x01\x1e5\x01\x1d5\x02\x1b5\x03\x04\x04\x0b,\x06B\x006\x00\x005\x005\x01\x1e5\x025\x01\x1d5\x03\x1b\x04\x04\x0b-\x0b" [] #0#) ()])
+#function(#array(uint8 62 0 50 0 45 45 64 4 3 11) [#function(#array(uint8 65 3 50 0 60 57 0 2 50 1 60 57 1 2 53 1 3 0 2 52 2 4 0 11) [#function(#array(uint8 62 0 52 0 50 1 3 1 2 52 2 52 3 3 1 2 50 4 50 5 60 50 6 60 61 64 4 2 11) [princ
+  "> " io.flush *output-stream* #function(#array(uint8 65 2 52 0 52 1 3 1 17 1 6 25 0 2 50 2 52 3 53 0 3 1 64 4 2 11) [io.eof?
+  *input-stream* #function(#array(uint8 65 2 52 0 53 0 3 1 2 53 0 56 1 2 44 11) [print
+  that]) load-process]) #function(#array(uint8 62 0 52 0 4 0 11) [read])
+  #function(#array(uint8 62 1 52 0 52 1 3 1 2 52 2 53 0 4 1 11) [io.discardbuffer
+								 *input-stream*
+								 raise])])
+  #function(#array(uint8 62 0 50 0 60 50 1 60 61 6 23 0 52 2 3 0 2 54 0 1 4 0 11 45 11) [#function(#array(uint8 62 0 54 0 0 3 0 1 6 16 0 2 52 0 4 0 11) [newline])
+  #function(#array(uint8 62 1 52 0 53 0 4 1 11) [print-exception]) newline])
+  newline])])
 ref-uint16-LE
-#function(">\x024\x005\x005\x01/\"\x02*/\x03\x024\x005\x005\x010\"\x02*1\x08\x03\x02\"\x02\x0b" [ash])
+#function(#array(uint8 62 2 52 0 53 0 53 1 47 34 2 42 47 3 2 52 0 53 0 53 1 48 34 2 42 49 8 3 2 34 2 11) [ash])
 ref-uint32-LE
-#function(">\x024\x005\x005\x01/\"\x02*/\x03\x024\x005\x005\x010\"\x02*1\x08\x03\x024\x005\x005\x011\x02\"\x02*1\x10\x03\x024\x005\x005\x011\x03\"\x02*1\x18\x03\x02\"\x04\x0b" [ash])
+#function(#array(uint8 62 2 52 0 53 0 53 1 47 34 2 42 47 3 2 52 0 53 0 53 1 48 34 2 42 49 8 3 2 52 0 53 0 53 1 49 2 34 2 42 49 16 3 2 52 0 53 0 53 1 49 3 34 2 42 49 24 3 2 34 4 11) [ash])
 remainder
-#function(">\x025\x005\x005\x01%\x025\x01$\x02#\x02\x0b" [])
+#function(#array(uint8 62 2 53 0 53 0 53 1 37 2 53 1 36 2 35 2 11) [])
+revappend
+#function(#array(uint8 62 2 52 0 52 1 53 0 3 1 53 1 4 2 11) [nconc reverse])
+reverse
+#function(#array(uint8 62 1 52 0 52 1 46 53 0 4 3 11) [foldl cons])
+separate
+#function(#array(uint8 62 2 54 0 0 53 0 53 1 46 46 4 4 11) [] #0=[#function(#array(uint8 62 4 53 1 18 6 14 0 53 2 53 3 27 11 53 0 53 1 29 3 1 6 43 0 54 0 0 53 0 53 1 30 53 1 29 53 2 27 53 3 4 4 11 44 6 66 0 54 0 0 53 0 53 1 30 53 2 53 1 29 53 3 27 4 4 11 45 11) [] #0#)
+								  ()])
 quote-value
-#function(">\x014\x005\x00\x03\x01\x06\x0e\x005\x00\x0b2\x015\x00\x1c\x02\x0b" [self-evaluating? quote])
+#function(#array(uint8 62 1 52 0 53 0 3 1 6 14 0 53 0 11 50 1 53 0 28 2 11) [self-evaluating?
+  quote])
+print-to-string
+#function(#array(uint8 62 1 50 0 52 1 3 0 64 4 2 11) [#function(#array(uint8 65 2 52 0 53 0 54 0 0 3 2 2 52 1 53 0 4 1 11) [io.print
+  io.tostring!]) buffer])
+println
+#function(#array(uint8 63 0 52 0 53 0 33 52 1 3 0 2 11) [print newline])
+procedure?
+#function(#array(uint8 62 1 53 0 24 1 7 38 0 2 52 0 53 0 3 1 50 1 13 1 7 38 0 2 53 0 23 1 6 38 0 2 53 0 29 50 2 13 11) [typeof
+  function lambda])
 print-exception
-#function(">\x015\x00\x17\x01\x06\x1d\x00\x025\x00\x1d2\x00\x0d\x01\x06\x1d\x00\x024\x015\x001\x04\x03\x02\x06H\x004\x024\x032\x044\x055\x00\x03\x012\x064\x075\x00\x03\x012\x08\x03\x06\x024\x094\x034\x0a5\x00\x03\x01\x03\x02\x05\x09\x015\x00\x17\x01\x06_\x00\x025\x00\x1d2\x0b\x0d\x01\x06_\x00\x025\x00\x1e\x17\x06u\x004\x024\x032\x0c4\x055\x00\x03\x012\x0d\x03\x04\x05\x09\x015\x00\x17\x01\x06\x83\x00\x025\x00\x1d2\x0e\x0d\x06\x9b\x004\x024\x032\x0f\x03\x02\x024\x024\x035\x00\x1e\x1b!\x05\x09\x015\x00\x17\x01\x06\xa9\x00\x025\x00\x1d2\x10\x0d\x06\xc8\x004\x114\x075\x00\x03\x01\x03\x01\x024\x024\x032\x124\x055\x00\x03\x01\x03\x03\x05\x09\x014\x135\x00\x03\x01\x01\x06\xdb\x00\x024\x015\x001\x02\x03\x02\x06\xf8\x004\x024\x035\x00\x1d2\x14\x03\x03\x022\x154\x055\x00\x03\x01@\x03\x02\x05\x09\x014\x024\x032\x16\x03\x02\x024\x094\x035\x00\x03\x02\x024\x024\x034\x17\x03\x02\x02,\x0b" [type-error
+#function(#array(uint8 62 1 53 0 23 1 6 29 0 2 53 0 29 50 0 13 1 6 29 0 2 52 1 53 0 49 4 3 2 6 72 0 52 2 52 3 50 4 52 5 53 0 3 1 50 6 52 7 53 0 3 1 50 8 3 6 2 52 9 52 3 52 10 53 0 3 1 3 2 5 9 1 53 0 23 1 6 95 0 2 53 0 29 50 11 13 1 6 95 0 2 53 0 30 23 6 117 0 52 2 52 3 50 12 52 5 53 0 3 1 50 13 3 4 5 9 1 53 0 23 1 6 131 0 2 53 0 29 50 14 13 6 155 0 52 2 52 3 50 15 3 2 2 52 2 52 3 53 0 30 27 33 5 9 1 53 0 23 1 6 169 0 2 53 0 29 50 16 13 6 200 0 52 17 52 7 53 0 3 1 3 1 2 52 2 52 3 50 18 52 5 53 0 3 1 3 3 5 9 1 52 19 53 0 3 1 1 6 219 0 2 52 1 53 0 49 2 3 2 6 248 0 52 2 52 3 53 0 29 50 20 3 3 2 50 21 52 5 53 0 3 1 64 3 2 5 9 1 52 2 52 3 50 22 3 2 2 52 9 52 3 53 0 3 2 2 52 2 52 3 52 23 3 2 2 44 11) [type-error
   length= io.princ *stderr* "type-error: " cadr ": expected " caddr ", got "
   io.print cadddr unbound-error "unbound-error: eval: variable " " has no value"
-  error "error: " load-error print-exception "in file " list? ": " #function("A\x024\x005\x00\x03\x01\x01\x07\x10\x00\x025\x00\x14\x06\x18\x004\x01\x05\x1a\x004\x024\x035\x00\x04\x02\x0b" [string?
+  error "error: " load-error print-exception "in file " list? ": " #function(#array(uint8 65 2 52 0 53 0 3 1 1 7 16 0 2 53 0 20 6 24 0 52 1 5 26 0 52 2 52 3 53 0 4 2 11) [string?
   io.princ io.print *stderr*]) "*** Unhandled exception: " *linefeed*])
-print-to-string
-#function(">\x012\x004\x01\x03\x00@\x04\x02\x0b" [#function("A\x024\x005\x006\x00\x00\x03\x02\x024\x015\x00\x04\x01\x0b" [io.print io.tostring!]) buffer])
-println
-#function("?\x004\x005\x00!4\x01\x03\x00\x02\x0b" [print newline])
 print
-#function("?\x004\x004\x015\x00\x1b\x0c\x0b" [io.print *output-stream*])
-princ
-#function("?\x004\x004\x015\x00\x1b\x0c\x0b" [io.princ *output-stream*])
-procedure?
-#function(">\x015\x00\x18\x01\x07&\x00\x024\x005\x00\x03\x012\x01\x0d\x01\x07&\x00\x025\x00\x17\x01\x06&\x00\x025\x00\x1d2\x02\x0d\x0b" [typeof function lambda])
+#function(#array(uint8 63 0 52 0 52 1 53 0 27 12 11) [io.print *output-stream*])
 positive?
-#function(">\x014\x005\x00/\x04\x02\x0b" [>])
+#function(#array(uint8 62 1 52 0 53 0 47 4 2 11) [>])
+princ
+#function(#array(uint8 63 0 52 0 52 1 53 0 27 12 11) [io.princ *output-stream*])
 peephole
-#function(">\x015\x00\x0b" [])
+#function(#array(uint8 62 1 53 0 11) [])
 pad-r
-#function(">\x034\x005\x004\x015\x025\x014\x025\x00\x03\x01#\x02\x03\x02\x04\x02\x0b" [string string.rep length])
+#function(#array(uint8 62 3 52 0 53 0 52 1 53 2 53 1 52 2 53 0 3 1 35 2 3 2 4 2 11) [string
+  string.rep length])
 pad-l
-#function(">\x034\x004\x015\x025\x014\x025\x00\x03\x01#\x02\x03\x025\x00\x04\x02\x0b" [string string.rep length])
+#function(#array(uint8 62 3 52 0 52 1 53 2 53 1 52 2 53 0 3 1 35 2 3 2 53 0 4 2 11) [string
+  string.rep length])
 odd?
-#function(">\x014\x005\x00\x03\x01\x11\x0b" [even?])
+#function(#array(uint8 62 1 52 0 53 0 3 1 17 11) [even?])
 nreconc
-#function(">\x024\x004\x015\x00\x03\x015\x01\x04\x02\x0b" [nconc nreverse])
+#function(#array(uint8 62 2 52 0 52 1 53 0 3 1 53 1 4 2 11) [nconc nreverse])
 nreverse
-#function(">\x012\x00.@\x04\x02\x0b" [#function("A\x02-6\x00\x00\x17\x06\"\x00\x026\x00\x00\x1e6\x00\x005\x006\x00\x009\x00\x02 \x02:\x00\x00\x05\x03\x00\x025\x00\x0b" [])])
-newline
-#function(">\x004\x004\x01\x03\x01\x02,\x0b" [princ *linefeed*])
-nestlist
-#function(">\x034\x005\x02/\x03\x02\x06\x0e\x00.\x0b5\x014\x015\x005\x005\x01\x03\x015\x020#\x02\x03\x03\x1b\x0b" [<= nestlist])
+#function(#array(uint8 62 1 50 0 46 64 4 2 11) [#function(#array(uint8 65 2 45 54 0 0 23 6 34 0 2 54 0 0 30 54 0 0 53 0 54 0 0 57 0 2 32 2 58 0 0 5 3 0 2 53 0 11) [])])
 nlist*
-#function("?\x005\x00\x1e\x10\x06\x0d\x005\x00\x1d\x0b5\x004\x005\x00\x1e! \x0b" [nlist*])
+#function(#array(uint8 63 0 53 0 30 16 6 13 0 53 0 29 11 53 0 52 0 53 0 30 33 32 11) [nlist*])
+nestlist
+#function(#array(uint8 62 3 52 0 53 2 47 3 2 6 14 0 46 11 53 1 52 1 53 0 53 0 53 1 3 1 53 2 48 35 2 3 3 27 11) [<=
+  nestlist])
 negative?
-#function(">\x015\x00/'\x0b" [])
+#function(#array(uint8 62 1 53 0 47 39 11) [])
+newline
+#function(#array(uint8 62 0 52 0 52 1 3 1 2 44 11) [princ *linefeed*])
 mod
-#function(">\x025\x005\x005\x01%\x025\x01$\x02#\x02\x0b" [])
+#function(#array(uint8 62 2 53 0 53 0 53 1 37 2 53 1 36 2 35 2 11) [])
 memv
-#function(">\x025\x01\x10\x06\x0a\x00-\x0b5\x01\x1d5\x00\x0e\x06\x16\x005\x01\x0b,\x06$\x004\x005\x005\x01\x1e\x04\x02\x0b-\x0b" [memv])
+#function(#array(uint8 62 2 53 1 16 6 10 0 45 11 53 1 29 53 0 14 6 22 0 53 1 11 44 6 36 0 52 0 53 0 53 1 30 4 2 11 45 11) [memv])
 mark-label
-#function(">\x024\x005\x004\x015\x01\x04\x03\x0b" [emit :label])
-map-int
-#function(">\x024\x005\x01/\x03\x02\x06\x0e\x00.\x0b2\x015\x00/\x03\x01.\x1b.@\x04\x03\x0b" [<= #function("A\x035\x009\x01\x0206\x00\x010#\x022\x00<B\x025\x00\x0b" [#function(">\x016\x00\x016\x01\x005\x00\x03\x01.\x1b \x026\x00\x01\x1e:\x00\x01\x0b" [])])])
-mapcar
-#function("?\x016\x00\x005\x005\x01\x04\x02\x0b" [] #0=[#function(">\x025\x01\x12\x06\x0d\x005\x00\x04\x00\x0b5\x01\x1d\x10\x06\x18\x005\x01\x1d\x0b,\x068\x005\x004\x004\x015\x01\x03\x02!6\x00\x005\x004\x004\x025\x01\x03\x02\x03\x02\x1b\x0b-\x0b" [map car cdr] #0#) ()])
-map!
-#function(">\x025\x01-5\x01\x17\x06\x1f\x00\x025\x015\x005\x01\x1d\x03\x01\x1f\x025\x01\x1e9\x01\x05\x05\x00\x02\x0b" [])
+#function(#array(uint8 62 2 52 0 53 0 52 1 53 1 4 3 11) [emit :label])
 member
-#function(">\x025\x01\x10\x06\x0a\x00-\x0b5\x01\x1d5\x00\x0f\x06\x16\x005\x01\x0b,\x06$\x004\x005\x005\x01\x1e\x04\x02\x0b-\x0b" [member])
+#function(#array(uint8 62 2 53 1 16 6 10 0 45 11 53 1 29 53 0 15 6 22 0 53 1 11 44 6 36 0 52 0 53 0 53 1 30 4 2 11 45 11) [member])
+map-int
+#function(#array(uint8 62 2 52 0 53 1 47 3 2 6 14 0 46 11 50 1 53 0 47 3 1 46 27 46 64 4 3 11) [<=
+  #function(#array(uint8 65 3 53 0 57 1 2 48 54 0 1 48 35 2 50 0 60 66 2 53 0 11) [#function(#array(uint8 62 1 54 0 1 54 1 0 53 0 3 1 46 27 32 2 54 0 1 30 58 0 1 11) [])])])
+map!
+#function(#array(uint8 62 2 53 1 45 53 1 23 6 31 0 2 53 1 53 0 53 1 29 3 1 31 2 53 1 30 57 1 5 5 0 2 11) [])
 make-label
-#function(">\x014\x00\x04\x00\x0b" [gensym])
+#function(#array(uint8 62 1 52 0 4 0 11) [gensym])
 make-code-emitter
-#function(">\x00.4\x00\x03\x00/)\x03\x0b" [table])
-make-enum-table
-#function(">\x022\x004\x01\x03\x00@\x04\x02\x0b" [#function("A\x02/4\x004\x016\x00\x01\x03\x01\x03\x012\x02<B\x0b" [1- length #function(">\x014\x006\x00\x006\x01\x015\x00*6\x01\x005\x00\"\x02\x04\x03\x0b" [put!])])
-		  table])
-make-system-image
-#function(">\x012\x004\x015\x004\x024\x034\x04\x03\x04@\x04\x02\x0b" [#function("A\x024\x002\x01<4\x02\x03\x00\x03\x02\x024\x035\x00\x04\x01\x0b" [for-each #function(">\x015\x00\x16\x01\x06.\x00\x024\x005\x00\x03\x01\x11\x01\x06.\x00\x024\x015\x00\x03\x01\x18\x11\x01\x06.\x00\x024\x024\x015\x00\x03\x01\x03\x01\x11\x06]\x004\x036\x00\x005\x00\x03\x02\x024\x046\x00\x002\x05\x03\x02\x024\x036\x00\x004\x015\x00\x03\x01\x03\x02\x024\x046\x00\x002\x05\x04\x02\x0b-\x0b" [constant?
-  top-level-value iostream? io.print io.write "\n"]) environment io.close])
-		      file :write :create :truncate])
+#function(#array(uint8 62 0 46 52 0 3 0 47 41 3 11) [table])
 macroexpand-in
-#function(">\x025\x00\x10\x06\x0b\x005\x00\x0b2\x004\x015\x00\x1d5\x01\x03\x02@\x04\x02\x0b" [#function("A\x025\x00\x06\x1d\x004\x004\x015\x00\x03\x016\x00\x00\x1e!4\x025\x00\x03\x01\x04\x02\x0b2\x034\x046\x00\x00\x03\x01@\x04\x02\x0b" [macroexpand-in cadr caddr #function("A\x025\x00\x06\x16\x004\x005\x006\x01\x00\x1e!6\x01\x01\x04\x02\x0b6\x01\x00\x1d2\x01\x0d\x06$\x006\x01\x00\x0b6\x01\x00\x1d2\x02\x0d\x06Q\x004\x032\x024\x046\x01\x00\x03\x014\x004\x056\x01\x00\x03\x016\x01\x01\x03\x024\x066\x01\x00\x03\x01\x04\x04\x0b6\x01\x00\x1d2\x07\x0d\x06s\x002\x084\x046\x01\x00\x03\x014\x094\x0a6\x01\x00\x03\x01\x03\x01@\x04\x03\x0b4\x0b2\x0c<6\x01\x00\x04\x02\x0b" [macroexpand-in
-  quote lambda nlist* cadr caddr cdddr let-syntax #function("A\x034\x005\x014\x014\x022\x03<5\x00\x03\x026\x02\x01\x03\x02\x04\x02\x0b" [macroexpand-in
-  nconc map #function(">\x015\x00\x1d4\x004\x015\x00\x03\x016\x03\x01\x03\x026\x03\x01\x1c\x03\x0b" [macroexpand-in cadr])]) f-body cddr map #function(">\x014\x005\x006\x02\x01\x04\x02\x0b" [macroexpand-in])])
-						 macrocall?]) assq])
+#function(#array(uint8 62 2 53 0 16 6 11 0 53 0 11 50 0 52 1 53 0 29 53 1 3 2 64 4 2 11) [#function(#array(uint8 65 2 53 0 6 29 0 52 0 52 1 53 0 3 1 54 0 0 30 33 52 2 53 0 3 1 4 2 11 50 3 52 4 54 0 0 3 1 64 4 2 11) [macroexpand-in
+  cadr caddr #function(#array(uint8 65 2 53 0 6 22 0 52 0 53 0 54 1 0 30 33 54 1 1 4 2 11 54 1 0 29 50 1 13 6 36 0 54 1 0 11 54 1 0 29 50 2 13 6 81 0 52 3 50 2 52 4 54 1 0 3 1 52 0 52 5 54 1 0 3 1 54 1 1 3 2 52 6 54 1 0 3 1 4 4 11 54 1 0 29 50 7 13 6 115 0 50 8 52 4 54 1 0 3 1 52 9 52 10 54 1 0 3 1 3 1 64 4 3 11 52 11 50 12 60 54 1 0 4 2 11) [macroexpand-in
+  quote lambda nlist* cadr caddr cdddr let-syntax #function(#array(uint8 65 3 52 0 53 1 52 1 52 2 50 3 60 53 0 3 2 54 2 1 3 2 4 2 11) [macroexpand-in
+  nconc map #function(#array(uint8 62 1 53 0 29 52 0 52 1 53 0 3 1 54 3 1 3 2 54 3 1 28 3 11) [macroexpand-in
+  cadr])]) f-body cddr map #function(#array(uint8 62 1 52 0 53 0 54 2 1 4 2 11) [macroexpand-in])])
+  macrocall?]) assq])
 macroexpand
-#function(">\x014\x005\x00.\x04\x02\x0b" [macroexpand-in])
-macroexpand-1
-#function(">\x015\x00\x10\x06\x0b\x005\x00\x0b2\x004\x015\x00\x03\x01@\x04\x02\x0b" [#function("A\x025\x00\x06\x0f\x005\x006\x00\x00\x1e\x0c\x0b6\x00\x00\x0b" []) macrocall?])
+#function(#array(uint8 62 1 52 0 53 0 46 4 2 11) [macroexpand-in])
 lookup-sym
-#function(">\x045\x01\x12\x06\x0b\x002\x00\x0b2\x015\x01\x1d@\x04\x02\x0b" [(global) #function("A\x022\x004\x016\x00\x005\x00/\x03\x03@\x04\x02\x0b" [#function("A\x025\x00\x06\x1e\x006\x01\x03\x06\x14\x002\x005\x00\x1c\x02\x0b2\x016\x01\x025\x00\x1c\x03\x0b4\x026\x01\x006\x01\x01\x1e6\x01\x03\x01\x073\x00\x026\x00\x00\x12\x06<\x006\x01\x02\x05B\x006\x01\x020\"\x02-\x04\x04\x0b" [arg
+#function(#array(uint8 62 4 53 1 18 6 11 0 50 0 11 50 1 53 1 29 64 4 2 11) [(global)
+  #function(#array(uint8 65 2 50 0 52 1 54 0 0 53 0 47 3 3 64 4 2 11) [#function(#array(uint8 65 2 53 0 6 30 0 54 1 3 6 20 0 50 0 53 0 28 2 11 50 1 54 1 2 53 0 28 3 11 52 2 54 1 0 54 1 1 30 54 1 3 1 7 51 0 2 54 0 0 18 6 60 0 54 1 2 5 66 0 54 1 2 48 34 2 45 4 4 11) [arg
   closed lookup-sym]) index-of])])
 macrocall?
-#function(">\x015\x00\x1d\x14\x01\x06\x15\x00\x024\x004\x015\x00\x1d-\x04\x03\x0b" [get *syntax-environment*])
+#function(#array(uint8 62 1 53 0 29 20 1 6 21 0 2 52 0 52 1 53 0 29 45 4 3 11) [get
+  *syntax-environment*])
+macroexpand-1
+#function(#array(uint8 62 1 53 0 16 6 11 0 53 0 11 50 0 52 1 53 0 3 1 64 4 2 11) [#function(#array(uint8 65 2 53 0 6 15 0 53 0 54 0 0 30 12 11 54 0 0 11) [])
+  macrocall?])
+make-enum-table
+#function(#array(uint8 62 2 50 0 52 1 3 0 64 4 2 11) [#function(#array(uint8 65 2 47 52 0 52 1 54 0 1 3 1 3 1 50 2 60 66 11) [1-
+  length #function(#array(uint8 62 1 52 0 54 0 0 54 1 1 53 0 42 54 1 0 53 0 34 2 4 3 11) [put!])])
+						      table])
+make-system-image
+#function(#array(uint8 62 1 50 0 52 1 53 0 52 2 52 3 52 4 3 4 50 5 64 4 3 11) [#function(#array(uint8 65 3 52 0 50 1 60 52 2 3 0 3 2 2 52 3 53 0 4 1 11) [for-each
+  #function(#array(uint8 62 1 53 0 22 1 6 61 0 2 52 0 53 0 3 1 17 1 6 61 0 2 52 1 53 0 3 1 24 17 1 6 61 0 2 52 2 53 0 54 0 1 3 2 17 1 6 61 0 2 52 3 52 1 53 0 3 1 3 1 17 6 108 0 52 4 54 0 0 53 0 3 2 2 52 5 54 0 0 50 6 3 2 2 52 4 54 0 0 52 1 53 0 3 1 3 2 2 52 5 54 0 0 50 6 4 2 11 45 11) [constant?
+  top-level-value memq iostream? io.print io.write "\n"]) environment io.close])
+  file :write :create :truncate (*linefeed* *directory-separator* *argv* that)])
 map
-#function(">\x025\x01\x10\x06\x0b\x005\x01\x0b5\x005\x01\x1d\x03\x014\x005\x005\x01\x1e\x03\x02\x1b\x0b" [map])
+#function(#array(uint8 62 2 53 1 16 6 11 0 53 1 11 53 0 53 1 29 3 1 52 0 53 0 53 1 30 3 2 27 11) [map])
+mapcar
+#function(#array(uint8 63 1 54 0 0 53 0 53 1 4 2 11) [] #0=[#function(#array(uint8 62 2 53 1 18 6 13 0 53 0 4 0 11 53 1 29 16 6 24 0 53 1 29 11 44 6 56 0 53 0 52 0 52 1 53 1 3 2 33 54 0 0 53 0 52 0 52 2 53 1 3 2 3 2 27 11 45 11) [map
+  car cdr] #0#) ()])
 load
-#function(">\x012\x004\x015\x004\x02\x03\x02@\x04\x02\x0b" [#function("A\x022\x00<2\x01<=\x0b" [#function(">\x002\x00-@\x03\x02---\x04\x03\x0b" [#function("A\x022\x00<9\x00\x0b" [#function(">\x034\x006\x01\x00\x03\x01\x11\x06\"\x006\x00\x004\x016\x01\x00\x03\x015\x004\x025\x01\x03\x01\x04\x03\x0b4\x036\x01\x00\x03\x01\x024\x025\x01\x04\x01\x0b" [io.eof?
-  read load-process io.close])])]) #function(">\x014\x006\x00\x00\x03\x01\x024\x012\x026\x01\x005\x00\x1c\x03\x04\x01\x0b" [io.close raise
-							load-error])]) file
-		    :read])
-load-process
-#function(">\x014\x005\x00\x04\x01\x0b" [eval])
-list-partition
-#function(">\x024\x005\x01/\x03\x02\x06\x13\x004\x012\x02\x04\x01\x0b4\x034\x045\x005\x01/..\x03\x05\x04\x01\x0b" [<= error "list-partition: invalid count" nreverse
-			   list-part-])
-list-part-
-#function(">\x055\x00\x10\x06\x1f\x004\x005\x02/\x03\x02\x06\x1c\x004\x015\x03\x03\x015\x04\x1b\x0b5\x04\x0b4\x025\x025\x01\x03\x02\x06>\x004\x035\x005\x01/.4\x015\x03\x03\x015\x04\x1b\x04\x05\x0b4\x035\x00\x1e5\x0105\x02\"\x025\x00\x1d5\x03\x1b5\x04\x04\x05\x0b" [> nreverse >= list-part-])
-list-ref
-#function(">\x024\x005\x005\x01\x03\x02\x1d\x0b" [list-tail])
-list->vector
-#function(">\x014\x005\x00\x0c\x0b" [vector])
-list*
-#function("?\x005\x00\x1e\x10\x06\x0d\x005\x00\x1d\x0b5\x00\x1d4\x005\x00\x1e!\x1b\x0b" [list*])
-list-head
-#function(">\x024\x005\x01/\x03\x02\x06\x0e\x00.\x0b5\x00\x1d4\x015\x00\x1e5\x010#\x02\x03\x02\x1b\x0b" [<= list-head])
-list-tail
-#function(">\x024\x005\x01/\x03\x02\x06\x0f\x005\x00\x0b4\x015\x00\x1e5\x010#\x02\x04\x02\x0b" [<= list-tail])
-list?
-#function(">\x015\x00\x12\x01\x07\x19\x00\x025\x00\x17\x01\x06\x19\x00\x024\x005\x00\x1e\x04\x01\x0b" [list?])
+#function(#array(uint8 62 1 50 0 52 1 53 0 52 2 3 2 64 4 2 11) [#function(#array(uint8 65 2 50 0 60 50 1 60 61 11) [#function(#array(uint8 62 0 50 0 45 64 3 2 45 45 45 4 3 11) [#function(#array(uint8 65 2 50 0 60 57 0 11) [#function(#array(uint8 62 3 52 0 54 1 0 3 1 17 6 34 0 54 0 0 52 1 54 1 0 3 1 53 0 52 2 53 1 3 1 4 3 11 52 3 54 1 0 3 1 2 52 2 53 1 4 1 11) [io.eof?
+  read load-process io.close])])]) #function(#array(uint8 62 1 52 0 54 0 0 3 1 2 52 1 50 2 54 1 0 53 0 28 3 4 1 11) [io.close
+  raise load-error])]) file :read])
 listp
-#function(">\x015\x00\x12\x01\x07\x0d\x00\x025\x00\x17\x0b" [])
+#function(#array(uint8 62 1 53 0 18 1 7 13 0 2 53 0 23 11) [])
+list-partition
+#function(#array(uint8 62 2 52 0 53 1 47 3 2 6 19 0 52 1 50 2 4 1 11 52 3 52 4 53 0 53 1 47 46 46 3 5 4 1 11) [<=
+  error "list-partition: invalid count" nreverse list-part-])
+list-part-
+#function(#array(uint8 62 5 53 0 16 6 31 0 52 0 53 2 47 3 2 6 28 0 52 1 53 3 3 1 53 4 27 11 53 4 11 52 2 53 2 53 1 3 2 6 62 0 52 3 53 0 53 1 47 46 52 1 53 3 3 1 53 4 27 4 5 11 52 3 53 0 30 53 1 48 53 2 34 2 53 0 29 53 3 27 53 4 4 5 11) [>
+  nreverse >= list-part-])
+list->vector
+#function(#array(uint8 62 1 52 0 53 0 12 11) [vector])
+list*
+#function(#array(uint8 63 0 53 0 30 16 6 13 0 53 0 29 11 53 0 29 52 0 53 0 30 33 27 11) [list*])
+list-head
+#function(#array(uint8 62 2 52 0 53 1 47 3 2 6 14 0 46 11 53 0 29 52 1 53 0 30 53 1 48 35 2 3 2 27 11) [<=
+  list-head])
+list-ref
+#function(#array(uint8 62 2 52 0 53 0 53 1 3 2 29 11) [list-tail])
+list-tail
+#function(#array(uint8 62 2 52 0 53 1 47 3 2 6 15 0 53 0 11 52 1 53 0 30 53 1 48 35 2 4 2 11) [<=
+  list-tail])
+list?
+#function(#array(uint8 62 1 53 0 18 1 7 25 0 2 53 0 23 1 6 25 0 2 52 0 53 0 30 4 1 11) [list?])
+load-process
+#function(#array(uint8 62 1 52 0 53 0 4 1 11) [eval])
 length>
-#function(">\x025\x01/'\x06\x0c\x005\x00\x0b5\x01/&\x06\x1e\x005\x00\x17\x01\x06\x1d\x00\x025\x00\x0b5\x00\x12\x06)\x005\x01/'\x0b4\x005\x00\x1e5\x010#\x02\x04\x02\x0b" [length>])
+#function(#array(uint8 62 2 53 1 47 39 6 12 0 53 0 11 53 1 47 38 6 30 0 53 0 23 1 6 29 0 2 53 0 11 53 0 18 6 41 0 53 1 47 39 11 52 0 53 0 30 53 1 48 35 2 4 2 11) [length>])
 length=
-#function(">\x025\x01/'\x06\x0b\x00-\x0b5\x01/&\x06\x16\x005\x00\x12\x0b5\x00\x12\x06!\x005\x01/&\x0b4\x005\x00\x1e5\x010#\x02\x04\x02\x0b" [length=])
-last-pair
-#function(">\x015\x00\x10\x06\x0b\x005\x00\x0b5\x00\x1e\x10\x06\x15\x005\x00\x0b,\x06!\x004\x005\x00\x1e\x04\x01\x0b-\x0b" [last-pair])
+#function(#array(uint8 62 2 53 1 47 39 6 11 0 45 11 53 1 47 38 6 22 0 53 0 18 11 53 0 18 6 33 0 53 1 47 38 11 52 0 53 0 30 53 1 48 35 2 4 2 11) [length=])
 lastcdr
-#function(">\x015\x00\x10\x06\x0b\x005\x00\x0b4\x005\x00\x1e\x04\x01\x0b" [lastcdr])
+#function(#array(uint8 62 1 53 0 16 6 11 0 53 0 11 52 0 53 0 30 4 1 11) [lastcdr])
+last-pair
+#function(#array(uint8 62 1 53 0 16 6 11 0 53 0 11 53 0 30 16 6 21 0 53 0 11 44 6 33 0 52 0 53 0 30 4 1 11 45 11) [last-pair])
 just-compile-args
-#function(">\x034\x002\x01<5\x01\x04\x02\x0b" [for-each #function(">\x014\x006\x00\x006\x00\x02-5\x00\x04\x04\x0b" [compile-in])])
+#function(#array(uint8 62 3 52 0 50 1 60 53 1 4 2 11) [for-each #function(#array(uint8 62 1 52 0 54 0 0 54 0 2 45 53 0 4 4 11) [compile-in])])
 iota
-#function(">\x014\x004\x015\x00\x04\x02\x0b" [map-int identity])
+#function(#array(uint8 62 1 52 0 52 1 53 0 4 2 11) [map-int identity])
 io.readline
-#function(">\x014\x005\x002\x01\x04\x02\x0b" [io.readuntil #\x000a])
+#function(#array(uint8 62 1 52 0 53 0 50 1 4 2 11) [io.readuntil #\x000a])
 in-env?
-#function(">\x025\x01\x17\x01\x06!\x00\x024\x005\x005\x01\x1d\x03\x02\x01\x07!\x00\x024\x015\x005\x01\x1e\x04\x02\x0b" [memq in-env?])
-index-of
-#function(">\x035\x01\x12\x06\x0a\x00-\x0b5\x005\x01\x1d\x0d\x06\x16\x005\x02\x0b,\x06)\x004\x005\x005\x01\x1e5\x020\"\x02\x04\x03\x0b-\x0b" [index-of])
+#function(#array(uint8 62 2 53 1 23 1 6 33 0 2 52 0 53 0 53 1 29 3 2 1 7 33 0 2 52 1 53 0 53 1 30 4 2 11) [memq
+  in-env?])
 hex5
-#function(">\x014\x004\x015\x001\x10\x03\x021\x052\x02\x04\x03\x0b" [pad-l number->string #\0])
+#function(#array(uint8 62 1 52 0 52 1 53 0 49 16 3 2 49 5 50 2 4 3 11) [pad-l
+  number->string #\0])
 identity
-#function(">\x015\x00\x0b" [])
+#function(#array(uint8 62 1 53 0 11) [])
+index-of
+#function(#array(uint8 62 3 53 1 18 6 10 0 45 11 53 0 53 1 29 13 6 22 0 53 2 11 44 6 41 0 52 0 53 0 53 1 30 53 2 48 34 2 4 3 11 45 11) [index-of])
 get-defined-vars
-#function(">\x014\x006\x00\x005\x00\x03\x01\x04\x01\x0b" [delete-duplicates] #0=[#function(">\x015\x00\x10\x06\x0a\x00.\x0b5\x00\x1d2\x00\x0d\x01\x06\x19\x00\x025\x00\x1e\x17\x06\\\x004\x015\x00\x03\x01\x14\x01\x060\x00\x024\x015\x00\x03\x01\x1c\x01\x01\x07[\x00\x024\x015\x00\x03\x01\x17\x01\x06U\x00\x024\x025\x00\x03\x01\x14\x01\x06U\x00\x024\x025\x00\x03\x01\x1c\x01\x01\x07[\x00\x02.\x0b5\x00\x1d2\x03\x0d\x06s\x004\x044\x056\x00\x005\x00\x1e\x03\x02\x0c\x0b.\x0b" [define
+#function(#array(uint8 62 1 52 0 54 0 0 53 0 3 1 4 1 11) [delete-duplicates] #0=[#function(#array(uint8 62 1 53 0 16 6 10 0 46 11 53 0 29 50 0 13 1 6 25 0 2 53 0 30 23 6 92 0 52 1 53 0 3 1 20 1 6 48 0 2 52 1 53 0 3 1 28 1 1 7 91 0 2 52 1 53 0 3 1 23 1 6 85 0 2 52 2 53 0 3 1 20 1 6 85 0 2 52 2 53 0 3 1 28 1 1 7 91 0 2 46 11 53 0 29 50 3 13 6 115 0 52 4 52 5 54 0 0 53 0 30 3 2 12 11 46 11) [define
   cadr caadr begin append map] #0#) ()])
 function?
-#function(">\x015\x00\x18\x01\x07&\x00\x024\x005\x00\x03\x012\x01\x0d\x01\x07&\x00\x025\x00\x17\x01\x06&\x00\x025\x00\x1d2\x02\x0d\x0b" [typeof function lambda])
+#function(#array(uint8 62 1 53 0 24 1 7 38 0 2 52 0 53 0 3 1 50 1 13 1 7 38 0 2 53 0 23 1 6 38 0 2 53 0 29 50 2 13 11) [typeof
+  function lambda])
 for-each
-#function(">\x025\x01\x17\x06\x1a\x005\x005\x01\x1d\x03\x01\x024\x005\x005\x01\x1e\x04\x02\x0b,\x0b" [for-each])
-foldl
-#function(">\x035\x02\x12\x06\x0b\x005\x01\x0b4\x005\x005\x005\x02\x1d5\x01\x03\x025\x02\x1e\x04\x03\x0b" [foldl])
+#function(#array(uint8 62 2 53 1 23 6 26 0 53 0 53 1 29 3 1 2 52 0 53 0 53 1 30 4 2 11 44 11) [for-each])
 foldr
-#function(">\x035\x02\x12\x06\x0b\x005\x01\x0b5\x005\x02\x1d4\x005\x005\x015\x02\x1e\x03\x03\x04\x02\x0b" [foldr])
+#function(#array(uint8 62 3 53 2 18 6 11 0 53 1 11 53 0 53 2 29 52 0 53 0 53 1 53 2 30 3 3 4 2 11) [foldr])
+foldl
+#function(#array(uint8 62 3 53 2 18 6 11 0 53 1 11 52 0 53 0 53 0 53 2 29 53 1 3 2 53 2 30 4 3 11) [foldl])
 filter
-#function(">\x026\x00\x005\x005\x01.\x04\x03\x0b" [] #0=[#function(">\x035\x01\x12\x06\x0b\x005\x02\x0b5\x005\x01\x1d\x03\x01\x06&\x006\x00\x005\x005\x01\x1e5\x01\x1d5\x02\x1b\x04\x03\x0b,\x067\x006\x00\x005\x005\x01\x1e5\x02\x04\x03\x0b-\x0b" [] #0#) ()])
+#function(#array(uint8 62 2 54 0 0 53 0 53 1 46 4 3 11) [] #0=[#function(#array(uint8 62 3 53 1 18 6 11 0 53 2 11 53 0 53 1 29 3 1 6 38 0 54 0 0 53 0 53 1 30 53 1 29 53 2 27 4 3 11 44 6 55 0 54 0 0 53 0 53 1 30 53 2 4 3 11 45 11) [] #0#)
+							       ()])
 f-body
-#function(">\x012\x006\x00\x005\x00\x03\x01@\x04\x02\x0b" [#function("A\x022\x004\x015\x00\x03\x01@\x04\x02\x0b" [#function("A\x025\x00\x12\x06\x0c\x006\x00\x00\x0b2\x005\x006\x00\x00\x1c\x034\x012\x02<5\x00\x03\x02\x1b\x0b" [lambda map #function(">\x01-\x0b" [])])
-				      get-defined-vars])] [#function(">\x015\x00\x10\x06\x0a\x00-\x0b5\x00\x1e.\x0d\x06\x16\x005\x00\x1d\x0b,\x06 \x002\x005\x00\x1b\x0b-\x0b" [begin])
-							   ()])
+#function(#array(uint8 62 1 50 0 54 0 0 53 0 3 1 64 4 2 11) [#function(#array(uint8 65 2 50 0 52 1 53 0 3 1 64 4 2 11) [#function(#array(uint8 65 2 53 0 18 6 12 0 54 0 0 11 50 0 53 0 54 0 0 28 3 52 1 50 2 60 53 0 3 2 27 11) [lambda
+  map #function(#array(uint8 62 1 45 11) [])]) get-defined-vars])] [#function(#array(uint8 62 1 53 0 16 6 10 0 45 11 53 0 30 46 13 6 22 0 53 0 29 11 44 6 32 0 50 0 53 0 27 11 45 11) [begin])
+								    ()])
 expand
-#function(">\x014\x005\x00\x04\x01\x0b" [macroexpand])
+#function(#array(uint8 62 1 52 0 53 0 4 1 11) [macroexpand])
 every
-#function(">\x025\x01\x10\x01\x07\x1f\x00\x025\x005\x01\x1d\x03\x01\x01\x06\x1f\x00\x024\x005\x005\x01\x1e\x04\x02\x0b" [every])
+#function(#array(uint8 62 2 53 1 16 1 7 31 0 2 53 0 53 1 29 3 1 1 6 31 0 2 52 0 53 0 53 1 30 4 2 11) [every])
 even?
-#function(">\x014\x005\x000\x03\x02/&\x0b" [logand])
+#function(#array(uint8 62 1 52 0 53 0 48 3 2 47 38 11) [logand])
 eval
-#function(">\x014\x004\x015\x00\x03\x01\x03\x01\x04\x00\x0b" [compile-thunk expand])
+#function(#array(uint8 62 1 52 0 52 1 53 0 3 1 3 1 4 0 11) [compile-thunk
+							    expand])
 error
-#function("?\x004\x002\x015\x00\x1b\x04\x01\x0b" [raise error])
+#function(#array(uint8 63 0 52 0 50 1 53 0 27 4 1 11) [raise error])
 emit-nothing
-#function(">\x015\x00\x0b" [])
+#function(#array(uint8 62 1 53 0 11) [])
 encode-byte-code
-#function(">\x012\x004\x014\x025\x00\x03\x01\x03\x01@\x04\x02\x0b" [#function("A\x022\x004\x014\x025\x00\x03\x011\x034\x032\x04<5\x00\x03\x02$\x02\"\x022\x05\x03\x02@\x04\x02\x0b" [#function("A\x022\x004\x016\x00\x00\x03\x01@\x04\x02\x0b" [#function("A\x022\x004\x015\x00\x03\x01/4\x02\x03\x004\x02\x03\x004\x03\x03\x00-@\x04\x07\x0b" [#function("A\x07-5\x015\x00'\x06\x90\x00\x026\x00\x005\x01*9\x05\x025\x054\x00\x0d\x06>\x004\x015\x026\x00\x005\x010\"\x02*4\x025\x04\x03\x01\x03\x03\x025\x011\x02\"\x029\x01\x05\x8d\x004\x035\x044\x044\x054\x066\x01\x00\x01\x06X\x00\x024\x075\x052\x08\x03\x02\x06e\x002\x095\x05@\x03\x02\x05g\x005\x05\x03\x02\x03\x01\x03\x02\x025\x010\"\x029\x01\x025\x015\x00'\x06\x8c\x002\x0a6\x00\x005\x01*@\x03\x02\x05\x8d\x00-\x05\x03\x00\x024\x0b2\x0c<5\x03\x03\x02\x024\x0d5\x04\x04\x01\x0b" [:label
+#function(#array(uint8 62 1 50 0 52 1 52 2 53 0 3 1 3 1 64 4 2 11) [#function(#array(uint8 65 2 50 0 52 1 52 2 53 0 3 1 49 3 52 3 50 4 60 53 0 3 2 36 2 34 2 50 5 3 2 64 4 2 11) [#function(#array(uint8 65 2 50 0 52 1 54 0 0 3 1 64 4 2 11) [#function(#array(uint8 65 2 50 0 52 1 53 0 3 1 47 52 2 3 0 52 2 3 0 52 3 3 0 45 64 4 7 11) [#function(#array(uint8 65 7 45 53 1 53 0 39 6 144 0 2 54 0 0 53 1 42 57 5 2 53 5 52 0 13 6 62 0 52 1 53 2 54 0 0 53 1 48 34 2 42 52 2 53 4 3 1 3 3 2 53 1 49 2 34 2 57 1 5 141 0 52 3 53 4 52 4 52 5 52 6 54 1 0 1 6 88 0 2 52 7 53 5 50 8 3 2 6 101 0 50 9 53 5 64 3 2 5 103 0 53 5 3 2 3 1 3 2 2 53 1 48 34 2 57 1 2 53 1 53 0 39 6 140 0 50 10 54 0 0 53 1 42 64 3 2 5 141 0 45 5 3 0 2 52 11 50 12 60 53 3 3 2 2 52 13 53 4 4 1 11) [:label
   put! sizeof io.write byte get Instructions memq (:jmp :brt :brf)
-  #function("A\x025\x004\x00\x0e\x06\x0d\x004\x01\x0b5\x004\x02\x0e\x06\x18\x004\x03\x0b5\x004\x04\x0e\x06#\x004\x05\x0b-\x0b" [:jmp :jmp.l :brt :brt.l :brf :brf.l])
-  #function("A\x022\x006\x00\x05@\x04\x02\x0b" [#function("A\x024\x005\x002\x01\x03\x02\x06&\x004\x026\x01\x044\x036\x00\x00\x03\x01\x03\x02\x026\x01\x010\"\x02:\x01\x01\x0b4\x005\x002\x04\x03\x02\x06J\x004\x026\x01\x044\x056\x00\x00\x03\x01\x03\x02\x026\x01\x010\"\x02:\x01\x01\x0b4\x005\x002\x06\x03\x02\x06\x8b\x004\x026\x01\x044\x056\x00\x00\x03\x01\x03\x02\x026\x01\x010\"\x02:\x01\x01\x024\x026\x01\x044\x056\x02\x006\x01\x01*\x03\x01\x03\x02\x026\x01\x010\"\x02:\x01\x01\x0b4\x005\x002\x07\x03\x02\x06\xca\x004\x086\x01\x034\x096\x01\x04\x03\x016\x00\x00\x03\x03\x024\x026\x01\x046\x03\x00\x06\xb8\x004\x03\x05\xba\x004\x0a/\x03\x01\x03\x02\x026\x01\x010\"\x02:\x01\x01\x0b-\x0b" [memv
+  #function(#array(uint8 65 2 53 0 52 0 14 6 13 0 52 1 11 53 0 52 2 14 6 24 0 52 3 11 53 0 52 4 14 6 35 0 52 5 11 45 11) [:jmp
+  :jmp.l :brt :brt.l :brf :brf.l]) #function(#array(uint8 65 2 50 0 54 0 5 64 4 2 11) [#function(#array(uint8 65 2 52 0 53 0 50 1 3 2 6 38 0 52 2 54 1 4 52 3 54 0 0 3 1 3 2 2 54 1 1 48 34 2 58 1 1 11 52 0 53 0 50 4 3 2 6 74 0 52 2 54 1 4 52 5 54 0 0 3 1 3 2 2 54 1 1 48 34 2 58 1 1 11 52 0 53 0 50 6 3 2 6 139 0 52 2 54 1 4 52 5 54 0 0 3 1 3 2 2 54 1 1 48 34 2 58 1 1 2 52 2 54 1 4 52 5 54 2 0 54 1 1 42 3 1 3 2 2 54 1 1 48 34 2 58 1 1 11 52 0 53 0 50 7 3 2 6 202 0 52 8 54 1 3 52 9 54 1 4 3 1 54 0 0 3 3 2 52 2 54 1 4 54 3 0 6 184 0 52 3 5 186 0 52 10 47 3 1 3 2 2 54 1 1 48 34 2 58 1 1 11 45 11) [memv
   (:loadv.l :loadg.l :setg.l) io.write uint32 (:loada :seta :call :tcall :loadv
 					       :loadg :setg :list :+ :- :* :/
 					       :vector :argc :vargc :loadi8
 					       :let) uint8 (:loadc :setc)
-  (:jmp :brf :brt) put! sizeof uint16])]) table.foreach #function(">\x024\x006\x00\x045\x00\x03\x02\x024\x016\x00\x046\x02\x00\x06\x1c\x004\x02\x05\x1e\x004\x034\x046\x00\x025\x01\x03\x02\x03\x01\x04\x02\x0b" [io.seek
+  (:jmp :brf :brt) put! sizeof uint16])]) table.foreach #function(#array(uint8 62 2 52 0 54 0 4 53 0 3 2 2 52 1 54 0 4 54 2 0 6 28 0 52 2 5 30 0 52 3 52 4 54 0 2 53 1 3 2 3 1 4 2 11) [io.seek
   io.write uint32 uint16 get]) io.tostring!]) length table buffer])
-								    list->vector])
-						 >= length count #function(">\x014\x005\x002\x01\x04\x02\x0b" [memq
+  list->vector]) >= length count #function(#array(uint8 62 1 52 0 53 0 50 1 4 2 11) [memq
   (:loadv :loadg :setg :jmp :brt :brf)]) 65536]) peephole nreverse])
 emit
-#function("?\x024\x005\x012\x01\x03\x02\x06\x19\x002\x025\x000*@\x03\x02\x05\x1a\x00-\x025\x00/4\x035\x015\x02\x1b5\x00/*\x03\x02+\x025\x00\x0b" [memq (:loadv :loadg :setg)
-				  #function("A\x022\x006\x00\x001\x02*@\x04\x02\x0b" [#function("A\x022\x006\x01\x02\x1d@\x04\x02\x0b" [#function("A\x022\x004\x016\x01\x005\x00\x03\x02\x06\x1c\x004\x026\x01\x005\x00\x03\x02\x059\x004\x036\x01\x005\x006\x00\x00\x03\x03\x026\x00\x000\"\x02:\x00\x00\x026\x00\x000#\x02@\x04\x02\x0b" [#function("A\x026\x03\x001\x026\x01\x00+\x025\x00\x1c\x01:\x03\x02\x024\x005\x002\x01\x03\x02\x06+\x002\x026\x03\x01@\x03\x02:\x03\x01\x0b-\x0b" [>=
-  256 #function("A\x025\x004\x00\x0e\x06\x0d\x004\x01\x0b5\x004\x02\x0e\x06\x18\x004\x03\x0b5\x004\x04\x0e\x06#\x004\x05\x0b-\x0b" [:loadv :loadv.l :loadg :loadg.l :setg :setg.l])])
-  has? get put!])])]) nreconc])
+#function(#array(uint8 63 2 52 0 53 1 50 1 3 2 6 25 0 50 2 53 0 48 42 64 3 2 5 26 0 45 2 53 0 47 52 3 53 1 53 2 27 53 0 47 42 3 2 43 2 53 0 11) [memq
+  (:loadv :loadg :setg) #function(#array(uint8 65 2 50 0 54 0 0 49 2 42 64 4 2 11) [#function(#array(uint8 65 2 50 0 54 1 2 29 64 4 2 11) [#function(#array(uint8 65 2 50 0 52 1 54 1 0 53 0 3 2 6 28 0 52 2 54 1 0 53 0 3 2 5 57 0 52 3 54 1 0 53 0 54 0 0 3 3 2 54 0 0 48 34 2 58 0 0 2 54 0 0 48 35 2 64 4 2 11) [#function(#array(uint8 65 2 54 3 0 49 2 54 1 0 43 2 53 0 28 1 58 3 2 2 52 0 53 0 50 1 3 2 6 43 0 50 2 54 3 1 64 3 2 58 3 1 11 45 11) [>=
+  256 #function(#array(uint8 65 2 53 0 52 0 14 6 13 0 52 1 11 53 0 52 2 14 6 24 0 52 3 11 53 0 52 4 14 6 35 0 52 5 11 45 11) [:loadv
+  :loadv.l :loadg :loadg.l :setg :setg.l])]) has? get put!])])]) nreconc])
 disassemble
-#function(">\x014\x005\x00/\x03\x02\x024\x01\x04\x00\x0b" [disassemble- newline])
+#function(#array(uint8 62 1 52 0 53 0 47 3 2 2 52 1 4 0 11) [disassemble-
+							     newline])
 disassemble-
-#function(">\x022\x004\x015\x00\x03\x01@\x04\x02\x0b" [#function("A\x022\x005\x00/*5\x000*@\x04\x03\x0b" [#function("A\x032\x00-@\x04\x02\x0b" [#function("A\x022\x00<9\x00\x022\x01/4\x026\x00\x00\x03\x01@\x04\x03\x0b" [#function(">\x015\x00\x17\x01\x06\x10\x00\x025\x00\x1d2\x00\x0d\x06'\x004\x012\x02\x03\x01\x024\x035\x006\x03\x010\"\x02\x04\x02\x0b4\x045\x00\x04\x01\x0b" [compiled-lambda
-  princ "\n" disassemble- print]) #function("A\x03-5\x005\x01'\x06 \x00\x022\x004\x014\x026\x01\x005\x00*\x03\x02@\x03\x02\x05\x03\x00\x0b" [#function("A\x024\x006\x00\x00/\x03\x02\x06\x14\x004\x01\x03\x00\x05\x15\x00-\x02/6\x04\x010#\x022\x02<B\x024\x034\x046\x00\x00\x03\x012\x054\x064\x075\x00\x03\x010\x03\x022\x08\x03\x04\x026\x00\x000\"\x02:\x00\x00\x022\x095\x00@\x04\x02\x0b" [>
-  newline #function(">\x014\x002\x01\x04\x01\x0b" [princ "\t"]) princ hex5 ":  " string.tail string "\t"
-  #function("A\x024\x005\x002\x01\x03\x02\x06,\x006\x02\x006\x03\x014\x026\x03\x006\x01\x00\x03\x02*\x03\x01\x026\x01\x001\x04\"\x02:\x01\x00\x0b4\x005\x002\x03\x03\x02\x06R\x006\x02\x006\x03\x016\x03\x006\x01\x00**\x03\x01\x026\x01\x000\"\x02:\x01\x00\x0b4\x005\x002\x04\x03\x02\x06w\x004\x054\x066\x03\x006\x01\x00*\x03\x01\x03\x01\x026\x01\x000\"\x02:\x01\x00\x0b4\x005\x002\x07\x03\x02\x06\xb8\x004\x054\x066\x03\x006\x01\x00*\x03\x012\x08\x03\x02\x026\x01\x000\"\x02:\x01\x00\x024\x054\x066\x03\x006\x01\x00*\x03\x01\x03\x01\x026\x01\x000\"\x02:\x01\x00\x0b4\x005\x002\x09\x03\x02\x06\xe3\x004\x052\x0a4\x0b4\x0c6\x03\x006\x01\x00\x03\x02\x03\x01\x03\x02\x026\x01\x001\x02\"\x02:\x01\x00\x0b4\x005\x002\x0d\x03\x02\x06\x0e\x014\x052\x0a4\x0b4\x026\x03\x006\x01\x00\x03\x02\x03\x01\x03\x02\x026\x01\x001\x04\"\x02:\x01\x00\x0b-\x0b" [memv
+#function(#array(uint8 62 2 50 0 52 1 53 0 3 1 64 4 2 11) [#function(#array(uint8 65 2 50 0 53 0 47 42 53 0 48 42 64 4 3 11) [#function(#array(uint8 65 3 50 0 45 64 4 2 11) [#function(#array(uint8 65 2 50 0 60 57 0 2 50 1 47 52 2 54 0 0 3 1 64 4 3 11) [#function(#array(uint8 62 1 53 0 23 1 6 16 0 2 53 0 29 50 0 13 6 39 0 52 1 50 2 3 1 2 52 3 53 0 54 3 1 48 34 2 4 2 11 52 4 53 0 4 1 11) [compiled-lambda
+  princ "\n" disassemble- print]) #function(#array(uint8 65 3 45 53 0 53 1 39 6 32 0 2 50 0 52 1 52 2 54 1 0 53 0 42 3 2 64 3 2 5 3 0 11) [#function(#array(uint8 65 2 52 0 54 0 0 47 3 2 6 20 0 52 1 3 0 5 21 0 45 2 47 54 4 1 48 35 2 50 2 60 66 2 52 3 52 4 54 0 0 3 1 50 5 52 6 52 7 53 0 3 1 48 3 2 50 8 3 4 2 54 0 0 48 34 2 58 0 0 2 50 9 53 0 64 4 2 11) [>
+  newline #function(#array(uint8 62 1 52 0 50 1 4 1 11) [princ "\t"]) princ
+  hex5 ":  " string.tail string "\t" #function(#array(uint8 65 2 52 0 53 0 50 1 3 2 6 44 0 54 2 0 54 3 1 52 2 54 3 0 54 1 0 3 2 42 3 1 2 54 1 0 49 4 34 2 58 1 0 11 52 0 53 0 50 3 3 2 6 82 0 54 2 0 54 3 1 54 3 0 54 1 0 42 42 3 1 2 54 1 0 48 34 2 58 1 0 11 52 0 53 0 50 4 3 2 6 119 0 52 5 52 6 54 3 0 54 1 0 42 3 1 3 1 2 54 1 0 48 34 2 58 1 0 11 52 0 53 0 50 7 3 2 6 184 0 52 5 52 6 54 3 0 54 1 0 42 3 1 50 8 3 2 2 54 1 0 48 34 2 58 1 0 2 52 5 52 6 54 3 0 54 1 0 42 3 1 3 1 2 54 1 0 48 34 2 58 1 0 11 52 0 53 0 50 9 3 2 6 227 0 52 5 50 10 52 11 52 12 54 3 0 54 1 0 3 2 3 1 3 2 2 54 1 0 49 2 34 2 58 1 0 11 52 0 53 0 50 13 3 2 6 14 1 52 5 50 10 52 11 52 2 54 3 0 54 1 0 3 2 3 1 3 2 2 54 1 0 49 4 34 2 58 1 0 11 45 11) [memv
   (:loadv.l :loadg.l :setg.l) ref-uint32-LE (:loadv :loadg :setg)
   (:loada :seta :call :tcall :list :+ :- :* :/ :vector :argc :vargc :loadi8
    :let) princ number->string (:loadc :setc) " " (:jmp :brf :brt) "@" hex5
   ref-uint16-LE (:jmp.l :brf.l :brt.l)])]) get 1/Instructions]) length])])])
-		   function->vector])
+							   function->vector])
 display
-#function(">\x014\x005\x00\x03\x01\x02,\x0b" [princ])
+#function(#array(uint8 62 1 52 0 53 0 3 1 2 44 11) [princ])
 delete-duplicates
-#function(">\x015\x00\x10\x06\x0b\x005\x00\x0b2\x005\x00\x1d5\x00\x1e@\x04\x03\x0b" [#function("A\x034\x005\x005\x01\x03\x02\x06\x14\x004\x015\x01\x04\x01\x0b5\x004\x015\x01\x03\x01\x1b\x0b" [member delete-duplicates])])
-count
-#function(">\x024\x005\x005\x01/\x04\x03\x0b" [count-])
+#function(#array(uint8 62 1 53 0 16 6 11 0 53 0 11 50 0 53 0 29 53 0 30 64 4 3 11) [#function(#array(uint8 65 3 52 0 53 0 53 1 3 2 6 20 0 52 1 53 1 4 1 11 53 0 52 1 53 1 3 1 27 11) [member
+  delete-duplicates])])
 count-
-#function(">\x035\x01\x12\x06\x0b\x005\x02\x0b4\x005\x005\x01\x1e5\x005\x01\x1d\x03\x01\x06$\x005\x020\"\x02\x05&\x005\x02\x04\x03\x0b" [count-])
+#function(#array(uint8 62 3 53 1 18 6 11 0 53 2 11 52 0 53 0 53 1 30 53 0 53 1 29 3 1 6 36 0 53 2 48 34 2 5 38 0 53 2 4 3 11) [count-])
 copy-tree
-#function(">\x015\x00\x10\x06\x0b\x005\x00\x0b4\x005\x00\x1d\x03\x014\x005\x00\x1e\x03\x01\x1b\x0b" [copy-tree])
+#function(#array(uint8 62 1 53 0 16 6 11 0 53 0 11 52 0 53 0 29 3 1 52 0 53 0 30 3 1 27 11) [copy-tree])
+count
+#function(#array(uint8 62 2 52 0 53 0 53 1 47 4 3 11) [count-])
 copy-list
-#function(">\x015\x00\x10\x06\x0b\x005\x00\x0b5\x00\x1d4\x005\x00\x1e\x03\x01\x1b\x0b" [copy-list])
+#function(#array(uint8 62 1 53 0 16 6 11 0 53 0 11 53 0 29 52 0 53 0 30 3 1 27 11) [copy-list])
 const-to-idx-vec
-#function(">\x012\x005\x000*5\x001\x02*@\x04\x03\x0b" [#function("A\x032\x004\x015\x01\x03\x01@\x04\x02\x0b" [#function("A\x024\x002\x01<6\x00\x00\x03\x02\x025\x00\x0b" [table.foreach #function(">\x026\x00\x005\x015\x00+\x0b" [])])
-					  vector.alloc])])
+#function(#array(uint8 62 1 50 0 53 0 48 42 53 0 49 2 42 64 4 3 11) [#function(#array(uint8 65 3 50 0 52 1 53 1 3 1 64 4 2 11) [#function(#array(uint8 65 2 52 0 50 1 60 54 0 0 3 2 2 53 0 11) [table.foreach
+  #function(#array(uint8 62 2 54 0 0 53 1 53 0 43 11) [])]) vector.alloc])])
 cond->if
-#function(">\x014\x005\x00\x1e\x04\x01\x0b" [cond-clauses->if])
+#function(#array(uint8 62 1 52 0 53 0 30 4 1 11) [cond-clauses->if])
 cond-clauses->if
-#function(">\x015\x00\x10\x06\x0a\x00-\x0b2\x005\x00\x1d@\x04\x02\x0b" [#function("A\x025\x00\x1d2\x00\x0d\x06\x12\x002\x015\x00\x1e\x1b\x0b2\x025\x00\x1d2\x015\x00\x1e\x1b4\x036\x00\x00\x1e\x03\x01\x1c\x04\x0b" [else begin if cond-clauses->if])])
+#function(#array(uint8 62 1 53 0 16 6 10 0 45 11 50 0 53 0 29 64 4 2 11) [#function(#array(uint8 65 2 53 0 29 50 0 13 6 18 0 50 1 53 0 30 27 11 50 2 53 0 29 50 1 53 0 30 27 52 3 54 0 0 30 3 1 28 4 11) [else
+  begin if cond-clauses->if])])
 compile-while
-#function(">\x042\x004\x015\x00\x03\x014\x015\x00\x03\x01@\x04\x03\x0b" [#function("A\x034\x006\x00\x006\x00\x01--\x03\x04\x024\x016\x00\x005\x00\x03\x02\x024\x006\x00\x006\x00\x01-6\x00\x02\x03\x04\x024\x026\x00\x004\x035\x01\x03\x03\x024\x026\x00\x004\x04\x03\x02\x024\x006\x00\x006\x00\x01-6\x00\x03\x03\x04\x024\x026\x00\x004\x055\x00\x03\x03\x024\x016\x00\x005\x01\x04\x02\x0b" [compile-in
-								    mark-label
-								    emit :brf
-								    :pop :jmp])
-		     make-label])
+#function(#array(uint8 62 4 50 0 52 1 53 0 3 1 52 1 53 0 3 1 64 4 3 11) [#function(#array(uint8 65 3 52 0 54 0 0 54 0 1 45 45 3 4 2 52 1 54 0 0 53 0 3 2 2 52 0 54 0 0 54 0 1 45 54 0 2 3 4 2 52 2 54 0 0 52 3 53 1 3 3 2 52 2 54 0 0 52 4 3 2 2 52 0 54 0 0 54 0 1 45 54 0 3 3 4 2 52 2 54 0 0 52 5 53 0 3 3 2 52 1 54 0 0 53 1 4 2 11) [compile-in
+  mark-label emit :brf :pop :jmp]) make-label])
 compile-short-circuit
-#function(">\x065\x03\x10\x06\x15\x004\x005\x005\x015\x025\x04\x04\x04\x0b5\x03\x1e\x10\x06*\x004\x005\x005\x015\x025\x03\x1d\x04\x04\x0b2\x014\x025\x00\x03\x01@\x04\x02\x0b" [compile-in #function("A\x024\x006\x00\x006\x00\x01-6\x00\x03\x1d\x03\x04\x024\x016\x00\x004\x02\x03\x02\x024\x016\x00\x006\x00\x055\x00\x03\x03\x024\x016\x00\x004\x03\x03\x02\x024\x046\x00\x006\x00\x016\x00\x026\x00\x03\x1e6\x00\x046\x00\x05\x03\x06\x024\x056\x00\x005\x00\x04\x02\x0b" [compile-in
+#function(#array(uint8 62 6 53 3 16 6 21 0 52 0 53 0 53 1 53 2 53 4 4 4 11 53 3 30 16 6 42 0 52 0 53 0 53 1 53 2 53 3 29 4 4 11 50 1 52 2 53 0 3 1 64 4 2 11) [compile-in
+  #function(#array(uint8 65 2 52 0 54 0 0 54 0 1 45 54 0 3 29 3 4 2 52 1 54 0 0 52 2 3 2 2 52 1 54 0 0 54 0 5 53 0 3 3 2 52 1 54 0 0 52 3 3 2 2 52 4 54 0 0 54 0 1 54 0 2 54 0 3 30 54 0 4 54 0 5 3 6 2 52 5 54 0 0 53 0 4 2 11) [compile-in
   emit :dup :pop compile-short-circuit mark-label]) make-label])
 compile-let
-#function(">\x042\x005\x03\x1d5\x03\x1e@\x04\x03\x0b" [#function("A\x034\x005\x014\x014\x025\x00\x03\x01\x03\x01\x03\x02\x06\x19\x00-\x05%\x004\x034\x042\x055\x00\x03\x02\x03\x01\x024\x066\x00\x004\x074\x086\x00\x015\x00,\x03\x03\x03\x03\x022\x094\x0a6\x00\x006\x00\x015\x01\x03\x03@\x04\x02\x0b" [length= length cadr
-							  error string "apply: incorrect number of arguments to "
-							  emit :loadv compile-f
-							  #function("A\x024\x006\x01\x004\x01\x03\x02\x024\x006\x01\x006\x01\x02\x06\x1c\x004\x02\x05\x1e\x004\x0305\x00\"\x02\x04\x03\x0b" [emit
+#function(#array(uint8 62 4 50 0 53 3 29 53 3 30 64 4 3 11) [#function(#array(uint8 65 3 52 0 53 1 52 1 52 2 53 0 3 1 3 1 3 2 6 25 0 45 5 37 0 52 3 52 4 50 5 53 0 3 2 3 1 2 52 6 54 0 0 52 7 52 8 54 0 1 53 0 44 3 3 3 3 2 50 9 52 10 54 0 0 54 0 1 53 1 3 3 64 4 2 11) [length=
+  length cadr error string "apply: incorrect number of arguments to " emit
+  :loadv compile-f #function(#array(uint8 65 2 52 0 54 1 0 52 1 3 2 2 52 0 54 1 0 54 1 2 6 28 0 52 2 5 30 0 52 3 48 53 0 34 2 4 3 11) [emit
   :close :tcall :call]) compile-arglist])])
 compile-or
-#function(">\x044\x005\x005\x015\x025\x03-4\x01\x04\x06\x0b" [compile-short-circuit :brt])
+#function(#array(uint8 62 4 52 0 53 0 53 1 53 2 53 3 45 52 1 4 6 11) [compile-short-circuit
+  :brt])
 compile-prog1
-#function(">\x034\x005\x005\x01-4\x015\x02\x03\x01\x03\x04\x024\x025\x02\x03\x01\x17\x065\x004\x035\x005\x01-4\x025\x02\x03\x01\x03\x04\x024\x045\x004\x05\x04\x02\x0b-\x0b" [compile-in cadr cddr compile-begin emit :pop])
+#function(#array(uint8 62 3 52 0 53 0 53 1 45 52 1 53 2 3 1 3 4 2 52 2 53 2 3 1 23 6 53 0 52 3 53 0 53 1 45 52 2 53 2 3 1 3 4 2 52 4 53 0 52 5 4 2 11 45 11) [compile-in
+  cadr cddr compile-begin emit :pop])
+compile-sym
+#function(#array(uint8 62 4 50 0 52 1 53 2 53 1 47 44 3 4 64 4 2 11) [#function(#array(uint8 65 2 50 0 53 0 29 64 4 2 11) [#function(#array(uint8 65 2 53 0 50 0 14 6 30 0 52 1 54 1 0 54 1 3 47 42 52 2 54 0 0 3 1 4 3 11 53 0 50 3 14 6 65 0 52 1 54 1 0 54 1 3 48 42 52 2 54 0 0 3 1 52 4 54 0 0 3 1 4 4 11 52 1 54 1 0 54 1 3 49 2 42 54 1 2 4 3 11) [arg
+  emit cadr closed caddr])]) lookup-sym])
+compile-thunk
+#function(#array(uint8 62 1 52 0 50 1 46 53 0 28 3 4 1 11) [compile lambda])
+compile-for
+#function(#array(uint8 62 5 52 0 53 4 3 1 6 56 0 52 1 53 0 53 1 45 53 2 3 4 2 52 1 53 0 53 1 45 53 3 3 4 2 52 1 53 0 53 1 45 53 4 3 4 2 52 2 53 0 52 3 4 2 11 52 4 50 5 4 1 11) [1arg-lambda?
+  compile-in emit :for error "for: third form must be a 1-argument lambda"])
+compile-if
+#function(#array(uint8 62 4 50 0 52 1 53 0 3 1 52 1 53 0 3 1 64 4 3 11) [#function(#array(uint8 65 3 52 0 54 0 0 54 0 1 45 52 1 54 0 3 3 1 3 4 2 52 2 54 0 0 52 3 53 0 3 3 2 52 0 54 0 0 54 0 1 54 0 2 52 4 54 0 3 3 1 3 4 2 54 0 2 6 72 0 52 2 54 0 0 52 5 3 2 5 83 0 52 2 54 0 0 52 6 53 1 3 3 2 52 7 54 0 0 53 0 3 2 2 52 0 54 0 0 54 0 1 54 0 2 52 8 54 0 3 3 1 23 6 126 0 52 9 54 0 3 3 1 5 127 0 45 3 4 2 52 7 54 0 0 53 1 4 2 11) [compile-in
+  cadr emit :brf caddr :ret :jmp mark-label cdddr cadddr]) make-label])
+compile-call
+#function(#array(uint8 62 4 50 0 53 3 29 64 4 2 11) [#function(#array(uint8 65 2 50 0 53 0 20 1 6 53 0 2 52 1 53 0 54 0 1 3 2 17 1 6 53 0 2 53 0 22 1 6 53 0 2 52 2 53 0 3 1 1 6 53 0 2 52 3 53 0 3 1 24 6 65 0 52 3 53 0 3 1 5 67 0 53 0 64 4 2 11) [#function(#array(uint8 65 2 50 0 53 0 24 1 6 18 0 2 52 1 53 0 3 1 64 4 2 11) [#function(#array(uint8 65 2 53 0 17 6 25 0 52 0 54 2 0 54 2 1 45 54 0 0 3 4 5 26 0 45 2 50 1 52 2 54 2 0 54 2 1 54 2 3 30 3 3 64 4 2 11) [compile-in
+  #function(#array(uint8 65 2 54 0 0 6 24 0 50 0 52 1 52 2 54 0 0 45 3 3 64 4 2 11 52 3 54 3 0 54 3 2 6 40 0 52 4 5 42 0 52 5 53 0 4 3 11) [#function(#array(uint8 65 2 53 0 1 6 20 0 2 52 0 54 4 3 30 53 0 3 2 17 6 35 0 52 1 54 2 0 53 0 3 2 5 36 0 45 2 50 2 54 1 0 64 4 2 11) [length=
+  argc-error #function(#array(uint8 65 2 53 0 52 0 14 6 42 0 54 1 0 47 38 6 28 0 52 1 54 5 0 52 2 4 2 11 52 1 54 5 0 54 2 0 54 1 0 4 3 11 53 0 52 3 14 6 82 0 54 1 0 47 38 6 68 0 52 1 54 5 0 52 4 4 2 11 52 1 54 5 0 54 2 0 54 1 0 4 3 11 53 0 52 5 14 6 121 0 54 1 0 47 38 6 107 0 52 6 54 3 0 48 4 2 11 52 1 54 5 0 54 2 0 54 1 0 4 3 11 53 0 52 7 14 6 161 0 54 1 0 47 38 6 147 0 52 1 54 5 0 52 8 4 2 11 52 1 54 5 0 54 2 0 54 1 0 4 3 11 53 0 52 9 14 6 200 0 54 1 0 47 38 6 186 0 52 6 54 3 0 48 4 2 11 52 1 54 5 0 54 2 0 54 1 0 4 3 11 53 0 52 10 14 6 242 0 54 1 0 47 38 6 228 0 52 1 54 5 0 52 11 50 12 4 3 11 52 1 54 5 0 54 2 0 54 1 0 4 3 11 52 1 54 5 0 54 5 2 1 6 5 1 2 54 2 0 52 13 13 6 13 1 52 14 5 16 1 54 2 0 4 2 11) [:list
+  emit :loadnil :+ :load0 :- argc-error :* :load1 :/ :vector :loadv [] :apply
+  :tapply])]) get arg-counts emit :tcall :call]) compile-arglist])
+  builtin->instruction]) in-env? constant? top-level-value])])
 compile-f
-#function("?\x022\x004\x01\x03\x004\x025\x01\x03\x01@\x04\x03\x0b" [#function("A\x036\x00\x02\x12\x11\x06\x1f\x004\x005\x004\x014\x024\x035\x01\x03\x01\x03\x01\x03\x03\x05R\x004\x045\x01\x03\x01\x12\x06:\x004\x005\x004\x054\x035\x01\x03\x01\x03\x03\x05R\x004\x005\x004\x065\x01\x10\x06J\x00/\x05P\x004\x035\x01\x03\x01\x03\x03\x024\x075\x004\x085\x01\x03\x016\x00\x00\x1b,4\x096\x00\x01\x03\x01\x03\x04\x024\x005\x004\x0a\x03\x02\x024\x0b4\x0c5\x00/*\x03\x014\x0d5\x00\x03\x01\x04\x02\x0b" [emit
+#function(#array(uint8 63 2 50 0 52 1 3 0 52 2 53 1 3 1 64 4 3 11) [#function(#array(uint8 65 3 54 0 2 18 17 6 31 0 52 0 53 0 52 1 52 2 52 3 53 1 3 1 3 1 3 3 5 82 0 52 4 53 1 3 1 18 6 58 0 52 0 53 0 52 5 52 3 53 1 3 1 3 3 5 82 0 52 0 53 0 52 6 53 1 16 6 74 0 47 5 80 0 52 3 53 1 3 1 3 3 2 52 7 53 0 52 8 53 1 3 1 54 0 0 27 44 52 9 54 0 1 3 1 3 4 2 52 0 53 0 52 10 3 2 2 52 11 52 12 53 0 47 42 3 1 52 13 53 0 3 1 4 2 11) [emit
   :let 1+ length lastcdr :argc :vargc compile-in to-proper caddr :ret function
   encode-byte-code const-to-idx-vec]) make-code-emitter cadr])
-compile-call
-#function(">\x042\x005\x03\x1d@\x04\x02\x0b" [#function("A\x022\x005\x00\x14\x01\x065\x00\x024\x015\x006\x00\x01\x03\x02\x11\x01\x065\x00\x025\x00\x16\x01\x065\x00\x024\x025\x00\x03\x01\x01\x065\x00\x024\x035\x00\x03\x01\x18\x06A\x004\x035\x00\x03\x01\x05C\x005\x00@\x04\x02\x0b" [#function("A\x022\x005\x00\x18\x01\x06\x12\x00\x024\x015\x00\x03\x01@\x04\x02\x0b" [#function("A\x025\x00\x11\x06\x19\x004\x006\x02\x006\x02\x01-6\x00\x00\x03\x04\x05\x1a\x00-\x022\x014\x026\x02\x006\x02\x016\x02\x03\x1e\x03\x03@\x04\x02\x0b" [compile-in
-  #function("A\x026\x00\x00\x06\x18\x002\x004\x014\x026\x00\x00-\x03\x03@\x04\x02\x0b4\x036\x03\x006\x03\x02\x06(\x004\x04\x05*\x004\x055\x00\x04\x03\x0b" [#function("A\x025\x00\x01\x06\x14\x00\x024\x006\x04\x03\x1e5\x00\x03\x02\x11\x06#\x004\x016\x02\x005\x00\x03\x02\x05$\x00-\x022\x026\x01\x00@\x04\x02\x0b" [length= argc-error
-							    #function("A\x025\x004\x00\x0e\x06*\x006\x01\x00/&\x06\x1c\x004\x016\x05\x004\x02\x04\x02\x0b4\x016\x05\x006\x02\x006\x01\x00\x04\x03\x0b5\x004\x03\x0e\x06b\x006\x01\x00/&\x06D\x004\x016\x05\x004\x04\x04\x02\x0b6\x01\x000&\x06T\x004\x056\x05\x00\x04\x01\x0b4\x016\x05\x006\x02\x006\x01\x00\x04\x03\x0b5\x004\x06\x0e\x06\x89\x006\x01\x00/&\x06{\x004\x076\x03\x000\x04\x02\x0b4\x016\x05\x006\x02\x006\x01\x00\x04\x03\x0b5\x004\x08\x0e\x06\xc1\x006\x01\x00/&\x06\xa3\x004\x016\x05\x004\x09\x04\x02\x0b6\x01\x000&\x06\xb3\x004\x056\x05\x00\x04\x01\x0b4\x016\x05\x006\x02\x006\x01\x00\x04\x03\x0b5\x004\x0a\x0e\x06\xe8\x006\x01\x00/&\x06\xda\x004\x076\x03\x000\x04\x02\x0b4\x016\x05\x006\x02\x006\x01\x00\x04\x03\x0b5\x004\x0b\x0e\x06\x12\x016\x01\x00/&\x06\x04\x014\x016\x05\x004\x0c2\x0d\x04\x03\x0b4\x016\x05\x006\x02\x006\x01\x00\x04\x03\x0b4\x016\x05\x006\x05\x02\x01\x06%\x01\x026\x02\x004\x0e\x0d\x06-\x014\x0f\x050\x016\x02\x00\x04\x02\x0b" [:list
-  emit :loadnil :+ :load0 emit-nothing :- argc-error :* :load1 :/ :vector
-  :loadv [] :apply :tapply])]) get arg-counts emit :tcall :call])
-  compile-arglist]) builtin->instruction]) in-env? constant? top-level-value])])
-compile-for
-#function(">\x054\x005\x04\x03\x01\x068\x004\x015\x005\x01-5\x02\x03\x04\x024\x015\x005\x01-5\x03\x03\x04\x024\x015\x005\x01-5\x04\x03\x04\x024\x025\x004\x03\x04\x02\x0b4\x042\x05\x04\x01\x0b" [1arg-lambda? compile-in emit :for error
-				      "for: third form must be a 1-argument lambda"])
 compile-app
-#function(">\x042\x005\x03\x1d@\x04\x02\x0b" [#function("A\x025\x00\x17\x01\x06\x1f\x00\x025\x00\x1d2\x00\x0d\x01\x06\x1f\x00\x024\x014\x025\x00\x03\x01\x03\x01\x063\x004\x036\x00\x006\x00\x016\x00\x026\x00\x03\x04\x04\x0b4\x046\x00\x006\x00\x016\x00\x026\x00\x03\x04\x04\x0b" [lambda list? cadr compile-let
-						  compile-call])])
-compile-arglist
-#function(">\x032\x004\x015\x024\x02\x03\x02@\x04\x02\x0b" [#function("A\x025\x00\x069\x004\x006\x00\x004\x016\x00\x024\x02\x03\x026\x00\x01\x03\x03\x022\x034\x044\x052\x06<4\x075\x004\x02\x03\x02\x03\x02\x1b@\x03\x02\x024\x020\"\x02\x0b4\x006\x00\x006\x00\x026\x00\x01\x03\x03\x024\x086\x00\x02\x04\x01\x0b" [just-compile-args
-							      list-head
-							      MAX_ARGS #function("A\x024\x006\x01\x006\x01\x01-5\x00\x04\x04\x0b" [compile-in])
-							      nconc map #function(">\x014\x005\x00\x1b\x0b" [list])
-							      list-partition
-							      length]) length>
-		    MAX_ARGS])
-compile
-#function(">\x014\x00.5\x00\x04\x02\x0b" [compile-f])
+#function(#array(uint8 62 4 50 0 53 3 29 64 4 2 11) [#function(#array(uint8 65 2 53 0 23 1 6 31 0 2 53 0 29 50 0 13 1 6 31 0 2 52 1 52 2 53 0 3 1 3 1 6 51 0 52 3 54 0 0 54 0 1 54 0 2 54 0 3 4 4 11 52 4 54 0 0 54 0 1 54 0 2 54 0 3 4 4 11) [lambda
+  list? cadr compile-let compile-call])])
 compile-and
-#function(">\x044\x005\x005\x015\x025\x03,4\x01\x04\x06\x0b" [compile-short-circuit :brf])
+#function(#array(uint8 62 4 52 0 53 0 53 1 53 2 53 3 44 52 1 4 6 11) [compile-short-circuit
+  :brf])
+compile
+#function(#array(uint8 62 1 52 0 46 53 0 4 2 11) [compile-f])
+compile-arglist
+#function(#array(uint8 62 3 50 0 52 1 53 2 52 2 3 2 64 4 2 11) [#function(#array(uint8 65 2 53 0 6 57 0 52 0 54 0 0 52 1 54 0 2 52 2 3 2 54 0 1 3 3 2 50 3 52 4 52 5 50 6 60 52 7 53 0 52 2 3 2 3 2 27 64 3 2 2 52 2 48 34 2 11 52 0 54 0 0 54 0 2 54 0 1 3 3 2 52 8 54 0 2 4 1 11) [just-compile-args
+  list-head MAX_ARGS #function(#array(uint8 65 2 52 0 54 1 0 54 1 1 45 53 0 4 4 11) [compile-in])
+  nconc map #function(#array(uint8 62 1 52 0 53 0 27 11) [list]) list-partition
+  length]) length> MAX_ARGS])
 compile-begin
-#function(">\x045\x03\x10\x06\x14\x004\x005\x005\x015\x02-\x04\x04\x0b5\x03\x1e\x10\x06)\x004\x005\x005\x015\x025\x03\x1d\x04\x04\x0b4\x005\x005\x01-5\x03\x1d\x03\x04\x024\x015\x004\x02\x03\x02\x024\x035\x005\x015\x025\x03\x1e\x04\x04\x0b" [compile-in emit :pop compile-begin])
-compile-if
-#function(">\x042\x004\x015\x00\x03\x014\x015\x00\x03\x01@\x04\x03\x0b" [#function("A\x034\x006\x00\x006\x00\x01-4\x016\x00\x03\x03\x01\x03\x04\x024\x026\x00\x004\x035\x00\x03\x03\x024\x006\x00\x006\x00\x016\x00\x024\x046\x00\x03\x03\x01\x03\x04\x026\x00\x02\x06H\x004\x026\x00\x004\x05\x03\x02\x05S\x004\x026\x00\x004\x065\x01\x03\x03\x024\x076\x00\x005\x00\x03\x02\x024\x006\x00\x006\x00\x016\x00\x024\x086\x00\x03\x03\x01\x17\x06~\x004\x096\x00\x03\x03\x01\x05\x7f\x00-\x03\x04\x024\x076\x00\x005\x01\x04\x02\x0b" [compile-in
-  cadr emit :brf caddr :ret :jmp mark-label cdddr cadddr]) make-label])
+#function(#array(uint8 62 4 53 3 16 6 20 0 52 0 53 0 53 1 53 2 45 4 4 11 53 3 30 16 6 41 0 52 0 53 0 53 1 53 2 53 3 29 4 4 11 52 0 53 0 53 1 45 53 3 29 3 4 2 52 1 53 0 52 2 3 2 2 52 3 53 0 53 1 53 2 53 3 30 4 4 11) [compile-in
+  emit :pop compile-begin])
 compile-in
-#function(">\x045\x03\x14\x06\x15\x004\x005\x005\x015\x032\x01\x04\x04\x0b5\x03\x10\x06\xa1\x005\x03/\x0d\x06+\x004\x025\x004\x03\x04\x02\x0b5\x030\x0d\x06;\x004\x025\x004\x04\x04\x02\x0b5\x03,\x0d\x06K\x004\x025\x004\x05\x04\x02\x0b5\x03-\x0d\x06[\x004\x025\x004\x06\x04\x02\x0b5\x03.\x0d\x06k\x004\x025\x004\x07\x04\x02\x0b5\x03\x1a\x01\x06\x88\x00\x024\x085\x031\x80\x03\x02\x01\x06\x88\x00\x024\x095\x031\x7f\x03\x02\x06\x96\x004\x025\x004\x0a5\x03\x04\x03\x0b4\x025\x004\x0b5\x03\x04\x03\x0b2\x0c5\x03\x1d@\x04\x02\x0b" [compile-sym
+#function(#array(uint8 62 4 53 3 20 6 21 0 52 0 53 0 53 1 53 3 50 1 4 4 11 53 3 16 6 161 0 53 3 47 13 6 43 0 52 2 53 0 52 3 4 2 11 53 3 48 13 6 59 0 52 2 53 0 52 4 4 2 11 53 3 44 13 6 75 0 52 2 53 0 52 5 4 2 11 53 3 45 13 6 91 0 52 2 53 0 52 6 4 2 11 53 3 46 13 6 107 0 52 2 53 0 52 7 4 2 11 53 3 26 1 6 136 0 2 52 8 53 3 49 128 3 2 1 6 136 0 2 52 9 53 3 49 127 3 2 6 150 0 52 2 53 0 52 10 53 3 4 3 11 52 2 53 0 52 11 53 3 4 3 11 50 12 53 3 29 64 4 2 11) [compile-sym
   [:loada :loadc :loadg] emit :load0 :load1 :loadt :loadf :loadnil >= <=
-  :loadi8 :loadv #function("A\x025\x002\x00\x0e\x06\x1b\x004\x016\x00\x004\x024\x036\x00\x03\x03\x01\x04\x03\x0b5\x002\x04\x0e\x068\x004\x056\x00\x006\x00\x016\x00\x024\x066\x00\x03\x03\x01\x04\x04\x0b5\x002\x07\x0e\x06Q\x004\x086\x00\x006\x00\x016\x00\x026\x00\x03\x04\x04\x0b5\x002\x09\x0e\x06k\x004\x0a6\x00\x006\x00\x016\x00\x026\x00\x03\x1e\x04\x04\x0b5\x002\x0b\x0e\x06\x81\x004\x0c6\x00\x006\x00\x016\x00\x03\x04\x03\x0b5\x002\x0d\x0e\x06\xa7\x004\x016\x00\x004\x024\x0e6\x00\x016\x00\x03\x03\x02\x03\x03\x024\x016\x00\x004\x0f\x04\x02\x0b5\x002\x10\x0e\x06\xc1\x004\x116\x00\x006\x00\x016\x00\x026\x00\x03\x1e\x04\x04\x0b5\x002\x12\x0e\x06\xdb\x004\x136\x00\x006\x00\x016\x00\x026\x00\x03\x1e\x04\x04\x0b5\x002\x14\x0e\x06\xff\x004\x156\x00\x006\x00\x014\x036\x00\x03\x03\x012\x094\x166\x00\x03\x03\x01\x1b\x04\x04\x0b5\x002\x17\x0e\x06'\x014\x186\x00\x006\x00\x014\x036\x00\x03\x03\x014\x196\x00\x03\x03\x014\x1a6\x00\x03\x03\x01\x04\x05\x0b5\x002\x1b\x0e\x06V\x014\x056\x00\x006\x00\x01-4\x196\x00\x03\x03\x01\x03\x04\x024\x1c6\x00\x006\x00\x014\x036\x00\x03\x03\x012\x1d\x04\x04\x0b5\x002\x1e\x0e\x06\xac\x014\x056\x00\x006\x00\x01-2\x0d.4\x036\x00\x03\x03\x01\x1c\x03\x03\x04\x024\x1f4\x196\x00\x03\x03\x01\x03\x01\x06\x88\x01-\x05\x8e\x014 2!\x03\x01\x024\x056\x00\x006\x00\x01-4\x196\x00\x03\x03\x01\x03\x04\x024\x016\x00\x004\"\x04\x02\x0b4#6\x00\x006\x00\x016\x00\x026\x00\x03\x04\x04\x0b" [quote
+  :loadi8 :loadv #function(#array(uint8 65 2 53 0 50 0 14 6 27 0 52 1 54 0 0 52 2 52 3 54 0 3 3 1 4 3 11 53 0 50 4 14 6 56 0 52 5 54 0 0 54 0 1 54 0 2 52 6 54 0 3 3 1 4 4 11 53 0 50 7 14 6 81 0 52 8 54 0 0 54 0 1 54 0 2 54 0 3 4 4 11 53 0 50 9 14 6 107 0 52 10 54 0 0 54 0 1 54 0 2 54 0 3 30 4 4 11 53 0 50 11 14 6 129 0 52 12 54 0 0 54 0 1 54 0 3 4 3 11 53 0 50 13 14 6 167 0 52 1 54 0 0 52 2 52 14 54 0 1 54 0 3 3 2 3 3 2 52 1 54 0 0 52 15 4 2 11 53 0 50 16 14 6 193 0 52 17 54 0 0 54 0 1 54 0 2 54 0 3 30 4 4 11 53 0 50 18 14 6 219 0 52 19 54 0 0 54 0 1 54 0 2 54 0 3 30 4 4 11 53 0 50 20 14 6 255 0 52 21 54 0 0 54 0 1 52 3 54 0 3 3 1 50 9 52 22 54 0 3 3 1 27 4 4 11 53 0 50 23 14 6 39 1 52 24 54 0 0 54 0 1 52 3 54 0 3 3 1 52 25 54 0 3 3 1 52 26 54 0 3 3 1 4 5 11 53 0 50 27 14 6 86 1 52 5 54 0 0 54 0 1 45 52 25 54 0 3 3 1 3 4 2 52 28 54 0 0 54 0 1 52 3 54 0 3 3 1 50 29 4 4 11 53 0 50 30 14 6 172 1 52 5 54 0 0 54 0 1 45 50 13 46 52 3 54 0 3 3 1 28 3 3 4 2 52 31 52 25 54 0 3 3 1 3 1 6 136 1 45 5 142 1 52 32 50 33 3 1 2 52 5 54 0 0 54 0 1 45 52 25 54 0 3 3 1 3 4 2 52 1 54 0 0 52 34 4 2 11 52 35 54 0 0 54 0 1 54 0 2 54 0 3 4 4 11) [quote
   emit :loadv cadr cond compile-in cond->if if compile-if begin compile-begin
   prog1 compile-prog1 lambda compile-f :closure and compile-and or compile-or
   while compile-while cddr for compile-for caddr cadddr set! compile-sym [:seta
   :setc :setg] trycatch 1arg-lambda? error "trycatch: second form must be a 1-argument lambda"
   :trycatch compile-app])])
-compile-sym
-#function(">\x042\x004\x015\x025\x01/,\x03\x04@\x04\x02\x0b" [#function("A\x022\x005\x00\x1d@\x04\x02\x0b" [#function("A\x025\x002\x00\x0e\x06\x1e\x004\x016\x01\x006\x01\x03/*4\x026\x00\x00\x03\x01\x04\x03\x0b5\x002\x03\x0e\x06A\x004\x016\x01\x006\x01\x030*4\x026\x00\x00\x03\x014\x046\x00\x00\x03\x01\x04\x04\x0b4\x016\x01\x006\x01\x031\x02*6\x01\x02\x04\x03\x0b" [arg
-  emit cadr closed caddr])]) lookup-sym])
-compile-thunk
-#function(">\x014\x002\x01.5\x00\x1c\x03\x04\x01\x0b" [compile lambda])
 char?
-#function(">\x014\x005\x00\x03\x012\x01\x0d\x0b" [typeof wchar])
-cdddr
-#function(">\x015\x00\x1e\x1e\x1e\x0b" [])
-cddar
-#function(">\x015\x00\x1d\x1e\x1e\x0b" [])
+#function(#array(uint8 62 1 52 0 53 0 3 1 50 1 13 11) [typeof wchar])
 cddr
-#function(">\x015\x00\x1e\x1e\x0b" [])
+#function(#array(uint8 62 1 53 0 30 30 11) [])
+cddar
+#function(#array(uint8 62 1 53 0 29 30 30 11) [])
 cdadr
-#function(">\x015\x00\x1e\x1d\x1e\x0b" [])
+#function(#array(uint8 62 1 53 0 30 29 30 11) [])
 cdaar
-#function(">\x015\x00\x1d\x1d\x1e\x0b" [])
+#function(#array(uint8 62 1 53 0 29 29 30 11) [])
 cdar
-#function(">\x015\x00\x1d\x1e\x0b" [])
-cadddr
-#function(">\x015\x00\x1e\x1e\x1e\x1d\x0b" [])
-caddr
-#function(">\x015\x00\x1e\x1e\x1d\x0b" [])
+#function(#array(uint8 62 1 53 0 29 30 11) [])
+cdddr
+#function(#array(uint8 62 1 53 0 30 30 30 11) [])
 cadar
-#function(">\x015\x00\x1d\x1e\x1d\x0b" [])
-caadr
-#function(">\x015\x00\x1e\x1d\x1d\x0b" [])
+#function(#array(uint8 62 1 53 0 29 30 29 11) [])
+cadddr
+#function(#array(uint8 62 1 53 0 30 30 30 29 11) [])
+caddr
+#function(#array(uint8 62 1 53 0 30 30 29 11) [])
 caaar
-#function(">\x015\x00\x1d\x1d\x1d\x0b" [])
+#function(#array(uint8 62 1 53 0 29 29 29 11) [])
+caadr
+#function(#array(uint8 62 1 53 0 30 29 29 11) [])
 caar
-#function(">\x015\x00\x1d\x1d\x0b" [])
+#function(#array(uint8 62 1 53 0 29 29 11) [])
 cadr
-#function(">\x015\x00\x1e\x1d\x0b" [])
+#function(#array(uint8 62 1 53 0 30 29 11) [])
 builtin->instruction
-#function(">\x012\x004\x014\x022\x035\x00\x03\x02\x03\x01@\x04\x02\x0b" [#function("A\x024\x004\x015\x00\x03\x02\x01\x06\x11\x00\x025\x00\x0b" [has? Instructions]) intern string #\:])
-bq-bracket
-#function(">\x015\x00\x10\x06\x13\x004\x004\x015\x00\x03\x01\x1c\x02\x0b5\x00\x1d2\x02\x0d\x06'\x004\x004\x035\x00\x03\x01\x1c\x02\x0b5\x00\x1d2\x04\x0d\x06;\x002\x054\x035\x00\x03\x01\x1c\x02\x0b5\x00\x1d2\x06\x0d\x06K\x004\x035\x00\x04\x01\x0b,\x06Z\x004\x004\x015\x00\x03\x01\x1c\x02\x0b-\x0b" [list bq-process *comma* cadr
-					  *comma-at* copy-list *comma-dot*])
-bq-bracket1
-#function(">\x015\x00\x17\x01\x06\x10\x00\x025\x00\x1d2\x00\x0d\x06\x1a\x004\x015\x00\x04\x01\x0b4\x025\x00\x04\x01\x0b" [*comma* cadr bq-process])
+#function(#array(uint8 62 1 50 0 52 1 52 2 50 3 53 0 3 2 3 1 64 4 2 11) [#function(#array(uint8 65 2 52 0 52 1 53 0 3 2 1 6 17 0 2 53 0 11) [has?
+  Instructions]) intern string #\:])
 bq-process
-#function(">\x014\x005\x00\x03\x01\x06$\x005\x00\x19\x06!\x002\x014\x024\x035\x00\x03\x01\x03\x01@\x04\x02\x0b5\x00\x0b5\x00\x10\x061\x002\x045\x00\x1c\x02\x0b5\x00\x1d2\x05\x0d\x06I\x004\x024\x024\x065\x00\x03\x01\x03\x01\x04\x01\x0b5\x00\x1d2\x07\x0d\x06Y\x004\x065\x00\x04\x01\x0b4\x084\x095\x00\x03\x02\x11\x06y\x002\x0a4\x0b5\x00\x03\x014\x0c4\x0d5\x00\x03\x02@\x04\x03\x0b,\x06\x86\x002\x0e5\x00.@\x04\x03\x0b-\x0b" [self-evaluating? #function("A\x025\x00\x1d2\x00\x0d\x06\x12\x004\x015\x00\x1e\x1b\x0b4\x024\x015\x00\x1c\x03\x0b" [list
+#function(#array(uint8 62 1 52 0 53 0 3 1 6 36 0 53 0 25 6 33 0 50 1 52 2 52 3 53 0 3 1 3 1 64 4 2 11 53 0 11 53 0 16 6 49 0 50 4 53 0 28 2 11 53 0 29 50 5 13 6 73 0 52 2 52 2 52 6 53 0 3 1 3 1 4 1 11 53 0 29 50 7 13 6 89 0 52 6 53 0 4 1 11 52 8 52 9 53 0 3 2 17 6 121 0 50 10 52 11 53 0 3 1 52 12 52 13 53 0 3 2 64 4 3 11 44 6 134 0 50 14 53 0 46 64 4 3 11 45 11) [self-evaluating?
+  #function(#array(uint8 65 2 53 0 29 50 0 13 6 18 0 52 1 53 0 30 27 11 52 2 52 1 53 0 28 3 11) [list
   vector apply]) bq-process vector->list quote backquote cadr *comma* any
-							   splice-form? #function("A\x035\x00\x12\x06\x0e\x002\x005\x01\x1b\x0b4\x012\x025\x01\x1b4\x035\x00\x03\x01\x1c\x01\x04\x02\x0b" [list
-  nconc nlist* bq-process]) lastcdr map bq-bracket1 #function("A\x03-5\x00\x17\x01\x06\x12\x00\x025\x00\x1d2\x00\x0d\x11\x06+\x00\x024\x015\x00\x1d\x03\x015\x01\x1b9\x01\x025\x00\x1e9\x00\x05\x03\x00\x022\x025\x00\x17\x06E\x004\x035\x014\x045\x00\x03\x01\x1c\x01\x03\x02\x05j\x005\x00\x12\x06T\x004\x055\x01\x03\x01\x05j\x00,\x06i\x004\x035\x014\x065\x00\x03\x01\x1c\x01\x03\x02\x05j\x00-@\x04\x02\x0b" [*comma*
-  bq-bracket #function("A\x025\x00\x1e\x12\x06\x0d\x005\x00\x1d\x0b2\x005\x00\x1b\x0b" [nconc]) nreconc cadr nreverse bq-process])])
+  splice-form? #function(#array(uint8 65 3 53 0 18 6 14 0 50 0 53 1 27 11 52 1 50 2 53 1 27 52 3 53 0 3 1 28 1 4 2 11) [list
+  nconc nlist* bq-process]) lastcdr map bq-bracket1 #function(#array(uint8 65 3 45 53 0 23 1 6 18 0 2 53 0 29 50 0 13 17 6 43 0 2 52 1 53 0 29 3 1 53 1 27 57 1 2 53 0 30 57 0 5 3 0 2 50 2 53 0 23 6 69 0 52 3 53 1 52 4 53 0 3 1 28 1 3 2 5 106 0 53 0 18 6 84 0 52 5 53 1 3 1 5 106 0 44 6 105 0 52 3 53 1 52 6 53 0 3 1 28 1 3 2 5 106 0 45 64 4 2 11) [*comma*
+  bq-bracket #function(#array(uint8 65 2 53 0 30 18 6 13 0 53 0 29 11 50 0 53 0 27 11) [nconc])
+  nreconc cadr nreverse bq-process])])
+bq-bracket
+#function(#array(uint8 62 1 53 0 16 6 19 0 52 0 52 1 53 0 3 1 28 2 11 53 0 29 50 2 13 6 39 0 52 0 52 3 53 0 3 1 28 2 11 53 0 29 50 4 13 6 59 0 50 5 52 3 53 0 3 1 28 2 11 53 0 29 50 6 13 6 75 0 52 3 53 0 4 1 11 44 6 90 0 52 0 52 1 53 0 3 1 28 2 11 45 11) [list
+  bq-process *comma* cadr *comma-at* copy-list *comma-dot*])
+bq-bracket1
+#function(#array(uint8 62 1 53 0 23 1 6 16 0 2 53 0 29 50 0 13 6 26 0 52 1 53 0 4 1 11 52 2 53 0 4 1 11) [*comma*
+  cadr bq-process])
 assv
-#function(">\x025\x01\x10\x06\x0a\x00-\x0b4\x005\x01\x03\x015\x00\x0e\x06\x1a\x005\x01\x1d\x0b,\x06(\x004\x015\x005\x01\x1e\x04\x02\x0b-\x0b" [caar assv])
+#function(#array(uint8 62 2 53 1 16 6 10 0 45 11 52 0 53 1 3 1 53 0 14 6 26 0 53 1 29 11 44 6 40 0 52 1 53 0 53 1 30 4 2 11 45 11) [caar
+  assv])
 assoc
-#function(">\x025\x01\x10\x06\x0a\x00-\x0b4\x005\x01\x03\x015\x00\x0f\x06\x1a\x005\x01\x1d\x0b,\x06(\x004\x015\x005\x01\x1e\x04\x02\x0b-\x0b" [caar assoc])
+#function(#array(uint8 62 2 53 1 16 6 10 0 45 11 52 0 53 1 3 1 53 0 15 6 26 0 53 1 29 11 44 6 40 0 52 1 53 0 53 1 30 4 2 11 45 11) [caar
+  assoc])
 argc-error
-#function(">\x024\x004\x012\x025\x002\x035\x015\x010&\x06\x1a\x002\x04\x05\x1c\x002\x05\x03\x05\x04\x01\x0b" [error string "compile error: " " expects " " argument."
-			  " arguments."])
+#function(#array(uint8 62 2 52 0 52 1 50 2 53 0 50 3 53 1 53 1 48 38 6 26 0 50 4 5 28 0 50 5 3 5 4 1 11) [error
+  string "compile error: " " expects " " argument." " arguments."])
 arg-counts
 #table(:not 1  :set-cdr! 2  :cons 2  :number? 1  :equal? 2  :cdr 1  :vector? 1  :eqv? 2  :apply 2  := 2  :atom? 1  :aref 2  :compare 2  :< 2  :null? 1  :eq? 2  :car 1  :set-car! 2  :builtin? 1  :aset! 3  :bound? 1  :boolean? 1  :pair? 1  :symbol? 1  :fixnum? 1)
-any
-#function(">\x025\x01\x17\x01\x06\x1f\x00\x025\x005\x01\x1d\x03\x01\x01\x07\x1f\x00\x024\x005\x005\x01\x1e\x04\x02\x0b" [any])
-__start
-#function(">\x014\x00\x03\x00\x025\x00\x1e\x17\x06!\x005\x00\x1e8\x01\x024\x024\x035\x00\x03\x01\x03\x01\x051\x005\x008\x01\x024\x044\x05\x03\x01\x024\x06\x03\x00\x024\x07/\x04\x01\x0b" [__init_globals *argv* __script cadr princ
-			       *banner* repl exit])
-__script
-#function(">\x012\x00<2\x01<=\x0b" [#function(">\x004\x006\x00\x00\x04\x01\x0b" [load])
-		    #function(">\x014\x005\x00\x03\x01\x024\x010\x04\x01\x0b" [print-exception exit])])
-__init_globals
-#function(">\x004\x002\x01\x0d\x01\x07\x1b\x00\x024\x002\x02\x0d\x01\x07\x1b\x00\x024\x002\x03\x0d\x06*\x002\x048\x05\x022\x068\x07\x053\x002\x088\x05\x022\x098\x07\x024\x0a8\x0b\x024\x0c8\x0d\x0b" [*os-name* win32 win64 windows "\\"
-				   *directory-separator* "\r\n" *linefeed* "/"
-				   "\n" *stdout* *output-stream* *stdin*
-				   *input-stream*])
-abs
-#function(">\x015\x00/'\x06\x0e\x005\x00#\x01\x0b5\x00\x0b" [])
-append
-#function("?\x005\x00\x12\x06\x0a\x00.\x0b5\x00\x1e\x12\x06\x15\x005\x00\x1d\x0b,\x06'\x004\x005\x00\x1d4\x015\x00\x1e!\x04\x02\x0b-\x0b" [append2 append])
 append2
-#function(">\x025\x00\x12\x06\x0b\x005\x01\x0b5\x00\x1d4\x005\x00\x1e5\x01\x03\x02\x1b\x0b" [append2])
+#function(#array(uint8 62 2 53 0 18 6 11 0 53 1 11 53 0 29 52 0 53 0 30 53 1 3 2 27 11) [append2])
+any
+#function(#array(uint8 62 2 53 1 23 1 6 31 0 2 53 0 53 1 29 3 1 1 7 31 0 2 52 0 53 0 53 1 30 4 2 11) [any])
+__start
+#function(#array(uint8 62 1 52 0 3 0 2 53 0 30 23 6 33 0 53 0 30 56 1 2 52 2 52 3 53 0 3 1 3 1 5 49 0 53 0 56 1 2 52 4 52 5 3 1 2 52 6 3 0 2 52 7 47 4 1 11) [__init_globals
+  *argv* __script cadr princ *banner* repl exit])
+__init_globals
+#function(#array(uint8 62 0 52 0 50 1 13 1 7 27 0 2 52 0 50 2 13 1 7 27 0 2 52 0 50 3 13 6 42 0 50 4 56 5 2 50 6 56 7 5 51 0 50 8 56 5 2 50 9 56 7 2 52 10 56 11 2 52 12 56 13 11) [*os-name*
+  win32 win64 windows "\\" *directory-separator* "\r\n" *linefeed* "/" "\n"
+  *stdout* *output-stream* *stdin* *input-stream*])
+__script
+#function(#array(uint8 62 1 50 0 60 50 1 60 61 11) [#function(#array(uint8 62 0 52 0 54 0 0 4 1 11) [load])
+						    #function(#array(uint8 62 1 52 0 53 0 3 1 2 52 1 48 4 1 11) [print-exception
+  exit])])
+abs
+#function(#array(uint8 62 1 53 0 47 39 6 14 0 53 0 35 1 11 53 0 11) [])
+append
+#function(#array(uint8 63 0 53 0 18 6 10 0 46 11 53 0 30 18 6 21 0 53 0 29 11 44 6 39 0 52 0 53 0 29 52 1 53 0 30 33 4 2 11 45 11) [append2
+  append])
 MAX_ARGS
 127
 Instructions
-#table(:nop 0  :tapply 12  :set-cdr! 32  :/ 37  :setc 58  :cons 27  :equal? 15  :cdr 30  :call 3  :eqv? 14  := 38  :setg.l 59  :list 28  :atom? 16  :aref 42  :load0 47  :let 65  :argc 62  :< 39  :null? 18  :loadg 52  :load1 48  :car 29  :brt.l 10  :vargc 63  :loada 53  :set-car! 31  :setg 56  :aset! 43  :bound? 22  :pair? 23  :symbol? 20  :fixnum? 26  :loadi8 49  :not 17  :* 36  :pop 2  :loadnil 46  :brf 6  :vector 41  :- 35  :loadv 50  :closure 60  :number? 21  :trycatch 61  :loadv.l 51  :vector? 25  :brf.l 9  :seta 57  :apply 33  :dup 1  :for 66  :loadc 54  :compare 40  :eq? 13  :+ 34  :jmp 5  :loadt 44  :brt 7  :builtin? 24  :loadg.l 55  :close 64  :tcall 4  :ret 11  :boolean? 19  :loadf 45  :jmp.l 8)
+#table(:set-cdr! 32  :/ 37  :call 3  := 38  :aref 42  :let 65  :argc 62  :loadg 52  :car 29  :brt.l 10  :vargc 63  :loada 53  :aset! 43  :pair? 23  :fixnum? 26  :brf 6  :closure 60  :number? 21  :loadv.l 51  :seta 57  :brf.l 9  :for 66  :dup 1  :compare 40  :eq? 13  :+ 34  :jmp 5  :loadt 44  :brt 7  :builtin? 24  :close 64  :tcall 4  :ret 11  :loadf 45  :jmp.l 8  :nop 0  :tapply 12  :setc 58  :cons 27  :equal? 15  :cdr 30  :setg.l 59  :eqv? 14  :list 28  :atom? 16  :load0 47  :< 39  :null? 18  :load1 48  :set-car! 31  :setg 56  :bound? 22  :symbol? 20  :loadi8 49  :not 17  :* 36  :pop 2  :loadnil 46  :loadv 50  :vector 41  :- 35  :trycatch 61  :vector? 25  :apply 33  :loadc 54  :loadg.l 55  :boolean? 19)
 >=
-#function(">\x025\x015\x00'\x01\x07\x11\x00\x025\x005\x01&\x0b" [])
+#function(#array(uint8 62 2 53 1 53 0 39 1 7 17 0 2 53 0 53 1 38 11) [])
 >
-#function(">\x025\x015\x00'\x0b" [])
+#function(#array(uint8 62 2 53 1 53 0 39 11) [])
 <=
-#function(">\x025\x005\x01'\x01\x07\x11\x00\x025\x005\x01&\x0b" [])
+#function(#array(uint8 62 2 53 0 53 1 39 1 7 17 0 2 53 0 53 1 38 11) [])
 1arg-lambda?
-#function(">\x015\x00\x17\x01\x065\x00\x025\x00\x1d2\x00\x0d\x01\x065\x00\x025\x00\x1e\x17\x01\x065\x00\x024\x015\x00\x03\x01\x17\x01\x065\x00\x024\x024\x015\x00\x03\x010\x04\x02\x0b" [lambda cadr length=])
+#function(#array(uint8 62 1 53 0 23 1 6 53 0 2 53 0 29 50 0 13 1 6 53 0 2 53 0 30 23 1 6 53 0 2 52 1 53 0 3 1 23 1 6 53 0 2 52 2 52 1 53 0 3 1 48 4 2 11) [lambda
+  cadr length=])
 1/Instructions
-#table(2 :pop  45 :loadf  59 :setg.l  15 :equal?  38 :=  50 :loadv  61 :trycatch  14 :eqv?  30 :cdr  40 :compare  11 :ret  28 :list  48 :load1  22 :bound?  36 :*  60 :closure  41 :vector  0 :nop  29 :car  56 :setg  23 :pair?  17 :not  4 :tcall  43 :aset!  3 :call  58 :setc  21 :number?  8 :jmp.l  39 :<  63 :vargc  51 :loadv.l  53 :loada  66 :for  44 :loadt  65 :let  55 :loadg.l  5 :jmp  27 :cons  46 :loadnil  34 :+  6 :brf  16 :atom?  42 :aref  10 :brt.l  31 :set-car!  25 :vector?  54 :loadc  13 :eq?  19 :boolean?  47 :load0  12 :tapply  32 :set-cdr!  62 :argc  20 :symbol?  26 :fixnum?  35 :-  9 :brf.l  7 :brt  37 :/  18 :null?  52 :loadg  49 :loadi8  1 :dup  24 :builtin?  64 :close  33 :apply  57 :seta)
-1-
-#function(">\x015\x000#\x02\x0b" [])
-1+
-#function(">\x015\x000\"\x02\x0b" [])
+#table(2 :pop  15 :equal?  38 :=  14 :eqv?  40 :compare  22 :bound?  36 :*  60 :closure  56 :setg  23 :pair?  3 :call  58 :setc  21 :number?  8 :jmp.l  51 :loadv.l  66 :for  65 :let  55 :loadg.l  5 :jmp  27 :cons  46 :loadnil  42 :aref  25 :vector?  13 :eq?  35 :-  12 :tapply  32 :set-cdr!  62 :argc  20 :symbol?  7 :brt  49 :loadi8  18 :null?  52 :loadg  1 :dup  45 :loadf  59 :setg.l  50 :loadv  61 :trycatch  11 :ret  30 :cdr  28 :list  48 :load1  41 :vector  0 :nop  29 :car  17 :not  4 :tcall  43 :aset!  39 :<  63 :vargc  53 :loada  44 :loadt  34 :+  6 :brf  16 :atom?  10 :brt.l  31 :set-car!  54 :loadc  19 :boolean?  47 :load0  9 :brf.l  26 :fixnum?  37 :/  24 :builtin?  64 :close  33 :apply  57 :seta)
 /=
-#function(">\x025\x005\x01&\x11\x0b" [])
+#function(#array(uint8 62 2 53 0 53 1 38 17 11) [])
+1+
+#function(#array(uint8 62 1 53 0 48 34 2 11) [])
+1-
+#function(#array(uint8 62 1 53 0 48 35 2 11) [])
 *whitespace*
 "\t\n\v\f\r \u0085  ᠎           \u2028\u2029  　"
 *syntax-environment*
-#table(define #function("?\x015\x00\x14\x06\x12\x002\x005\x005\x01\x1d\x1c\x03\x0b2\x005\x00\x1d2\x015\x00\x1e4\x025\x01\x03\x01\x1c\x03\x1c\x03\x0b" [set! lambda f-body])  letrec #function("?\x012\x004\x014\x025\x00\x03\x024\x034\x044\x012\x05<5\x00\x03\x025\x01\x03\x02\x03\x01\x1c\x034\x012\x06<5\x00\x03\x02\x1b\x0b" [lambda
-  map car f-body nconc #function(">\x012\x005\x00\x1b\x0b" [set!])
-  #function(">\x01-\x0b" [])])  backquote #function(">\x014\x005\x00\x04\x01\x0b" [bq-process])  assert #function(">\x012\x005\x00,2\x012\x022\x035\x00\x1c\x02\x1c\x02\x1c\x02\x1c\x04\x0b" [if
-  raise quote assert-failed])  label #function(">\x022\x005\x00\x1c\x012\x015\x005\x01\x1c\x03\x1c\x03-\x1c\x02\x0b" [lambda set!])  do #function("?\x022\x004\x01\x03\x005\x01\x1d4\x024\x035\x00\x03\x024\x024\x045\x00\x03\x024\x022\x05<5\x00\x03\x02@\x04\x06\x0b" [#function("A\x062\x005\x002\x015\x022\x025\x014\x032\x04\x1c\x014\x056\x00\x01\x1e\x03\x01\x03\x024\x032\x04\x1c\x014\x056\x00\x02\x03\x014\x035\x00\x1c\x014\x055\x04\x03\x01\x03\x02\x1c\x01\x03\x03\x1c\x04\x1c\x03\x1c\x02\x1c\x014\x035\x00\x1c\x014\x055\x03\x03\x01\x03\x02\x1c\x03\x0b" [letrec
-  lambda if nconc begin copy-list]) gensym map car cadr #function(">\x014\x005\x00\x03\x01\x17\x06\x13\x004\x015\x00\x04\x01\x0b5\x00\x1d\x0b" [cddr
-  caddr])])  when #function("?\x012\x005\x004\x015\x01\x03\x01-\x1c\x04\x0b" [if f-body])  dotimes #function("?\x012\x005\x00\x1d4\x015\x00\x03\x01@\x04\x03\x0b" [#function("A\x032\x00/2\x015\x010\x1c\x032\x025\x00\x1c\x014\x036\x00\x01\x03\x01\x1c\x03\x1c\x04\x0b" [for
-  - lambda f-body]) cadr])  unwind-protect #function(">\x022\x004\x01\x03\x00@\x04\x02\x0b" [#function("A\x022\x002\x016\x00\x002\x025\x00\x1c\x012\x036\x00\x012\x045\x00\x1c\x02\x1c\x03\x1c\x03\x1c\x036\x00\x01\x1c\x03\x0b" [prog1
-  trycatch lambda begin raise]) gensym])  define-macro #function("?\x012\x002\x015\x00\x1d\x1c\x022\x025\x00\x1e4\x035\x01\x03\x01\x1c\x03\x1c\x03\x0b" [set-syntax!
-  quote lambda f-body])  unless #function("?\x012\x005\x00-4\x015\x01\x03\x01\x1c\x04\x0b" [if f-body])  let #function("?\x012\x00-@\x04\x02\x0b" [#function("A\x026\x00\x00\x14\x06!\x006\x00\x009\x00\x026\x00\x01\x1d:\x00\x00\x026\x00\x01\x1e:\x00\x01\x05\"\x00-\x022\x002\x014\x022\x03<6\x00\x00\x03\x024\x046\x00\x01\x03\x01\x1c\x034\x022\x05<6\x00\x00\x03\x02@\x04\x03\x0b" [#function("A\x036\x00\x00\x06\x14\x002\x006\x00\x005\x00\x1c\x03\x05\x16\x005\x005\x01\x1b\x0b" [label])
-  lambda map #function(">\x015\x00\x17\x06\x0c\x005\x00\x1d\x0b5\x00\x0b" []) f-body #function(">\x015\x00\x17\x06\x0f\x004\x005\x00\x04\x01\x0b-\x0b" [cadr])])])  throw #function(">\x022\x002\x012\x022\x03\x1c\x025\x005\x01\x1c\x04\x1c\x02\x0b" [raise
-  list quote thrown-value])  time #function(">\x012\x004\x01\x03\x00@\x04\x02\x0b" [#function("A\x022\x005\x002\x01\x1c\x01\x1c\x02\x1c\x012\x026\x00\x002\x032\x042\x052\x01\x1c\x015\x00\x1c\x032\x06\x1c\x04\x1c\x03\x1c\x03\x0b" [let
-  time.now prog1 princ "Elapsed time: " - " seconds\n"]) gensym])  let* #function("?\x015\x00\x10\x06\x0f\x004\x005\x01\x04\x01\x0b2\x014\x025\x00\x03\x01\x1c\x014\x032\x04\x1c\x015\x00\x1e\x1c\x014\x055\x01\x03\x01\x03\x03\x1c\x034\x065\x00\x03\x01\x1c\x02\x0b" [f-body
-  lambda caar nconc let* copy-list cadar])  case #function("?\x012\x00-@\x04\x02\x0b" [#function("A\x022\x00<9\x00\x022\x014\x02\x03\x00@\x04\x02\x0b" [#function(">\x025\x012\x00\x0d\x06\x0d\x002\x00\x0b5\x01\x12\x06\x15\x00-\x0b5\x01\x10\x06(\x002\x015\x004\x025\x01\x03\x01\x1c\x03\x0b5\x01\x1e\x12\x06=\x002\x015\x004\x025\x01\x1d\x03\x01\x1c\x03\x0b2\x035\x002\x045\x01\x1c\x02\x1c\x03\x0b" [else
-  eqv? quote-value memv quote]) #function("A\x022\x005\x006\x01\x00\x1c\x02\x1c\x014\x012\x02\x1c\x014\x034\x042\x05<6\x01\x01\x03\x02\x03\x01\x03\x02\x1c\x03\x0b" [let nconc cond
-							 copy-list map #function(">\x016\x01\x006\x00\x005\x00\x1d\x03\x025\x00\x1e\x1b\x0b" [])])
-  gensym])])  catch #function(">\x022\x004\x01\x03\x00@\x04\x02\x0b" [#function("A\x022\x006\x00\x012\x015\x00\x1c\x012\x022\x032\x045\x00\x1c\x022\x052\x065\x00\x1c\x022\x072\x08\x1c\x02\x1c\x032\x052\x095\x00\x1c\x026\x00\x00\x1c\x03\x1c\x042\x0a5\x00\x1c\x022\x0b5\x00\x1c\x02\x1c\x04\x1c\x03\x1c\x03\x0b" [trycatch
-  lambda if and pair? eq car quote thrown-value cadr caddr raise]) gensym]))
+#table(letrec #function(#array(uint8 63 1 50 0 52 1 52 2 53 0 3 2 52 3 52 4 52 1 50 5 60 53 0 3 2 53 1 3 2 3 1 28 3 52 1 50 6 60 53 0 3 2 27 11) [lambda
+  map car f-body nconc #function(#array(uint8 62 1 50 0 53 0 27 11) [set!])
+  #function(#array(uint8 62 1 45 11) [])])  backquote #function(#array(uint8 62 1 52 0 53 0 4 1 11) [bq-process])  when #function(#array(uint8 63 1 50 0 53 0 52 1 53 1 3 1 45 28 4 11) [if
+  f-body])  dotimes #function(#array(uint8 63 1 50 0 53 0 29 52 1 53 0 3 1 64 4 3 11) [#function(#array(uint8 65 3 50 0 47 50 1 53 1 48 28 3 50 2 53 0 28 1 52 3 54 0 1 3 1 28 3 28 4 11) [for
+  - lambda f-body]) cadr])  unwind-protect #function(#array(uint8 62 2 50 0 52 1 3 0 64 4 2 11) [#function(#array(uint8 65 2 50 0 50 1 54 0 0 50 2 53 0 28 1 50 3 54 0 1 50 4 53 0 28 2 28 3 28 3 28 3 54 0 1 28 3 11) [prog1
+  trycatch lambda begin raise]) gensym])  define-macro #function(#array(uint8 63 1 50 0 50 1 53 0 29 28 2 50 2 53 0 30 52 3 53 1 3 1 28 3 28 3 11) [set-syntax!
+  quote lambda f-body])  unless #function(#array(uint8 63 1 50 0 53 0 45 52 1 53 1 3 1 28 4 11) [if
+  f-body])  let* #function(#array(uint8 63 1 53 0 16 6 15 0 52 0 53 1 4 1 11 50 1 52 2 53 0 3 1 28 1 52 3 50 4 28 1 53 0 30 28 1 52 5 53 1 3 1 3 3 28 3 52 6 53 0 3 1 28 2 11) [f-body
+  lambda caar nconc let* copy-list cadar])  case #function(#array(uint8 63 1 50 0 45 64 4 2 11) [#function(#array(uint8 65 2 50 0 60 57 0 2 50 1 52 2 3 0 64 4 2 11) [#function(#array(uint8 62 2 53 1 50 0 13 6 13 0 50 0 11 53 1 18 6 21 0 45 11 53 1 16 6 40 0 50 1 53 0 52 2 53 1 3 1 28 3 11 53 1 30 18 6 61 0 50 1 53 0 52 2 53 1 29 3 1 28 3 11 50 3 53 0 50 4 53 1 28 2 28 3 11) [else
+  eqv? quote-value memv quote]) #function(#array(uint8 65 2 50 0 53 0 54 1 0 28 2 28 1 52 1 50 2 28 1 52 3 52 4 50 5 60 54 1 1 3 2 3 1 3 2 28 3 11) [let
+  nconc cond copy-list map #function(#array(uint8 62 1 54 1 0 54 0 0 53 0 29 3 2 53 0 30 27 11) [])])
+  gensym])])  define #function(#array(uint8 63 1 53 0 20 6 18 0 50 0 53 0 53 1 29 28 3 11 50 0 53 0 29 50 1 53 0 30 52 2 53 1 3 1 28 3 28 3 11) [set!
+  lambda f-body])  assert #function(#array(uint8 62 1 50 0 53 0 44 50 1 50 2 50 3 53 0 28 2 28 2 28 2 28 4 11) [if
+  raise quote assert-failed])  catch #function(#array(uint8 62 2 50 0 52 1 3 0 64 4 2 11) [#function(#array(uint8 65 2 50 0 54 0 1 50 1 53 0 28 1 50 2 50 3 50 4 53 0 28 2 50 5 50 6 53 0 28 2 50 7 50 8 28 2 28 3 50 5 50 9 53 0 28 2 54 0 0 28 3 28 4 50 10 53 0 28 2 50 11 53 0 28 2 28 4 28 3 28 3 11) [trycatch
+  lambda if and pair? eq car quote thrown-value cadr caddr raise]) gensym])  label #function(#array(uint8 62 2 50 0 53 0 28 1 50 1 53 0 53 1 28 3 28 3 45 28 2 11) [lambda
+  set!])  do #function(#array(uint8 63 2 50 0 52 1 3 0 53 1 29 52 2 52 3 53 0 3 2 52 2 52 4 53 0 3 2 52 2 50 5 60 53 0 3 2 64 4 6 11) [#function(#array(uint8 65 6 50 0 53 0 50 1 53 2 50 2 53 1 52 3 50 4 28 1 52 5 54 0 1 30 3 1 3 2 52 3 50 4 28 1 52 5 54 0 2 3 1 52 3 53 0 28 1 52 5 53 4 3 1 3 2 28 1 3 3 28 4 28 3 28 2 28 1 52 3 53 0 28 1 52 5 53 3 3 1 3 2 28 3 11) [letrec
+  lambda if nconc begin copy-list]) gensym map car cadr #function(#array(uint8 62 1 52 0 53 0 3 1 23 6 19 0 52 1 53 0 4 1 11 53 0 29 11) [cddr
+  caddr])])  let #function(#array(uint8 63 1 50 0 45 64 4 2 11) [#function(#array(uint8 65 2 54 0 0 20 6 33 0 54 0 0 57 0 2 54 0 1 29 58 0 0 2 54 0 1 30 58 0 1 5 34 0 45 2 50 0 50 1 52 2 50 3 60 54 0 0 3 2 52 4 54 0 1 3 1 28 3 52 2 50 5 60 54 0 0 3 2 64 4 3 11) [#function(#array(uint8 65 3 54 0 0 6 20 0 50 0 54 0 0 53 0 28 3 5 22 0 53 0 53 1 27 11) [label])
+  lambda map #function(#array(uint8 62 1 53 0 23 6 12 0 53 0 29 11 53 0 11) [])
+  f-body #function(#array(uint8 62 1 53 0 23 6 15 0 52 0 53 0 4 1 11 45 11) [cadr])])])  throw #function(#array(uint8 62 2 50 0 50 1 50 2 50 3 28 2 53 0 53 1 28 4 28 2 11) [raise
+  list quote thrown-value])  time #function(#array(uint8 62 1 50 0 52 1 3 0 64 4 2 11) [#function(#array(uint8 65 2 50 0 53 0 50 1 28 1 28 2 28 1 50 2 54 0 0 50 3 50 4 50 5 50 1 28 1 53 0 28 3 50 6 28 4 28 3 28 3 11) [let
+  time.now prog1 princ "Elapsed time: " - " seconds\n"]) gensym]))
 *print-width*
 80
-*linefeed*
-"\n"
-*directory-separator*
-"/"
 *print-pretty*
 #t
-*argv*
-("./flisp")
 *banner*
 ";  _\n; |_ _ _ |_ _ |  . _ _\n; | (-||||_(_)|__|_)|_)\n;-------------------|----------------------------------------------------------\n\n"

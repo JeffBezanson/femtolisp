@@ -1326,13 +1326,10 @@ static value_t apply_cl(uint32_t nargs)
                 x = Stack[SP-2];  // closure to copy
                 assert(isfunction(x));
                 pv[0] = ((value_t*)ptr(x))[0];
-                assert(pv[0] == functiontype);
                 pv[1] = (value_t)&pv[3];
                 pv[2] = ((value_t*)ptr(x))[2];
                 pv[3] = ((value_t*)ptr(x))[3];
-                assert(isstring(pv[3]));
                 pv[4] = ((value_t*)ptr(x))[4];
-                assert(isvector(pv[4]));
                 pv[5] = Stack[SP-1];  // env
                 POPN(1);
                 Stack[SP-1] = tagptr(pv, TAG_CVALUE);
@@ -1368,6 +1365,7 @@ static void print_function(value_t v, ios_t *f, int princ)
     (void)princ;
     function_t *fn = value2c(function_t*,v);
     outs("#function(", f);
+    /*
     char *data = cvalue_data(fn->bcode);
     size_t sz = cvalue_len(fn->bcode);
     outc('"', f);
@@ -1384,6 +1382,9 @@ static void print_function(value_t v, ios_t *f, int princ)
             ios_printf(f, "\\x%02x", c);
     }
     outsn("\" ", f, 2);
+    */
+    fl_print_child(f, fn->bcode, 0);
+    outc(' ', f);
     fl_print_child(f, fn->vals, 0);
     if (fn->env != NIL) {
         outc(' ', f);
@@ -1413,11 +1414,12 @@ static value_t fl_function(value_t *args, uint32_t nargs)
 {
     if (nargs != 3)
         argcount("function", nargs, 2);
-    if (!isstring(args[0]))
-        type_error("function", "string", args[0]);
     if (!isvector(args[1]))
         type_error("function", "vector", args[1]);
-    cv_pin((cvalue_t*)ptr(args[0]));
+    fltype_t *uint8array = get_array_type(uint8sym);
+    cvalue_t *arr = (cvalue_t*)ptr(args[0]);
+    arr->type = uint8array;
+    cv_pin(arr);
     value_t fv = cvalue(functiontype, sizeof(function_t));
     function_t *fn = value2c(function_t*,fv);
     fn->bcode = args[0];
