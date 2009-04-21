@@ -444,7 +444,7 @@
     (let ((code (aref fvec 0))
 	  (vals (aref fvec 1)))
       (define (print-val v)
-	(if (and (pair? v) (eq? (car v) 'compiled-lambda))
+	(if (and (function? v) (not (builtin? v)))
 	    (begin (princ "\n")
 		   (disassemble- v (+ lev 1)))
 	    (print v)))
