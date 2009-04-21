@@ -731,7 +731,8 @@
 
 (define (make-system-image fname)
   (let ((f (file fname :write :create :truncate))
-	(excludes '(*linefeed* *directory-separator* *argv* that)))
+	(excludes '(*linefeed* *directory-separator* *argv* that
+			       *print-pretty* *print-width*)))
     (for-each (lambda (s)
 		(if (and (bound? s)
 			 (not (constant? s))

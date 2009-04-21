@@ -403,7 +403,7 @@ void fl_print_child(ios_t *f, value_t v, int princ)
             for(i=0; i < sz; i++) {
                 fl_print_child(f, vector_elt(v,i), princ);
                 if (i < sz-1) {
-                    if (princ) {
+                    if (princ || !print_pretty) {
                         outc(' ', f);
                     }
                     else {
