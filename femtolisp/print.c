@@ -72,7 +72,8 @@ void print_traverse(value_t v)
         return;
     }
     if (isvector(v)) {
-        mark_cons(v);
+        if (vector_size(v) > 0)
+            mark_cons(v);
         unsigned int i;
         for(i=0; i < vector_size(v); i++)
             print_traverse(vector_elt(v,i));
@@ -225,8 +226,7 @@ static int indentevery(value_t v)
     value_t c = car_(v);
     if (c == LAMBDA || c == labelsym || c == setqsym)
         return 0;
-    value_t f;
-    if (issymbol(c) && (f=((symbol_t*)ptr(c))->syntax) && isspecial(f))
+    if (c == IF) // TODO: others
         return !allsmallp(cdr_(v));
     return 0;
 }

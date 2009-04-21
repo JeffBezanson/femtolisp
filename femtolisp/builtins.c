@@ -147,46 +147,10 @@ static value_t fl_set_top_level_value(value_t *args, u_int32_t nargs)
     return args[1];
 }
 
-extern value_t LAMBDA;
-
-static value_t fl_setsyntax(value_t *args, u_int32_t nargs)
-{
-    argcount("set-syntax!", nargs, 2);
-    symbol_t *sym = tosymbol(args[0], "set-syntax!");
-    if (sym->syntax && (sym->syntax == TAG_CONST || isspecial(sym->syntax)))
-        lerrorf(ArgError, "set-syntax!: cannot define syntax for %s",
-                symbol_name(args[0]));
-    if (args[1] == FL_F) {
-        sym->syntax = 0;
-    }
-    else {
-        if (!iscvalue(args[1]) &&
-            (!iscons(args[1]) || car_(args[1])!=LAMBDA))
-            type_error("set-syntax!", "function", args[1]);
-        sym->syntax = args[1];
-    }
-    return args[1];
-}
-
-static value_t fl_symbolsyntax(value_t *args, u_int32_t nargs)
-{
-    argcount("symbol-syntax", nargs, 1);
-    symbol_t *sym = tosymbol(args[0], "symbol-syntax");
-    // must avoid returning built-in syntax expanders, because they
-    // don't behave like functions (they take their arguments directly
-    // from the form rather than from the stack of evaluated arguments)
-    if (sym->syntax == TAG_CONST || isspecial(sym->syntax))
-        return FL_F;
-    return sym->syntax;
-}
-
 static void global_env_list(symbol_t *root, value_t *pv)
 {
     while (root != NULL) {
-        if (root->name[0] != ':' &&
-            (root->binding != UNBOUND ||
-             (root->syntax && root->syntax != TAG_CONST &&
-              !isspecial(root->syntax)))) {
+        if (root->name[0] != ':' && (root->binding != UNBOUND)) {
             *pv = fl_cons(tagptr(root,TAG_SYM), *pv);
         }
         global_env_list(root->left, pv);
@@ -429,8 +393,6 @@ extern void table_init();
 extern void iostream_init();
 
 static builtinspec_t builtin_info[] = {
-    { "set-syntax!", fl_setsyntax },
-    { "symbol-syntax", fl_symbolsyntax },
     { "environment", fl_global_env },
     { "constant?", fl_constantp },
     { "top-level-value", fl_top_level_value },

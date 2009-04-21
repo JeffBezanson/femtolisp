@@ -11,6 +11,11 @@
                      ((eq (cdr e) ()) (car e))
                      (#t              (cons 'begin e)))))
 
+(set! *syntax-environment* (table))
+
+(set! set-syntax!
+      (lambda (s v) (put! *syntax-environment* s v)))
+
 (set-syntax! 'define-macro
              (lambda (form . body)
                (list 'set-syntax! (list 'quote (car form))
@@ -20,6 +25,8 @@
   (if (symbol? form)
       (list 'set! form (car body))
       (list 'set! (car form) (list 'lambda (cdr form) (f-body body)))))
+
+(define (symbol-syntax s) (get *syntax-environment* s #f))
 
 (define (map f lst)
   (if (atom? lst) lst
@@ -417,7 +424,6 @@
       first)))
 
 (define (iota n) (map-int identity n))
-(define ι iota)
 
 (define (for-each f l)
   (if (pair? l)
@@ -482,16 +488,6 @@
 
 ; text I/O --------------------------------------------------------------------
 
-(if (or (eq? *os-name* 'win32)
-	(eq? *os-name* 'win64)
-	(eq? *os-name* 'windows))
-    (begin (define *directory-separator* "\\")
-	   (define *linefeed* "\r\n"))
-    (begin (define *directory-separator* "/")
-	   (define *linefeed* "\n")))
-
-(define *output-stream* *stdout*)
-(define *input-stream*  *stdin*)
 (define (print . args) (apply io.print (cons *output-stream* args)))
 (define (princ . args) (apply io.princ (cons *output-stream* args)))
 
@@ -511,8 +507,6 @@
          (lambda (i)
            (set! l (cons (aref v (- n i)) l))))
     l))
-
-(define (vu8 . elts) (apply array (cons 'uint8 elts)))
 
 (define (vector.map f v)
   (let* ((n (length v))
@@ -610,7 +604,7 @@
 ; toplevel --------------------------------------------------------------------
 
 (define (macrocall? e) (and (symbol? (car e))
-			    (symbol-syntax (car e))))
+			    (get *syntax-environment* (car e) #f)))
 
 (define (macroexpand-1 e)
   (if (atom? e) e
@@ -650,8 +644,9 @@
 
 (define (expand x) (macroexpand x))
 
-(if (not (bound? 'load-process))
-    (define (load-process x) (eval (expand x))))
+(define (eval x) ((compile-thunk (expand x))))
+
+(define (load-process x) (eval x))
 
 (define (load filename)
   (let ((F (file filename :read)))
@@ -668,9 +663,6 @@
        (begin
 	 (io.close F)
 	 (raise `(load-error ,filename ,e)))))))
-
-(load (string *install-dir* *directory-separator* "compiler.lsp"))
-(define (load-process x) ((compile-thunk (expand x))))
 
 (define *banner* (string.tail "
 ;  _
@@ -738,14 +730,38 @@
   (io.princ *stderr* *linefeed*)
   #t)
 
+(define (make-system-image fname)
+  (let ((f (file fname :write :create :truncate)))
+    (for-each (lambda (s)
+		(if (and (bound? s)
+			 (not (constant? s))
+			 (not (builtin? (top-level-value s)))
+			 (not (iostream? (top-level-value s))))
+		    (begin
+		      (io.print f s) (io.write f "\n")
+		      (io.print f (top-level-value s)) (io.write f "\n"))))
+	      (environment))
+    (io.close f)))
+
+; initialize globals that need to be set at load time
+(define (__init_globals)
+  (if (or (eq? *os-name* 'win32)
+	  (eq? *os-name* 'win64)
+	  (eq? *os-name* 'windows))
+      (begin (set! *directory-separator* "\\")
+	     (set! *linefeed* "\r\n"))
+      (begin (set! *directory-separator* "/")
+	     (set! *linefeed* "\n")))
+  (set! *output-stream* *stdout*)
+  (set! *input-stream*  *stdin*))
+
 (define (__script fname)
   (trycatch (load fname)
 	    (lambda (e) (begin (print-exception e)
 			       (exit 1)))))
 
 (define (__start argv)
-  ; reload this file with our new definition of load
-  (load (string *install-dir* *directory-separator* "system.lsp"))
+  (__init_globals)
   (if (pair? (cdr argv))
       (begin (set! *argv* (cdr argv))
 	     (__script (cadr argv)))

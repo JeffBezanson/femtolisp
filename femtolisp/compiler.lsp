@@ -1,13 +1,13 @@
 ; -*- scheme -*-
 
-(define (make-enum-table keys)
+(define (make-enum-table offset keys)
   (let ((e (table)))
     (for 0 (1- (length keys))
 	 (lambda (i)
-	   (put! e (aref keys i) i)))))
+	   (put! e (aref keys i) (+ offset i))))))
 
 (define Instructions
-  (make-enum-table
+  (make-enum-table 0
    [:nop :dup :pop :call :tcall :jmp :brf :brt :jmp.l :brf.l :brt.l :ret
     :tapply
 
@@ -15,7 +15,7 @@
     :number? :bound? :pair? :builtin? :vector? :fixnum?
 
     :cons :list :car :cdr :set-car! :set-cdr!
-    :eval :apply
+    :apply
 
     :+ :- :* :/ := :< :compare
 
@@ -37,10 +37,10 @@
 	 :vector?  1      :fixnum?  1
 	 :cons     2      :car      1
 	 :cdr      1      :set-car! 2
-	 :set-cdr! 2      :eval     1
-	 :apply    2      :<        2
-         :compare  2      :aref     2
-         :aset!    3      :=        2))
+	 :set-cdr! 2      :apply    2
+         :<        2      :compare  2
+         :aref     2      :aset!    3
+	 :=        2))
 
 (define 1/Instructions (table.invert Instructions))
 
@@ -372,7 +372,9 @@
 		  (:/    (if (= nargs 0)
 			     (argc-error head 1)
 			     (emit g b nargs)))
-		  (:vector   (emit g b nargs))
+		  (:vector   (if (= nargs 0)
+				 (emit g :loadv [])
+				 (emit g b nargs)))
 		  (else
 		   (emit g (if (and tail? (eq? b :apply)) :tapply b)))))
 	      (emit g (if tail? :tcall :call) nargs)))))))

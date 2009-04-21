@@ -346,7 +346,7 @@ static u_int32_t peek()
 
 static value_t read_vector(value_t label, u_int32_t closer)
 {
-    value_t v=alloc_vector(4, 1), elt;
+    value_t v=the_empty_vector, elt;
     u_int32_t i=0;
     PUSH(v);
     if (label != UNBOUND)
@@ -354,7 +354,12 @@ static value_t read_vector(value_t label, u_int32_t closer)
     while (peek() != closer) {
         if (ios_eof(F))
             lerror(ParseError, "read: unexpected end of input");
-        if (i >= vector_size(v))
+        if (i == 0) {
+            v = Stack[SP-1] = alloc_vector(4, 1);
+            if (label != UNBOUND)
+                ptrhash_put(&readstate->backrefs, (void*)label, (void*)v);
+        }
+        else if (i >= vector_size(v))
             Stack[SP-1] = vector_grow(v);
         elt = do_read_sexpr(UNBOUND);
         v = Stack[SP-1];
@@ -362,7 +367,8 @@ static value_t read_vector(value_t label, u_int32_t closer)
         i++;
     }
     take();
-    vector_setsize(v, i);
+    if (i > 0)
+        vector_setsize(v, i);
     return POP();
 }
 

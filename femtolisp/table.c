@@ -85,7 +85,7 @@ value_t fl_table(value_t *args, uint32_t nargs)
 {
     size_t cnt = (size_t)nargs;
     if (nargs > MAX_ARGS)
-        cnt += llength(args[MAX_ARGS]);
+        cnt += (llength(args[MAX_ARGS])-1);
     if (cnt & 1)
         lerror(ArgError, "table: arguments must come in pairs");
     value_t nt;

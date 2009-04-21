@@ -117,23 +117,18 @@ extern uint32_t SP;
                  (arg = args[i])) || 1)); i++)
 
 enum {
-    // special forms
-    F_QUOTE=0, F_COND, F_IF, F_AND, F_OR, F_WHILE, F_LAMBDA,
-    F_TRYCATCH, F_SPECIAL_APPLY, F_SETQ, F_PROG1, F_FOR, F_BEGIN,
-
     // functions
-    F_EQ, F_EQV, F_EQUAL, F_ATOM, F_NOT, F_NULL, F_BOOLEANP, F_SYMBOLP,
+    F_EQ=13, F_EQV, F_EQUAL, F_ATOM, F_NOT, F_NULL, F_BOOLEANP, F_SYMBOLP,
     F_NUMBERP, F_BOUNDP, F_CONSP, F_BUILTINP, F_VECTORP, F_FIXNUMP,
 
     F_CONS, F_LIST, F_CAR, F_CDR, F_SETCAR, F_SETCDR,
-    F_EVAL, F_APPLY,
+    F_APPLY,
     F_ADD, F_SUB, F_MUL, F_DIV, F_NUMEQ, F_LT, F_COMPARE,
 
     F_VECTOR, F_AREF, F_ASET,
     F_TRUE, F_FALSE, F_NIL,
     N_BUILTINS
 };
-#define isspecial(v) (uintval(v) <= (unsigned int)F_BEGIN)
 
 extern value_t NIL, FL_T, FL_F;
 
@@ -247,6 +242,7 @@ typedef struct {
 #define cv_isPOD(cv)   (cv_class(cv)->init != NULL)
 
 #define cvalue_data(v) cv_data((cvalue_t*)ptr(v))
+#define cvalue_len(v) cv_len((cvalue_t*)ptr(v))
 #define value2c(type, v) ((type)cv_data((cvalue_t*)ptr(v)))
 
 #define valid_numtype(v) ((v) < N_NUMTYPES)

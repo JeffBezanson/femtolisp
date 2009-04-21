@@ -465,7 +465,7 @@ value_t cvalue_array(value_t *args, u_int32_t nargs)
 
     cnt = nargs - 1;
     if (nargs > MAX_ARGS)
-        cnt += llength(args[MAX_ARGS]);
+        cnt += (llength(args[MAX_ARGS])-1);
     fltype_t *type = get_array_type(args[0]);
     elsize = type->elsz;
     sz = elsize * cnt;
