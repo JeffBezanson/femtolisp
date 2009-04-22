@@ -814,7 +814,19 @@ static value_t apply_cl(uint32_t nargs)
         do_call:
             s = SP;
             func = Stack[SP-i-1];
-            if (isbuiltinish(func)) {
+            if (isfunction(func)) {
+                if (op == OP_TCALL) {
+                    for(s=-1; s < (fixnum_t)i; s++)
+                        Stack[bp+s] = Stack[SP-i+s];
+                    SP = bp+i;
+                    nargs = i;
+                    goto apply_cl_top;
+                }
+                else {
+                    v = apply_cl(i);
+                }
+            }
+            else if (isbuiltinish(func)) {
                 op = uintval(func);
                 if (op > N_BUILTINS) {
                     v = ((builtin_t)ptr(func))(&Stack[SP-i], i);
@@ -840,18 +852,6 @@ static value_t apply_cl(uint32_t nargs)
                     default:
                         goto dispatch;
                     }
-                }
-            }
-            else if (isfunction(func)) {
-                if (op == OP_TCALL) {
-                    for(s=-1; s < (fixnum_t)i; s++)
-                        Stack[bp+s] = Stack[SP-i+s];
-                    SP = bp+i;
-                    nargs = i;
-                    goto apply_cl_top;
-                }
-                else {
-                    v = apply_cl(i);
                 }
             }
             else {
@@ -1021,7 +1021,6 @@ static value_t apply_cl(uint32_t nargs)
         case OP_SUB:
             n = code[ip++];
         apply_sub:
-            if (__unlikely(n < 1)) lerror(ArgError, "-: too few arguments");
             i = SP-n;
             if (n == 1) {
                 if (__likely(isfixnum(Stack[i])))
@@ -1084,7 +1083,6 @@ static value_t apply_cl(uint32_t nargs)
         case OP_DIV:
             n = code[ip++];
         apply_div:
-            if (__unlikely(n < 1)) lerror(ArgError, "/: too few arguments");
             i = SP-n;
             if (n == 1) {
                 Stack[SP-1] = fl_div2(fixnum(1), Stack[i]);

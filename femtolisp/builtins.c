@@ -33,12 +33,17 @@ static value_t fl_nconc(value_t *args, u_int32_t nargs)
     value_t lst, first=NIL;
     value_t *pcdr = &first;
     cons_t *c;
-    int a;
-    FOR_ARGS(a, 0, lst, args) {
-        // skip last
-        if ((nargs > MAX_ARGS && !iscons(args[MAX_ARGS])) ||
-            (nargs <= MAX_ARGS && a == nargs-1))
-            break;
+    int i=0;
+    while (1) {
+        if (i >= MAX_ARGS) {
+            lst = car_(args[MAX_ARGS]);
+            args[MAX_ARGS] = cdr_(args[MAX_ARGS]);
+            if (!iscons(args[MAX_ARGS])) break;
+        }
+        else {
+            lst = args[i++];
+            if (i >= nargs) break;
+        }
         if (iscons(lst)) {
             *pcdr = lst;
             c = (cons_t*)ptr(lst);
@@ -254,8 +259,13 @@ static value_t fl_truncate(value_t *args, u_int32_t nargs)
             d = *(double*)data;
         else
             return args[0];
-        if (d > 0)
+        if (d > 0) {
+            if (d > (double)U64_MAX)
+                return args[0];
             return return_from_uint64((uint64_t)d);
+        }
+        if (d > (double)S64_MAX || d < (double)S64_MIN)
+            return args[0];
         return return_from_int64((int64_t)d);
     }
     type_error("truncate", "number", args[0]);
