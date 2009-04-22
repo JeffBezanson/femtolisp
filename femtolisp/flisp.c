@@ -798,50 +798,49 @@ static value_t apply_cl(uint32_t nargs)
             nargs = i+1;
             break;
         case OP_LET:
-          ip++;
-          // last arg is closure environment to use
-          nargs--;
-          Stack[SP-2] = Stack[SP-1];
-          POPN(1);
-          pvals = &Stack[SP-1];
-          break;
+            ip++;
+            // last arg is closure environment to use
+            nargs--;
+            Stack[SP-2] = Stack[SP-1];
+            POPN(1);
+            pvals = &Stack[SP-1];
+            break;
         case OP_NOP: break;
         case OP_DUP: v = Stack[SP-1]; PUSH(v); break;
         case OP_POP: POPN(1); break;
         case OP_TCALL:
         case OP_CALL:
-            i = code[ip++];  // nargs
+            n = code[ip++];  // nargs
         do_call:
             s = SP;
-            func = Stack[SP-i-1];
+            func = Stack[SP-n-1];
             if (isfunction(func)) {
                 if (op == OP_TCALL) {
-                    for(s=-1; s < (fixnum_t)i; s++)
-                        Stack[bp+s] = Stack[SP-i+s];
-                    SP = bp+i;
-                    nargs = i;
+                    for(s=-1; s < (fixnum_t)n; s++)
+                        Stack[bp+s] = Stack[SP-n+s];
+                    SP = bp+n;
+                    nargs = n;
                     goto apply_cl_top;
                 }
                 else {
-                    v = apply_cl(i);
+                    v = apply_cl(n);
                 }
             }
             else if (isbuiltinish(func)) {
                 op = uintval(func);
                 if (op > N_BUILTINS) {
-                    v = ((builtin_t)ptr(func))(&Stack[SP-i], i);
+                    v = ((builtin_t)ptr(func))(&Stack[SP-n], n);
                 }
                 else {
                     s = builtin_arg_counts[op];
                     if (s >= 0)
-                        argcount(builtin_names[op], i, s);
-                    else if (s != ANYARGS && (signed)i < -s)
-                        argcount(builtin_names[op], i, -s);
+                        argcount(builtin_names[op], n, s);
+                    else if (s != ANYARGS && (signed)n < -s)
+                        argcount(builtin_names[op], n, -s);
                     // remove function arg
-                    for(s=SP-i-1; s < (int)SP-1; s++)
+                    for(s=SP-n-1; s < (int)SP-1; s++)
                         Stack[s] = Stack[s+1];
                     SP--;
-                    n = i;
                     switch (op) {
                     case OP_LIST:   goto apply_list;
                     case OP_ADD:    goto apply_add;
@@ -857,7 +856,7 @@ static value_t apply_cl(uint32_t nargs)
             else {
                 type_error("apply", "function", func);
             }
-            SP = s-i-1;
+            SP = s-n-1;
             PUSH(v);
             break;
         case OP_JMP: ip = (uint32_t)*(uint16_t*)&code[ip]; break;
@@ -953,12 +952,14 @@ static value_t apply_cl(uint32_t nargs)
             Stack[SP-2] = tagptr(c, TAG_CONS);
             POPN(1); break;
         case OP_CAR:
-            c = tocons(Stack[SP-1], "car");
-            Stack[SP-1] = c->car;
+            v = Stack[SP-1];
+            if (!iscons(v)) type_error("car", "cons", v);
+            Stack[SP-1] = car_(v);
             break;
         case OP_CDR:
-            c = tocons(Stack[SP-1], "cdr");
-            Stack[SP-1] = c->cdr;
+            v = Stack[SP-1];
+            if (!iscons(v)) type_error("cdr", "cons", v);
+            Stack[SP-1] = cdr_(v);
             break;
         case OP_SETCAR:
             car(Stack[SP-2]) = Stack[SP-1];
@@ -967,29 +968,31 @@ static value_t apply_cl(uint32_t nargs)
             cdr(Stack[SP-2]) = Stack[SP-1];
             POPN(1); break;
         case OP_LIST:
-            i = code[ip++];
+            n = code[ip++];
         apply_list:
-            if (i > 0)
-                v = list(&Stack[SP-i], i);
-            else
-                v = NIL;
-            POPN(i);
-            PUSH(v);
+            if (n > 0) {
+                v = list(&Stack[SP-n], n);
+                POPN(n);
+                PUSH(v);
+            }
+            else {
+                PUSH(NIL);
+            }
             break;
 
         case OP_TAPPLY:
         case OP_APPLY:
             v = POP();  // arglist
-            i = SP;
+            n = SP;
             while (iscons(v)) {
-                if (SP-i == MAX_ARGS) {
+                if (SP-n == MAX_ARGS) {
                     PUSH(v);
                     break;
                 }
                 PUSH(car_(v));
                 v = cdr_(v);
             }
-            i = SP-i;
+            n = SP-n;
             if (op==OP_TAPPLY) op = OP_TCALL;
             goto do_call;
 
@@ -1278,16 +1281,7 @@ static value_t apply_cl(uint32_t nargs)
         case OP_SETC:
             s = code[ip++];
             i = code[ip++];
-            if (captured) {
-                if (nargs > 0) {
-                    // current frame has been captured
-                    s++;
-                }
-                v = Stack[bp];
-            }
-            else {
-                v = Stack[bp+nargs];
-            }
+            v = Stack[bp+nargs];
             while (s--)
                 v = vector_elt(v, vector_size(v)-1);
             assert(isvector(v));
