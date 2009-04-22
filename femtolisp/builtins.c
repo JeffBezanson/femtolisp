@@ -30,23 +30,27 @@ static value_t fl_nconc(value_t *args, u_int32_t nargs)
 {
     if (nargs == 0)
         return NIL;
-    value_t first=NIL;
+    value_t lst, first=NIL;
     value_t *pcdr = &first;
     cons_t *c;
     int a;
-    for(a=0; a < (int)nargs-1; a++) {
-        if (iscons(args[a])) {
-            *pcdr = args[a];
-            c = (cons_t*)ptr(args[a]);
+    FOR_ARGS(a, 0, lst, args) {
+        // skip last
+        if ((nargs > MAX_ARGS && !iscons(args[MAX_ARGS])) ||
+            (nargs <= MAX_ARGS && a == nargs-1))
+            break;
+        if (iscons(lst)) {
+            *pcdr = lst;
+            c = (cons_t*)ptr(lst);
             while (iscons(c->cdr))
                 c = (cons_t*)ptr(c->cdr);
             pcdr = &c->cdr;
         }
-        else if (args[a] != NIL) {
-            type_error("nconc", "cons", args[a]);
+        else if (lst != NIL) {
+            type_error("nconc", "cons", lst);
         }
     }
-    *pcdr = args[a];
+    *pcdr = lst;
     return first;
 }
 
