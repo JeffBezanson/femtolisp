@@ -1358,23 +1358,11 @@ static void print_function(value_t v, ios_t *f, int princ)
     function_t *fn = value2c(function_t*,v);
     outs("#function(", f);
     char *data = cvalue_data(fn->bcode);
-    size_t sz = cvalue_len(fn->bcode);
-    outc('"', f);
-    size_t i; uint8_t c;
-    for(i=0; i < sz; i++) {
-        c = data[i]+48;
-        if (c == '\\')
-            outsn("\\\\", f, 2);
-        else if (c == '"')
-            outsn("\\\"", f, 2);
-        else if (c >= 32 && c < 0x7f)
-            outc(c, f);
-        else
-            ios_printf(f, "\\x%02x", c);
-    }
-    outsn("\" ", f, 2);
-    //fl_print_child(f, fn->bcode, 0);
-    //outc(' ', f);
+    size_t i, sz = cvalue_len(fn->bcode);
+    for(i=0; i < sz; i++) data[i] += 48;
+    fl_print_child(f, fn->bcode, 0);
+    for(i=0; i < sz; i++) data[i] -= 48;
+    outc(' ', f);
     fl_print_child(f, fn->vals, 0);
     if (fn->env != NIL) {
         outc(' ', f);
@@ -1404,6 +1392,8 @@ static value_t fl_function(value_t *args, uint32_t nargs)
 {
     if (nargs != 3)
         argcount("function", nargs, 2);
+    if (!isstring(args[0]))
+        type_error("function", "string", args[0]);
     if (!isvector(args[1]))
         type_error("function", "vector", args[1]);
     cvalue_t *arr = (cvalue_t*)ptr(args[0]);

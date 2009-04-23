@@ -436,11 +436,28 @@ static void print_string(ios_t *f, char *str, size_t sz)
 {
     char buf[512];
     size_t i = 0;
+    uint8_t c;
 
     outc('"', f);
-    while (i < sz) {
-        size_t n = u8_escape(buf, sizeof(buf), str, &i, sz, 1, 0);
-        outsn(buf, f, n-1);
+    if (!u8_isvalid(str, sz)) {
+        // alternate print algorithm that preserves data if it's not UTF-8
+        for(i=0; i < sz; i++) {
+            c = str[i];
+            if (c == '\\')
+                outsn("\\\\", f, 2);
+            else if (c == '"')
+                outsn("\\\"", f, 2);
+            else if (c >= 32 && c < 0x7f)
+                outc(c, f);
+            else
+                HPOS += ios_printf(f, "\\x%02x", c);
+        }
+    }
+    else {
+        while (i < sz) {
+            size_t n = u8_escape(buf, sizeof(buf), str, &i, sz, 1, 0);
+            outsn(buf, f, n-1);
+        }
     }
     outc('"', f);
 }
