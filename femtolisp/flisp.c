@@ -64,13 +64,13 @@ static char *builtin_names[] =
       "cons", "list", "car", "cdr", "set-car!", "set-cdr!",
 
       // execution
-      "eval", "eval*", "apply",
+      "%eval", "eval*", "apply",
 
       // arithmetic
       "+", "-", "*", "/", "<", "lognot", "compare",
 
       // sequences
-      "vector", "aref", "aset!", "length", "for",
+      "vector", "aref", "aset!", "for",
       "", "", "" };
 
 #define N_STACK 131072
@@ -78,12 +78,13 @@ value_t Stack[N_STACK];
 uint32_t SP = 0;
 
 value_t NIL, FL_T, FL_F, LAMBDA, QUOTE, IF, TRYCATCH;
-value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT;
+value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT, FUNCTION;
 value_t IOError, ParseError, TypeError, ArgError, UnboundError, MemoryError;
 value_t DivideError, BoundsError, Error, KeyError, EnumerationError;
 value_t conssym, symbolsym, fixnumsym, vectorsym, builtinsym;
 value_t definesym, defmacrosym, forsym, labelsym, printprettysym, setqsym;
 value_t printwidthsym, tsym, Tsym, fsym, Fsym, booleansym, nullsym, elsesym;
+static fltype_t *functiontype;
 
 static value_t eval_sexpr(value_t e, uint32_t penv, int tail);
 static value_t *alloc_words(int n);
@@ -724,7 +725,6 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
     uint32_t saveSP, bp, envsz, lenv, nargs;
     int i, noeval=0;
     fixnum_t s, lo, hi;
-    cvalue_t *cv;
     int64_t accum;
 
     /*
@@ -1032,38 +1032,6 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                     e = cdr_(e);
                 }
             }
-            break;
-        case F_LENGTH:
-            argcount("length", nargs, 1);
-            if (isvector(Stack[SP-1])) {
-                v = fixnum(vector_size(Stack[SP-1]));
-                break;
-            }
-            else if (iscprim(Stack[SP-1])) {
-                cv = (cvalue_t*)ptr(Stack[SP-1]);
-                if (cp_class(cv) == bytetype) {
-                    v = fixnum(1);
-                    break;
-                }
-                else if (cp_class(cv) == wchartype) {
-                    v = fixnum(u8_charlen(*(uint32_t*)cp_data((cprim_t*)cv)));
-                    break;
-                }
-            }
-            else if (iscvalue(Stack[SP-1])) {
-                cv = (cvalue_t*)ptr(Stack[SP-1]);
-                if (cv_class(cv)->eltype != NULL) {
-                    v = size_wrap(cvalue_arraylen(Stack[SP-1]));
-                    break;
-                }
-            }
-            else if (Stack[SP-1] == NIL) {
-                v = fixnum(0); break;
-            }
-            else if (iscons(Stack[SP-1])) {
-                v = fixnum(llength(Stack[SP-1])); break;
-            }
-            type_error("length", "sequence", Stack[SP-1]);
             break;
         case F_AREF:
             argcount("aref", nargs, 2);
@@ -1480,6 +1448,71 @@ void assign_global_builtins(builtinspec_t *b)
     }
 }
 
+static void print_function(value_t v, ios_t *f, int princ)
+{
+    (void)princ;
+    function_t *fn = value2c(function_t*,v);
+    outs("#function(", f);
+    char *data = cvalue_data(fn->bcode);
+    size_t i, sz = cvalue_len(fn->bcode);
+    for(i=0; i < sz; i++) data[i] += 48;
+    fl_print_child(f, fn->bcode, 0);
+    for(i=0; i < sz; i++) data[i] -= 48;
+    outc(' ', f);
+    fl_print_child(f, fn->vals, 0);
+    if (fn->env != NIL) {
+        outc(' ', f);
+        fl_print_child(f, fn->env, 0);
+    }
+    outc(')', f);
+}
+
+static void print_traverse_function(value_t v)
+{
+    function_t *fn = value2c(function_t*,v);
+    print_traverse(fn->bcode);
+    print_traverse(fn->vals);
+    print_traverse(fn->env);
+}
+
+static void relocate_function(value_t oldv, value_t newv)
+{
+    (void)oldv;
+    function_t *fn = value2c(function_t*,newv);
+    fn->bcode = relocate(fn->bcode);
+    fn->vals = relocate(fn->vals);
+    fn->env = relocate(fn->env);
+}
+
+static value_t fl_function(value_t *args, uint32_t nargs)
+{
+    if (nargs != 3)
+        argcount("function", nargs, 2);
+    if (!isstring(args[0]))
+        type_error("function", "string", args[0]);
+    if (!isvector(args[1]))
+        type_error("function", "vector", args[1]);
+    value_t fv = cvalue(functiontype, sizeof(function_t));
+    function_t *fn = value2c(function_t*,fv);
+    fn->bcode = args[0];
+    fn->vals = args[1];
+    if (nargs == 3)
+        fn->env = args[2];
+    else
+        fn->env = NIL;
+    return fv;
+}
+
+static cvtable_t function_vtable = { print_function, relocate_function,
+                                     NULL, print_traverse_function };
+
+static builtinspec_t core_builtin_info[] = {
+    { "function", fl_function },
+    { "gensym", gensym },
+    { "hash", fl_hash },
+    { NULL, NULL }
+};
+
 static void lisp_init(void)
 {
     int i;
@@ -1498,6 +1531,7 @@ static void lisp_init(void)
     FL_T = builtin(F_TRUE);
     FL_F = builtin(F_FALSE);
     LAMBDA = symbol("lambda");
+    FUNCTION = symbol("function");
     QUOTE = symbol("quote");
     TRYCATCH = symbol("trycatch");
     BACKQUOTE = symbol("backquote");
@@ -1558,8 +1592,6 @@ static void lisp_init(void)
 #endif
 
     cvalues_init();
-    set(symbol("gensym"), cbuiltin("gensym", gensym));
-    set(symbol("hash"), cbuiltin("hash", fl_hash));
 
     char buf[1024];
     char *exename = get_exename(buf, sizeof(buf));
@@ -1571,6 +1603,11 @@ static void lisp_init(void)
 
     memory_exception_value = list2(MemoryError,
                                    cvalue_static_cstring("out of memory"));
+
+    functiontype = define_opaque_type(FUNCTION, sizeof(function_t),
+                                      &function_vtable, NULL);
+
+    assign_global_builtins(core_builtin_info);
 
     builtins_init();
 }

@@ -3,6 +3,8 @@
 ; by Jeff Bezanson (C) 2009
 ; Distributed under the BSD License
 
+(set! eval %eval)
+
 ; convert a sequence of body statements to a single expression.
 ; this allows define, defun, defmacro, let, etc. to contain multiple
 ; body expressions.
@@ -23,7 +25,7 @@
 
 (define-macro (body . forms) (f-body forms))
 
-(define (set s v) (eval (list 'set! s (list 'quote v))))
+(define (set s v) (%eval (list 'set! s (list 'quote v))))
 
 (define (map f lst)
   (if (atom? lst) lst
@@ -282,7 +284,7 @@
   (or (and (atom? x)
            (not (symbol? x)))
       (and (constant? x)
-           (eq x (eval x)))))
+           (eq x (%eval x)))))
 
 (define-macro (backquote x) (bq-process x))
 
@@ -442,7 +444,7 @@
 (define-macro (assert expr) `(if ,expr #t (raise '(assert-failed ,expr))))
 
 (define (trace sym)
-  (let* ((lam  (eval sym))
+  (let* ((lam  (%eval sym))
 	 (args (cadr lam))
 	 (al   (to-proper args)))
     (if (not (eq? (car lam) 'trace-lambda))
@@ -460,7 +462,7 @@
   'ok)
 
 (define (untrace sym)
-  (let ((lam  (eval sym)))
+  (let ((lam  (%eval sym)))
     (if (eq? (car lam) 'trace-lambda)
 	(set sym
 	     (cadr (caar (last (caddr lam))))))))
@@ -640,10 +642,10 @@
        (if (not (io.eof? F))
 	   (next (read F)
                  prev
-		 (eval (expand E)))
+		 (%eval (expand E)))
 	   (begin (io.close F)
 		  ; evaluate last form in almost-tail position
-		  (eval (expand E)))))
+		  (%eval (expand E)))))
      (lambda (e)
        (begin
 	 (io.close F)
@@ -664,7 +666,7 @@
 		       (lambda (e) (begin (io.discardbuffer *input-stream*)
 					  (raise e))))))
       (and (not (io.eof? *input-stream*))
-	   (let ((V (eval (expand v))))
+	   (let ((V (%eval (expand v))))
 	     (print V)
 	     (set! that V)
 	     #t))))

@@ -127,7 +127,7 @@ enum {
     F_EVAL, F_EVALSTAR, F_APPLY,
     F_ADD, F_SUB, F_MUL, F_DIV, F_LT, F_BNOT, F_COMPARE,
 
-    F_VECTOR, F_AREF, F_ASET, F_LENGTH, F_FOR,
+    F_VECTOR, F_AREF, F_ASET, F_FOR,
     F_TRUE, F_FALSE, F_NIL,
     N_BUILTINS,
 };
@@ -222,6 +222,12 @@ typedef struct {
     char _space[1];
 } cprim_t;
 
+typedef struct {
+    value_t bcode;
+    value_t vals;
+    value_t env;
+} function_t;
+
 #define CPRIM_NWORDS 2
 #define MAX_INL_SIZE 96
 
@@ -237,6 +243,7 @@ typedef struct {
 #define cv_isstr(cv)   (cv_class(cv)->eltype == bytetype)
 
 #define cvalue_data(v) cv_data((cvalue_t*)ptr(v))
+#define cvalue_len(v) cv_len((cvalue_t*)ptr(v))
 #define value2c(type, v) ((type)cv_data((cvalue_t*)ptr(v)))
 
 #define valid_numtype(v) ((v) < N_NUMTYPES)

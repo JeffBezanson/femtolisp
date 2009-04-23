@@ -78,6 +78,35 @@ static value_t fl_memq(value_t *args, u_int32_t nargs)
     return FL_F;
 }
 
+static value_t fl_length(value_t *args, u_int32_t nargs)
+{
+    argcount("length", nargs, 1);
+    value_t a = args[0];
+    cvalue_t *cv;
+    if (isvector(a)) {
+        return fixnum(vector_size(a));
+    }
+    else if (iscprim(a)) {
+        cv = (cvalue_t*)ptr(a);
+        if (cp_class(cv) == bytetype)
+            return fixnum(1);
+        else if (cp_class(cv) == wchartype)
+            return fixnum(u8_charlen(*(uint32_t*)cp_data((cprim_t*)cv)));
+    }
+    else if (iscvalue(a)) {
+        cv = (cvalue_t*)ptr(a);
+        if (cv_class(cv)->eltype != NULL)
+            return size_wrap(cvalue_arraylen(a));
+    }
+    else if (a == NIL) {
+        return fixnum(0);
+    }
+    else if (iscons(a)) {
+        return fixnum(llength(a));
+    }
+    type_error("length", "sequence", a);
+}
+
 static value_t fl_raise(value_t *args, u_int32_t nargs)
 {
     argcount("raise", nargs, 1);
@@ -387,6 +416,7 @@ static builtinspec_t builtin_info[] = {
     { "nconc", fl_nconc },
     { "assq", fl_assq },
     { "memq", fl_memq },
+    { "length", fl_length },
 
     { "vector.alloc", fl_vector_alloc },
 
