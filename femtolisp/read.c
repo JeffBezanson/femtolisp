@@ -575,8 +575,14 @@ static value_t do_read_sexpr(value_t label)
         // cannot see pending labels. in other words:
         // (... #2=#.#0# ... )    OK
         // (... #2=#.(#2#) ... )  DO NOT WANT
-        v = do_read_sexpr(UNBOUND);
-        return toplevel_eval(v);
+        sym = do_read_sexpr(UNBOUND);
+        if (issymbol(sym)) {
+            v = symbol_value(sym);
+            if (v == UNBOUND)
+                raise(list2(UnboundError, sym));
+            return v;
+        }
+        return toplevel_eval(sym);
     case TOK_LABEL:
         // create backreference label
         if (ptrhash_has(&readstate->backrefs, (void*)tokval))
