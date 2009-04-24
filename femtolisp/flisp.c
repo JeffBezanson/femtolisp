@@ -54,10 +54,11 @@
 
 static char *builtin_names[] =
     { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-      NULL, NULL, NULL, NULL, NULL,
+      NULL, NULL, NULL, NULL,
       // predicates
       "eq?", "eqv?", "equal?", "atom?", "not", "null?", "boolean?", "symbol?",
       "number?", "bound?", "pair?", "builtin?", "vector?", "fixnum?",
+      "function?",
 
       // lists
       "cons", "list", "car", "cdr", "set-car!", "set-cdr!",
@@ -75,8 +76,8 @@ static char *builtin_names[] =
 #define ANYARGS -10000
 
 static short builtin_arg_counts[] =
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-      2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+      2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
       2, ANYARGS, 1, 1, 2, 2,
       2,
       ANYARGS, -1, ANYARGS, -1, 2, 2, 2,
@@ -832,6 +833,8 @@ static value_t apply_cl(uint32_t nargs)
                     v = ((builtin_t)ptr(func))(&Stack[SP-n], n);
                 }
                 else {
+                    if (op > OP_ASET)
+                        type_error("apply", "function", func);
                     s = builtin_arg_counts[op];
                     if (s >= 0)
                         argcount(builtin_names[op], n, s);
@@ -938,6 +941,11 @@ static value_t apply_cl(uint32_t nargs)
             v = Stack[SP-1];
             Stack[SP-1] = ((isbuiltinish(v) && v!=FL_F && v!=FL_T && v!=NIL)
                            ? FL_T : FL_F);
+            break;
+        case OP_FUNCTIONP:
+            v = Stack[SP-1];
+            Stack[SP-1] = ((isbuiltinish(v) && v!=FL_F && v!=FL_T && v!=NIL) ||
+                           isfunction(v)) ? FL_T : FL_F;
             break;
         case OP_VECTORP:
             Stack[SP-1] = (isvector(Stack[SP-1]) ? FL_T : FL_F); break;
@@ -1455,9 +1463,9 @@ static void lisp_init(void)
     htable_new(&printconses, 32);
     comparehash_init();
 
-    NIL = builtin(F_NIL);
-    FL_T = builtin(F_TRUE);
-    FL_F = builtin(F_FALSE);
+    NIL = builtin(OP_THE_EMPTY_LIST);
+    FL_T = builtin(OP_BOOL_CONST_T);
+    FL_F = builtin(OP_BOOL_CONST_F);
     LAMBDA = symbol("lambda");
     FUNCTION = symbol("function");
     QUOTE = symbol("quote");
@@ -1497,11 +1505,12 @@ static void lisp_init(void)
     set(printwidthsym=symbol("*print-width*"), fixnum(SCR_WIDTH));
     lasterror = NIL;
     i = 0;
-    for (i=F_EQ; i < F_TRUE; i++) {
+    for (i=OP_EQ; i <= OP_ASET; i++) {
         setc(symbol(builtin_names[i]), builtin(i));
     }
-    setc(symbol("eq"), builtin(F_EQ));
-    setc(symbol("equal"), builtin(F_EQUAL));
+    setc(symbol("eq"), builtin(OP_EQ));
+    setc(symbol("equal"), builtin(OP_EQUAL));
+    setc(symbol("procedure?"), builtin(OP_FUNCTIONP));
 
 #ifdef LINUX
     setc(symbol("*os-name*"), symbol("linux"));

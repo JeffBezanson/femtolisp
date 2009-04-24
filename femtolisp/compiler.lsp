@@ -9,10 +9,9 @@
 (define Instructions
   (make-enum-table 0
    [:nop :dup :pop :call :tcall :jmp :brf :brt :jmp.l :brf.l :brt.l :ret
-    :tapply
 
     :eq? :eqv? :equal? :atom? :not :null? :boolean? :symbol?
-    :number? :bound? :pair? :builtin? :vector? :fixnum?
+    :number? :bound? :pair? :builtin? :vector? :fixnum? :function?
 
     :cons :list :car :cdr :set-car! :set-cdr!
     :apply
@@ -25,7 +24,9 @@
     :loadg :loada :loadc :loadg.l
     :setg  :seta  :setc  :setg.l
 
-    :closure :trycatch :argc :vargc :close :let :for]))
+    :closure :trycatch :argc :vargc :close :let :for :tapply
+
+    dummy_t dummy_f dummy_nil]))
 
 (define arg-counts
   (table :eq?      2      :eqv?     2

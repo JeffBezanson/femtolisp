@@ -116,19 +116,7 @@ extern uint32_t SP;
                               args[MAX_ARGS]=cdr_(args[MAX_ARGS])) :    \
                  (arg = args[i])) || 1)); i++)
 
-enum {
-    // functions
-    F_EQ=13, F_EQV, F_EQUAL, F_ATOM, F_NOT, F_NULL, F_BOOLEANP, F_SYMBOLP,
-    F_NUMBERP, F_BOUNDP, F_CONSP, F_BUILTINP, F_VECTORP, F_FIXNUMP,
-
-    F_CONS, F_LIST, F_CAR, F_CDR, F_SETCAR, F_SETCDR,
-    F_APPLY,
-    F_ADD, F_SUB, F_MUL, F_DIV, F_NUMEQ, F_LT, F_COMPARE,
-
-    F_VECTOR, F_AREF, F_ASET,
-    F_TRUE, F_FALSE, F_NIL,
-    N_BUILTINS
-};
+#define N_BUILTINS ((int)N_OPCODES)
 
 extern value_t NIL, FL_T, FL_F;
 

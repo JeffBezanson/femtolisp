@@ -107,10 +107,6 @@
 (define (abs x)   (if (< x 0) (- x) x))
 (define (identity x) x)
 (define (char? x) (eq? (typeof x) 'wchar))
-(define (function? x)
-  (or (builtin? x)
-      (eq (typeof x) 'function)))
-(define procedure? function?)
 
 (define (caar x) (car (car x)))
 (define (cadr x) (car (cdr x)))
