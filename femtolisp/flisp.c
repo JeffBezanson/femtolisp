@@ -716,6 +716,8 @@ static value_t do_trycatch()
     return v;
 }
 
+#define fn_vals(f) (((value_t*)ptr(f))[4])
+
 /*
   stack on entry: <func>  <args...>
   caller's responsibility:
@@ -744,7 +746,7 @@ static value_t apply_cl(uint32_t nargs)
     uint8_t *code;
     value_t func, v, x, e;
     function_t *fn;
-    value_t *pvals, *lenv, *pv;
+    value_t *lenv, *pv;
     symbol_t *sym;
     cons_t *c;
 
@@ -761,8 +763,6 @@ static value_t apply_cl(uint32_t nargs)
 
     bp = SP-nargs;
     PUSH(fn->env);
-    PUSH(fn->vals);
-    pvals = &Stack[SP-1];
 
     ip = 0;
     while (1) {
@@ -786,15 +786,11 @@ static value_t apply_cl(uint32_t nargs)
                 }
                 Stack[bp+i] = v;
                 Stack[bp+i+1] = Stack[bp+nargs];
-                Stack[bp+i+2] = Stack[bp+nargs+1];
-                pvals = &Stack[bp+i+2];
             }
             else {
                 PUSH(NIL);
                 Stack[SP-1] = Stack[SP-2];
-                Stack[SP-2] = Stack[SP-3];
-                Stack[SP-3] = NIL;
-                pvals = &Stack[SP-1];
+                Stack[SP-2] = NIL;
             }
             nargs = i+1;
             break;
@@ -802,9 +798,7 @@ static value_t apply_cl(uint32_t nargs)
             ip++;
             // last arg is closure environment to use
             nargs--;
-            Stack[SP-2] = Stack[SP-1];
             POPN(1);
-            pvals = &Stack[SP-1];
             break;
         case OP_NOP: break;
         case OP_DUP: v = Stack[SP-1]; PUSH(v); break;
@@ -1029,42 +1023,60 @@ static value_t apply_cl(uint32_t nargs)
             POPN(n);
             PUSH(v);
             break;
+        case OP_ADD2:
+            if (bothfixnums(Stack[SP-1], Stack[SP-2])) {
+                accum = (int64_t)numval(Stack[SP-1]) + numval(Stack[SP-2]);
+                if (fits_fixnum(accum))
+                    v = fixnum(accum);
+                else
+                    v = return_from_int64(accum);
+            }
+            else {
+                v = fl_add_any(&Stack[SP-2], 2, 0);
+            }
+            POPN(1);
+            Stack[SP-1] = v;
+            break;
         case OP_SUB:
             n = code[ip++];
         apply_sub:
+            if (n == 2) goto do_sub2;
+            if (n == 1) goto do_neg;
             i = SP-n;
-            if (n == 1) {
-                if (__likely(isfixnum(Stack[i])))
-                    Stack[SP-1] = fixnum(-numval(Stack[i]));
-                else
-                    Stack[SP-1] = fl_neg(Stack[i]);
-                break;
-            }
-            if (n == 2) {
-                if (__likely(bothfixnums(Stack[i], Stack[i+1]))) {
-                    s = numval(Stack[i]) - numval(Stack[i+1]);
-                    if (__likely(fits_fixnum(s))) {
-                        POPN(1);
-                        Stack[SP-1] = fixnum(s);
-                        break;
-                    }
-                    Stack[i+1] = fixnum(-numval(Stack[i+1]));
-                }
-                else {
-                    Stack[i+1] = fl_neg(Stack[i+1]);
-                }
-            }
-            else {
-                // we need to pass the full arglist on to fl_add_any
-                // so it can handle rest args properly
-                PUSH(Stack[i]);
-                Stack[i] = fixnum(0);
-                Stack[i+1] = fl_neg(fl_add_any(&Stack[i], n, 0));
-                Stack[i] = POP();
-            }
+            // we need to pass the full arglist on to fl_add_any
+            // so it can handle rest args properly
+            PUSH(Stack[i]);
+            Stack[i] = fixnum(0);
+            Stack[i+1] = fl_neg(fl_add_any(&Stack[i], n, 0));
+            Stack[i] = POP();
             v = fl_add_any(&Stack[i], 2, 0);
             POPN(n);
             PUSH(v);
+            break;
+        case OP_NEG:
+        do_neg:
+            if (__likely(isfixnum(Stack[SP-1])))
+                Stack[SP-1] = fixnum(-numval(Stack[SP-1]));
+            else
+                Stack[SP-1] = fl_neg(Stack[SP-1]);
+            break;
+        case OP_SUB2:
+        do_sub2:
+            if (__likely(bothfixnums(Stack[SP-2], Stack[SP-1]))) {
+                s = numval(Stack[SP-2]) - numval(Stack[SP-1]);
+                if (__likely(fits_fixnum(s))) {
+                    POPN(1);
+                    Stack[SP-1] = fixnum(s);
+                    break;
+                }
+                Stack[SP-1] = fixnum(-numval(Stack[SP-1]));
+            }
+            else {
+                Stack[SP-1] = fl_neg(Stack[SP-1]);
+            }
+            v = fl_add_any(&Stack[SP-2], 2, 0);
+            POPN(1);
+            Stack[SP-1] = v;
             break;
         case OP_MUL:
             n = code[ip++];
@@ -1219,20 +1231,24 @@ static value_t apply_cl(uint32_t nargs)
         case OP_LOAD1: PUSH(fixnum(1)); break;
         case OP_LOADI8: s = (int8_t)code[ip++]; PUSH(fixnum(s)); break;
         case OP_LOADV:
-            assert(code[ip] < vector_size(*pvals));
-            v = vector_elt(*pvals, code[ip]); ip++;
+            v = fn_vals(Stack[bp-1]);
+            assert(code[ip] < vector_size(v));
+            v = vector_elt(v, code[ip]); ip++;
             PUSH(v);
             break;
         case OP_LOADVL:
-            v = vector_elt(*pvals, *(uint32_t*)&code[ip]); ip+=4;
+            v = fn_vals(Stack[bp-1]);
+            v = vector_elt(v, *(uint32_t*)&code[ip]); ip+=4;
             PUSH(v);
             break;
         case OP_LOADGL:
-            v = vector_elt(*pvals, *(uint32_t*)&code[ip]); ip+=4;
+            v = fn_vals(Stack[bp-1]);
+            v = vector_elt(v, *(uint32_t*)&code[ip]); ip+=4;
             goto do_loadg;
         case OP_LOADG:
-            assert(code[ip] < vector_size(*pvals));
-            v = vector_elt(*pvals, code[ip]); ip++;
+            v = fn_vals(Stack[bp-1]);
+            assert(code[ip] < vector_size(v));
+            v = vector_elt(v, code[ip]); ip++;
         do_loadg:
             assert(issymbol(v));
             sym = (symbol_t*)ptr(v);
@@ -1242,11 +1258,13 @@ static value_t apply_cl(uint32_t nargs)
             break;
 
         case OP_SETGL:
-            v = vector_elt(*pvals, *(uint32_t*)&code[ip]); ip+=4;
+            v = fn_vals(Stack[bp-1]);
+            v = vector_elt(v, *(uint32_t*)&code[ip]); ip+=4;
             goto do_setg;
         case OP_SETG:
-            assert(code[ip] < vector_size(*pvals));
-            v = vector_elt(*pvals, code[ip]); ip++;
+            v = fn_vals(Stack[bp-1]);
+            assert(code[ip] < vector_size(v));
+            v = vector_elt(v, code[ip]); ip++;
         do_setg:
             assert(issymbol(v));
             sym = (symbol_t*)ptr(v);

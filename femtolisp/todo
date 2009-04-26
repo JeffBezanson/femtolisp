@@ -1030,4 +1030,14 @@ new evaluator todo:
 * let optimization
 * have macroexpand use its own global syntax table
 * be able to create/load an image file
-- opcodes NEG, ADD2
+- fix trace and untrace
+- opcodes NEG, ADD2, (CADR ?), sub-immediate, add-immediate
+- EQTO N, compare directly to stored datum N
+- peephole opt
+  constant+pop => nothing, e.g. 2-arg 'if' in statement position
+  not+brf => brt
+  not+brt => brf
+  loadt+brf => nothing
+  loadf+brt => nothing
+  loadt+brt => jmp
+  loadf+brf => jmp

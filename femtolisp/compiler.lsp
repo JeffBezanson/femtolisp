@@ -24,7 +24,7 @@
     :loadg :loada :loadc :loadg.l
     :setg  :seta  :setc  :setg.l
 
-    :closure :trycatch :argc :vargc :close :let :for :tapply
+    :closure :trycatch :argc :vargc :close :let :for :tapply :add2 :sub2 :neg
 
     dummy_t dummy_f dummy_nil]))
 
@@ -69,13 +69,14 @@
 (define (make-label e)   (gensym))
 (define (mark-label e l) (emit e :label l))
 
-(define (count- f l n)
-  (if (null? l)
-      n
-      (count- f (cdr l) (if (f (car l))
-			    (+ n 1)
-			    n))))
-(define (count f l) (count- f l 0))
+(define (count f l)
+  (define (count- f l n)
+    (if (null? l)
+	n
+	(count- f (cdr l) (if (f (car l))
+			      (+ n 1)
+			      n))))
+  (count- f l 0))
 
 (define (peephole c) c)
 
@@ -147,22 +148,17 @@
       (io.tostring! bcode))))
 
 (define (const-to-idx-vec e)
-  (let ((const-to-idx (aref e 1))
-	(nconst       (aref e 2)))
-    (let ((cvec (vector.alloc nconst)))
-      (table.foreach (lambda (val idx) (aset! cvec idx val))
-		     const-to-idx)
-      cvec)))
+  (let ((cvec (vector.alloc (aref e 2))))
+    (table.foreach (lambda (val idx) (aset! cvec idx val))
+		   (aref e 1))
+    cvec))
 
 (define (index-of item lst start)
   (cond ((null? lst) #f)
-	((eq item (car lst)) start)
-	(#t (index-of item (cdr lst) (+ start 1)))))
+	((eq? item (car lst)) start)
+	(else (index-of item (cdr lst) (+ start 1)))))
 
-(define (in-env? s env)
-  (and (pair? env)
-       (or (memq s (car env))
-	   (in-env? s (cdr env)))))
+(define (in-env? s env) (any (lambda (e) (memq s e)) env))
 
 (define (lookup-sym s env lev arg?)
   (if (null? env)
@@ -185,17 +181,14 @@
       (closed  (emit g (aref Is 1) (cadr loc) (caddr loc)))
       (else    (emit g (aref Is 2) s)))))
 
-(define (builtin->instruction b)
-  (let ((sym (intern (string #\: b))))
-    (and (has? Instructions sym) sym)))
-
 (define (cond->if form)
   (cond-clauses->if (cdr form)))
 (define (cond-clauses->if lst)
   (if (atom? lst)
       #f
       (let ((clause (car lst)))
-	(if (eq? (car clause) 'else)
+	(if (or (eq? (car clause) 'else)
+		(eq? (car clause) #t))
 	    (cons 'begin (cdr clause))
 	    `(if ,(car clause)
 		 ,(cons 'begin (cdr clause))
@@ -278,13 +271,13 @@
 
 (define MAX_ARGS 127)
 
-(define (list-part- l n  i subl acc)
-  (cond ((atom? l) (if (> i 0)
-		       (cons (nreverse subl) acc)
-		       acc))
-	((>= i n)  (list-part- l n 0 () (cons (nreverse subl) acc)))
-	(else      (list-part- (cdr l) n (+ 1 i) (cons (car l) subl) acc))))
 (define (list-partition l n)
+  (define (list-part- l n  i subl acc)
+    (cond ((atom? l) (if (> i 0)
+			 (cons (nreverse subl) acc)
+			 acc))
+	  ((>= i n)  (list-part- l n 0 () (cons (nreverse subl) acc)))
+	  (else      (list-part- (cdr l) n (+ 1 i) (cons (car l) subl) acc))))
   (if (<= n 0)
       (error "list-partition: invalid count")
       (nreverse (list-part- l n 0 () ()))))
@@ -339,6 +332,10 @@
       (emit g :close)
       (emit g (if tail? :tcall :call) (+ 1 nargs)))))
 
+(define (builtin->instruction b)
+  (let ((sym (intern (string #\: b))))
+    (and (has? Instructions sym) sym)))
+
 (define (compile-call g env tail? x)
   (let ((head  (car x)))
     (let ((head
@@ -361,11 +358,13 @@
 		    (argc-error head count))
 		(case b  ; handle special cases of vararg builtins
 		  (:list (if (= nargs 0) (emit g :loadnil) (emit g b nargs)))
-		  (:+    (if (= nargs 0) (emit g :load0)
-			     (emit g b nargs)))
-		  (:-    (if (= nargs 0)
-			     (argc-error head 1)
-			     (emit g b nargs)))
+		  (:+    (cond ((= nargs 0) (emit g :load0))
+			       ((= nargs 2) (emit g :add2))
+			       (else (emit g b nargs))))
+		  (:-    (cond ((= nargs 0) (argc-error head 1))
+			       ((= nargs 1) (emit g :neg))
+			       ((= nargs 2) (emit g :sub2))
+			       (else (emit g b nargs))))
 		  (:*    (if (= nargs 0) (emit g :load1)
 			     (emit g b nargs)))
 		  (:/    (if (= nargs 0)
@@ -403,6 +402,8 @@
 	   (or       (compile-or  g env tail? (cdr x)))
 	   (while    (compile-while g env (cadr x) (cons 'begin (cddr x))))
 	   (for      (compile-for   g env (cadr x) (caddr x) (cadddr x)))
+	   (return   (compile-in g env #t (cadr x))
+		     (emit g :ret))
 	   (set!     (compile-in g env #f (caddr x))
 		     (compile-sym g env (cadr x) [:seta :setc :setg]))
 	   (trycatch (compile-in g env #f `(lambda () ,(cadr x)))
@@ -440,14 +441,19 @@
 (define (hex5 n)
   (pad-l (number->string n 16) 5 #\0))
 
-(define (disassemble- f lev)
-  (let ((fvec (function->vector f)))
+(define (disassemble f . lev?)
+  (if (null? lev?)
+      (begin (disassemble f 0)
+	     (newline)
+	     (return #t)))
+  (let ((fvec (function->vector f))
+	(lev (car lev?)))
     (let ((code (aref fvec 0))
 	  (vals (aref fvec 1)))
       (define (print-val v)
 	(if (and (function? v) (not (builtin? v)))
 	    (begin (princ "\n")
-		   (disassemble- v (+ lev 1)))
+		   (disassemble v (+ lev 1)))
 	    (print v)))
       (let ((i 0)
 	    (N (length code)))
@@ -487,7 +493,5 @@
 		    (set! i (+ i 4)))
 		   
 		   (else #f))))))))
-
-(define (disassemble f) (disassemble- f 0) (newline))
 
 #t

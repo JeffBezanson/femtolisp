@@ -134,7 +134,6 @@
        (or (pred (car lst))
            (any pred (cdr lst)))))
 
-(define (listp a) (or (null? a) (pair? a)))
 (define (list? a) (or (null? a) (and (pair? a) (list? (cdr a)))))
 
 (define (list-tail lst n)
@@ -728,18 +727,23 @@
 (define (make-system-image fname)
   (let ((f (file fname :write :create :truncate))
 	(excludes '(*linefeed* *directory-separator* *argv* that
-			       *print-pretty* *print-width*)))
-    (for-each (lambda (s)
-		(if (and (bound? s)
-			 (not (constant? s))
-			 (not (builtin? (top-level-value s)))
-			 (not (memq s excludes))
-			 (not (iostream? (top-level-value s))))
-		    (begin
-		      (io.print f s) (io.write f "\n")
-		      (io.print f (top-level-value s)) (io.write f "\n"))))
-	      (environment))
-    (io.close f)))
+			       *print-pretty* *print-width*))
+	(pp *print-pretty*))
+    (set! *print-pretty* #f)
+    (unwind-protect
+     (for-each (lambda (s)
+		 (if (and (bound? s)
+			  (not (constant? s))
+			  (not (builtin? (top-level-value s)))
+			  (not (memq s excludes))
+			  (not (iostream? (top-level-value s))))
+		     (begin
+		       (io.print f s) (io.write f "\n")
+		       (io.print f (top-level-value s)) (io.write f "\n"))))
+	       (environment))
+     (begin
+       (io.close f)
+       (set! *print-pretty* pp)))))
 
 ; initialize globals that need to be set at load time
 (define (__init_globals)
