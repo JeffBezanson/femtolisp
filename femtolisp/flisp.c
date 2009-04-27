@@ -765,7 +765,8 @@ static value_t apply_cl(uint32_t nargs)
     PUSH(fn->env);
 
     ip = 0;
-    while (1) {
+    { 
+    next_op:
         op = code[ip++];
     dispatch:
         switch (op) {
@@ -773,7 +774,7 @@ static value_t apply_cl(uint32_t nargs)
             if (nargs > code[ip++]) {
                 lerror(ArgError, "apply: too many arguments");
             }
-            break;
+            goto next_op;
         case OP_VARGC:
             i = code[ip++];
             s = (fixnum_t)nargs - (fixnum_t)i;
@@ -793,33 +794,33 @@ static value_t apply_cl(uint32_t nargs)
                 Stack[SP-2] = NIL;
             }
             nargs = i+1;
-            break;
+            goto next_op;
         case OP_LET:
             ip++;
             // last arg is closure environment to use
             nargs--;
             POPN(1);
-            break;
-        case OP_NOP: break;
-        case OP_DUP: v = Stack[SP-1]; PUSH(v); break;
-        case OP_POP: POPN(1); break;
+            goto next_op;
+        case OP_NOP: goto next_op;
+        case OP_DUP: v = Stack[SP-1]; PUSH(v); goto next_op;
+        case OP_POP: POPN(1); goto next_op;
         case OP_TCALL:
+            n = code[ip++];  // nargs
+            if (isfunction(Stack[SP-n-1])) {
+                for(s=-1; s < (fixnum_t)n; s++)
+                    Stack[bp+s] = Stack[SP-n+s];
+                SP = bp+n;
+                nargs = n;
+                goto apply_cl_top;
+            }
+            goto do_call;
         case OP_CALL:
             n = code[ip++];  // nargs
         do_call:
-            s = SP;
             func = Stack[SP-n-1];
+            s = SP;
             if (isfunction(func)) {
-                if (op == OP_TCALL) {
-                    for(s=-1; s < (fixnum_t)n; s++)
-                        Stack[bp+s] = Stack[SP-n+s];
-                    SP = bp+n;
-                    nargs = n;
-                    goto apply_cl_top;
-                }
-                else {
-                    v = apply_cl(n);
-                }
+                v = apply_cl(n);
             }
             else if (isbuiltinish(func)) {
                 op = uintval(func);
@@ -853,36 +854,36 @@ static value_t apply_cl(uint32_t nargs)
             else {
                 type_error("apply", "function", func);
             }
-            SP = s-n-1;
-            PUSH(v);
-            break;
-        case OP_JMP: ip = (uint32_t)*(uint16_t*)&code[ip]; break;
+            SP = s-n;
+            Stack[SP-1] = v;
+            goto next_op;
+        case OP_JMP: ip = (uint32_t)*(uint16_t*)&code[ip]; goto next_op;
         case OP_BRF:
             v = POP();
             if (v == FL_F) ip = (uint32_t)*(uint16_t*)&code[ip];
             else ip += 2;
-            break;
+            goto next_op;
         case OP_BRT:
             v = POP();
             if (v != FL_F) ip = (uint32_t)*(uint16_t*)&code[ip];
             else ip += 2;
-            break;
-        case OP_JMPL: ip = *(uint32_t*)&code[ip]; break;
+            goto next_op;
+        case OP_JMPL: ip = *(uint32_t*)&code[ip]; goto next_op;
         case OP_BRFL:
             v = POP();
             if (v == FL_F) ip = *(uint32_t*)&code[ip];
             else ip += 4;
-            break;
+            goto next_op;
         case OP_BRTL:
             v = POP();
             if (v != FL_F) ip = *(uint32_t*)&code[ip];
             else ip += 4;
-            break;
+            goto next_op;
         case OP_RET: v = POP(); return v;
 
         case OP_EQ:
             Stack[SP-2] = ((Stack[SP-2] == Stack[SP-1]) ? FL_T : FL_F);
-            POPN(1); break;
+            POPN(1); goto next_op;
         case OP_EQV:
             if (Stack[SP-2] == Stack[SP-1]) {
                 v = FL_T;
@@ -895,7 +896,7 @@ static value_t apply_cl(uint32_t nargs)
                     FL_T : FL_F;
             }
             Stack[SP-2] = v; POPN(1);
-            break;
+            goto next_op;
         case OP_EQUAL:
             if (Stack[SP-2] == Stack[SP-1]) {
                 v = FL_T;
@@ -908,41 +909,41 @@ static value_t apply_cl(uint32_t nargs)
                     FL_T : FL_F;
             }
             Stack[SP-2] = v; POPN(1);
-            break;
+            goto next_op;
         case OP_PAIRP:
-            Stack[SP-1] = (iscons(Stack[SP-1]) ? FL_T : FL_F); break;
+            Stack[SP-1] = (iscons(Stack[SP-1]) ? FL_T : FL_F); goto next_op;
         case OP_ATOMP:
-            Stack[SP-1] = (iscons(Stack[SP-1]) ? FL_F : FL_T); break;
+            Stack[SP-1] = (iscons(Stack[SP-1]) ? FL_F : FL_T); goto next_op;
         case OP_NOT:
-            Stack[SP-1] = ((Stack[SP-1]==FL_F) ? FL_T : FL_F); break;
+            Stack[SP-1] = ((Stack[SP-1]==FL_F) ? FL_T : FL_F); goto next_op;
         case OP_NULLP:
-            Stack[SP-1] = ((Stack[SP-1]==NIL) ? FL_T : FL_F); break;
+            Stack[SP-1] = ((Stack[SP-1]==NIL) ? FL_T : FL_F); goto next_op;
         case OP_BOOLEANP:
             v = Stack[SP-1];
-            Stack[SP-1] = ((v == FL_T || v == FL_F) ? FL_T : FL_F); break;
+            Stack[SP-1] = ((v == FL_T || v == FL_F) ? FL_T : FL_F); goto next_op;
         case OP_SYMBOLP:
-            Stack[SP-1] = (issymbol(Stack[SP-1]) ? FL_T : FL_F); break;
+            Stack[SP-1] = (issymbol(Stack[SP-1]) ? FL_T : FL_F); goto next_op;
         case OP_NUMBERP:
             v = Stack[SP-1];
-            Stack[SP-1] = (isfixnum(v) || iscprim(v) ? FL_T : FL_F); break;
+            Stack[SP-1] = (isfixnum(v) || iscprim(v) ? FL_T : FL_F); goto next_op;
         case OP_FIXNUMP:
-            Stack[SP-1] = (isfixnum(Stack[SP-1]) ? FL_T : FL_F); break;
+            Stack[SP-1] = (isfixnum(Stack[SP-1]) ? FL_T : FL_F); goto next_op;
         case OP_BOUNDP:
             sym = tosymbol(Stack[SP-1], "bound?");
             Stack[SP-1] = ((sym->binding == UNBOUND) ? FL_F : FL_T);
-            break;
+            goto next_op;
         case OP_BUILTINP:
             v = Stack[SP-1];
             Stack[SP-1] = ((isbuiltinish(v) && v!=FL_F && v!=FL_T && v!=NIL)
                            ? FL_T : FL_F);
-            break;
+            goto next_op;
         case OP_FUNCTIONP:
             v = Stack[SP-1];
             Stack[SP-1] = ((isbuiltinish(v) && v!=FL_F && v!=FL_T && v!=NIL) ||
                            isfunction(v)) ? FL_T : FL_F;
-            break;
+            goto next_op;
         case OP_VECTORP:
-            Stack[SP-1] = (isvector(Stack[SP-1]) ? FL_T : FL_F); break;
+            Stack[SP-1] = (isvector(Stack[SP-1]) ? FL_T : FL_F); goto next_op;
 
         case OP_CONS:
             if (curheap > lim)
@@ -952,23 +953,23 @@ static value_t apply_cl(uint32_t nargs)
             c->car = Stack[SP-2];
             c->cdr = Stack[SP-1];
             Stack[SP-2] = tagptr(c, TAG_CONS);
-            POPN(1); break;
+            POPN(1); goto next_op;
         case OP_CAR:
             v = Stack[SP-1];
             if (!iscons(v)) type_error("car", "cons", v);
             Stack[SP-1] = car_(v);
-            break;
+            goto next_op;
         case OP_CDR:
             v = Stack[SP-1];
             if (!iscons(v)) type_error("cdr", "cons", v);
             Stack[SP-1] = cdr_(v);
-            break;
+            goto next_op;
         case OP_SETCAR:
             car(Stack[SP-2]) = Stack[SP-1];
-            POPN(1); break;
+            POPN(1); goto next_op;
         case OP_SETCDR:
             cdr(Stack[SP-2]) = Stack[SP-1];
-            POPN(1); break;
+            POPN(1); goto next_op;
         case OP_LIST:
             n = code[ip++];
         apply_list:
@@ -980,7 +981,7 @@ static value_t apply_cl(uint32_t nargs)
             else {
                 PUSH(NIL);
             }
-            break;
+            goto next_op;
 
         case OP_TAPPLY:
         case OP_APPLY:
@@ -1022,21 +1023,21 @@ static value_t apply_cl(uint32_t nargs)
                 v = fixnum(s);
             POPN(n);
             PUSH(v);
-            break;
+            goto next_op;
         case OP_ADD2:
             if (bothfixnums(Stack[SP-1], Stack[SP-2])) {
-                accum = (int64_t)numval(Stack[SP-1]) + numval(Stack[SP-2]);
-                if (fits_fixnum(accum))
-                    v = fixnum(accum);
+                s = numval(Stack[SP-1]) + numval(Stack[SP-2]);
+                if (fits_fixnum(s))
+                    v = fixnum(s);
                 else
-                    v = return_from_int64(accum);
+                    v = mk_long(s);
             }
             else {
                 v = fl_add_any(&Stack[SP-2], 2, 0);
             }
             POPN(1);
             Stack[SP-1] = v;
-            break;
+            goto next_op;
         case OP_SUB:
             n = code[ip++];
         apply_sub:
@@ -1052,32 +1053,30 @@ static value_t apply_cl(uint32_t nargs)
             v = fl_add_any(&Stack[i], 2, 0);
             POPN(n);
             PUSH(v);
-            break;
+            goto next_op;
         case OP_NEG:
         do_neg:
             if (__likely(isfixnum(Stack[SP-1])))
                 Stack[SP-1] = fixnum(-numval(Stack[SP-1]));
             else
                 Stack[SP-1] = fl_neg(Stack[SP-1]);
-            break;
+            goto next_op;
         case OP_SUB2:
         do_sub2:
             if (__likely(bothfixnums(Stack[SP-2], Stack[SP-1]))) {
                 s = numval(Stack[SP-2]) - numval(Stack[SP-1]);
-                if (__likely(fits_fixnum(s))) {
-                    POPN(1);
-                    Stack[SP-1] = fixnum(s);
-                    break;
-                }
-                Stack[SP-1] = fixnum(-numval(Stack[SP-1]));
+                if (__likely(fits_fixnum(s)))
+                    v = fixnum(s);
+                else
+                    v = mk_long(s);
             }
             else {
                 Stack[SP-1] = fl_neg(Stack[SP-1]);
+                v = fl_add_any(&Stack[SP-2], 2, 0);
             }
-            v = fl_add_any(&Stack[SP-2], 2, 0);
             POPN(1);
             Stack[SP-1] = v;
-            break;
+            goto next_op;
         case OP_MUL:
             n = code[ip++];
         apply_mul:
@@ -1102,7 +1101,7 @@ static value_t apply_cl(uint32_t nargs)
             }
             POPN(n);
             PUSH(v);
-            break;
+            goto next_op;
         case OP_DIV:
             n = code[ip++];
         apply_div:
@@ -1121,7 +1120,7 @@ static value_t apply_cl(uint32_t nargs)
                 POPN(n);
                 PUSH(v);
             }
-            break;
+            goto next_op;
         case OP_NUMEQ:
             v = Stack[SP-2]; e = Stack[SP-1];
             if (bothfixnums(v, e)) {
@@ -1132,7 +1131,7 @@ static value_t apply_cl(uint32_t nargs)
             }
             POPN(1);
             Stack[SP-1] = v;
-            break;
+            goto next_op;
         case OP_LT:
             if (bothfixnums(Stack[SP-2], Stack[SP-1])) {
                 v = (numval(Stack[SP-2]) < numval(Stack[SP-1])) ? FL_T : FL_F;
@@ -1143,11 +1142,11 @@ static value_t apply_cl(uint32_t nargs)
             }
             POPN(1);
             Stack[SP-1] = v;
-            break;
+            goto next_op;
         case OP_COMPARE:
             Stack[SP-2] = compare(Stack[SP-2], Stack[SP-1]);
             POPN(1);
-            break;
+            goto next_op;
 
         case OP_VECTOR:
             n = code[ip++];
@@ -1171,7 +1170,7 @@ static value_t apply_cl(uint32_t nargs)
                 }
             }
             PUSH(v);
-            break;
+            goto next_op;
 
         case OP_AREF:
             v = Stack[SP-2];
@@ -1189,7 +1188,7 @@ static value_t apply_cl(uint32_t nargs)
             }
             POPN(1);
             Stack[SP-1] = v;
-            break;
+            goto next_op;
         case OP_ASET:
             e = Stack[SP-3];
             if (isvector(e)) {
@@ -1206,7 +1205,7 @@ static value_t apply_cl(uint32_t nargs)
             }
             POPN(2);
             Stack[SP-1] = v;
-            break;
+            goto next_op;
         case OP_FOR:
             lo = tofixnum(Stack[SP-3], "for");
             hi = tofixnum(Stack[SP-2], "for");
@@ -1222,25 +1221,25 @@ static value_t apply_cl(uint32_t nargs)
             }
             POPN(4);
             Stack[SP-1] = v;
-            break;
+            goto next_op;
 
-        case OP_LOADT: PUSH(FL_T); break;
-        case OP_LOADF: PUSH(FL_F); break;
-        case OP_LOADNIL: PUSH(NIL); break;
-        case OP_LOAD0: PUSH(fixnum(0)); break;
-        case OP_LOAD1: PUSH(fixnum(1)); break;
-        case OP_LOADI8: s = (int8_t)code[ip++]; PUSH(fixnum(s)); break;
+        case OP_LOADT: PUSH(FL_T); goto next_op;
+        case OP_LOADF: PUSH(FL_F); goto next_op;
+        case OP_LOADNIL: PUSH(NIL); goto next_op;
+        case OP_LOAD0: PUSH(fixnum(0)); goto next_op;
+        case OP_LOAD1: PUSH(fixnum(1)); goto next_op;
+        case OP_LOADI8: s = (int8_t)code[ip++]; PUSH(fixnum(s)); goto next_op;
         case OP_LOADV:
             v = fn_vals(Stack[bp-1]);
             assert(code[ip] < vector_size(v));
             v = vector_elt(v, code[ip]); ip++;
             PUSH(v);
-            break;
+            goto next_op;
         case OP_LOADVL:
             v = fn_vals(Stack[bp-1]);
             v = vector_elt(v, *(uint32_t*)&code[ip]); ip+=4;
             PUSH(v);
-            break;
+            goto next_op;
         case OP_LOADGL:
             v = fn_vals(Stack[bp-1]);
             v = vector_elt(v, *(uint32_t*)&code[ip]); ip+=4;
@@ -1255,7 +1254,7 @@ static value_t apply_cl(uint32_t nargs)
             if (sym->binding == UNBOUND)
                 raise(list2(UnboundError, v));
             PUSH(sym->binding);
-            break;
+            goto next_op;
 
         case OP_SETGL:
             v = fn_vals(Stack[bp-1]);
@@ -1271,7 +1270,7 @@ static value_t apply_cl(uint32_t nargs)
             v = Stack[SP-1];
             if (sym->syntax != TAG_CONST)
                 sym->binding = v;
-            break;
+            goto next_op;
 
         case OP_LOADA:
             assert(nargs > 0);
@@ -1287,7 +1286,7 @@ static value_t apply_cl(uint32_t nargs)
                 v = Stack[bp+i];
             }
             PUSH(v);
-            break;
+            goto next_op;
         case OP_SETA:
             assert(nargs > 0);
             v = Stack[SP-1];
@@ -1302,7 +1301,7 @@ static value_t apply_cl(uint32_t nargs)
                 assert(bp+i < SP);
                 Stack[bp+i] = v;
             }
-            break;
+            goto next_op;
         case OP_LOADC:
         case OP_SETC:
             s = code[ip++];
@@ -1316,7 +1315,7 @@ static value_t apply_cl(uint32_t nargs)
                 vector_elt(v, i) = Stack[SP-1];
             else
                 PUSH(vector_elt(v, i));
-            break;
+            goto next_op;
 
         case OP_CLOSURE:
         case OP_CLOSE:
@@ -1352,15 +1351,17 @@ static value_t apply_cl(uint32_t nargs)
                 POPN(1);
                 Stack[SP-1] = tagptr(pv, TAG_CVALUE);
             }
-            break;
+            goto next_op;
 
         case OP_TRYCATCH:
             v = do_trycatch();
             POPN(1);
             Stack[SP-1] = v;
-            break;
+            goto next_op;
         }
     }
+    assert(0);
+    return UNBOUND;
 }
 
 // initialization -------------------------------------------------------------
