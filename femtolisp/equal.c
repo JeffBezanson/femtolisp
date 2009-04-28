@@ -91,11 +91,16 @@ static value_t bounded_compare(value_t a, value_t b, int bound, int eq)
             return fixnum(c);
         break;
     case TAG_CVALUE:
-        if (iscvalue(b))
-            return cvalue_compare(a, b);
+        if (iscvalue(b)) {
+            if (cv_isPOD((cvalue_t*)ptr(a)) && cv_isPOD((cvalue_t*)ptr(b)))
+                return cvalue_compare(a, b);
+            return fixnum(1);
+        }
         break;
-    case TAG_BUILTIN:
-        if (tagb == TAG_BUILTIN) {
+    case TAG_FUNCTION:
+        if (uintval(a) > N_BUILTINS || uintval(b) > N_BUILTINS)
+            return fixnum(1);
+        if (tagb == TAG_FUNCTION) {
             return (uintval(a) < uintval(b)) ? fixnum(-1) : fixnum(1);
         }
         break;
@@ -267,7 +272,9 @@ static uptrint_t bounded_hash(value_t a, int bound)
     case TAG_NUM1:
         d = numval(a);
         return doublehash(*(int64_t*)&d);
-    case TAG_BUILTIN:
+    case TAG_FUNCTION:
+        if (uintval(a) > N_BUILTINS)
+            return bounded_hash(((function_t*)ptr(a))->bcode, bound);
         return inthash(a);
     case TAG_SYM:
         return ((symbol_t*)ptr(a))->hash;

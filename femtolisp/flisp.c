@@ -95,7 +95,6 @@ value_t DivideError, BoundsError, Error, KeyError, EnumerationError;
 value_t conssym, symbolsym, fixnumsym, vectorsym, builtinsym, vu8sym;
 value_t definesym, defmacrosym, forsym, labelsym, printprettysym, setqsym;
 value_t printwidthsym, tsym, Tsym, fsym, Fsym, booleansym, nullsym, evalsym;
-static fltype_t *functiontype;
 
 static value_t apply_cl(uint32_t nargs);
 static value_t *alloc_words(int n);
@@ -203,7 +202,7 @@ void bounds_error(char *fname, value_t arr, value_t ind)
 #define SAFECAST_OP(type,ctype,cnvt)                                          \
 ctype to##type(value_t v, char *fname)                                        \
 {                                                                             \
-    if (__likely(is##type(v)))                                                \
+    if (is##type(v))                                                          \
         return (ctype)cnvt(v);                                                \
     type_error(fname, #type, v);                                              \
 }
@@ -437,6 +436,18 @@ static value_t relocate(value_t v)
     else if (t == TAG_CVALUE) {
         return cvalue_relocate(v);
     }
+    else if (t == TAG_FUNCTION) {
+        function_t *fn = (function_t*)ptr(v);
+        function_t *nfn = (function_t*)alloc_words(4);
+        nfn->bcode = fn->bcode;
+        nfn->vals = fn->vals;
+        nc = tagptr(nfn, TAG_FUNCTION);
+        forward(v, nc);
+        nfn->env = relocate(fn->env);
+        nfn->vals = relocate(nfn->vals);
+        nfn->bcode = relocate(nfn->bcode);
+        return nc;
+    }
     else if (t == TAG_SYM) {
         gensym_t *gs = (gensym_t*)ptr(v);
         gensym_t *ng = (gensym_t*)alloc_words(sizeof(gensym_t)/sizeof(void*));
@@ -541,19 +552,17 @@ static value_t _applyn(uint32_t n)
     value_t f = Stack[SP-n-1];
     uint32_t saveSP = SP;
     value_t v;
-    if (isbuiltinish(f)) {
-        if (uintval(f) > N_BUILTINS) {
-            v = ((builtin_t)ptr(f))(&Stack[SP-n], n);
-            SP = saveSP;
-            return v;
-        }
+    if (iscbuiltin(f)) {
+        v = ((builtin_t*)ptr(f))[3](&Stack[SP-n], n);
     }
     else if (isfunction(f)) {
         v = apply_cl(n);
-        SP = saveSP;
-        return v;
     }
-    type_error("apply", "function", f);
+    else {
+        type_error("apply", "function", f);
+    }
+    SP = saveSP;
+    return v;
 }
 
 value_t apply(value_t f, value_t l)
@@ -716,7 +725,9 @@ static value_t do_trycatch()
     return v;
 }
 
-#define fn_vals(f) (((value_t*)ptr(f))[4])
+#define fn_bcode(f) (((value_t*)ptr(f))[0])
+#define fn_vals(f) (((value_t*)ptr(f))[1])
+#define fn_env(f) (((value_t*)ptr(f))[2])
 
 /*
   stack on entry: <func>  <args...>
@@ -745,7 +756,6 @@ static value_t apply_cl(uint32_t nargs)
     int64_t accum;
     uint8_t *code;
     value_t func, v, x, e;
-    function_t *fn;
     value_t *lenv, *pv;
     symbol_t *sym;
     cons_t *c;
@@ -753,16 +763,12 @@ static value_t apply_cl(uint32_t nargs)
  apply_cl_top:
     captured = 0;
     func = Stack[SP-nargs-1];
-    fn = value2c(function_t*,func);
-    code = cv_data((cvalue_t*)ptr(fn->bcode));
+    code = cv_data((cvalue_t*)ptr(fn_bcode(func)));
     assert(!ismanaged((uptrint_t)code));
     assert(ismanaged(func));
-    assert(ismanaged(fn->bcode));
-    if (nargs < code[1])
-        lerror(ArgError, "apply: too few arguments");
 
     bp = SP-nargs;
-    PUSH(fn->env);
+    PUSH(fn_env(func));
 
     ip = 0;
     { 
@@ -771,8 +777,12 @@ static value_t apply_cl(uint32_t nargs)
     dispatch:
         switch (op) {
         case OP_ARGC:
-            if (nargs > code[ip++]) {
-                lerror(ArgError, "apply: too many arguments");
+            n = code[ip++];
+            if (nargs != n) {
+                if (nargs > n)
+                    lerror(ArgError, "apply: too many arguments");
+                else
+                    lerror(ArgError, "apply: too few arguments");
             }
             goto next_op;
         case OP_VARGC:
@@ -787,6 +797,9 @@ static value_t apply_cl(uint32_t nargs)
                 }
                 Stack[bp+i] = v;
                 Stack[bp+i+1] = Stack[bp+nargs];
+            }
+            else if (s < 0) {
+                lerror(ArgError, "apply: too few arguments");
             }
             else {
                 PUSH(NIL);
@@ -819,15 +832,12 @@ static value_t apply_cl(uint32_t nargs)
         do_call:
             func = Stack[SP-n-1];
             s = SP;
-            if (isfunction(func)) {
-                v = apply_cl(n);
-            }
-            else if (isbuiltinish(func)) {
-                op = uintval(func);
-                if (op > N_BUILTINS) {
-                    v = ((builtin_t)ptr(func))(&Stack[SP-n], n);
+            if (tag(func) == TAG_FUNCTION) {
+                if (func > (N_BUILTINS<<3)) {
+                    v = apply_cl(n);
                 }
                 else {
+                    op = uintval(func);
                     if (op > OP_ASET)
                         type_error("apply", "function", func);
                     s = builtin_arg_counts[op];
@@ -850,6 +860,9 @@ static value_t apply_cl(uint32_t nargs)
                         goto dispatch;
                     }
                 }
+            }
+            else if (iscbuiltin(func)) {
+                v = (((builtin_t*)ptr(func))[3])(&Stack[SP-n], n);
             }
             else {
                 type_error("apply", "function", func);
@@ -892,8 +905,7 @@ static value_t apply_cl(uint32_t nargs)
                 v = FL_F;
             }
             else {
-                v = (numval(compare(Stack[SP-2], Stack[SP-1]))==0) ?
-                    FL_T : FL_F;
+                v = equal(Stack[SP-2], Stack[SP-1]);
             }
             Stack[SP-2] = v; POPN(1);
             goto next_op;
@@ -901,12 +913,8 @@ static value_t apply_cl(uint32_t nargs)
             if (Stack[SP-2] == Stack[SP-1]) {
                 v = FL_T;
             }
-            else if (eq_comparable(Stack[SP-2],Stack[SP-1])) {
-                v = FL_F;
-            }
             else {
-                v = (numval(compare(Stack[SP-2], Stack[SP-1]))==0) ?
-                    FL_T : FL_F;
+                v = equal(Stack[SP-2], Stack[SP-1]);
             }
             Stack[SP-2] = v; POPN(1);
             goto next_op;
@@ -920,12 +928,12 @@ static value_t apply_cl(uint32_t nargs)
             Stack[SP-1] = ((Stack[SP-1]==NIL) ? FL_T : FL_F); goto next_op;
         case OP_BOOLEANP:
             v = Stack[SP-1];
-            Stack[SP-1] = ((v == FL_T || v == FL_F) ? FL_T : FL_F); goto next_op;
+            Stack[SP-1] = ((v == FL_T || v == FL_F) ? FL_T:FL_F); goto next_op;
         case OP_SYMBOLP:
             Stack[SP-1] = (issymbol(Stack[SP-1]) ? FL_T : FL_F); goto next_op;
         case OP_NUMBERP:
             v = Stack[SP-1];
-            Stack[SP-1] = (isfixnum(v) || iscprim(v) ? FL_T : FL_F); goto next_op;
+            Stack[SP-1] = (isfixnum(v) || iscprim(v) ? FL_T:FL_F); goto next_op;
         case OP_FIXNUMP:
             Stack[SP-1] = (isfixnum(Stack[SP-1]) ? FL_T : FL_F); goto next_op;
         case OP_BOUNDP:
@@ -934,13 +942,12 @@ static value_t apply_cl(uint32_t nargs)
             goto next_op;
         case OP_BUILTINP:
             v = Stack[SP-1];
-            Stack[SP-1] = ((isbuiltinish(v) && v!=FL_F && v!=FL_T && v!=NIL)
-                           ? FL_T : FL_F);
+            Stack[SP-1] = (isbuiltin(v) || iscbuiltin(v)) ? FL_T : FL_F;
             goto next_op;
         case OP_FUNCTIONP:
             v = Stack[SP-1];
-            Stack[SP-1] = ((isbuiltinish(v) && v!=FL_F && v!=FL_T && v!=NIL) ||
-                           isfunction(v)) ? FL_T : FL_F;
+            Stack[SP-1] = ((tag(v)==TAG_FUNCTION &&v!=FL_F&&v!=FL_T&&v!=NIL) ||
+                           iscbuiltin(v)) ? FL_T : FL_F;
             goto next_op;
         case OP_VECTORP:
             Stack[SP-1] = (isvector(Stack[SP-1]) ? FL_T : FL_F); goto next_op;
@@ -1006,9 +1013,9 @@ static value_t apply_cl(uint32_t nargs)
             i = SP-n;
             if (n > MAX_ARGS) goto add_ovf;
             for (; i < SP; i++) {
-                if (__likely(isfixnum(Stack[i]))) {
+                if (isfixnum(Stack[i])) {
                     s += numval(Stack[i]);
-                    if (__unlikely(!fits_fixnum(s))) {
+                    if (!fits_fixnum(s)) {
                         i++;
                         goto add_ovf;
                     }
@@ -1056,16 +1063,16 @@ static value_t apply_cl(uint32_t nargs)
             goto next_op;
         case OP_NEG:
         do_neg:
-            if (__likely(isfixnum(Stack[SP-1])))
+            if (isfixnum(Stack[SP-1]))
                 Stack[SP-1] = fixnum(-numval(Stack[SP-1]));
             else
                 Stack[SP-1] = fl_neg(Stack[SP-1]);
             goto next_op;
         case OP_SUB2:
         do_sub2:
-            if (__likely(bothfixnums(Stack[SP-2], Stack[SP-1]))) {
+            if (bothfixnums(Stack[SP-2], Stack[SP-1])) {
                 s = numval(Stack[SP-2]) - numval(Stack[SP-1]);
-                if (__likely(fits_fixnum(s)))
+                if (fits_fixnum(s))
                     v = fixnum(s);
                 else
                     v = mk_long(s);
@@ -1084,7 +1091,7 @@ static value_t apply_cl(uint32_t nargs)
             i = SP-n;
             if (n > MAX_ARGS) goto mul_ovf;
             for (; i < SP; i++) {
-                if (__likely(isfixnum(Stack[i]))) {
+                if (isfixnum(Stack[i])) {
                     accum *= numval(Stack[i]);
                 }
                 else {
@@ -1094,7 +1101,7 @@ static value_t apply_cl(uint32_t nargs)
                 }
             }
             if (i == SP) {
-                if (__likely(fits_fixnum(accum)))
+                if (fits_fixnum(accum))
                     v = fixnum(accum);
                 else
                     v = return_from_int64(accum);
@@ -1176,7 +1183,7 @@ static value_t apply_cl(uint32_t nargs)
             v = Stack[SP-2];
             if (isvector(v)) {
                 i = tofixnum(Stack[SP-1], "aref");
-                if (__unlikely((unsigned)i >= vector_size(v)))
+                if ((unsigned)i >= vector_size(v))
                     bounds_error("aref", v, Stack[SP-1]);
                 v = vector_elt(v, i);
             }
@@ -1193,7 +1200,7 @@ static value_t apply_cl(uint32_t nargs)
             e = Stack[SP-3];
             if (isvector(e)) {
                 i = tofixnum(Stack[SP-2], "aset!");
-                if (__unlikely((unsigned)i >= vector_size(e)))
+                if ((unsigned)i >= vector_size(e))
                     bounds_error("aset!", v, Stack[SP-1]);
                 vector_elt(e, i) = (v=Stack[SP-1]);
             }
@@ -1339,17 +1346,14 @@ static value_t apply_cl(uint32_t nargs)
                 PUSH(Stack[bp]); // env has already been captured; share
             }
             if (op == OP_CLOSURE) {
-                pv = alloc_words(6);
+                pv = alloc_words(4);
                 x = Stack[SP-2];  // closure to copy
                 assert(isfunction(x));
                 pv[0] = ((value_t*)ptr(x))[0];
-                pv[1] = (value_t)&pv[3];
-                pv[2] = ((value_t*)ptr(x))[2];
-                pv[3] = ((value_t*)ptr(x))[3];
-                pv[4] = ((value_t*)ptr(x))[4];
-                pv[5] = Stack[SP-1];  // env
+                pv[1] = ((value_t*)ptr(x))[1];
+                pv[2] = Stack[SP-1];  // env
                 POPN(1);
-                Stack[SP-1] = tagptr(pv, TAG_CVALUE);
+                Stack[SP-1] = tagptr(pv, TAG_FUNCTION);
             }
             goto next_op;
 
@@ -1379,42 +1383,6 @@ void assign_global_builtins(builtinspec_t *b)
     }
 }
 
-static void print_function(value_t v, ios_t *f, int princ)
-{
-    (void)princ;
-    function_t *fn = value2c(function_t*,v);
-    outs("#function(", f);
-    char *data = cvalue_data(fn->bcode);
-    size_t i, sz = cvalue_len(fn->bcode);
-    for(i=0; i < sz; i++) data[i] += 48;
-    fl_print_child(f, fn->bcode, 0);
-    for(i=0; i < sz; i++) data[i] -= 48;
-    outc(' ', f);
-    fl_print_child(f, fn->vals, 0);
-    if (fn->env != NIL) {
-        outc(' ', f);
-        fl_print_child(f, fn->env, 0);
-    }
-    outc(')', f);
-}
-
-static void print_traverse_function(value_t v)
-{
-    function_t *fn = value2c(function_t*,v);
-    print_traverse(fn->bcode);
-    print_traverse(fn->vals);
-    print_traverse(fn->env);
-}
-
-static void relocate_function(value_t oldv, value_t newv)
-{
-    (void)oldv;
-    function_t *fn = value2c(function_t*,newv);
-    fn->bcode = relocate(fn->bcode);
-    fn->vals = relocate(fn->vals);
-    fn->env = relocate(fn->env);
-}
-
 static value_t fl_function(value_t *args, uint32_t nargs)
 {
     if (nargs != 3)
@@ -1432,8 +1400,8 @@ static value_t fl_function(value_t *args, uint32_t nargs)
         for(i=0; i < sz; i++)
             data[i] -= 48;
     }
-    value_t fv = cvalue(functiontype, sizeof(function_t));
-    function_t *fn = value2c(function_t*,fv);
+    function_t *fn = (function_t*)alloc_words(4);
+    value_t fv = tagptr(fn, TAG_FUNCTION);
     fn->bcode = args[0];
     fn->vals = args[1];
     if (nargs == 3)
@@ -1447,18 +1415,15 @@ static value_t fl_function2vector(value_t *args, uint32_t nargs)
 {
     argcount("function->vector", nargs, 1);
     value_t v = args[0];
-    if (!iscvalue(v) || cv_class((cvalue_t*)ptr(v)) != functiontype)
+    if (!isclosure(v))
         type_error("function->vector", "function", v);
     value_t vec = alloc_vector(3, 0);
-    function_t *fn = value2c(function_t*,args[0]);
+    function_t *fn = (function_t*)ptr(args[0]);
     vector_elt(vec,0) = fn->bcode;
     vector_elt(vec,1) = fn->vals;
     vector_elt(vec,2) = fn->env;
     return vec;
 }
-
-static cvtable_t function_vtable = { print_function, relocate_function,
-                                     NULL, print_traverse_function };
 
 static builtinspec_t core_builtin_info[] = {
     { "function", fl_function },
@@ -1556,9 +1521,6 @@ static void lisp_init(void)
 
     the_empty_vector = tagptr(alloc_words(1), TAG_VECTOR);
     vector_setsize(the_empty_vector, 0);
-
-    functiontype = define_opaque_type(FUNCTION, sizeof(function_t),
-                                      &function_vtable, NULL);
 
     assign_global_builtins(core_builtin_info);
 

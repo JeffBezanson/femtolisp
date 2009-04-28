@@ -31,7 +31,7 @@ typedef struct _symbol_t {
 
 #define TAG_NUM      0x0
 #define TAG_CPRIM    0x1
-#define TAG_BUILTIN  0x2
+#define TAG_FUNCTION 0x2
 #define TAG_VECTOR   0x3
 #define TAG_NUM1     0x4
 #define TAG_CVALUE   0x5
@@ -52,13 +52,12 @@ typedef struct _symbol_t {
 #endif
 #define fits_bits(x,b) (((x)>>(b-1)) == 0 || (~((x)>>(b-1))) == 0)
 #define uintval(x)  (((unsigned int)(x))>>3)
-#define builtin(n) tagptr((((int)n)<<3), TAG_BUILTIN)
+#define builtin(n) tagptr((((int)n)<<3), TAG_FUNCTION)
 #define iscons(x)    (tag(x) == TAG_CONS)
 #define issymbol(x)  (tag(x) == TAG_SYM)
 #define isfixnum(x)  (((x)&3) == TAG_NUM)
 #define bothfixnums(x,y) ((((x)|(y))&3) == TAG_NUM)
-#define isbuiltin(x) ((tag(x) == TAG_BUILTIN) && uintval(x) < N_BUILTINS)
-#define isbuiltinish(x) (tag(x) == TAG_BUILTIN)
+#define isbuiltin(x) ((tag(x) == TAG_FUNCTION) && (x) < (OP_BOOL_CONST_T<<3))
 #define isvector(x) (tag(x) == TAG_VECTOR)
 #define iscvalue(x) (tag(x) == TAG_CVALUE)
 #define iscprim(x)  (tag(x) == TAG_CPRIM)
@@ -93,7 +92,9 @@ typedef struct _symbol_t {
                       (((unsigned char*)ptr(v)) < fromspace+heapsize))
 #define isgensym(x)  (issymbol(x) && ismanaged(x))
 
-#define isfunction(x) (iscvalue(x) && (cv_class((cvalue_t*)ptr(x))==functiontype))
+#define isfunction(x) (tag(x) == TAG_FUNCTION && (x) > (N_BUILTINS<<3))
+#define isclosure(x) isfunction(x)
+#define iscbuiltin(x) (iscvalue(x) && (cv_class((cvalue_t*)ptr(x))==builtintype))
 
 extern value_t *Stack;
 extern uint32_t SP;
@@ -104,6 +105,8 @@ extern uint32_t SP;
 // maximum number of explicit arguments. the 128th arg is a list of rest args.
 // the largest value nargs can have is MAX_ARGS+1
 #define MAX_ARGS 127
+
+#include "opcodes.h"
 
 // utility for iterating over all arguments in a builtin
 // i=index, i0=start index, arg = var for each arg, args = arg array

@@ -1024,6 +1024,7 @@ new evaluator todo:
 * make (for ...) a special form
 * trycatch should require 2nd arg to be a lambda expression
 * immediate load int8 instruction
+- fix equal? on functions
 - maxstack calculation, replace Stack with C stack, alloca
   - stack traces and better debugging support
 - lambda lifting

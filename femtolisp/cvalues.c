@@ -635,12 +635,14 @@ value_t cvalue_typeof(value_t *args, u_int32_t nargs)
     case TAG_NUM:  return fixnumsym;
     case TAG_SYM:  return symbolsym;
     case TAG_VECTOR: return vectorsym;
-    case TAG_BUILTIN:
+    case TAG_FUNCTION:
         if (args[0] == FL_T || args[0] == FL_F)
             return booleansym;
         if (args[0] == NIL)
             return nullsym;
-        return builtinsym;
+        if (isbuiltin(args[0]))
+            return builtinsym;
+        return FUNCTION;
     }
     return cv_type((cvalue_t*)ptr(args[0]));
 }
@@ -877,31 +879,26 @@ value_t fl_builtin(value_t *args, u_int32_t nargs)
 {
     argcount("builtin", nargs, 1);
     symbol_t *name = tosymbol(args[0], "builtin");
-    builtin_t f;
-    if (ismanaged(args[0]) || (f=(builtin_t)name->dlcache) == NULL) {
+    cvalue_t *cv;
+    if (ismanaged(args[0]) || (cv=name->dlcache) == NULL) {
         lerror(ArgError, "builtin: function not found");
     }
-    return tagptr(f, TAG_BUILTIN);
+    return tagptr(cv, TAG_CVALUE);
 }
 
 value_t cbuiltin(char *name, builtin_t f)
 {
-    assert(((uptrint_t)f & 0x7) == 0);
+    cvalue_t *cv = (cvalue_t*)malloc(CVALUE_NWORDS * sizeof(value_t));
+    cv->type = builtintype;
+    cv->data = &cv->_space[0];
+    cv->len = sizeof(value_t);
+    *(void**)cv->data = f;
+
     value_t sym = symbol(name);
-    ((symbol_t*)ptr(sym))->dlcache = f;
-    ptrhash_put(&reverse_dlsym_lookup_table, f, (void*)sym);
-    return tagptr(f, TAG_BUILTIN);
-    /*
-    value_t gf = cvalue(builtintype, sizeof(void*));
-    ((cvalue_t*)ptr(gf))->data = f;
-    size_t nw = cv_nwords((cvalue_t*)ptr(gf));
-    // directly-callable values are assumed not to move for
-    // evaluator performance, so put builtin func metadata on the
-    // unmanaged heap
-    cvalue_t *buf = malloc(nw * sizeof(value_t));
-    memcpy(buf, ptr(gf), nw*sizeof(value_t));
-    return tagptr(buf, TAG_BUILTIN);
-    */
+    ((symbol_t*)ptr(sym))->dlcache = cv;
+    ptrhash_put(&reverse_dlsym_lookup_table, cv, (void*)sym);
+
+    return tagptr(cv, TAG_CVALUE);
 }
 
 static value_t fl_logand(value_t *args, u_int32_t nargs);

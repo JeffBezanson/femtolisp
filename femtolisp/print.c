@@ -81,6 +81,13 @@ void print_traverse(value_t v)
     else if (iscprim(v)) {
         mark_cons(v);
     }
+    else if (isclosure(v)) {
+        mark_cons(v);
+        function_t *f = (function_t*)ptr(v);
+        print_traverse(f->bcode);
+        print_traverse(f->vals);
+        print_traverse(f->env);
+    }
     else {
         assert(iscvalue(v));
         cvalue_t *cv = (cvalue_t*)ptr(v);
@@ -152,7 +159,7 @@ static inline int tinyp(value_t v)
         return (u8_strwidth(symbol_name(v)) < SMALL_STR_LEN);
     if (isstring(v))
         return (cv_len((cvalue_t*)ptr(v)) < SMALL_STR_LEN);
-    return (isfixnum(v) || isbuiltinish(v));
+    return (isfixnum(v) || isbuiltin(v));
 }
 
 static int smallp(value_t v)
@@ -351,35 +358,37 @@ void fl_print_child(ios_t *f, value_t v, int princ)
         else
             print_symbol_name(f, name);
         break;
-    case TAG_BUILTIN:
+    case TAG_FUNCTION:
         if (v == FL_T) {
             outsn("#t", f, 2);
-            break;
         }
-        if (v == FL_F) {
+        else if (v == FL_F) {
             outsn("#f", f, 2);
-            break;
         }
-        if (v == NIL) {
+        else if (v == NIL) {
             outsn("()", f, 2);
-            break;
         }
-        if (isbuiltin(v)) {
+        else if (isbuiltin(v)) {
             if (!princ)
                 outsn("#.", f, 2);
             outs(builtin_names[uintval(v)], f);
-            break;
-        }
-        label = (value_t)ptrhash_get(&reverse_dlsym_lookup_table, ptr(v));
-        if (label == (value_t)HT_NOTFOUND) {
-            HPOS += ios_printf(f, "#<builtin @0x%08lx>",
-                               (unsigned long)(builtin_t)ptr(v));
         }
         else {
-            if (princ)
-                outs(symbol_name(label), f);
-            else
-                HPOS += ios_printf(f, "#builtin(%s)", symbol_name(label));
+            assert(isclosure(v));
+            function_t *fn = (function_t*)ptr(v);
+            outs("#function(", f);
+            char *data = cvalue_data(fn->bcode);
+            size_t i, sz = cvalue_len(fn->bcode);
+            for(i=0; i < sz; i++) data[i] += 48;
+            fl_print_child(f, fn->bcode, 0);
+            for(i=0; i < sz; i++) data[i] -= 48;
+            outc(' ', f);
+            fl_print_child(f, fn->vals, 0);
+            if (fn->env != NIL) {
+                outc(' ', f);
+                fl_print_child(f, fn->env, 0);
+            }
+            outc(')', f);
         }
         break;
     case TAG_CVALUE:
@@ -423,7 +432,8 @@ void fl_print_child(ios_t *f, value_t v, int princ)
             break;
         }
         if (iscvalue(v) || iscprim(v)) {
-            unmark_cons(v);
+            if (ismanaged(v))
+                unmark_cons(v);
             cvalue_print(f, v, princ);
             break;
         }
@@ -657,10 +667,21 @@ static void cvalue_print(ios_t *f, value_t v, int princ)
 {
     cvalue_t *cv = (cvalue_t*)ptr(v);
     void *data = cptr(v);
+    value_t label;
 
     if (cv_class(cv) == builtintype) {
-        HPOS+=ios_printf(f, "#<builtin @0x%08lx>",
-                         (unsigned long)(builtin_t)data);
+        void *fptr = *(void**)data;
+        label = (value_t)ptrhash_get(&reverse_dlsym_lookup_table, cv);
+        if (label == (value_t)HT_NOTFOUND) {
+            HPOS += ios_printf(f, "#<builtin @0x%08lx>",
+                               (unsigned long)(builtin_t)fptr);
+        }
+        else {
+            if (princ)
+                outs(symbol_name(label), f);
+            else
+                HPOS += ios_printf(f, "#builtin(%s)", symbol_name(label));
+        }
     }
     else if (cv_class(cv)->vtable != NULL &&
              cv_class(cv)->vtable->print != NULL) {
