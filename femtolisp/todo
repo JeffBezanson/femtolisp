@@ -1025,10 +1025,12 @@ new evaluator todo:
 * trycatch should require 2nd arg to be a lambda expression
 * immediate load int8 instruction
 - fix equal? on functions
+- store function name and signature
 - maxstack calculation, replace Stack with C stack, alloca
   - stack traces and better debugging support
 - lambda lifting
 * let optimization
+- let eversion
 * have macroexpand use its own global syntax table
 * be able to create/load an image file
 - fix trace and untrace

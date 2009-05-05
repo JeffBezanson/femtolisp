@@ -11,10 +11,9 @@ static value_t iostreamsym, rdsym, wrsym, apsym, crsym, truncsym;
 static value_t instrsym, outstrsym;
 fltype_t *iostreamtype;
 
-void print_iostream(value_t v, ios_t *f, int princ)
+void print_iostream(value_t v, ios_t *f)
 {
     (void)v;
-    (void)princ;
     fl_print_str("#<io stream>", f);
 }
 
@@ -167,24 +166,27 @@ value_t fl_ioseek(value_t *args, u_int32_t nargs)
     return FL_T;
 }
 
-static void do_ioprint(value_t *args, u_int32_t nargs, int princ, char *fname)
+static void do_ioprint(value_t *args, u_int32_t nargs, char *fname)
 {
     if (nargs < 2 || nargs > MAX_ARGS)
         argcount(fname, nargs, 2);
     ios_t *s = toiostream(args[0], fname);
     unsigned i;
     for (i=1; i < nargs; i++) {
-        print(s, args[i], princ);
+        print(s, args[i]);
     }
 }
 value_t fl_ioprint(value_t *args, u_int32_t nargs)
 {
-    do_ioprint(args, nargs, 0, "io.print");
+    do_ioprint(args, nargs, "io.print");
     return args[nargs-1];
 }
 value_t fl_ioprinc(value_t *args, u_int32_t nargs)
 {
-    do_ioprint(args, nargs, 1, "io.princ");
+    value_t oldpr = symbol_value(printreadablysym);
+    set(printreadablysym, FL_F);
+    do_ioprint(args, nargs, "io.princ");
+    set(printreadablysym, oldpr);
     return args[nargs-1];
 }
 

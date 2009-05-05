@@ -110,9 +110,15 @@ value_t fl_string(value_t *args, u_int32_t nargs)
     value_t arg, buf = fl_buffer(NULL, 0);
     ios_t *s = value2c(ios_t*,buf);
     uint32_t i;
+    value_t oldpr = symbol_value(printreadablysym);
+    value_t oldpp = symbol_value(printprettysym);
+    set(printreadablysym, FL_F);
+    set(printprettysym, FL_F);
     FOR_ARGS(i,0,arg,args) {
-        print(s, args[i], 1);
+        print(s, args[i]);
     }
+    set(printreadablysym, oldpr);
+    set(printprettysym, oldpp);
     PUSH(buf);
     value_t outp = stream_to_string(&Stack[SP-1]);
     (void)POP();

@@ -1,6 +1,7 @@
 static htable_t printconses;
 static u_int32_t printlabel;
 static int print_pretty;
+static int print_princ;
 static int SCR_WIDTH = 80;
 
 static int HPOS, VPOS;
@@ -247,7 +248,7 @@ static int blockindent(value_t v)
     return (allsmallp(v) > 9);
 }
 
-static void print_pair(ios_t *f, value_t v, int princ)
+static void print_pair(ios_t *f, value_t v)
 {
     value_t cd;
     char *op = NULL;
@@ -262,7 +263,7 @@ static void print_pair(ios_t *f, value_t v, int princ)
         unmark_cons(v);
         unmark_cons(cdr_(v));
         outs(op, f);
-        fl_print_child(f, car_(cdr_(v)), princ);
+        fl_print_child(f, car_(cdr_(v)));
         return;
     }
     int startpos = HPOS;
@@ -277,20 +278,20 @@ static void print_pair(ios_t *f, value_t v, int princ)
     while (1) {
         lastv = VPOS;
         unmark_cons(v);
-        fl_print_child(f, car_(v), princ);
+        fl_print_child(f, car_(v));
         cd = cdr_(v);
         if (!iscons(cd) || ptrhash_has(&printconses, (void*)cd)) {
             if (cd != NIL) {
                 outsn(" . ", f, 3);
-                fl_print_child(f, cd, princ);
+                fl_print_child(f, cd);
             }
             outc(')', f);
             break;
         }
 
-        if (princ || !print_pretty ||
+        if (!print_pretty ||
             ((head == LAMBDA || head == labelsym) && n == 0)) {
-            // never break line before lambda-list or in princ
+            // never break line before lambda-list
             ind = 0;
         }
         else {
@@ -337,9 +338,9 @@ static void print_pair(ios_t *f, value_t v, int princ)
     }
 }
 
-static void cvalue_print(ios_t *f, value_t v, int princ);
+static void cvalue_print(ios_t *f, value_t v);
 
-void fl_print_child(ios_t *f, value_t v, int princ)
+void fl_print_child(ios_t *f, value_t v)
 {
     value_t label;
     char *name;
@@ -349,7 +350,7 @@ void fl_print_child(ios_t *f, value_t v, int princ)
     case TAG_NUM1: HPOS+=ios_printf(f, "%ld", numval(v)); break;
     case TAG_SYM:
         name = symbol_name(v);
-        if (princ)
+        if (print_princ)
             outs(name, f);
         else if (ismanaged(v)) {
             outsn("#:", f, 2);
@@ -369,7 +370,7 @@ void fl_print_child(ios_t *f, value_t v, int princ)
             outsn("()", f, 2);
         }
         else if (isbuiltin(v)) {
-            if (!princ)
+            if (!print_princ)
                 outsn("#.", f, 2);
             outs(builtin_names[uintval(v)], f);
         }
@@ -380,13 +381,13 @@ void fl_print_child(ios_t *f, value_t v, int princ)
             char *data = cvalue_data(fn->bcode);
             size_t i, sz = cvalue_len(fn->bcode);
             for(i=0; i < sz; i++) data[i] += 48;
-            fl_print_child(f, fn->bcode, 0);
+            fl_print_child(f, fn->bcode);
             for(i=0; i < sz; i++) data[i] -= 48;
             outc(' ', f);
-            fl_print_child(f, fn->vals, 0);
+            fl_print_child(f, fn->vals);
             if (fn->env != NIL) {
                 outc(' ', f);
-                fl_print_child(f, fn->env, 0);
+                fl_print_child(f, fn->env);
             }
             outc(')', f);
         }
@@ -410,9 +411,9 @@ void fl_print_child(ios_t *f, value_t v, int princ)
             unmark_cons(v);
             int i, sz = vector_size(v);
             for(i=0; i < sz; i++) {
-                fl_print_child(f, vector_elt(v,i), princ);
+                fl_print_child(f, vector_elt(v,i));
                 if (i < sz-1) {
-                    if (princ || !print_pretty) {
+                    if (!print_pretty) {
                         outc(' ', f);
                     }
                     else {
@@ -434,10 +435,10 @@ void fl_print_child(ios_t *f, value_t v, int princ)
         if (iscvalue(v) || iscprim(v)) {
             if (ismanaged(v))
                 unmark_cons(v);
-            cvalue_print(f, v, princ);
+            cvalue_print(f, v);
             break;
         }
-        print_pair(f, v, princ);
+        print_pair(f, v);
         break;
     }
 }
@@ -479,13 +480,13 @@ static numerictype_t sym_to_numtype(value_t type);
 // printing in a context where a type is already implied, e.g. inside
 // an array.
 static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
-                             int princ, int weak)
+                             int weak)
 {
     int64_t tmp=0;
 
     if (type == bytesym) {
         unsigned char ch = *(unsigned char*)data;
-        if (princ)
+        if (print_princ)
             outc(ch, f);
         else if (weak)
             HPOS+=ios_printf(f, "0x%hhx", ch);
@@ -495,11 +496,11 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
     else if (type == wcharsym) {
         uint32_t wc = *(uint32_t*)data;
         char seq[8];
-        if (princ || iswprint(wc)) {
+        if (print_princ || iswprint(wc)) {
             size_t nb = u8_toutf8(seq, sizeof(seq), &wc, 1);
             seq[nb] = '\0';
             // TODO: better multibyte handling
-            if (!princ) outsn("#\\", f, 2);
+            if (!print_princ) outsn("#\\", f, 2);
             outs(seq, f);
         }
         else {
@@ -512,8 +513,8 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
 #endif
              ) {
         int64_t i64 = *(int64_t*)data;
-        if (fits_fixnum(i64) || princ) {
-            if (weak || princ)
+        if (fits_fixnum(i64) || print_princ) {
+            if (weak || print_princ)
                 HPOS+=ios_printf(f, "%lld", i64);
             else
                 HPOS+=ios_printf(f, "#%s(%lld)", symbol_name(type), i64);
@@ -529,8 +530,8 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
 #endif
              ) {
         uint64_t ui64 = *(uint64_t*)data;
-        if (fits_fixnum(ui64) || princ) {
-            if (weak || princ)
+        if (fits_fixnum(ui64) || print_princ) {
+            if (weak || print_princ)
                 HPOS+=ios_printf(f, "%llu", ui64);
             else
                 HPOS+=ios_printf(f, "#%s(%llu)", symbol_name(type), ui64);
@@ -552,7 +553,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
                 rep = sign_bit(d) ? "-NaN" : "+NaN";
             else
                 rep = sign_bit(d) ? "-Inf" : "+Inf";
-            if (type == floatsym && !princ && !weak)
+            if (type == floatsym && !print_princ && !weak)
                 HPOS+=ios_printf(f, "#%s(%s)", symbol_name(type), rep);
             else
                 outs(rep, f);
@@ -562,7 +563,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
                 outsn("-0.0", f, 4);
             else
                 outsn("0.0", f, 3);
-            if (type == floatsym && !princ && !weak)
+            if (type == floatsym && !print_princ && !weak)
                 outc('f', f);
         }
         else {
@@ -570,7 +571,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             int hasdec = (strpbrk(buf, ".eE") != NULL);
             outs(buf, f);
             if (!hasdec) outsn(".0", f, 2);
-            if (type == floatsym && !princ && !weak)
+            if (type == floatsym && !print_princ && !weak)
                 outc('f', f);
         }
     }
@@ -578,8 +579,8 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
         // handle other integer prims. we know it's smaller than 64 bits
         // at this point, so int64 is big enough to capture everything.
         tmp = conv_to_int64(data, sym_to_numtype(type));
-        if (fits_fixnum(tmp) || princ) {
-            if (weak || princ)
+        if (fits_fixnum(tmp) || print_princ) {
+            if (weak || print_princ)
                 HPOS+=ios_printf(f, "%lld", tmp);
             else
                 HPOS+=ios_printf(f, "#%s(%lld)", symbol_name(type), tmp);
@@ -603,7 +604,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
                 cnt = elsize ? len/elsize : 0;
             }
             if (eltype == bytesym) {
-                if (princ) {
+                if (print_princ) {
                     ios_write(f, data, len);
                 }
                 else {
@@ -623,7 +624,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
                 }
                 else {
                     outsn("#array(", f, 7);
-                    fl_print_child(f, eltype, princ);
+                    fl_print_child(f, eltype);
                     if (cnt > 0)
                         outc(' ', f);
                 }
@@ -634,7 +635,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             for(i=0; i < cnt; i++) {
                 if (i > 0)
                     outc(' ', f);
-                cvalue_printdata(f, data, elsize, eltype, princ, 1);
+                cvalue_printdata(f, data, elsize, eltype, 1);
                 data += elsize;
             }
             if (!weak)
@@ -648,14 +649,14 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             assert(isvector(syms));
             if (!weak) {
                 outsn("#enum(", f, 6);
-                fl_print_child(f, syms, princ);
+                fl_print_child(f, syms);
                 outc(' ', f);
             }
             if (n >= (int)vector_size(syms)) {
-                cvalue_printdata(f, data, len, int32sym, princ, 1);
+                cvalue_printdata(f, data, len, int32sym, 1);
             }
             else {
-                fl_print_child(f, vector_elt(syms, n), princ);
+                fl_print_child(f, vector_elt(syms, n));
             }
             if (!weak)
                 outc(')', f);
@@ -663,7 +664,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
     }
 }
 
-static void cvalue_print(ios_t *f, value_t v, int princ)
+static void cvalue_print(ios_t *f, value_t v)
 {
     cvalue_t *cv = (cvalue_t*)ptr(v);
     void *data = cptr(v);
@@ -677,7 +678,7 @@ static void cvalue_print(ios_t *f, value_t v, int princ)
                                (unsigned long)(builtin_t)fptr);
         }
         else {
-            if (princ)
+            if (print_princ)
                 outs(symbol_name(label), f);
             else
                 HPOS += ios_printf(f, "#builtin(%s)", symbol_name(label));
@@ -685,12 +686,12 @@ static void cvalue_print(ios_t *f, value_t v, int princ)
     }
     else if (cv_class(cv)->vtable != NULL &&
              cv_class(cv)->vtable->print != NULL) {
-        cv_class(cv)->vtable->print(v, f, princ);
+        cv_class(cv)->vtable->print(v, f);
     }
     else {
         value_t type = cv_type(cv);
         size_t len = iscprim(v) ? cv_class(cv)->size : cv_len(cv);
-        cvalue_printdata(f, data, len, type, princ, 0);
+        cvalue_printdata(f, data, len, type, 0);
     }
 }
 
@@ -701,16 +702,17 @@ static void set_print_width()
     SCR_WIDTH = numval(pw);
 }
 
-void print(ios_t *f, value_t v, int princ)
+void print(ios_t *f, value_t v)
 {
     print_pretty = (symbol_value(printprettysym) != FL_F);
     if (print_pretty)
         set_print_width();
+    print_princ = (symbol_value(printreadablysym) == FL_F);
     printlabel = 0;
     print_traverse(v);
     HPOS = VPOS = 0;
 
-    fl_print_child(f, v, princ);
+    fl_print_child(f, v);
 
     htable_reset(&printconses, 32);
 }

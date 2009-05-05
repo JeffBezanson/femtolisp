@@ -125,11 +125,13 @@ extern value_t NIL, FL_T, FL_F;
 
 /* read, eval, print main entry points */
 value_t read_sexpr(value_t f);
-void print(ios_t *f, value_t v, int princ);
+void print(ios_t *f, value_t v);
 value_t toplevel_eval(value_t expr);
 value_t apply(value_t f, value_t l);
 value_t applyn(uint32_t n, value_t f, ...);
 value_t load_file(char *fname);
+
+extern value_t printprettysym, printreadablysym, printwidthsym;
 
 /* object model manipulation */
 value_t fl_cons(value_t a, value_t b);
@@ -167,7 +169,7 @@ static inline void argcount(char *fname, uint32_t nargs, uint32_t c)
 }
 
 typedef struct {
-    void (*print)(value_t self, ios_t *f, int princ);
+    void (*print)(value_t self, ios_t *f);
     void (*relocate)(value_t oldv, value_t newv);
     void (*finalize)(value_t self);
     void (*print_traverse)(value_t self);
@@ -178,7 +180,7 @@ value_t relocate_lispvalue(value_t v);
 void print_traverse(value_t v);
 void fl_print_chr(char c, ios_t *f);
 void fl_print_str(char *s, ios_t *f);
-void fl_print_child(ios_t *f, value_t v, int princ);
+void fl_print_child(ios_t *f, value_t v);
 
 typedef int (*cvinitfunc_t)(struct _fltype_t*, value_t, void*);
 

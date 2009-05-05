@@ -11,7 +11,7 @@
 static value_t tablesym;
 static fltype_t *tabletype;
 
-void print_htable(value_t v, ios_t *f, int princ)
+void print_htable(value_t v, ios_t *f)
 {
     htable_t *h = (htable_t*)cv_data((cvalue_t*)ptr(v));
     size_t i;
@@ -20,9 +20,9 @@ void print_htable(value_t v, ios_t *f, int princ)
     for(i=0; i < h->size; i+=2) {
         if (h->table[i+1] != HT_NOTFOUND) {
             if (!first) fl_print_str("  ", f);
-            fl_print_child(f, (value_t)h->table[i], princ);
+            fl_print_child(f, (value_t)h->table[i]);
             fl_print_chr(' ', f);
-            fl_print_child(f, (value_t)h->table[i+1], princ);
+            fl_print_child(f, (value_t)h->table[i+1]);
             first = 0;
         }
     }

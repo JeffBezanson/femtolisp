@@ -94,7 +94,8 @@ value_t IOError, ParseError, TypeError, ArgError, UnboundError, MemoryError;
 value_t DivideError, BoundsError, Error, KeyError, EnumerationError;
 value_t conssym, symbolsym, fixnumsym, vectorsym, builtinsym, vu8sym;
 value_t definesym, defmacrosym, forsym, labelsym, printprettysym, setqsym;
-value_t printwidthsym, tsym, Tsym, fsym, Fsym, booleansym, nullsym, evalsym;
+value_t printwidthsym, printreadablysym;
+value_t tsym, Tsym, fsym, Fsym, booleansym, nullsym, evalsym;
 
 static value_t apply_cl(uint32_t nargs);
 static value_t *alloc_words(int n);
@@ -1486,6 +1487,7 @@ static void lisp_init(void)
     tsym = symbol("t"); Tsym = symbol("T");
     fsym = symbol("f"); Fsym = symbol("F");
     set(printprettysym=symbol("*print-pretty*"), FL_T);
+    set(printreadablysym=symbol("*print-readably*"), FL_T);
     set(printwidthsym=symbol("*print-width*"), fixnum(SCR_WIDTH));
     lasterror = NIL;
     i = 0;
@@ -1606,7 +1608,7 @@ int main(int argc, char *argv[])
     }
     FL_CATCH {
         ios_puts("fatal error during bootstrap:\n", ios_stderr);
-        print(ios_stderr, lasterror, 0);
+        print(ios_stderr, lasterror);
         ios_putc('\n', ios_stderr);
         return 1;
     }

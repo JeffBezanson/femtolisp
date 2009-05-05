@@ -440,10 +440,12 @@
 				(raise ,e))))))
 
 (define-macro (unwind-protect expr finally)
-  (let ((e (gensym)))
-    `(prog1 (trycatch ,expr
-                      (lambda (,e) (begin ,finally (raise ,e))))
-	    ,finally)))
+  (let ((e   (gensym))
+	(thk (gensym)))
+    `(let ((,thk (lambda () ,finally)))
+       (prog1 (trycatch ,expr
+			(lambda (,e) (begin (,thk) (raise ,e))))
+	      (,thk)))))
 
 ; debugging utilities ---------------------------------------------------------
 
