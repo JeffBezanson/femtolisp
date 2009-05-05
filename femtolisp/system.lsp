@@ -688,48 +688,48 @@
   (newline))
 
 (define (print-exception e)
+  (define (eprinc . args) (apply io.princ (cons *error-stream* args)))
+  (define (eprint . args) (apply io.print (cons *error-stream* args)))
   (cond ((and (pair? e)
 	      (eq? (car e) 'type-error)
 	      (length= e 4))
-	 (io.princ *stderr*
-		   "type-error: " (cadr e) ": expected " (caddr e) ", got ")
-	 (io.print *stderr* (cadddr e)))
+	 (eprinc "type-error: " (cadr e) ": expected " (caddr e) ", got ")
+	 (eprint (cadddr e)))
 
 	((and (pair? e)
 	      (eq? (car e) 'unbound-error)
 	      (pair? (cdr e)))
-	 (io.princ *stderr*
-		   "unbound-error: eval: variable " (cadr e)
-		   " has no value"))
+	 (eprinc "unbound-error: eval: variable " (cadr e)
+		 " has no value"))
 
 	((and (pair? e)
 	      (eq? (car e) 'error))
-	 (io.princ *stderr* "error: ")
-	 (apply io.princ (cons *stderr* (cdr e))))
+	 (eprinc "error: ")
+	 (apply eprinc (cdr e)))
 
 	((and (pair? e)
 	      (eq? (car e) 'load-error))
 	 (print-exception (caddr e))
-	 (io.princ *stderr* "in file " (cadr e)))
+	 (eprinc "in file " (cadr e)))
 
 	((and (list? e)
 	      (length= e 2))
-	 (io.princ *stderr* (car e) ": ")
+	 (eprinc (car e) ": ")
 	 (let ((msg (cadr e)))
 	   ((if (or (string? msg) (symbol? msg))
-		io.princ io.print)
-	    *stderr* msg)))
+		eprinc eprint)
+	    msg)))
 
-	(else (io.princ *stderr* "*** Unhandled exception: ")
-	      (io.print *stderr* e)))
+	(else (eprinc "*** Unhandled exception: ")
+	      (eprint e)))
 
-  (io.princ *stderr* *linefeed*)
+  (eprinc *linefeed*)
   #t)
 
 (define (make-system-image fname)
   (let ((f (file fname :write :create :truncate))
 	(excludes '(*linefeed* *directory-separator* *argv* that
-			       *print-pretty* *print-width*))
+		    *print-pretty* *print-width* *print-readably*))
 	(pp *print-pretty*))
     (set! *print-pretty* #f)
     (unwind-protect
@@ -757,7 +757,8 @@
       (begin (set! *directory-separator* "/")
 	     (set! *linefeed* "\n")))
   (set! *output-stream* *stdout*)
-  (set! *input-stream*  *stdin*))
+  (set! *input-stream*  *stdin*)
+  (set! *error-stream*  *stderr*))
 
 (define (__script fname)
   (trycatch (load fname)

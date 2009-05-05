@@ -810,7 +810,6 @@ static value_t apply_cl(uint32_t nargs)
             nargs = i+1;
             goto next_op;
         case OP_LET:
-            ip++;
             // last arg is closure environment to use
             nargs--;
             POPN(1);
@@ -1326,7 +1325,7 @@ static value_t apply_cl(uint32_t nargs)
             goto next_op;
 
         case OP_CLOSURE:
-        case OP_CLOSE:
+        case OP_COPYENV:
             // build a closure (lambda args body . env)
             if (nargs > 0 && !captured) {
                 // save temporary environment to the heap

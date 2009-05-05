@@ -24,7 +24,7 @@
     :loadg :loada :loadc :loadg.l
     :setg  :seta  :setc  :setg.l
 
-    :closure :trycatch :argc :vargc :close :let :for :tapply :add2 :sub2 :neg
+    :closure :trycatch :argc :vargc :copyenv :let :for :tapply :add2 :sub2 :neg
 
     dummy_t dummy_f dummy_nil]))
 
@@ -123,7 +123,7 @@
 			 (set! i (+ i 1)))
 			
 			((:loada :seta :call :tcall :loadv :loadg :setg
-			  :list :+ :- :* :/ :vector :argc :vargc :loadi8 :let)
+			  :list :+ :- :* :/ :vector :argc :vargc :loadi8)
 			 (io.write bcode (uint8 nxt))
 			 (set! i (+ i 1)))
 			
@@ -329,7 +329,7 @@
 	    (error (string "apply: incorrect number of arguments to " head)))
     (emit g :loadv (compile-f env head #t))
     (let ((nargs (compile-arglist g env args)))
-      (emit g :close)
+      (emit g :copyenv)
       (emit g (if tail? :tcall :call) (+ 1 nargs)))))
 
 (define (builtin->instruction b)
@@ -416,7 +416,7 @@
 (define (compile-f env f . let?)
   (let ((g    (make-code-emitter))
 	(args (cadr f)))
-    (cond ((not (null? let?))     (emit g :let  (1+ (length args))))
+    (cond ((not (null? let?))     (emit g :let))
 	  ((null? (lastcdr args)) (emit g :argc (length args)))
 	  (else  (emit g :vargc (if (atom? args) 0 (length args)))))
     (compile-in g (cons (to-proper args) env) #t (caddr f))
@@ -474,7 +474,7 @@
 		    (set! i (+ i 1)))
 		   
 		   ((:loada :seta :call :tcall :list :+ :- :* :/ :vector
-			    :argc :vargc :loadi8 :let)
+			    :argc :vargc :loadi8)
 		    (princ (number->string (aref code i)))
 		    (set! i (+ i 1)))
 		   
