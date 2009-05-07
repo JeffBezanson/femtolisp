@@ -170,16 +170,22 @@ value_t fl_string_split(value_t *args, u_int32_t nargs)
 
 value_t fl_string_sub(value_t *args, u_int32_t nargs)
 {
-    argcount("string.sub", nargs, 3);
+    if (nargs != 2)
+        argcount("string.sub", nargs, 3);
     char *s = tostring(args[0], "string.sub");
     size_t len = cv_len((cvalue_t*)ptr(args[0]));
     size_t i1, i2;
     i1 = toulong(args[1], "string.sub");
     if (i1 > len)
         bounds_error("string.sub", args[0], args[1]);
-    i2 = toulong(args[2], "string.sub");
-    if (i2 > len)
-        bounds_error("string.sub", args[0], args[2]);
+    if (nargs == 3) {
+        i2 = toulong(args[2], "string.sub");
+        if (i2 > len)
+            bounds_error("string.sub", args[0], args[2]);
+    }
+    else {
+        i2 = len;
+    }
     if (i2 <= i1)
         return cvalue_string(0);
     value_t ns = cvalue_string(i2-i1);

@@ -43,8 +43,6 @@
          :aref     2      :aset!    3
 	 :=        2))
 
-(define 1/Instructions (table.invert Instructions))
-
 (define (make-code-emitter) (vector () (table) 0))
 (define (emit e inst . args)
   (if (memq inst '(:loadv :loadg :setg))
@@ -439,7 +437,7 @@
      (ash (aref a (+ i 1)) 8)))
 
 (define (hex5 n)
-  (pad-l (number->string n 16) 5 #\0))
+  (string.lpad (number->string n 16) 5 #\0))
 
 (define (disassemble f . lev?)
   (if (null? lev?)
@@ -458,7 +456,11 @@
       (let ((i 0)
 	    (N (length code)))
 	(while (< i N)
-	       (let ((inst (get 1/Instructions (aref code i))))
+	       ; find key whose value matches the current byte
+	       (let ((inst (table.foldl (lambda (k v z)
+					  (or z (and (eq? v (aref code i))
+						     k)))
+					#f Instructions)))
 		 (if (> i 0) (newline))
 		 (dotimes (xx lev) (princ "\t"))
 		 (princ (hex5 i) ":  "

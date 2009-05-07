@@ -1034,7 +1034,7 @@ new evaluator todo:
 * have macroexpand use its own global syntax table
 * be able to create/load an image file
 - fix trace and untrace
-- opcodes NEG, ADD2, (CADR ?), sub-immediate, add-immediate
+- opcodes CAAR, CADR, CDAR, CDDR, LOADA0, LOADA1, LOADC00, LOADC01, LOADC10
 - EQTO N, compare directly to stored datum N
 - peephole opt
   constant+pop => nothing, e.g. 2-arg 'if' in statement position

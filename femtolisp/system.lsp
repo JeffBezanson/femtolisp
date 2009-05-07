@@ -3,6 +3,11 @@
 ; by Jeff Bezanson (C) 2009
 ; Distributed under the BSD License
 
+(set! *syntax-environment* (table))
+
+(set! set-syntax!
+      (lambda (s v) (put! *syntax-environment* s v)))
+
 ; convert a sequence of body statements to a single expression.
 ; this allows define, defun, defmacro, let, etc. to contain multiple
 ; body expressions.
@@ -10,11 +15,6 @@
                (cond ((atom? e)       #f)
                      ((eq (cdr e) ()) (car e))
                      (#t              (cons 'begin e)))))
-
-(set! *syntax-environment* (table))
-
-(set! set-syntax!
-      (lambda (s v) (put! *syntax-environment* s v)))
 
 (set-syntax! 'define-macro
              (lambda (form . body)
@@ -538,8 +538,7 @@
 
 ; string functions ------------------------------------------------------------
 
-(define (string.tail s n)
-  (string.sub s (string.inc s 0 n) (sizeof s)))
+(define (string.tail s n) (string.sub s (string.inc s 0 n)))
 
 (define *whitespace*
   (string.encode #array(wchar 9 10 11 12 13 32 133 160 5760 6158 8192
@@ -580,8 +579,8 @@
 	((odd? k) (string s (string.rep s (- k 1))))
 	(else     (string.rep (string s s) (/ k 2)))))
 
-(define (pad-l s n c) (string (string.rep c (- n (length s))) s))
-(define (pad-r s n c) (string s (string.rep c (- n (length s)))))
+(define (string.lpad s n c) (string (string.rep c (- n (length s))) s))
+(define (string.rpad s n c) (string s (string.rep c (- n (length s)))))
 
 (define (print-to-string v)
   (let ((b (buffer)))
