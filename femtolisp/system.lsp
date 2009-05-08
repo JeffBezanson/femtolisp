@@ -104,6 +104,10 @@
 (define (1- n) (- n 1))
 (define (mod x y) (- x (* (/ x y) y)))
 (define remainder mod)
+(define (random n)
+  (if (integer? n)
+      (remainder (rand) n)
+      (* (rand.double) n)))
 (define (abs x)   (if (< x 0) (- x) x))
 (define (identity x) x)
 (define (char? x) (eq? (typeof x) 'wchar))
@@ -725,6 +729,14 @@
   (eprinc *linefeed*)
   #t)
 
+(define (simple-sort l)
+  (if (or (null? l) (null? (cdr l))) l
+      (let* ((piv (car l))
+	     (halves (separate (lambda (x) (< x piv)) (cdr l))))
+	(nconc (simple-sort (car halves))
+	       (list piv)
+	       (simple-sort (cdr halves))))))
+
 (define (make-system-image fname)
   (let ((f (file fname :write :create :truncate))
 	(excludes '(*linefeed* *directory-separator* *argv* that
@@ -741,7 +753,7 @@
 		     (begin
 		       (io.print f s) (io.write f "\n")
 		       (io.print f (top-level-value s)) (io.write f "\n"))))
-	       (environment))
+	       (simple-sort (environment)))
      (begin
        (io.close f)
        (set! *print-pretty* pp)))))

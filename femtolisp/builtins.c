@@ -227,7 +227,8 @@ static value_t fl_integerp(value_t *args, u_int32_t nargs)
     argcount("integer?", nargs, 1);
     value_t v = args[0];
     return (isfixnum(v) ||
-            (iscprim(v) && cp_numtype((cprim_t*)ptr(v)) < T_FLOAT));
+            (iscprim(v) && cp_numtype((cprim_t*)ptr(v)) < T_FLOAT)) ?
+        FL_T : FL_F;
 }
 
 static value_t fl_fixnum(value_t *args, u_int32_t nargs)
