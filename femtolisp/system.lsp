@@ -753,7 +753,7 @@
 		     (begin
 		       (io.print f s) (io.write f "\n")
 		       (io.print f (top-level-value s)) (io.write f "\n"))))
-	       (simple-sort (environment)))
+	       (nreverse (simple-sort (environment))))
      (begin
        (io.close f)
        (set! *print-pretty* pp)))))
