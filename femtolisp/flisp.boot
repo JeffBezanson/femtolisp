@@ -239,7 +239,7 @@ compile-for
 compile-f
 #function("o2b0d130d2e131p43;" [#function("qf02A@6D0d0e0d1325w0d2e131A6_0d0e0d3d4e131335w0d0e0d5e1?6o0_5u0d4e131332d6e0d7e131f00K\\d8f0131342d0e0d9322d:d;e0_Z31d<e03142;" [emit :let lastcdr :argc length :vargc compile-in to-proper caddr :ret function encode-byte-code const-to-idx-vec]) make-code-emitter cadr])
 compile-call
-#function("n4b0e3Mp42;" [#function("qb0e0C16d02d1e0f0132@16d02e0E16d02d2e03116d02d3e031G6p0d3e0315r0e0p42;" [#function("qb0e0G16A02d1e031p42;" [#function("qe0@6H0d0f20f21]f00345I0]2b1d2f20f21f23N33p42;" [compile-in #function("qf006G0b0d1d2f00]33p42;d3f30f326W0d45Y0d5e043;" [#function("qe016C02d0f43Ne032@6R0d1f20e0325S0]2b2f10p42;" [length= argc-error #function("qe0d0=6Y0f10_V6K0d1f50d242;d1f50f20f1043;e0d3=6\x940f10_V6s0d1f50d442;f10a2V6\x860d1f50d542;d1f50f20f1043;e0d6=6\xe00f10_V6\xad0d7f30`42;f10`V6\xbf0d1f50d842;f10a2V6\xd20d1f50d942;d1f50f20f1043;e0d:=6\x080f10_V6\xfa0d1f50d;42;d1f50f20f1043;e0d<=6/0f10_V6!0d7f30`42;d1f50f20f1043;e0d==6Y1f10_V6K1d1f50d>b?43;d1f50f20f1043;d1f50f5216l12f20d@<6t1dA5w1f2042;" [:list emit :loadnil :+ :load0 :add2 :- argc-error :neg :sub2 :* :load1 :/ :vector :loadv [] :apply :tapply])]) get arg-counts emit :tcall :call]) compile-arglist]) builtin->instruction]) in-env? constant? top-level-value])])
+#function("n4b0e3Mp42;" [#function("qb0e0C16d02d1e0f0132@16d02e0E16d02d2e03116d02d3e031G6p0d3e0315r0e0p42;" [#function("qb0e0G16A02d1e031p42;" [#function("qe0d0<6\xb90d1f23a4326j0f00d2f2331d3b4L1d5d6f23313132L3j235\xb60d7f23a4326\xb50f00d2f2331b3d3b8L1d5d9d6f2331d:f2331a3u323132d;f2331ML3L3j235\xb60]5\xba0]2e0@6\xd20d<f20f21]f00345\xd30]2b=d>f20f21f23N33p42;" [:apply length= cadr nconc cons copy-list cddr length> list list-head length last-pair compile-in #function("qf006G0b0d1d2f00]33p42;d3f30f326W0d45Y0d5e043;" [#function("qe016C02d0f43Ne032@6R0d1f20e0325S0]2b2f10p42;" [length= argc-error #function("qe0d0=6Y0f10_V6K0d1f50d242;d1f50f20f1043;e0d3=6\x940f10_V6s0d1f50d442;f10a2V6\x860d1f50d542;d1f50f20f1043;e0d6=6\xe00f10_V6\xad0d7f30`42;f10`V6\xbf0d1f50d842;f10a2V6\xd20d1f50d942;d1f50f20f1043;e0d:=6\x080f10_V6\xfa0d1f50d;42;d1f50f20f1043;e0d<=6/0f10_V6!0d7f30`42;d1f50f20f1043;e0d==6Y1f10_V6K1d1f50d>b?43;d1f50f20f1043;d1f50f5216l12f20d@<6t1dA5w1f2042;" [:list emit :loadnil :+ :load0 :add2 :- argc-error :neg :sub2 :* :load1 :/ :vector :loadv [] :apply :tapply])]) get arg-counts emit :tcall :call]) compile-arglist]) builtin->instruction]) in-env? constant? top-level-value])])
 compile-begin
 #function("n4e3?6D0d0e0e1e2]44;e3N?6Y0d0e0e1e2e3M44;d0e0e1]e3M342d1e0d2322d3e0e1e2e3N44;" [compile-in emit :pop compile-begin])
 compile-arglist
@@ -290,6 +290,8 @@ assv
 #function("n2e1?6:0];d0e131e0=6J0e1M;d1e0e1N42;" [caar assv])
 assoc
 #function("n2e1?6:0];d0e131e0>6J0e1M;d1e0e1N42;" [caar assoc])
+array?
+#function("n1e0H17E02b0d1e031p42;" [#function("qe0F16?02e0Mb0<;" [array]) typeof])
 argc-error
 #function("n2d0d1b2e0b3e1e1`V6J0b45L0b53541;" [error string "compile error: " " expects " " argument." " arguments."])
 arg-counts

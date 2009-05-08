@@ -111,6 +111,9 @@
 (define (abs x)   (if (< x 0) (- x) x))
 (define (identity x) x)
 (define (char? x) (eq? (typeof x) 'wchar))
+(define (array? x) (or (vector? x)
+		       (let ((t (typeof x)))
+			 (and (pair? t) (eq? (car t) 'array)))))
 
 (define (caar x) (car (car x)))
 (define (cadr x) (car (cdr x)))
@@ -200,7 +203,7 @@
   (set! mapcar
 	(lambda (f . lsts) (mapcar- f lsts))))
 
-(define (transpose M) (apply mapcar (cons list M)))
+(define (transpose M) (apply mapcar list M))
 
 (letrec ((filter-
 	  (lambda (pred lst accum)
@@ -488,8 +491,8 @@
 
 ; text I/O --------------------------------------------------------------------
 
-(define (print . args) (apply io.print (cons *output-stream* args)))
-(define (princ . args) (apply io.princ (cons *output-stream* args)))
+(define (print . args) (apply io.print *output-stream* args))
+(define (princ . args) (apply io.princ *output-stream* args))
 
 (define (newline) (princ *linefeed*) #t)
 (define (display x) (princ x) #t)
@@ -691,8 +694,8 @@
   (newline))
 
 (define (print-exception e)
-  (define (eprinc . args) (apply io.princ (cons *error-stream* args)))
-  (define (eprint . args) (apply io.print (cons *error-stream* args)))
+  (define (eprinc . args) (apply io.princ *error-stream* args))
+  (define (eprint . args) (apply io.print *error-stream* args))
   (cond ((and (pair? e)
 	      (eq? (car e) 'type-error)
 	      (length= e 4))
