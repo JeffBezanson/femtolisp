@@ -79,7 +79,7 @@ static short builtin_arg_counts[] =
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
       2, ANYARGS, 1, 1, 2, 2,
-      2,
+      -2,
       ANYARGS, -1, ANYARGS, -1, 2, 2, 2,
       ANYARGS, 2, 3 };
 
@@ -707,6 +707,39 @@ static value_t list(value_t *args, uint32_t nargs)
     return v;
 }
 
+// perform (apply list* L)
+// like the function list() above, but takes arguments from a list
+// rather than from an array (the stack)
+static value_t apply_liststar(value_t L)
+{
+    PUSH(NIL);
+    PUSH(NIL);
+    PUSH(L);
+    value_t *pfirst = &Stack[SP-3];
+    value_t *plcons = &Stack[SP-2];
+    value_t *pL = &Stack[SP-1];
+    value_t c;
+    while (iscons(*pL)) {
+        if (iscons(cdr_(*pL))) {
+            c = mk_cons();
+            car_(c) = car_(*pL);
+            cdr_(c) = NIL;
+        }
+        else {
+            // last element; becomes final CDR
+            c = car_(*pL);
+        }
+        if (*pfirst == NIL)
+            *pfirst = c;
+        else
+            cdr_(*plcons) = c;
+        *plcons = c;
+        *pL = cdr_(*pL);
+    }
+    POPN(2);
+    return POP();
+}
+
 static value_t do_trycatch()
 {
     uint32_t saveSP = SP;
@@ -819,6 +852,7 @@ static value_t apply_cl(uint32_t nargs)
         case OP_POP: POPN(1); goto next_op;
         case OP_TCALL:
             n = code[ip++];  // nargs
+        do_tcall:
             if (isfunction(Stack[SP-n-1])) {
                 for(s=-1; s < (fixnum_t)n; s++)
                     Stack[bp+s] = Stack[SP-n+s];
@@ -851,11 +885,12 @@ static value_t apply_cl(uint32_t nargs)
                     SP--;
                     switch (op) {
                     case OP_LIST:   goto apply_list;
+                    case OP_VECTOR: goto apply_vector;
+                    case OP_APPLY:  goto apply_apply;
                     case OP_ADD:    goto apply_add;
                     case OP_SUB:    goto apply_sub;
                     case OP_MUL:    goto apply_mul;
                     case OP_DIV:    goto apply_div;
-                    case OP_VECTOR: goto apply_vector;
                     default:
                         goto dispatch;
                     }
@@ -992,8 +1027,13 @@ static value_t apply_cl(uint32_t nargs)
 
         case OP_TAPPLY:
         case OP_APPLY:
-            v = POP();  // arglist
-            n = SP;
+            n = code[ip++];
+        apply_apply:
+            v = POP();     // arglist
+            if (n > MAX_ARGS) {
+                v = apply_liststar(v);
+            }
+            n = SP-(n-2);  // n-2 == # leading arguments not in the list
             while (iscons(v)) {
                 if (SP-n == MAX_ARGS) {
                     PUSH(v);
@@ -1003,8 +1043,8 @@ static value_t apply_cl(uint32_t nargs)
                 v = cdr_(v);
             }
             n = SP-n;
-            if (op==OP_TAPPLY) op = OP_TCALL;
-            goto do_call;
+            if (op==OP_TAPPLY) goto do_tcall;
+            else goto do_call;
 
         case OP_ADD:
             n = code[ip++];

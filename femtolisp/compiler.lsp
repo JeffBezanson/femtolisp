@@ -38,10 +38,9 @@
 	 :vector?  1      :fixnum?  1
 	 :cons     2      :car      1
 	 :cdr      1      :set-car! 2
-	 :set-cdr! 2      :apply    2
+	 :set-cdr! 2      :=        2
          :<        2      :compare  2
-         :aref     2      :aset!    3
-	 :=        2))
+         :aref     2      :aset!    3))
 
 (define (make-code-emitter) (vector () (table) 0))
 (define (emit e inst . args)
@@ -121,7 +120,8 @@
 			 (set! i (+ i 1)))
 			
 			((:loada :seta :call :tcall :loadv :loadg :setg
-			  :list :+ :- :* :/ :vector :argc :vargc :loadi8)
+			  :list :+ :- :* :/ :vector :argc :vargc :loadi8
+			  :apply :tapply)
 			 (io.write bcode (uint8 nxt))
 			 (set! i (+ i 1)))
 			
@@ -346,14 +346,6 @@
 	       head)))
       (let ((b (and (builtin? head)
 		    (builtin->instruction head))))
-	(if (eq? b :apply)
-	    (cond ((length= x 4)
-		   (set! x `(,head ,(cadr x) (cons ,@(cddr x)))))
-		  ((length> x 4)
-		   (set! x `(,head ,(cadr x)
-				   (nconc (list ,@(list-head (cddr x)
-							     (- (length x) 3)))
-					  ,(car (last-pair x))))))))
 	(if (not b)
 	    (compile-in g env #f head))
 	(let ((nargs (compile-arglist g env (cdr x))))
@@ -379,8 +371,10 @@
 		  (:vector   (if (= nargs 0)
 				 (emit g :loadv [])
 				 (emit g b nargs)))
-		  (else
-		   (emit g (if (and tail? (eq? b :apply)) :tapply b)))))
+		  (:apply    (if (< nargs 2)
+				 (argc-error head 2)
+				 (emit g (if tail? :tapply :apply) nargs)))
+		  (else      (emit g b))))
 	      (emit g (if tail? :tcall :call) nargs)))))))
 
 (define (fits-i8 x) (and (fixnum? x) (>= x -128) (<= x 127)))
@@ -484,7 +478,7 @@
 		    (set! i (+ i 1)))
 		   
 		   ((:loada :seta :call :tcall :list :+ :- :* :/ :vector
-			    :argc :vargc :loadi8)
+		     :argc :vargc :loadi8 :apply :tapply)
 		    (princ (number->string (aref code i)))
 		    (set! i (+ i 1)))
 		   

@@ -7,7 +7,7 @@ vector->list
 untrace
 #function("n1b0d1e031p42;" [#function("qe0Mb0<6T0d1f00d2d3d4d5e03131313142;];" [trace-lambda set-top-level-value! cadr caar last-pair caddr]) top-level-value])
 transpose
-#function("n1d0d1e0Ks;" [mapcar list])
+#function("n1d0d1e0s3;" [mapcar list])
 trace
 #function("n1b0d1e031p322b2;" [#function("qb0d1e031p42;" [#function("qb0d1e031p42;" [#function("qf10Mb0<@6\x920d1f20b0f00d2b3L1b4b5L2L1b6b7f20L2L2L1d8d9b:le03231b4b;L2L1d2b7f10L2L1d8e03132L136L342;];" [trace-lambda set-top-level-value! nconc begin princ "(" print quote copy-list map #function("n1b0b1b2L2b3e0L2L3;" [begin princ " " print]) ")\n"]) to-proper]) cadr]) top-level-value ok])
 to-proper
@@ -67,15 +67,15 @@ random
 quote-value
 #function("n1d0e0316>0e0;b1e0L2;" [self-evaluating? quote])
 println
-#function("o0d0e0Qd1302;" [print newline])
+#function("o0d0e0Q2d1302;" [print newline])
 print-to-string
 #function("n1b0d130p42;" [#function("qd0e0f00322d1e041;" [io.print io.tostring!]) buffer])
 print-exception
-#function("n1b0]]p43;" [#function("qb0li02b1li12f00F16[02f00Mb2<16[02d3f00a4326\x850e0b4d5f0031b6d7f0031b8352e1d9f0031315G1f00F16\x9f02f00Mb:<16\x9f02f00NF6\xb40e0b;d5f0031b<335G1f00F16\xc402f00Mb=<6\xd80e0b>312e0f00NQ5G1f00F16\xe802f00Mb?<6\x070d@d7f0031312e0bAd5f0031325G1dBf003116\x1c02d3f00a232691e0f00MbC322bDd5f0031p325G1e0bE312e1f00312e0dF312\\;" [#function("o0d0d1e0Ks;" [io.princ *error-stream*]) #function("o0d0d1e0Ks;" [io.print *error-stream*]) type-error length= "type-error: " cadr ": expected " caddr ", got " cadddr unbound-error "unbound-error: eval: variable " " has no value" error "error: " load-error print-exception "in file " list? ": " #function("qd0e03117?02e0C6H0f005K0f01e041;" [string?]) "*** Unhandled exception: " *linefeed*])])
+#function("n1b0]]p43;" [#function("qb0li02b1li12f00F16[02f00Mb2<16[02d3f00a4326\x850e0b4d5f0031b6d7f0031b8352e1d9f0031315H1f00F16\x9f02f00Mb:<16\x9f02f00NF6\xb40e0b;d5f0031b<335H1f00F16\xc402f00Mb=<6\xd90e0b>312e0f00NQ25H1f00F16\xe902f00Mb?<6\x080d@d7f0031312e0bAd5f0031325H1dBf003116\x1d02d3f00a2326:1e0f00MbC322bDd5f0031p325H1e0bE312e1f00312e0dF312\\;" [#function("o0d0d1e0s3;" [io.princ *error-stream*]) #function("o0d0d1e0s3;" [io.print *error-stream*]) type-error length= "type-error: " cadr ": expected " caddr ", got " cadddr unbound-error "unbound-error: eval: variable " " has no value" error "error: " load-error print-exception "in file " list? ": " #function("qd0e03117?02e0C6H0f005K0f01e041;" [string?]) "*** Unhandled exception: " *linefeed*])])
 print
-#function("o0d0d1e0Ks;" [io.print *output-stream*])
+#function("o0d0d1e0s3;" [io.print *output-stream*])
 princ
-#function("o0d0d1e0Ks;" [io.princ *output-stream*])
+#function("o0d0d1e0s3;" [io.princ *output-stream*])
 positive?
 #function("n1d0e0_42;" [>])
 peephole
@@ -87,7 +87,7 @@ nreverse
 nreconc
 #function("n2d0d1e031e142;" [nconc nreverse])
 nlist*
-#function("o0e0N?6=0e0M;e0d0e0NQP;" [nlist*])
+#function("o0e0N?6=0e0M;e0d0e0NQ2P;" [nlist*])
 newline
 #function("n0d0d1312\\;" [princ *linefeed*])
 nestlist
@@ -103,7 +103,7 @@ member
 mark-label
 #function("n2d0e0d1e143;" [emit :label])
 mapcar
-#function("o1f00e0e142;" [] #0=[#function("n2e1A6=0e040;e1M?6H0e1M;e0d0d1e132Qf00e0d0d2e13232K;" [map car cdr] #0#) ()])
+#function("o1f00e0e142;" [] #0=[#function("n2e1A6=0e040;e1M?6H0e1M;e0d0d1e132Q2f00e0d0d2e13232K;" [map car cdr] #0#) ()])
 map-int
 #function("n2d0e1_326>0^;b1e0_31^K^p43;" [<= #function("qe0i12`f01`ub0lr2e0;" [#function("n1f01f10e031^KP2f01Nj01;" [])])])
 map!
@@ -119,9 +119,9 @@ make-enum-table
 make-code-emitter
 #function("n0^d030_Y3;" [table])
 macroexpand-in
-#function("n2e0?6;0e0;b0d1e0Me132p42;" [#function("qe06L0d0d1e031f00NQd2e03142;b3d4f0031p42;" [macroexpand-in cadr caddr #function("qe06E0d0e0f10NQf1142;f10Mb1<6S0f10;f10Mb2<6\x800d3b2d4f1031d0d5f1031f1132d6f103144;f10Mb7<6\xa20b8d4f1031d9d:f103131p43;d;b<lf1042;" [macroexpand-in quote lambda nlist* cadr caddr cdddr let-syntax #function("qd0e1d1d2b3le032f213242;" [macroexpand-in nconc map #function("n1e0Md0d1e031f3132f31L3;" [macroexpand-in cadr])]) f-body cddr map #function("n1d0e0f2142;" [macroexpand-in])]) macrocall?]) assq])
+#function("n2e0?6;0e0;b0d1e0Me132p42;" [#function("qe06M0d0d1e031f00NQ2d2e03142;b3d4f0031p42;" [macroexpand-in cadr caddr #function("qe06F0d0e0f10NQ2f1142;f10Mb1<6T0f10;f10Mb2<6\x810d3b2d4f1031d0d5f1031f1132d6f103144;f10Mb7<6\xa30b8d4f1031d9d:f103131p43;d;b<lf1042;" [macroexpand-in quote lambda nlist* cadr caddr cdddr let-syntax #function("qd0e1d1d2b3le032f213242;" [macroexpand-in nconc map #function("n1e0Md0d1e031f3132f31L3;" [macroexpand-in cadr])]) f-body cddr map #function("n1d0e0f2142;" [macroexpand-in])]) macrocall?]) assq])
 macroexpand-1
-#function("n1e0?6;0e0;b0d1e031p42;" [#function("qe06>0e0f00Ns;f00;" []) macrocall?])
+#function("n1e0?6;0e0;b0d1e031p42;" [#function("qe06?0e0f00Ns2;f00;" []) macrocall?])
 macroexpand
 #function("n1d0e0^42;" [macroexpand-in])
 macrocall?
@@ -143,9 +143,9 @@ list-partition
 list-head
 #function("n2d0e1_326>0^;e0Md1e0Ne1`u32K;" [<= list-head])
 list->vector
-#function("n1d0e0s;" [vector])
+#function("n1d0e0s2;" [vector])
 list*
-#function("o0e0N?6=0e0M;e0Md0e0NQK;" [list*])
+#function("o0e0N?6=0e0M;e0Md0e0NQ2K;" [list*])
 length>
 #function("n2e1_W6<0e0;e1_V6N0e0F16M02e0;e0A6Y0e1_W;d0e0Ne1`u42;" [length>])
 length=
@@ -169,7 +169,7 @@ identity
 hex5
 #function("n1d0d1e0a@32a5b243;" [string.lpad number->string #\0])
 get-defined-vars
-#function("n1d0f00e03141;" [delete-duplicates] #0=[#function("n1e0?6:0^;e0Mb0<16I02e0NF6\x8c0d1e031C16`02d1e031L117\x8b02d1e031F16\x8502d2e031C16\x8502d2e031L117\x8b02^;e0Mb3<6\xa30d4d5f00e0N32s;^;" [define cadr caadr begin append map] #0#) ()])
+#function("n1d0f00e03141;" [delete-duplicates] #0=[#function("n1e0?6:0^;e0Mb0<16I02e0NF6\x8c0d1e031C16`02d1e031L117\x8b02d1e031F16\x8502d2e031C16\x8502d2e031L117\x8b02^;e0Mb3<6\xa40d4d5f00e0N32s2;^;" [define cadr caadr begin append map] #0#) ()])
 for-each
 #function("n2e1F6J0e0e1M312d0e0e1N42;\\;" [for-each])
 foldr
@@ -193,7 +193,7 @@ eval
 error
 #function("o0d0b1e0K41;" [raise error])
 encode-byte-code
-#function("n1b0d1d2e03131p42;" [#function("qb0d1d2e031a3d3b4le032T2tb532p42;" [#function("qb0d1f0031p42;" [#function("qb0d1e031_d230d230d330]p47;" [#function("q]e1e0W6\xbc02f00e1Zi52e5d0<6k0d1e2f00e1`tZd2e431332e1a2ti15\xb90d3e4d4d5d6f1016\x8502d7e5b8326\x920b9e5p325\x940e53231322e1`ti12e1e0W6\xb80b:f00e1Zp325\xb90]5202d;b<le3322d=e441;" [:label put! sizeof io.write byte get Instructions memq (:jmp :brt :brf) #function("qe0d0=6<0d1;e0d2=6G0d3;e0d4=6R0d5;];" [:jmp :jmp.l :brt :brt.l :brf :brf.l]) #function("qb0f05p42;" [#function("qd0e0b1326T0d2f14d3f0031322f11`tj11;d0e0b4326w0d2f14d5f0031322f11`tj11;d0e0b6326\xb60d2f14d5f0031322f11`tj112d2f14d5f20f11Z31322f11`tj11;d0e0b7326\xf40d8f13d9f1431f00332d2f14f306\xe30d35\xe50d:_31322f11`tj11;];" [memv (:loadv.l :loadg.l :setg.l) io.write uint32 (:loada :seta :call :tcall :loadv :loadg :setg :list :+ :- :* :/ :vector :argc :vargc :loadi8) uint8 (:loadc :setc) (:jmp :brf :brt) put! sizeof uint16])]) table.foreach #function("n2d0f04e0322d1f04f206L0d25N0d3d4f02e1323142;" [io.seek io.write uint32 uint16 get]) io.tostring!]) length table buffer]) list->vector]) >= length count #function("n1d0e0b142;" [memq (:loadv :loadg :setg :jmp :brt :brf)]) 65536]) peephole nreverse])
+#function("n1b0d1d2e03131p42;" [#function("qb0d1d2e031a3d3b4le032T2tb532p42;" [#function("qb0d1f0031p42;" [#function("qb0d1e031_d230d230d330]p47;" [#function("q]e1e0W6\xbc02f00e1Zi52e5d0<6k0d1e2f00e1`tZd2e431332e1a2ti15\xb90d3e4d4d5d6f1016\x8502d7e5b8326\x920b9e5p325\x940e53231322e1`ti12e1e0W6\xb80b:f00e1Zp325\xb90]5202d;b<le3322d=e441;" [:label put! sizeof io.write byte get Instructions memq (:jmp :brt :brf) #function("qe0d0=6<0d1;e0d2=6G0d3;e0d4=6R0d5;];" [:jmp :jmp.l :brt :brt.l :brf :brf.l]) #function("qb0f05p42;" [#function("qd0e0b1326T0d2f14d3f0031322f11`tj11;d0e0b4326w0d2f14d5f0031322f11`tj11;d0e0b6326\xb60d2f14d5f0031322f11`tj112d2f14d5f20f11Z31322f11`tj11;d0e0b7326\xf40d8f13d9f1431f00332d2f14f306\xe30d35\xe50d:_31322f11`tj11;];" [memv (:loadv.l :loadg.l :setg.l) io.write uint32 (:loada :seta :call :tcall :loadv :loadg :setg :list :+ :- :* :/ :vector :argc :vargc :loadi8 :apply :tapply) uint8 (:loadc :setc) (:jmp :brf :brt) put! sizeof uint16])]) table.foreach #function("n2d0f04e0322d1f04f206L0d25N0d3d4f02e1323142;" [io.seek io.write uint32 uint16 get]) io.tostring!]) length table buffer]) list->vector]) >= length count #function("n1d0e0b142;" [memq (:loadv :loadg :setg :jmp :brt :brf)]) 65536]) peephole nreverse])
 emit-nothing
 #function("n1e0;" [])
 emit
@@ -201,7 +201,7 @@ emit
 display
 #function("n1d0e0312\\;" [princ])
 disassemble
-#function("o1e1A6J0d0e0_322d1302\\;5K0]2b2d3e031e1Mp43;" [disassemble newline #function("qb0e0_Ze0`Zp43;" [#function("qb0]p42;" [#function("qb0li02b1_d2f0031p43;" [#function("n1e0J16>02e0G@6T0d0b1312d2e0f21`t42;d3e041;" [princ "\n" disassemble print]) #function("q]e0e1W6M02b0d1b2l]d333p32520;" [#function("qd0f00_326C0d1305D0]2_f31`ub2lr2d3d4f0031b5d6d7e031`32b8342f00`tj002b9e0p42;" [> newline #function("n1d0b141;" [princ "\t"]) princ hex5 ":  " string.tail string "\t" #function("qd0e0b1326Z0f20f31d2f30f1032Z312f10a4tj10;d0e0b3326\x7f0f20f31f30f10ZZ312f10`tj10;d0e0b4326\xa30d5d6f30f10Z31312f10`tj10;d0e0b7326\xe20d5d6f30f10Z31b8322f10`tj102d5d6f30f10Z31312f10`tj10;d0e0b9326\x0c0d5b:d;d<f30f103231322f10a2tj10;d0e0b=32661d5b:d;d2f30f103231322f10a4tj10;];" [memv (:loadv.l :loadg.l :setg.l) ref-uint32-LE (:loadv :loadg :setg) (:loada :seta :call :tcall :list :+ :- :* :/ :vector :argc :vargc :loadi8) princ number->string (:loadc :setc) " " (:jmp :brf :brt) "@" hex5 ref-uint16-LE (:jmp.l :brf.l :brt.l)])]) table.foldl #function("n3e217J02e1f20f00Z<16J02e0;" []) Instructions]) length])])]) function->vector])
+#function("o1e1A6J0d0e0_322d1302\\;5K0]2b2d3e031e1Mp43;" [disassemble newline #function("qb0e0_Ze0`Zp43;" [#function("qb0]p42;" [#function("qb0li02b1_d2f0031p43;" [#function("n1e0J16>02e0G@6T0d0b1312d2e0f21`t42;d3e041;" [princ "\n" disassemble print]) #function("q]e0e1W6M02b0d1b2l]d333p32520;" [#function("qd0f00_326C0d1305D0]2_f31`ub2lr2d3d4f0031b5d6d7e031`32b8342f00`tj002b9e0p42;" [> newline #function("n1d0b141;" [princ "\t"]) princ hex5 ":  " string.tail string "\t" #function("qd0e0b1326Z0f20f31d2f30f1032Z312f10a4tj10;d0e0b3326\x7f0f20f31f30f10ZZ312f10`tj10;d0e0b4326\xa30d5d6f30f10Z31312f10`tj10;d0e0b7326\xe20d5d6f30f10Z31b8322f10`tj102d5d6f30f10Z31312f10`tj10;d0e0b9326\x0c0d5b:d;d<f30f103231322f10a2tj10;d0e0b=32661d5b:d;d2f30f103231322f10a4tj10;];" [memv (:loadv.l :loadg.l :setg.l) ref-uint32-LE (:loadv :loadg :setg) (:loada :seta :call :tcall :list :+ :- :* :/ :vector :argc :vargc :loadi8 :apply :tapply) princ number->string (:loadc :setc) " " (:jmp :brf :brt) "@" hex5 ref-uint16-LE (:jmp.l :brf.l :brt.l)])]) table.foldl #function("n3e217J02e1f20f00Z<16J02e0;" []) Instructions]) length])])]) function->vector])
 delete-duplicates
 #function("n1e0?6;0e0;b0e0Me0Np43;" [#function("qd0e0e1326C0d1e141;e0d1e131K;" [member delete-duplicates])])
 count
@@ -239,7 +239,7 @@ compile-for
 compile-f
 #function("o2b0d130d2e131p43;" [#function("qf02A@6D0d0e0d1325w0d2e131A6_0d0e0d3d4e131335w0d0e0d5e1?6o0_5u0d4e131332d6e0d7e131f00K\\d8f0131342d0e0d9322d:d;e0_Z31d<e03142;" [emit :let lastcdr :argc length :vargc compile-in to-proper caddr :ret function encode-byte-code const-to-idx-vec]) make-code-emitter cadr])
 compile-call
-#function("n4b0e3Mp42;" [#function("qb0e0C16d02d1e0f0132@16d02e0E16d02d2e03116d02d3e031G6p0d3e0315r0e0p42;" [#function("qb0e0G16A02d1e031p42;" [#function("qe0d0<6\xb90d1f23a4326j0f00d2f2331d3b4L1d5d6f23313132L3j235\xb60d7f23a4326\xb50f00d2f2331b3d3b8L1d5d9d6f2331d:f2331a3u323132d;f2331ML3L3j235\xb60]5\xba0]2e0@6\xd20d<f20f21]f00345\xd30]2b=d>f20f21f23N33p42;" [:apply length= cadr nconc cons copy-list cddr length> list list-head length last-pair compile-in #function("qf006G0b0d1d2f00]33p42;d3f30f326W0d45Y0d5e043;" [#function("qe016C02d0f43Ne032@6R0d1f20e0325S0]2b2f10p42;" [length= argc-error #function("qe0d0=6Y0f10_V6K0d1f50d242;d1f50f20f1043;e0d3=6\x940f10_V6s0d1f50d442;f10a2V6\x860d1f50d542;d1f50f20f1043;e0d6=6\xe00f10_V6\xad0d7f30`42;f10`V6\xbf0d1f50d842;f10a2V6\xd20d1f50d942;d1f50f20f1043;e0d:=6\x080f10_V6\xfa0d1f50d;42;d1f50f20f1043;e0d<=6/0f10_V6!0d7f30`42;d1f50f20f1043;e0d==6Y1f10_V6K1d1f50d>b?43;d1f50f20f1043;d1f50f5216l12f20d@<6t1dA5w1f2042;" [:list emit :loadnil :+ :load0 :add2 :- argc-error :neg :sub2 :* :load1 :/ :vector :loadv [] :apply :tapply])]) get arg-counts emit :tcall :call]) compile-arglist]) builtin->instruction]) in-env? constant? top-level-value])])
+#function("n4b0e3Mp42;" [#function("qb0e0C16d02d1e0f0132@16d02e0E16d02d2e03116d02d3e031G6p0d3e0315r0e0p42;" [#function("qb0e0G16A02d1e031p42;" [#function("qe0@6H0d0f20f21]f00345I0]2b1d2f20f21f23N33p42;" [compile-in #function("qf006G0b0d1d2f00]33p42;d3f30f326W0d45Y0d5e043;" [#function("qe016C02d0f43Ne032@6R0d1f20e0325S0]2b2f10p42;" [length= argc-error #function("qe0d0=6Y0f10_V6K0d1f50d242;d1f50f20f1043;e0d3=6\x940f10_V6s0d1f50d442;f10a2V6\x860d1f50d542;d1f50f20f1043;e0d6=6\xe00f10_V6\xad0d7f30`42;f10`V6\xbf0d1f50d842;f10a2V6\xd20d1f50d942;d1f50f20f1043;e0d:=6\x080f10_V6\xfa0d1f50d;42;d1f50f20f1043;e0d<=6/0f10_V6!0d7f30`42;d1f50f20f1043;e0d==6Y1f10_V6K1d1f50d>b?43;d1f50f20f1043;e0d@=6\x8c1f10a2W6t1d7f30a242;d1f50f526\x841dA5\x861d@f1043;d1f50f2042;" [:list emit :loadnil :+ :load0 :add2 :- argc-error :neg :sub2 :* :load1 :/ :vector :loadv [] :apply :tapply])]) get arg-counts emit :tcall :call]) compile-arglist]) builtin->instruction]) in-env? constant? top-level-value])])
 compile-begin
 #function("n4e3?6D0d0e0e1e2]44;e3N?6Y0d0e0e1e2e3M44;d0e0e1]e3M342d1e0d2322d3e0e1e2e3N44;" [compile-in emit :pop compile-begin])
 compile-arglist
@@ -295,11 +295,11 @@ array?
 argc-error
 #function("n2d0d1b2e0b3e1e1`V6J0b45L0b53541;" [error string "compile error: " " expects " " argument." " arguments."])
 arg-counts
-#table(:not 1  :set-cdr! 2  :cons 2  :number? 1  :equal? 2  :cdr 1  :vector? 1  :eqv? 2  :apply 2  := 2  :atom? 1  :aref 2  :compare 2  :< 2  :null? 1  :eq? 2  :car 1  :set-car! 2  :builtin? 1  :aset! 3  :bound? 1  :boolean? 1  :pair? 1  :symbol? 1  :fixnum? 1)
+#table(:not 1  :set-cdr! 2  :cons 2  :number? 1  :equal? 2  :cdr 1  :vector? 1  :eqv? 2  := 2  :atom? 1  :aref 2  :compare 2  :< 2  :null? 1  :eq? 2  :car 1  :set-car! 2  :builtin? 1  :aset! 3  :bound? 1  :boolean? 1  :pair? 1  :symbol? 1  :fixnum? 1)
 append2
 #function("n2e0A6;0e1;e0Md0e0Ne132K;" [append2])
 append
-#function("o0e0A6:0^;e0NA6E0e0M;d0e0Md1e0NQ42;" [append2 append])
+#function("o0e0A6:0^;e0NA6E0e0M;d0e0Md1e0NQ242;" [append2 append])
 any
 #function("n2e1F16O02e0e1M3117O02d0e0e1N42;" [any])
 abs

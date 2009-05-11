@@ -33,7 +33,7 @@ static value_t fl_nconc(value_t *args, u_int32_t nargs)
     value_t lst, first=NIL;
     value_t *pcdr = &first;
     cons_t *c;
-    int i=0;
+    uint32_t i=0;
     while (1) {
         if (i >= MAX_ARGS) {
             lst = car_(args[MAX_ARGS]);
