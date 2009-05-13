@@ -256,16 +256,24 @@ value_t equal(value_t a, value_t b)
 #define doublehash(a) int64to32hash(a)
 #endif
 
-static uptrint_t bounded_hash(value_t a, int bound)
+// *flag means max recursion bound exceeded
+// *ut means this happened some time, so we had to start using the table
+static uptrint_t bounded_hash(value_t a, int bound, int *flag, int *ut)
 {
+    *flag = 0;
     double d;
     numerictype_t nt;
     size_t i, len;
     cvalue_t *cv;
     cprim_t *cp;
     void *data;
-    if (bound <= 0) return 0;
     uptrint_t h = 0;
+    if (*ut) {
+        h = (uptrint_t)ptrhash_get(&equal_eq_hashtable, (void*)a);
+        if (h != (uptrint_t)HT_NOTFOUND)
+            return h;
+    }
+    if (bound <= 0) { *ut = *flag = 1; return 0; }
     int bb, tg = tag(a);
     switch(tg) {
     case TAG_NUM :
@@ -274,7 +282,7 @@ static uptrint_t bounded_hash(value_t a, int bound)
         return doublehash(*(int64_t*)&d);
     case TAG_FUNCTION:
         if (uintval(a) > N_BUILTINS)
-            return bounded_hash(((function_t*)ptr(a))->bcode, bound);
+            return bounded_hash(((function_t*)ptr(a))->bcode, bound, flag, ut);
         return inthash(a);
     case TAG_SYM:
         return ((symbol_t*)ptr(a))->hash;
@@ -292,18 +300,30 @@ static uptrint_t bounded_hash(value_t a, int bound)
     case TAG_VECTOR:
         len = vector_size(a);
         for(i=0; i < len; i++) {
-            h = MIX(h, bounded_hash(vector_elt(a,i), bound-1));
+            h = MIX(h, bounded_hash(vector_elt(a,i), bound-1, flag, ut));
+            if (*flag) {
+                if (h == (uptrint_t)HT_NOTFOUND) h++;
+                ptrhash_put(&equal_eq_hashtable, (void*)a, (void*)h);
+            }
         }
         return h;
     case TAG_CONS:
         bb = BOUNDED_HASH_BOUND;
         do {
-            h = MIX(h, bounded_hash(car_(a), bound-1)+1);
-            bb--;
-            if (bb <= 0) return h;
+            h = MIX(h, bounded_hash(car_(a), bound-1, flag, ut)+1);
+            if (*flag) {
+                if (h == (uptrint_t)HT_NOTFOUND) h++;
+                ptrhash_put(&equal_eq_hashtable, (void*)a, (void*)h);
+            }
             a = cdr_(a);
+            bb--;
+            if (bb <= 0) { *ut = *flag = 1; return h; }
+            if (*ut) {
+                if (ptrhash_get(&equal_eq_hashtable, (void*)a) != HT_NOTFOUND)
+                    return h;
+            }
         } while (iscons(a));
-        return MIX(h, bounded_hash(a, bound-1)+1);
+        return MIX(h, bounded_hash(a, bound-1, flag, ut)+1);
     }
     return 0;
 }
@@ -317,7 +337,11 @@ int equal_lispvalue(value_t a, value_t b)
 
 uptrint_t hash_lispvalue(value_t a)
 {
-    return bounded_hash(a, BOUNDED_HASH_BOUND);
+    int flag, ut=0;
+    uptrint_t n = bounded_hash(a, BOUNDED_HASH_BOUND, &flag, &ut);
+    if (ut)
+        htable_reset(&equal_eq_hashtable, 512);
+    return n;
 }
 
 value_t fl_hash(value_t *args, u_int32_t nargs)

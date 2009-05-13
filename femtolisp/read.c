@@ -344,6 +344,28 @@ static u_int32_t peek()
     return toktype;
 }
 
+// NOTE: this is NOT an efficient operation. it is only used by the
+// reader, and requires at least 1 and up to 3 garbage collections!
+static value_t vector_grow(value_t v)
+{
+    size_t s = vector_size(v);
+    size_t d = vector_grow_amt(s);
+    PUSH(v);
+    value_t newv = alloc_vector(s+d, 1);
+    v = Stack[SP-1];
+    int i;
+    for(i=0; i < s; i++)
+        vector_elt(newv, i) = vector_elt(v, i);
+    // use gc to rewrite references from the old vector to the new
+    Stack[SP-1] = newv;
+    if (s > 0) {
+        ((size_t*)ptr(v))[0] |= 0x1;
+        vector_elt(v, 0) = newv;
+        gc(0);
+    }
+    return POP();
+}
+
 static value_t read_vector(value_t label, u_int32_t closer)
 {
     value_t v=the_empty_vector, elt;
@@ -354,13 +376,11 @@ static value_t read_vector(value_t label, u_int32_t closer)
     while (peek() != closer) {
         if (ios_eof(F))
             lerror(ParseError, "read: unexpected end of input");
-        if (i == 0) {
-            v = Stack[SP-1] = alloc_vector(4, 1);
+        if (i >= vector_size(v)) {
+            v = Stack[SP-1] = vector_grow(v);
             if (label != UNBOUND)
                 ptrhash_put(&readstate->backrefs, (void*)label, (void*)v);
         }
-        else if (i >= vector_size(v))
-            Stack[SP-1] = vector_grow(v);
         elt = do_read_sexpr(UNBOUND);
         v = Stack[SP-1];
         vector_elt(v,i) = elt;

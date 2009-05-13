@@ -401,22 +401,23 @@ static value_t relocate(value_t v)
 
     if (t == TAG_VECTOR) {
         // N.B.: 0-length vectors secretly have space for a first element
-        size_t i, newsz, sz = vector_size(v);
-        newsz = sz;
-        if (vector_elt(v,-1) & 0x1)
-            newsz += vector_grow_amt(sz);
-        nc = tagptr(alloc_words(newsz+1), TAG_VECTOR);
-        vector_setsize(nc, newsz);
-        a = vector_elt(v,0);
-        forward(v, nc);
-        i = 0;
-        if (sz > 0) {
-            vector_elt(nc,0) = relocate(a); i++;
-            for(; i < sz; i++)
-                vector_elt(nc,i) = relocate(vector_elt(v,i));
+        size_t i, sz = vector_size(v);
+        if (vector_elt(v,-1) & 0x1) {
+            // grown vector
+            nc = relocate(vector_elt(v,0));
+            forward(v, nc);
         }
-        for(; i < newsz; i++)
-            vector_elt(nc,i) = NIL;
+        else {
+            nc = tagptr(alloc_words(sz+1), TAG_VECTOR);
+            vector_setsize(nc, sz);
+            a = vector_elt(v,0);
+            forward(v, nc);
+            if (sz > 0) {
+                vector_elt(nc,0) = relocate(a);
+                for(i=1; i < sz; i++)
+                    vector_elt(nc,i) = relocate(vector_elt(v,i));
+            }
+        }
         return nc;
     }
     else if (t == TAG_CPRIM) {
@@ -647,24 +648,6 @@ value_t fl_cons(value_t a, value_t b)
     return c;
 }
 
-// NOTE: this is NOT an efficient operation. it is only used by the
-// reader; vectors should not generally be resized.
-// vector_grow requires at least 1 and up to 3 garbage collections!
-static value_t vector_grow(value_t v)
-{
-    size_t s = vector_size(v);
-    size_t d = vector_grow_amt(s);
-    PUSH(v);
-    // first allocate enough space to guarantee the heap will be big enough
-    // for the new vector
-    alloc_words(d);
-    // setting low bit of vector's size acts as a flag to the collector
-    // to grow this vector as it is relocated
-    ((size_t*)ptr(Stack[SP-1]))[0] |= 0x1;
-    gc(0);
-    return POP();
-}
-
 int isnumber(value_t v)
 {
     return (isfixnum(v) || iscprim(v));
@@ -676,13 +659,6 @@ int isnumber(value_t v)
 
 // eval -----------------------------------------------------------------------
 
-/*
-  there is one interesting difference between this and (lambda x x).
-  (eq a (apply list a)) is always false for nonempty a, while
-  (eq a (apply (lambda x x) a)) is always true. the justification for this
-  is that a vararg lambda often needs to recur by applying itself to the
-  tail of its argument list, so copying the list would be unacceptable.
-*/
 static value_t list(value_t *args, uint32_t nargs)
 {
     cons_t *c;
@@ -841,7 +817,7 @@ static value_t apply_cl(uint32_t nargs)
             POPN(1);
             goto next_op;
         case OP_NOP: goto next_op;
-        case OP_DUP: v = Stack[SP-1]; PUSH(v); goto next_op;
+        case OP_DUP: SP++; Stack[SP-1] = Stack[SP-2]; goto next_op;
         case OP_POP: POPN(1); goto next_op;
         case OP_TCALL:
             n = code[ip++];  // nargs
