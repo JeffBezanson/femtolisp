@@ -277,21 +277,16 @@ static uint32_t _gensym_ctr=0;
 // gensym names available at a time, mostly for compare()
 static char gsname[2][16];
 static int gsnameno=0;
-value_t gensym(value_t *args, uint32_t nargs)
+value_t fl_gensym(value_t *args, uint32_t nargs)
 {
+    argcount("gensym", nargs, 0);
     (void)args;
-    (void)nargs;
     gensym_t *gs = (gensym_t*)alloc_words(sizeof(gensym_t)/sizeof(void*));
     gs->id = _gensym_ctr++;
     gs->binding = UNBOUND;
     gs->syntax = 0;
     gs->type = NULL;
     return tagptr(gs, TAG_SYM);
-}
-
-value_t fl_gensym()
-{
-    return gensym(NULL, 0);
 }
 
 char *symbol_name(value_t v)
@@ -776,23 +771,21 @@ static value_t do_trycatch()
   - check arg counts
   - allocate vararg array
   - push closed env, set up new environment
-
-  ** need 'copyenv' instruction that moves env to heap, installs
-     heap version as the current env, and pushes the result vector.
-     this can be used to implement the copy-closure op in terms of
-     other ops. and it can be the first instruction in lambdas in
-     head position (let optimization).
 */
 static value_t apply_cl(uint32_t nargs)
 {
-    uint32_t i, n, ip, bp, envsz, captured, op;
-    fixnum_t s, lo, hi;
-    int64_t accum;
+    // frame variables
+    uint32_t i, n, ip, bp, captured;
+    fixnum_t s, hi;
     uint8_t *code;
-    value_t func, v, x, e;
-    value_t *lenv, *pv;
+
+    // temporary variables (not necessary to preserve across calls)
+    uint32_t op, envsz;
+    int64_t accum;
     symbol_t *sym;
     cons_t *c;
+    value_t func, v, x, e;
+    value_t *lenv, *pv;
 
  apply_cl_top:
     captured = 0;
@@ -1254,13 +1247,13 @@ static value_t apply_cl(uint32_t nargs)
             Stack[SP-1] = v;
             goto next_op;
         case OP_FOR:
-            lo = tofixnum(Stack[SP-3], "for");
+            s  = tofixnum(Stack[SP-3], "for");
             hi = tofixnum(Stack[SP-2], "for");
             //f = Stack[SP-1];
             v = FL_F;
             SP += 2;
             i = SP;
-            for(s=lo; s <= hi; s++) {
+            for(; s <= hi; s++) {
                 Stack[SP-2] = Stack[SP-3];
                 Stack[SP-1] = fixnum(s);
                 v = apply_cl(1);
@@ -1451,24 +1444,34 @@ static value_t fl_function(value_t *args, uint32_t nargs)
     return fv;
 }
 
-static value_t fl_function2vector(value_t *args, uint32_t nargs)
+static value_t fl_function_code(value_t *args, uint32_t nargs)
 {
-    argcount("function->vector", nargs, 1);
+    argcount("function:code", nargs, 1);
     value_t v = args[0];
-    if (!isclosure(v))
-        type_error("function->vector", "function", v);
-    value_t vec = alloc_vector(3, 0);
-    function_t *fn = (function_t*)ptr(args[0]);
-    vector_elt(vec,0) = fn->bcode;
-    vector_elt(vec,1) = fn->vals;
-    vector_elt(vec,2) = fn->env;
-    return vec;
+    if (!isclosure(v)) type_error("function:code", "function", v);
+    return fn_bcode(v);
+}
+static value_t fl_function_vals(value_t *args, uint32_t nargs)
+{
+    argcount("function:vals", nargs, 1);
+    value_t v = args[0];
+    if (!isclosure(v)) type_error("function:vals", "function", v);
+    return fn_vals(v);
+}
+static value_t fl_function_env(value_t *args, uint32_t nargs)
+{
+    argcount("function:env", nargs, 1);
+    value_t v = args[0];
+    if (!isclosure(v)) type_error("function:env", "function", v);
+    return fn_env(v);
 }
 
 static builtinspec_t core_builtin_info[] = {
     { "function", fl_function },
-    { "function->vector", fl_function2vector },
-    { "gensym", gensym },
+    { "function:code", fl_function_code },
+    { "function:vals", fl_function_vals },
+    { "function:env", fl_function_env },
+    { "gensym", fl_gensym },
     { "hash", fl_hash },
     { NULL, NULL }
 };

@@ -600,7 +600,7 @@ static value_t do_read_sexpr(value_t label)
     case TOK_GENSYM:
         pv = (value_t*)ptrhash_bp(&readstate->gensyms, (void*)tokval);
         if (*pv == (value_t)HT_NOTFOUND)
-            *pv = gensym(NULL, 0);
+            *pv = fl_gensym(NULL, 0);
         return *pv;
     case TOK_DOUBLEQUOTE:
         return read_string();

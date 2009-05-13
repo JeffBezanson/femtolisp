@@ -446,56 +446,55 @@
       (begin (disassemble f 0)
 	     (newline)
 	     (return #t)))
-  (let ((fvec (function->vector f))
-	(lev (car lev?)))
-    (let ((code (aref fvec 0))
-	  (vals (aref fvec 1)))
-      (define (print-val v)
-	(if (and (function? v) (not (builtin? v)))
-	    (begin (princ "\n")
-		   (disassemble v (+ lev 1)))
-	    (print v)))
-      (let ((i 0)
-	    (N (length code)))
-	(while (< i N)
-	       ; find key whose value matches the current byte
-	       (let ((inst (table.foldl (lambda (k v z)
-					  (or z (and (eq? v (aref code i))
-						     k)))
-					#f Instructions)))
-		 (if (> i 0) (newline))
-		 (dotimes (xx lev) (princ "\t"))
-		 (princ (hex5 i) ":  "
-			(string.tail (string inst) 1) "\t")
-		 (set! i (+ i 1))
-		 (case inst
-		   ((:loadv.l :loadg.l :setg.l)
-		    (print-val (aref vals (ref-uint32-LE code i)))
-		    (set! i (+ i 4)))
-		   
-		   ((:loadv :loadg :setg)
-		    (print-val (aref vals (aref code i)))
-		    (set! i (+ i 1)))
-		   
-		   ((:loada :seta :call :tcall :list :+ :- :* :/ :vector
-		     :argc :vargc :loadi8 :apply :tapply)
-		    (princ (number->string (aref code i)))
-		    (set! i (+ i 1)))
-		   
-		   ((:loadc :setc)
-		    (princ (number->string (aref code i)) " ")
-		    (set! i (+ i 1))
-		    (princ (number->string (aref code i)))
-		    (set! i (+ i 1)))
-		   
-		   ((:jmp :brf :brt)
-		    (princ "@" (hex5 (ref-uint16-LE code i)))
-		    (set! i (+ i 2)))
-		   
-		   ((:jmp.l :brf.l :brt.l)
-		    (princ "@" (hex5 (ref-uint32-LE code i)))
-		    (set! i (+ i 4)))
-		   
-		   (else #f))))))))
+  (let ((lev (car lev?))
+	(code (function:code f))
+	(vals (function:vals f)))
+    (define (print-val v)
+      (if (and (function? v) (not (builtin? v)))
+	  (begin (princ "\n")
+		 (disassemble v (+ lev 1)))
+	  (print v)))
+    (let ((i 0)
+	  (N (length code)))
+      (while (< i N)
+	     ; find key whose value matches the current byte
+	     (let ((inst (table.foldl (lambda (k v z)
+					(or z (and (eq? v (aref code i))
+						   k)))
+				      #f Instructions)))
+	       (if (> i 0) (newline))
+	       (dotimes (xx lev) (princ "\t"))
+	       (princ (hex5 i) ":  "
+		      (string.tail (string inst) 1) "\t")
+	       (set! i (+ i 1))
+	       (case inst
+		 ((:loadv.l :loadg.l :setg.l)
+		  (print-val (aref vals (ref-uint32-LE code i)))
+		  (set! i (+ i 4)))
+		 
+		 ((:loadv :loadg :setg)
+		  (print-val (aref vals (aref code i)))
+		  (set! i (+ i 1)))
+		 
+		 ((:loada :seta :call :tcall :list :+ :- :* :/ :vector
+			  :argc :vargc :loadi8 :apply :tapply)
+		  (princ (number->string (aref code i)))
+		  (set! i (+ i 1)))
+		 
+		 ((:loadc :setc)
+		  (princ (number->string (aref code i)) " ")
+		  (set! i (+ i 1))
+		  (princ (number->string (aref code i)))
+		  (set! i (+ i 1)))
+		 
+		 ((:jmp :brf :brt)
+		  (princ "@" (hex5 (ref-uint16-LE code i)))
+		  (set! i (+ i 2)))
+		 
+		 ((:jmp.l :brf.l :brt.l)
+		  (princ "@" (hex5 (ref-uint32-LE code i)))
+		  (set! i (+ i 4)))
+		 
+		 (else #f)))))))
 
 #t

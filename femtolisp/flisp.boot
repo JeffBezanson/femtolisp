@@ -5,11 +5,13 @@ vector.map
 vector->list
 #function("n1b0d1e031^p43;" [#function("q`e0b0lr2e1;" [#function("n1f10f00e0uZf01Kj01;" [])]) length])
 untrace
-#function("n1b0d1e031p42;" [#function("qe0Mb0<6T0d1f00d2d3d4d5e03131313142;];" [trace-lambda set-top-level-value! cadr caar last-pair caddr]) top-level-value])
+#function("n1b0d1e031p42;" [#function("qd0e0316K0d1f00d2e031a2Z42;];" [traced? set-top-level-value! function:vals]) top-level-value])
 transpose
 #function("n1d0d1e0s3;" [mapcar list])
+traced?
+#function("n1d0e031d0f0031>;" [function:code] #0=[#function("o0d0b1e0K312b2e0s2;" [println x #.apply] #0#) ()])
 trace
-#function("n1b0d1e031p322b2;" [#function("qb0d1e031p42;" [#function("qb0d1e031p42;" [#function("qf10Mb0<@6\x920d1f20b0f00d2b3L1b4b5L2L1b6b7f20L2L2L1d8d9b:le03231b4b;L2L1d2b7f10L2L1d8e03132L136L342;];" [trace-lambda set-top-level-value! nconc begin princ "(" print quote copy-list map #function("n1b0b1b2L2b3e0L2L3;" [begin princ " " print]) ")\n"]) to-proper]) cadr]) top-level-value ok])
+#function("n1b0d1e031p322b2;" [#function("qb0d130p42;" [#function("qd0f0031@6p0d1f10d2b3e0b4b5b6b7f10L2e0L3L2b8b7f00L2e0L3L3L33142;];" [traced? set-top-level-value! eval lambda begin println cons quote apply]) gensym]) top-level-value ok])
 to-proper
 #function("n1e0A6;0e0;e0?6F0e0L1;e0Md0e0N31K;" [to-proper])
 table.values
@@ -201,7 +203,7 @@ emit
 display
 #function("n1d0e0312\\;" [princ])
 disassemble
-#function("o1e1A6J0d0e0_322d1302\\;5K0]2b2d3e031e1Mp43;" [disassemble newline #function("qb0e0_Ze0`Zp43;" [#function("qb0]p42;" [#function("qb0li02b1_d2f0031p43;" [#function("n1e0J16>02e0G@6T0d0b1312d2e0f21`t42;d3e041;" [princ "\n" disassemble print]) #function("q]e0e1W6M02b0d1b2l]d333p32520;" [#function("qd0f00_326C0d1305D0]2_f31`ub2lr2d3d4f0031b5d6d7e031`32b8342f00`tj002b9e0p42;" [> newline #function("n1d0b141;" [princ "\t"]) princ hex5 ":  " string.tail string "\t" #function("qd0e0b1326Z0f20f31d2f30f1032Z312f10a4tj10;d0e0b3326\x7f0f20f31f30f10ZZ312f10`tj10;d0e0b4326\xa30d5d6f30f10Z31312f10`tj10;d0e0b7326\xe20d5d6f30f10Z31b8322f10`tj102d5d6f30f10Z31312f10`tj10;d0e0b9326\x0c0d5b:d;d<f30f103231322f10a2tj10;d0e0b=32661d5b:d;d2f30f103231322f10a4tj10;];" [memv (:loadv.l :loadg.l :setg.l) ref-uint32-LE (:loadv :loadg :setg) (:loada :seta :call :tcall :list :+ :- :* :/ :vector :argc :vargc :loadi8 :apply :tapply) princ number->string (:loadc :setc) " " (:jmp :brf :brt) "@" hex5 ref-uint16-LE (:jmp.l :brf.l :brt.l)])]) table.foldl #function("n3e217J02e1f20f00Z<16J02e0;" []) Instructions]) length])])]) function->vector])
+#function("o1e1A6J0d0e0_322d1302\\;5K0]2b2e1Md3e031d4e031p44;" [disassemble newline #function("qb0]p42;" [#function("qb0li02b1_d2f0131p43;" [#function("n1e0J16>02e0G@6T0d0b1312d2e0f10`t42;d3e041;" [princ "\n" disassemble print]) #function("q]e0e1W6M02b0d1b2l]d333p32520;" [#function("qd0f00_326C0d1305D0]2_f20`ub2lr2d3d4f0031b5d6d7e031`32b8342f00`tj002b9e0p42;" [> newline #function("n1d0b141;" [princ "\t"]) princ hex5 ":  " string.tail string "\t" #function("qd0e0b1326Z0f20f32d2f31f1032Z312f10a4tj10;d0e0b3326\x7f0f20f32f31f10ZZ312f10`tj10;d0e0b4326\xa30d5d6f31f10Z31312f10`tj10;d0e0b7326\xe20d5d6f31f10Z31b8322f10`tj102d5d6f31f10Z31312f10`tj10;d0e0b9326\x0c0d5b:d;d<f31f103231322f10a2tj10;d0e0b=32661d5b:d;d2f31f103231322f10a4tj10;];" [memv (:loadv.l :loadg.l :setg.l) ref-uint32-LE (:loadv :loadg :setg) (:loada :seta :call :tcall :list :+ :- :* :/ :vector :argc :vargc :loadi8 :apply :tapply) princ number->string (:loadc :setc) " " (:jmp :brf :brt) "@" hex5 ref-uint16-LE (:jmp.l :brf.l :brt.l)])]) table.foldl #function("n3e217J02e1f21f00Z<16J02e0;" []) Instructions]) length])]) function:code function:vals])
 delete-duplicates
 #function("n1e0?6;0e0;b0e0Me0Np43;" [#function("qd0e0e1326C0d1e141;e0d1e131K;" [member delete-duplicates])])
 count

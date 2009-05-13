@@ -458,29 +458,29 @@
 
 (define-macro (assert expr) `(if ,expr #t (raise '(assert-failed ,expr))))
 
+(letrec ((sample-traced-lambda (lambda args (begin (println (cons 'x args))
+						   (apply #.apply args)))))
+  (set! traced?
+	(lambda (f)
+	  (equal? (function:code f)
+		  (function:code sample-traced-lambda)))))
+
 (define (trace sym)
-  (let* ((lam  (top-level-value sym))
-	 (args (cadr lam))
-	 (al   (to-proper args)))
-    (if (not (eq? (car lam) 'trace-lambda))
+  (let* ((func (top-level-value sym))
+	 (args (gensym)))
+    (if (not (traced? func))
 	(set-top-level-value! sym
-	     `(trace-lambda ,args
-	        (begin
-		  (princ "(")
-		  (print ',sym)
-		  ,@(map (lambda (a)
-			   `(begin (princ " ")
-				   (print ,a)))
-			 al)
-		  (princ ")\n")
-		  (',lam ,@al))))))
+			      (eval
+			       `(lambda ,args
+				  (begin (println (cons ',sym ,args))
+					 (apply ',func ,args)))))))
   'ok)
 
 (define (untrace sym)
-  (let ((lam  (top-level-value sym)))
-    (if (eq? (car lam) 'trace-lambda)
+  (let ((func (top-level-value sym)))
+    (if (traced? func)
 	(set-top-level-value! sym
-	     (cadr (caar (last-pair (caddr lam))))))))
+			      (aref (function:vals func) 2)))))
 
 (define-macro (time expr)
   (let ((t0 (gensym)))

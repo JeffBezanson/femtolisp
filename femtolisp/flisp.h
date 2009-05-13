@@ -138,7 +138,6 @@ value_t fl_cons(value_t a, value_t b);
 value_t list2(value_t a, value_t b);
 value_t listn(size_t n, ...);
 value_t symbol(char *str);
-value_t fl_gensym();
 char *symbol_name(value_t v);
 value_t alloc_vector(size_t n, int init);
 size_t llength(value_t v);
