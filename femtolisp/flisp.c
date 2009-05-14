@@ -67,7 +67,7 @@ static char *builtin_names[] =
       "%eval", "eval*", "apply",
 
       // arithmetic
-      "+", "-", "*", "/", "<", "lognot", "compare",
+      "+", "-", "*", "/", "div", "<", "lognot", "compare",
 
       // sequences
       "vector", "aref", "aset!", "for",
@@ -1183,6 +1183,7 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             else
                 v = return_from_int64(accum);
             break;
+        case F_IDIV:
         case F_DIV:
             if (__unlikely(nargs < 1)) lerror(ArgError, "/: too few arguments");
             i = bp+1;
