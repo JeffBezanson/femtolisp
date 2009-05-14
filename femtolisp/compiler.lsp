@@ -16,7 +16,7 @@
     :cons :list :car :cdr :set-car! :set-cdr!
     :apply
 
-    :+ :- :* :/ := :< :compare
+    :+ :- :* :/ :div := :< :compare
 
     :vector :aref :aset!
 
@@ -24,7 +24,7 @@
     :loadg :loada :loadc :loadg.l
     :setg  :seta  :setc  :setg.l
 
-    :closure :trycatch :argc :vargc :copyenv :let :for :tapply :add2 :sub2 :neg
+    :closure :argc :vargc :trycatch :copyenv :let :for :tapply :add2 :sub2 :neg
 
     dummy_t dummy_f dummy_nil]))
 
@@ -40,7 +40,8 @@
 	 :cdr      1      :set-car! 2
 	 :set-cdr! 2      :=        2
          :<        2      :compare  2
-         :aref     2      :aset!    3))
+         :aref     2      :aset!    3
+	 :div      2))
 
 (define (make-code-emitter) (vector () (table) 0))
 (define (emit e inst . args)

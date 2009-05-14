@@ -1233,6 +1233,8 @@ static int num_to_ptr(value_t a, fixnum_t *pi, numerictype_t *pt, void **pp)
   returns -1, 0, or 1 based on ordering of a and b
   eq: consider equality only, returning 0 or nonzero
   eqnans: NaNs considered equal to each other
+          -0.0 not considered equal to 0.0
+          inexact not considered equal to exact
   fname: if not NULL, throws type errors, else returns 2 for type errors
 */
 int numeric_compare(value_t a, value_t b, int eq, int eqnans, char *fname)
@@ -1252,6 +1254,8 @@ int numeric_compare(value_t a, value_t b, int eq, int eqnans, char *fname)
     if (!num_to_ptr(b, &bi, &tb, &bptr)) {
         if (fname) type_error(fname, "number", b); else return 2;
     }
+    if (eq && eqnans && ((ta >= T_FLOAT) != (tb >= T_FLOAT)))
+        return 1;
     if (cmp_eq(aptr, ta, bptr, tb, eqnans))
         return 0;
     if (eq) return 1;
@@ -1272,28 +1276,30 @@ static value_t fl_div2(value_t a, value_t b)
     if (!num_to_ptr(b, &bi, &tb, &bptr))
         type_error("/", "number", b);
 
-    if (ta == T_FLOAT) {
-        db = conv_to_double(bptr, tb);
-        da = (double)*(float*)aptr / db;
-        return mk_double(da);
-    }
-    if (ta == T_DOUBLE) {
-        db = conv_to_double(bptr, tb);
-        da = *(double*)aptr / db;
-        return mk_double(da);
-    }
-    if (tb == T_FLOAT) {
-        da = conv_to_double(aptr, ta);
-        da /= (double)*(float*)bptr;
-        return mk_double(da);
-    }
-    if (tb == T_DOUBLE) {
-        da = conv_to_double(aptr, ta);
-        da /= *(double*)bptr;
-        return mk_double(da);
-    }
+    da = conv_to_double(aptr, ta);
+    db = conv_to_double(bptr, tb);
 
+    if (db == 0 && tb < T_FLOAT)  // exact 0
+        lerror(DivideError, "/: division by zero");
+
+    da = da/db;
+
+    if (ta < T_FLOAT && tb < T_FLOAT && (double)(int64_t)da == da)
+        return return_from_int64((int64_t)da);
+    return mk_double(da);
+}
+
+static value_t fl_idiv2(value_t a, value_t b)
+{
+    int_t ai, bi;
+    numerictype_t ta, tb;
+    void *aptr, *bptr;
     int64_t a64, b64;
+
+    if (!num_to_ptr(a, &ai, &ta, &aptr))
+        type_error("div", "number", a);
+    if (!num_to_ptr(b, &bi, &tb, &bptr))
+        type_error("div", "number", b);
 
     if (ta == T_UINT64) {
         if (tb == T_UINT64) {

@@ -48,7 +48,6 @@
 
 (assert (= (/ 1) 1))
 (assert (= (/ -1) -1))
-(assert (= (/ 2) 0))
 (assert (= (/ 2.0) 0.5))
 
 (assert (= (- 4999950000 4999941999) 8001))
@@ -82,6 +81,16 @@
 (assert (equal? (< 3 +nan.0) (> +nan.0 (double 3))))
 (assert (equal? (> 3 +nan.0) (> (double 3) +nan.0)))
 (assert (not (>= +nan.0 +nan.0)))
+
+; -0.0 etc.
+(assert (not (equal? 0.0 0)))
+(assert (equal? 0.0 0.0))
+(assert (not (equal? -0.0 0.0)))
+(assert (not (equal? -0.0 0)))
+(assert (not (eqv? 0.0 0)))
+(assert (not (eqv? -0.0 0)))
+(assert (not (eqv? -0.0 0.0)))
+(assert (= 0.0 -0.0))
 
 ; this crashed once
 (for 1 10 (lambda (i) 0))

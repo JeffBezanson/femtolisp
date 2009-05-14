@@ -67,7 +67,7 @@ static char *builtin_names[] =
       "apply",
 
       // arithmetic
-      "+", "-", "*", "/", "=", "<", "compare",
+      "+", "-", "*", "/", "div", "=", "<", "compare",
 
       // sequences
       "vector", "aref", "aset!",
@@ -80,7 +80,7 @@ static short builtin_arg_counts[] =
       2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
       2, ANYARGS, 1, 1, 2, 2,
       -2,
-      ANYARGS, -1, ANYARGS, -1, 2, 2, 2,
+      ANYARGS, -1, ANYARGS, -1, 2,  2, 2, 2,
       ANYARGS, 2, 3 };
 
 #define N_STACK 262144
@@ -1137,14 +1137,21 @@ static value_t apply_cl(uint32_t nargs)
                 PUSH(v);
             }
             goto next_op;
+        case OP_IDIV:
+            v = Stack[SP-2]; e = Stack[SP-1];
+            if (bothfixnums(v, e))
+                v = fixnum(numval(v) / numval(e));
+            else
+                v = fl_idiv2(v, e);
+            POPN(1);
+            Stack[SP-1] = v;
+            goto next_op;
         case OP_NUMEQ:
             v = Stack[SP-2]; e = Stack[SP-1];
-            if (bothfixnums(v, e)) {
+            if (bothfixnums(v, e))
                 v = (v == e) ? FL_T : FL_F;
-            }
-            else {
+            else
                 v = (!numeric_compare(v,e,1,0,"=")) ? FL_T : FL_F;
-            }
             POPN(1);
             Stack[SP-1] = v;
             goto next_op;

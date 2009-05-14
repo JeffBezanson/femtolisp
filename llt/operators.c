@@ -245,7 +245,7 @@ int cmp_eq(void *a, numerictype_t atag, void *b, numerictype_t btag,
     double db = conv_to_double(b, btag);
 
     if ((int)atag >= T_FLOAT && (int)btag >= T_FLOAT) {
-        if (equalnans && DNAN(da)) {
+        if (equalnans) {
             return *(uint64_t*)&da == *(uint64_t*)&db;
         }
         return (da == db);

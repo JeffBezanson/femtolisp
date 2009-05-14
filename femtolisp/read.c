@@ -348,12 +348,11 @@ static u_int32_t peek()
 // reader, and requires at least 1 and up to 3 garbage collections!
 static value_t vector_grow(value_t v)
 {
-    size_t s = vector_size(v);
+    size_t i, s = vector_size(v);
     size_t d = vector_grow_amt(s);
     PUSH(v);
     value_t newv = alloc_vector(s+d, 1);
     v = Stack[SP-1];
-    int i;
     for(i=0; i < s; i++)
         vector_elt(newv, i) = vector_elt(v, i);
     // use gc to rewrite references from the old vector to the new

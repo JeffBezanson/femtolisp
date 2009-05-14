@@ -291,7 +291,6 @@ static uptrint_t bounded_hash(value_t a, int bound, int *flag, int *ut)
         data = cp_data(cp);
         nt = cp_numtype(cp);
         d = conv_to_double(data, nt);
-        if (d==0) d = 0.0;  // normalize -0
         return doublehash(*(int64_t*)&d);
     case TAG_CVALUE:
         cv = (cvalue_t*)ptr(a);
