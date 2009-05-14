@@ -1264,6 +1264,12 @@ int numeric_compare(value_t a, value_t b, int eq, int eqnans, char *fname)
     return 1;
 }
 
+static void DivideByZeroError() __attribute__ ((__noreturn__));
+static void DivideByZeroError()
+{
+    lerror(DivideError, "/: division by zero");
+}
+
 static value_t fl_div2(value_t a, value_t b)
 {
     double da, db;
@@ -1280,7 +1286,7 @@ static value_t fl_div2(value_t a, value_t b)
     db = conv_to_double(bptr, tb);
 
     if (db == 0 && tb < T_FLOAT)  // exact 0
-        lerror(DivideError, "/: division by zero");
+        DivideByZeroError();
 
     da = da/db;
 
@@ -1330,7 +1336,7 @@ static value_t fl_idiv2(value_t a, value_t b)
 
     return return_from_int64(conv_to_int64(aptr, ta) / b64);
  div_error:
-    lerror(DivideError, "/: division by zero");
+    DivideByZeroError();
 }
 
 static value_t fl_bitwise_op(value_t a, value_t b, int opcode, char *fname)

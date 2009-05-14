@@ -1139,8 +1139,10 @@ static value_t apply_cl(uint32_t nargs)
             goto next_op;
         case OP_IDIV:
             v = Stack[SP-2]; e = Stack[SP-1];
-            if (bothfixnums(v, e))
+            if (bothfixnums(v, e)) {
+                if (e==0) DivideByZeroError();
                 v = fixnum(numval(v) / numval(e));
+            }
             else
                 v = fl_idiv2(v, e);
             POPN(1);
