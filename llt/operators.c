@@ -238,7 +238,7 @@ int cmp_lt(void *a, numerictype_t atag, void *b, numerictype_t btag)
 int cmp_eq(void *a, numerictype_t atag, void *b, numerictype_t btag,
            int equalnans)
 {
-    if (atag==btag && !equalnans)
+    if (atag==btag && (!equalnans || atag < T_FLOAT))
         return cmp_same_eq(a, b, atag);
 
     double da = conv_to_double(a, atag);

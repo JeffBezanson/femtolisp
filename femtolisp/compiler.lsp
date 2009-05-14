@@ -16,7 +16,7 @@
     :cons :list :car :cdr :set-car! :set-cdr!
     :apply
 
-    :+ :- :* :/ :div := :< :compare
+    :+ :- :* :/ :div0 := :< :compare
 
     :vector :aref :aset!
 
@@ -41,7 +41,7 @@
 	 :set-cdr! 2      :=        2
          :<        2      :compare  2
          :aref     2      :aset!    3
-	 :div      2))
+	 :div0     2))
 
 (define (make-code-emitter) (vector () (table) 0))
 (define (emit e inst . args)

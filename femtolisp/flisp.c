@@ -67,7 +67,7 @@ static char *builtin_names[] =
       "apply",
 
       // arithmetic
-      "+", "-", "*", "/", "div", "=", "<", "compare",
+      "+", "-", "*", "/", "div0", "=", "<", "compare",
 
       // sequences
       "vector", "aref", "aset!",

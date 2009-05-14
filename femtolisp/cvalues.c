@@ -1303,9 +1303,9 @@ static value_t fl_idiv2(value_t a, value_t b)
     int64_t a64, b64;
 
     if (!num_to_ptr(a, &ai, &ta, &aptr))
-        type_error("div", "number", a);
+        type_error("div0", "number", a);
     if (!num_to_ptr(b, &bi, &tb, &bptr))
-        type_error("div", "number", b);
+        type_error("div0", "number", b);
 
     if (ta == T_UINT64) {
         if (tb == T_UINT64) {

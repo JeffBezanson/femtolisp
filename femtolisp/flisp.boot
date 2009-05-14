@@ -96,8 +96,10 @@ nestlist
 #function("n3e0f2`326>0_;f1e1f0f0f131f2av33K;" [<= nestlist])
 negative?
 #function("n1f0`X;" [])
-mod
+mod0
 #function("n2f0f0f1Vf1T2v;" [])
+mod
+#function("n2f0e0f0f132f1T2v;" [div])
 memv
 #function("n2f1?6:0^;f1Mf0=6F0f1;e0f0f1N42;" [memv])
 member
@@ -200,6 +202,8 @@ emit-nothing
 #function("n1f0;" [])
 emit
 #function("o2e0f1c1326I0c2f0a[q325J0^2f0`e3f1f2Kf0`[32\\2f0;" [memq (:loadv :loadg :setg) #function("rc0g00b2[q42;" [#function("rc0g12Mq42;" [#function("rc0e1g10f0326K0e2g10f0325f0e3g10f0g00332g00auk002g00avq42;" [#function("rg30b2g10\\2f0L1k322e0f0c1326Z0c2g31q32k31;^;" [>= 256 #function("rf0e0=6<0e1;f0e2=6G0e3;f0e4=6R0e5;^;" [:loadv :loadv.l :loadg :loadg.l :setg :setg.l])]) has? get put!])])]) nreconc])
+div
+#function("n2f0f1Vf0`X16Q02f1`X16J02a17Q02b/17W02`u;" [])
 display
 #function("n1e0f0312];" [princ])
 disassemble
@@ -297,7 +301,7 @@ array?
 argc-error
 #function("n2e0e1c2f0c3f1f1aW6J0c45L0c53541;" [error string "compile error: " " expects " " argument." " arguments."])
 arg-counts
-#table(:not 1  :set-cdr! 2  :div 2  :cons 2  :number? 1  :equal? 2  :cdr 1  :vector? 1  :eqv? 2  := 2  :atom? 1  :aref 2  :compare 2  :< 2  :null? 1  :eq? 2  :car 1  :set-car! 2  :builtin? 1  :aset! 3  :bound? 1  :boolean? 1  :pair? 1  :symbol? 1  :fixnum? 1)
+#table(:not 1  :set-cdr! 2  :cons 2  :number? 1  :equal? 2  :cdr 1  :vector? 1  :eqv? 2  := 2  :div0 2  :atom? 1  :aref 2  :compare 2  :< 2  :null? 1  :eq? 2  :car 1  :set-car! 2  :builtin? 1  :aset! 3  :bound? 1  :boolean? 1  :pair? 1  :symbol? 1  :fixnum? 1)
 append2
 #function("n2f0A6;0f1;f0Me0f0Nf132K;" [append2])
 append
@@ -315,7 +319,7 @@ __init_globals
 MAX_ARGS
 127
 Instructions
-#table(:sub2 70  :nop 0  :set-cdr! 32  :/ 37  :setc 59  :tapply 68  :div 38  :cons 27  dummy_nil 74  :equal? 14  :cdr 30  :call 3  :eqv? 13  := 39  :setg.l 60  :list 28  :atom? 15  :aref 43  :load0 48  :let 66  dummy_t 72  :argc 62  :< 40  :null? 17  :loadg 53  :load1 49  :car 29  :brt.l 10  :vargc 63  :loada 54  :set-car! 31  :setg 57  :aset! 44  :bound? 21  :pair? 22  :symbol? 19  :fixnum? 25  :loadi8 50  :not 16  :* 36  :neg 71  :pop 2  :loadnil 47  :brf 6  :vector 42  :- 35  :loadv 51  :closure 61  dummy_f 73  :number? 20  :trycatch 64  :add2 69  :loadv.l 52  :vector? 24  :brf.l 9  :seta 58  :apply 33  :dup 1  :copyenv 65  :for 67  :loadc 55  :compare 41  :eq? 12  :function? 26  :+ 34  :jmp 5  :loadt 45  :brt 7  :builtin? 23  :loadg.l 56  :tcall 4  :ret 11  :boolean? 18  :loadf 46  :jmp.l 8)
+#table(:sub2 70  :nop 0  :set-cdr! 32  :/ 37  :setc 59  :tapply 68  :cons 27  dummy_nil 74  :equal? 14  :cdr 30  :call 3  :eqv? 13  := 39  :setg.l 60  :list 28  :atom? 15  :aref 43  :load0 48  :let 66  dummy_t 72  :argc 62  :< 40  :null? 17  :loadg 53  :load1 49  :car 29  :brt.l 10  :vargc 63  :loada 54  :set-car! 31  :setg 57  :aset! 44  :bound? 21  :pair? 22  :symbol? 19  :fixnum? 25  :loadi8 50  :not 16  :* 36  :neg 71  :pop 2  :loadnil 47  :brf 6  :vector 42  :- 35  :loadv 51  :closure 61  dummy_f 73  :number? 20  :trycatch 64  :add2 69  :loadv.l 52  :vector? 24  :brf.l 9  :seta 58  :apply 33  :dup 1  :div0 38  :copyenv 65  :for 67  :loadc 55  :compare 41  :eq? 12  :function? 26  :+ 34  :jmp 5  :loadt 45  :brt 7  :builtin? 23  :loadg.l 56  :tcall 4  :ret 11  :boolean? 18  :loadf 46  :jmp.l 8)
 >=
 #function("n2f1f0X17A02f0f1W;" [])
 >
