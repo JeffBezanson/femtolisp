@@ -91,15 +91,18 @@ value_t fl_buffer(value_t *args, u_int32_t nargs)
 
 value_t fl_read(value_t *args, u_int32_t nargs)
 {
+    value_t arg;
     if (nargs > 1) {
         argcount("read", nargs, 1);
     }
     else if (nargs == 0) {
-        PUSH(symbol_value(instrsym));
-        args = &Stack[SP-1];
+        arg = symbol_value(instrsym);
     }
-    (void)toiostream(args[0], "read");
-    return read_sexpr(args[0]);
+    else {
+        arg = args[0];
+    }
+    (void)toiostream(arg, "read");
+    return read_sexpr(arg);
 }
 
 value_t fl_iogetc(value_t *args, u_int32_t nargs)

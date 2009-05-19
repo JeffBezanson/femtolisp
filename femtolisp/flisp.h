@@ -96,11 +96,8 @@ typedef struct _symbol_t {
 #define isclosure(x) isfunction(x)
 #define iscbuiltin(x) (iscvalue(x) && (cv_class((cvalue_t*)ptr(x))==builtintype))
 
-extern value_t *Stack;
-extern uint32_t SP;
-#define PUSH(v) (Stack[SP++] = (v))
-#define POP()   (Stack[--SP])
-#define POPN(n) (SP-=(n))
+void fl_gc_handle(value_t *pv);
+void fl_free_gc_handles(int n);
 
 // maximum number of explicit arguments. the 128th arg is a list of rest args.
 // the largest value nargs can have is MAX_ARGS+1

@@ -80,10 +80,11 @@ value_t fl_string_decode(value_t *args, u_int32_t nargs)
 {
     int term=0;
     if (nargs == 2) {
-        term = (POP() != FL_F);
-        nargs--;
+        term = (args[1] != FL_F);
     }
-    argcount("string.decode", nargs, 1);
+    else {
+        argcount("string.decode", nargs, 1);
+    }
     if (!isstring(args[0]))
         type_error("string.decode", "string", args[0]);
     cvalue_t *cv = (cvalue_t*)ptr(args[0]);
@@ -119,9 +120,9 @@ value_t fl_string(value_t *args, u_int32_t nargs)
     }
     set(printreadablysym, oldpr);
     set(printprettysym, oldpp);
-    PUSH(buf);
-    value_t outp = stream_to_string(&Stack[SP-1]);
-    (void)POP();
+    fl_gc_handle(&buf);
+    value_t outp = stream_to_string(&buf);
+    fl_free_gc_handles(1);
     return outp;
 }
 
@@ -132,10 +133,12 @@ value_t fl_string_split(value_t *args, u_int32_t nargs)
     char *delim = tostring(args[1], "string.split");
     size_t len = cv_len((cvalue_t*)ptr(args[0]));
     size_t dlen = cv_len((cvalue_t*)ptr(args[1]));
-    PUSH(NIL);
     size_t ssz, tokend=0, tokstart=0, i=0;
-    value_t c=NIL;
+    value_t first=NIL, c=NIL, last;
     size_t junk;
+    fl_gc_handle(&first);
+    fl_gc_handle(&last);
+
     do {
         // find and allocate next token
         tokstart = tokend = i;
@@ -143,7 +146,7 @@ value_t fl_string_split(value_t *args, u_int32_t nargs)
                !u8_memchr(delim, u8_nextmemchar(s, &i), dlen, &junk))
             tokend = i;
         ssz = tokend - tokstart;
-        PUSH(c);  // save previous cons cell
+        last = c;  // save previous cons cell
         c = fl_cons(cvalue_string(ssz), NIL);
 
         // we've done allocation; reload movable pointers
@@ -153,19 +156,17 @@ value_t fl_string_split(value_t *args, u_int32_t nargs)
         if (ssz) memcpy(cv_data((cvalue_t*)ptr(car_(c))), &s[tokstart], ssz);
 
         // link new cell
-        if (Stack[SP-1] == NIL) {
-            Stack[SP-2] = c;   // first time, save first cons
-            (void)POP();
-        }
-        else {
-            ((cons_t*)ptr(POP()))->cdr = c;
-        }
+        if (last == NIL)
+            first = c;   // first time, save first cons
+        else
+            ((cons_t*)ptr(last))->cdr = c;
 
         // note this tricky condition: if the string ends with a
         // delimiter, we need to go around one more time to add an
         // empty string. this happens when (i==len && tokend<i)
     } while (i < len || (i==len && (tokend!=i)));
-    return POP();
+    fl_free_gc_handles(2);
+    return first;
 }
 
 value_t fl_string_sub(value_t *args, u_int32_t nargs)

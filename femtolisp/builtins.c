@@ -173,9 +173,11 @@ value_t fl_global_env(value_t *args, u_int32_t nargs)
 {
     (void)args;
     argcount("environment", nargs, 0);
-    PUSH(NIL);
-    global_env_list(symtab, &Stack[SP-1]);
-    return POP();
+    value_t lst = NIL;
+    fl_gc_handle(&lst);
+    global_env_list(symtab, &lst);
+    fl_free_gc_handles(1);
+    return lst;
 }
 
 extern value_t QUOTE;

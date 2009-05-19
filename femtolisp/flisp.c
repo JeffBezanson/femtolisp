@@ -84,9 +84,15 @@ static short builtin_arg_counts[] =
       ANYARGS, 2, 3 };
 
 #define N_STACK 262144
-value_t StaticStack[N_STACK];
-value_t *Stack = StaticStack;
-uint32_t SP = 0;
+static value_t Stack[N_STACK];
+static uint32_t SP = 0;
+#define PUSH(v) (Stack[SP++] = (v))
+#define POP()   (Stack[--SP])
+#define POPN(n) (SP-=(n))
+
+#define N_GC_HANDLES 1024
+static value_t *GCHandleStack[N_GC_HANDLES];
+static uint32_t N_GCHND = 0;
 
 value_t NIL, FL_T, FL_F, LAMBDA, QUOTE, IF, TRYCATCH;
 value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT, FUNCTION;
@@ -371,6 +377,19 @@ static int symchar(char c);
 
 // collector ------------------------------------------------------------------
 
+void fl_gc_handle(value_t *pv)
+{
+    if (N_GCHND >= N_GC_HANDLES)
+        lerror(MemoryError, "out of gc handles");
+    GCHandleStack[N_GCHND++] = pv;
+}
+
+void fl_free_gc_handles(int n)
+{
+    assert(N_GCHND >= n);
+    N_GCHND -= n;
+}
+
 static value_t relocate(value_t v)
 {
     value_t a, d, nc, first, *pcdr;
@@ -493,6 +512,8 @@ void gc(int mustgrow)
 
     for (i=0; i < SP; i++)
         Stack[i] = relocate(Stack[i]);
+    for (i=0; i < N_GCHND; i++)
+        *GCHandleStack[i] = relocate(*GCHandleStack[i]);
     trace_globals(symtab);
     relocate_typetable();
     rs = readstate;
