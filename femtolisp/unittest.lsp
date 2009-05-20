@@ -154,5 +154,17 @@
 	      (hash [6 1 [2 [[3 1 [2 [1]] 3]]] 3])
 	      (hash [6 1 [2 [[1 1 [2 [1]] 3]]] 3]))))
 
+(assert (equal? (hash '#0=(1 . #0#))
+		(hash '#1=(1 1 . #1#))))
+
+(assert (not (equal? (hash '#0=(1 1 . #0#))
+		     (hash '#1=(1 #0# . #1#)))))
+
+(assert (not (equal? (hash (iota 10))
+		     (hash (iota 20)))))
+
+(assert (not (equal? (hash (iota 41))
+		     (hash (iota 42)))))
+
 (princ "all tests pass\n")
 #t

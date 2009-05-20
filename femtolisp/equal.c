@@ -259,9 +259,10 @@ value_t equal(value_t a, value_t b)
 #define doublehash(a) int64to32hash(a)
 #endif
 
-// *ut means we had to start using the table
-static uptrint_t bounded_hash(value_t a, int bound, int *ut)
+// *oob: output argument, means we hit the limit specified by 'bound'
+static uptrint_t bounded_hash(value_t a, int bound, int *oob)
 {
+    *oob = 0;
     double d;
     numerictype_t nt;
     size_t i, len;
@@ -269,12 +270,7 @@ static uptrint_t bounded_hash(value_t a, int bound, int *ut)
     cprim_t *cp;
     void *data;
     uptrint_t h = 0;
-    if (*ut) {
-        h = (uptrint_t)ptrhash_get(&equal_eq_hashtable, (void*)a);
-        if (h != (uptrint_t)HT_NOTFOUND)
-            return h;
-    }
-    int tg = tag(a);
+    int oob2, tg = tag(a);
     switch(tg) {
     case TAG_NUM :
     case TAG_NUM1:
@@ -282,7 +278,7 @@ static uptrint_t bounded_hash(value_t a, int bound, int *ut)
         return doublehash(*(int64_t*)&d);
     case TAG_FUNCTION:
         if (uintval(a) > N_BUILTINS)
-            return bounded_hash(((function_t*)ptr(a))->bcode, bound, ut);
+            return bounded_hash(((function_t*)ptr(a))->bcode, bound, oob);
         return inthash(a);
     case TAG_SYM:
         return ((symbol_t*)ptr(a))->hash;
@@ -296,39 +292,39 @@ static uptrint_t bounded_hash(value_t a, int bound, int *ut)
         cv = (cvalue_t*)ptr(a);
         data = cv_data(cv);
         return memhash(data, cv_len(cv));
+
     case TAG_VECTOR:
         if (bound <= 0) {
-            h = ++(*ut) + (uptrint_t)HT_NOTFOUND;
-            ptrhash_put(&equal_eq_hashtable, (void*)a, (void*)h);
-            return h;
+            *oob = 1;
+            return 1;
         }
         len = vector_size(a);
         for(i=0; i < len; i++) {
-            h = MIX(h, bounded_hash(vector_elt(a,i), bound-1, ut)+1);
+            h = MIX(h, bounded_hash(vector_elt(a,i), bound/2, &oob2)+1);
+            if (oob2)
+                bound/=2;
+            *oob = *oob || oob2;
         }
         return h;
+
     case TAG_CONS:
-        if (bound <= 0)
+        if (bound <= 0) {
+            *oob = 1;
             return 1;
-        return MIX(bounded_hash(car_(a), bound/2, ut),
-                   bounded_hash(cdr_(a), bound/2, ut)+2);
-        // this should be able to hash long lists with greater fidelity,
-        // but it does not work yet.
-        /*
-        first = a;
-        bb = BOUNDED_HASH_BOUND;
-        do {
-            h = MIX(h, bounded_hash(car_(a), bound-1, ut));
-            a = cdr_(a);
-            bb--;
-            if (bb <= 0) {
-                *ut = 1;
-                ptrhash_put(&equal_eq_hashtable, (void*)first, (void*)h);
-                return h;
-            }
-        } while (iscons(a));
-        return MIX(h, bounded_hash(a, bound-1, ut));
-        */
+        }
+        h = bounded_hash(car_(a), bound/2, oob);
+        // bounds balancing: try to share the bounds efficiently
+        // between the car and cdr so we can hash better when a list is
+        // car-shallow and cdr-deep (a common case) or vice-versa.
+        if (*oob)
+            bound/=2;
+        else
+            bound--;
+        h = MIX(h, bounded_hash(cdr_(a), bound, &oob2)+2);
+        // recursive OOB propagation. otherwise this case is slow:
+        // (hash '#2=('#0=(#1=(#1#) . #0#) . #2#))
+        *oob = *oob || oob2;
+        return h;
     }
     return 0;
 }
@@ -342,10 +338,8 @@ int equal_lispvalue(value_t a, value_t b)
 
 uptrint_t hash_lispvalue(value_t a)
 {
-    int ut=0;
-    uptrint_t n = bounded_hash(a, BOUNDED_HASH_BOUND, &ut);
-    if (ut)
-        htable_reset(&equal_eq_hashtable, 512);
+    int oob=0;
+    uptrint_t n = bounded_hash(a, BOUNDED_HASH_BOUND, &oob);
     return n;
 }
 
