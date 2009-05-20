@@ -308,21 +308,24 @@ static uptrint_t bounded_hash(value_t a, int bound, int *oob)
         return h;
 
     case TAG_CONS:
-        if (bound <= 0) {
-            *oob = 1;
-            return 1;
-        }
-        h = bounded_hash(car_(a), bound/2, oob);
-        // bounds balancing: try to share the bounds efficiently
-        // between the car and cdr so we can hash better when a list is
-        // car-shallow and cdr-deep (a common case) or vice-versa.
-        if (*oob)
-            bound/=2;
-        else
-            bound--;
-        h = MIX(h, bounded_hash(cdr_(a), bound, &oob2)+2);
-        // recursive OOB propagation. otherwise this case is slow:
-        // (hash '#2=('#0=(#1=(#1#) . #0#) . #2#))
+        do {
+            if (bound <= 0) {
+                *oob = 1;
+                return h;
+            }
+            h = MIX(h, bounded_hash(car_(a), bound/2, &oob2));
+            // bounds balancing: try to share the bounds efficiently
+            // so we can hash better when a list is cdr-deep (a common case)
+            if (oob2)
+                bound/=2;
+            else
+                bound--;
+            // recursive OOB propagation. otherwise this case is slow:
+            // (hash '#2=((#0=(#1=(#1#) . #0#)) . #2#))
+            *oob = *oob || oob2;
+            a = cdr_(a);
+        } while (iscons(a));
+        h = MIX(h, bounded_hash(a, bound-1, &oob2)+2);
         *oob = *oob || oob2;
         return h;
     }
