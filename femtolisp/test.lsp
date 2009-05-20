@@ -35,14 +35,6 @@
 ;(set! a (map-int identity 10000))
 ;(dotimes (i 200) (rfoldl cons () a))
 
-; iterative filter
-(define (ifilter pred lst)
-  ((label f (lambda (accum lst)
-              (cond ((null? lst) (nreverse accum))
-                    ((not (pred (car lst))) (f accum (cdr lst)))
-                    (#t (f (cons (car lst) accum) (cdr lst))))))
-   () lst))
-
 (define (sort l)
   (if (or (null? l) (null? (cdr l))) l
     (let* ((piv (car l))
@@ -76,11 +68,10 @@
   `((lambda (,name) (set! ,name ,fn)) ()))
 
 (define (square x) (* x x))
-(define (evenp  x) (= x (* (/ x 2) 2)))
 (define (expt b p)
   (cond ((= p 0) 1)
         ((= b 0) 0)
-        ((evenp p) (square (expt b (/ p 2))))
+        ((even? p) (square (expt b (div0 p 2))))
         (#t (* b (expt b (- p 1))))))
 
 (define (gcd a b)

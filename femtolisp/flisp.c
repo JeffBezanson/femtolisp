@@ -761,7 +761,6 @@ static value_t do_trycatch()
   - put the stack in this state
   - provide arg count
   - respect tail position
-  - call correct entry point (either eval_sexpr or apply_cl)
   - restore SP
 
   callee's responsibility:

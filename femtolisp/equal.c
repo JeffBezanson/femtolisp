@@ -165,6 +165,7 @@ static value_t cyc_vector_compare(value_t a, value_t b, htable_t *table,
 
 static value_t cyc_compare(value_t a, value_t b, htable_t *table, int eq)
 {
+ cyc_compare_top:
     if (a==b)
         return fixnum(0);
     if (iscons(a)) {
@@ -199,7 +200,9 @@ static value_t cyc_compare(value_t a, value_t b, htable_t *table, int eq)
             eq_union(table, a, b, ca, cb);
             d = cyc_compare(aa, ab, table, eq);
             if (numval(d)!=0) return d;
-            return cyc_compare(da, db, table, eq);
+            a = da;
+            b = db;
+            goto cyc_compare_top;
         }
         else {
             return fixnum(1);
@@ -256,11 +259,9 @@ value_t equal(value_t a, value_t b)
 #define doublehash(a) int64to32hash(a)
 #endif
 
-// *flag means max recursion bound exceeded
-// *ut means this happened some time, so we had to start using the table
-static uptrint_t bounded_hash(value_t a, int bound, int *flag, int *ut)
+// *ut means we had to start using the table
+static uptrint_t bounded_hash(value_t a, int bound, int *ut)
 {
-    *flag = 0;
     double d;
     numerictype_t nt;
     size_t i, len;
@@ -273,8 +274,7 @@ static uptrint_t bounded_hash(value_t a, int bound, int *flag, int *ut)
         if (h != (uptrint_t)HT_NOTFOUND)
             return h;
     }
-    if (bound <= 0) { *ut = *flag = 1; return 0; }
-    int bb, tg = tag(a);
+    int tg = tag(a);
     switch(tg) {
     case TAG_NUM :
     case TAG_NUM1:
@@ -282,7 +282,7 @@ static uptrint_t bounded_hash(value_t a, int bound, int *flag, int *ut)
         return doublehash(*(int64_t*)&d);
     case TAG_FUNCTION:
         if (uintval(a) > N_BUILTINS)
-            return bounded_hash(((function_t*)ptr(a))->bcode, bound, flag, ut);
+            return bounded_hash(((function_t*)ptr(a))->bcode, bound, ut);
         return inthash(a);
     case TAG_SYM:
         return ((symbol_t*)ptr(a))->hash;
@@ -297,32 +297,38 @@ static uptrint_t bounded_hash(value_t a, int bound, int *flag, int *ut)
         data = cv_data(cv);
         return memhash(data, cv_len(cv));
     case TAG_VECTOR:
+        if (bound <= 0) {
+            h = ++(*ut) + (uptrint_t)HT_NOTFOUND;
+            ptrhash_put(&equal_eq_hashtable, (void*)a, (void*)h);
+            return h;
+        }
         len = vector_size(a);
         for(i=0; i < len; i++) {
-            h = MIX(h, bounded_hash(vector_elt(a,i), bound-1, flag, ut));
-            if (*flag) {
-                if (h == (uptrint_t)HT_NOTFOUND) h++;
-                ptrhash_put(&equal_eq_hashtable, (void*)a, (void*)h);
-            }
+            h = MIX(h, bounded_hash(vector_elt(a,i), bound-1, ut)+1);
         }
         return h;
     case TAG_CONS:
+        if (bound <= 0)
+            return 1;
+        return MIX(bounded_hash(car_(a), bound/2, ut),
+                   bounded_hash(cdr_(a), bound/2, ut)+2);
+        // this should be able to hash long lists with greater fidelity,
+        // but it does not work yet.
+        /*
+        first = a;
         bb = BOUNDED_HASH_BOUND;
         do {
-            h = MIX(h, bounded_hash(car_(a), bound-1, flag, ut)+1);
-            if (*flag) {
-                if (h == (uptrint_t)HT_NOTFOUND) h++;
-                ptrhash_put(&equal_eq_hashtable, (void*)a, (void*)h);
-            }
+            h = MIX(h, bounded_hash(car_(a), bound-1, ut));
             a = cdr_(a);
             bb--;
-            if (bb <= 0) { *ut = *flag = 1; return h; }
-            if (*ut) {
-                if (ptrhash_get(&equal_eq_hashtable, (void*)a) != HT_NOTFOUND)
-                    return h;
+            if (bb <= 0) {
+                *ut = 1;
+                ptrhash_put(&equal_eq_hashtable, (void*)first, (void*)h);
+                return h;
             }
         } while (iscons(a));
-        return MIX(h, bounded_hash(a, bound-1, flag, ut)+1);
+        return MIX(h, bounded_hash(a, bound-1, ut));
+        */
     }
     return 0;
 }
@@ -336,8 +342,8 @@ int equal_lispvalue(value_t a, value_t b)
 
 uptrint_t hash_lispvalue(value_t a)
 {
-    int flag, ut=0;
-    uptrint_t n = bounded_hash(a, BOUNDED_HASH_BOUND, &flag, &ut);
+    int ut=0;
+    uptrint_t n = bounded_hash(a, BOUNDED_HASH_BOUND, &ut);
     if (ut)
         htable_reset(&equal_eq_hashtable, 512);
     return n;
