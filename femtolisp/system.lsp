@@ -376,8 +376,8 @@
 	  (let* ,(cdr binds) ,@body))
 	,(cadar binds))))
 
-(define-macro (when   c . body) (list 'if c (f-body body) #f))
-(define-macro (unless c . body) (list 'if c #f (f-body body)))
+(define-macro (when   c . body) (list 'if c (cons 'begin body) #f))
+(define-macro (unless c . body) (list 'if c #f (cons 'begin body)))
 
 (define-macro (case key . clauses)
   (define (vals->cond key v)

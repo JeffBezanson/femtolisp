@@ -340,9 +340,24 @@ static void print_pair(ios_t *f, value_t v)
 
 static void cvalue_print(ios_t *f, value_t v);
 
-void fl_print_child(ios_t *f, value_t v)
+static int print_circle_prefix(ios_t *f, value_t v)
 {
     value_t label;
+    if ((label=(value_t)ptrhash_get(&printconses, (void*)v)) !=
+        (value_t)HT_NOTFOUND) {
+        if (!ismarked(v)) {
+            HPOS+=ios_printf(f, "#%ld#", numval(label));
+            return 1;
+        }
+        HPOS+=ios_printf(f, "#%ld=", numval(label));
+    }
+    if (ismanaged(v))
+        unmark_cons(v);
+    return 0;
+}
+
+void fl_print_child(ios_t *f, value_t v)
+{
     char *name;
 
     switch (tag(v)) {
@@ -376,6 +391,7 @@ void fl_print_child(ios_t *f, value_t v)
         }
         else {
             assert(isclosure(v));
+            if (print_circle_prefix(f, v)) return;
             function_t *fn = (function_t*)ptr(v);
             outs("#function(", f);
             char *data = cvalue_data(fn->bcode);
@@ -397,18 +413,10 @@ void fl_print_child(ios_t *f, value_t v)
       if (v == UNBOUND) { outs("#<undefined>", f); break; }
     case TAG_VECTOR:
     case TAG_CONS:
-        if ((label=(value_t)ptrhash_get(&printconses, (void*)v)) !=
-            (value_t)HT_NOTFOUND) {
-            if (!ismarked(v)) {
-                HPOS+=ios_printf(f, "#%ld#", numval(label));
-                return;
-            }
-            HPOS+=ios_printf(f, "#%ld=", numval(label));
-        }
+        if (print_circle_prefix(f, v)) return;
         if (isvector(v)) {
             outc('[', f);
             int newindent = HPOS, est;
-            unmark_cons(v);
             int i, sz = vector_size(v);
             for(i=0; i < sz; i++) {
                 fl_print_child(f, vector_elt(v,i));
@@ -432,13 +440,10 @@ void fl_print_child(ios_t *f, value_t v)
             outc(']', f);
             break;
         }
-        if (iscvalue(v) || iscprim(v)) {
-            if (ismanaged(v))
-                unmark_cons(v);
+        if (iscvalue(v) || iscprim(v))
             cvalue_print(f, v);
-            break;
-        }
-        print_pair(f, v);
+        else
+            print_pair(f, v);
         break;
     }
 }

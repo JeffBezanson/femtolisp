@@ -274,7 +274,7 @@
                         (shift yk
                                (begin (set! ,ko  yk)
                                       (set! ,cur v))))))
-                 ,(f-body body))))))))))
+                 ,@body)))))))))
 
 ; a test case
 (define-generator (range-iterator lo hi)
