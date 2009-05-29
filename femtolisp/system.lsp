@@ -9,9 +9,11 @@
 ; this allows define, defun, defmacro, let, etc. to contain multiple
 ; body expressions.
 (set! f-body (lambda (e)
-               (cond ((atom? e)       #f)
-                     ((eq (cdr e) ()) (car e))
-                     (#t              (cons 'begin e)))))
+               (if (atom? e)
+		   #f
+		   (if (eq (cdr e) ())
+		       (car e)
+		       (cons 'begin e)))))
 
 (set-syntax! 'define-macro
              (lambda (form . body)
@@ -51,6 +53,21 @@
 	      (f-body body))
 	(map (lambda (c) (if (pair? c) (cadr c) #f)) binds))))
    #f))
+
+(define (cond-clauses->if lst)
+  (if (atom? lst)
+      #f
+      ((lambda (clause)
+	 (if (or (eq? (car clause) 'else)
+		 (eq? (car clause) #t))
+	     (cons 'begin (cdr clause))
+	     (list 'if
+		   (car clause)
+		   (cons 'begin (cdr clause))
+		   (cond-clauses->if (cdr lst)))))
+       (car lst))))
+(define-macro (cond . clauses)
+  (cond-clauses->if clauses))
 
 ; standard procedures ---------------------------------------------------------
 

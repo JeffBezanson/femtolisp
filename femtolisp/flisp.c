@@ -53,7 +53,7 @@
 
 static char *builtin_names[] =
     { // special forms
-      "quote", "cond", "if", "and", "or", "while", "lambda",
+      "quote", "if", "and", "or", "while", "lambda",
       "trycatch", "%apply", "set!", "prog1", "begin",
 
       // predicates
@@ -873,30 +873,6 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
                 else v = car_(v);
             }
             tail_eval(v);
-            break;
-        case F_COND:
-            pv = &Stack[bp]; v = FL_F;
-            while (iscons(*pv)) {
-                c = tocons(car_(*pv), "cond");
-                v = c->car;
-                // allow last condition to be 'else'
-                if (iscons(cdr_(*pv)) || v != elsesym)
-                    v = eval(v);
-                if (v != FL_F) {
-                    *pv = cdr_(car_(*pv));
-                    // evaluate body forms
-                    if (iscons(*pv)) {
-                        while (iscons(cdr_(*pv))) {
-                            v = car_(*pv);
-                            v = eval(v);
-                            *pv = cdr_(*pv);
-                        }
-                        tail_eval(car_(*pv));
-                    }
-                    break;
-                }
-                *pv = cdr_(*pv);
-            }
             break;
         case F_AND:
             pv = &Stack[bp]; v = FL_T;
