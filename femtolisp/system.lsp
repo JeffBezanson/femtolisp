@@ -8,23 +8,15 @@
 (set! set-syntax!
       (lambda (s v) (put! *syntax-environment* s v)))
 
-; convert a sequence of body statements to a single expression.
-; this allows define, defun, defmacro, let, etc. to contain multiple
-; body expressions.
-(set! f-body (lambda (e)
-               (cond ((atom? e)       #f)
-                     ((eq (cdr e) ()) (car e))
-                     (#t              (cons 'begin e)))))
-
 (set-syntax! 'define-macro
              (lambda (form . body)
                (list 'set-syntax! (list 'quote (car form))
-                     (list 'lambda (cdr form) (f-body body)))))
+                     (cons 'lambda (cons (cdr form) body)))))
 
 (define-macro (define form . body)
   (if (symbol? form)
       (list 'set! form (car body))
-      (list 'set! (car form) (list 'lambda (cdr form) (f-body body)))))
+      (list 'set! (car form) (cons 'lambda (cons (cdr form) body)))))
 
 (define (symbol-syntax s) (get *syntax-environment* s #f))
 
@@ -47,18 +39,31 @@
 		    (list 'label lname thelambda)
 		    thelambda)
 		theargs))
-	(list 'lambda
-	      (map (lambda (c) (if (pair? c) (car c) c)) binds)
-	      (f-body body))
+	(cons 'lambda
+	      (cons (map (lambda (c) (if (pair? c) (car c) c)) binds)
+		    body))
 	(map (lambda (c) (if (pair? c) (cadr c) #f)) binds))))
    #f))
 
 (define-macro (letrec binds . body)
-  (cons (list 'lambda (map car binds)
-              (f-body
-	       (nconc (map (lambda (b) (cons 'set! b)) binds)
-		      body)))
-        (map (lambda (x) #f) binds)))
+  (cons (cons 'lambda (cons (map car binds)
+			    (nconc (map (lambda (b) (cons 'set! b)) binds)
+				   body)))
+	(map (lambda (x) #f) binds)))
+
+(define-macro (cond . clauses)
+  (define (cond-clauses->if lst)
+    (if (atom? lst)
+	#f
+	(let ((clause (car lst)))
+	  (if (or (eq? (car clause) 'else)
+		  (eq? (car clause) #t))
+	      (cons 'begin (cdr clause))
+	      (list 'if
+		    (car clause)
+		    (cons 'begin (cdr clause))
+		    (cond-clauses->if (cdr lst)))))))
+  (cond-clauses->if clauses))
 
 ; standard procedures ---------------------------------------------------------
 
@@ -200,36 +205,36 @@
 		(set-car! lst (f (car lst)))
 		(set! lst (cdr lst)))))
 
-(letrec ((mapcar-
-          (lambda (f lsts)
-	    (cond ((null? lsts) (f))
-		  ((atom? (car lsts)) (car lsts))
-		  (#t (cons (apply   f (map car lsts))
-			    (mapcar- f (map cdr lsts))))))))
-  (set! mapcar
-	(lambda (f . lsts) (mapcar- f lsts))))
+(define mapcar
+  (letrec ((mapcar-
+	    (lambda (f lsts)
+	      (cond ((null? lsts) (f))
+		    ((atom? (car lsts)) (car lsts))
+		    (#t (cons (apply   f (map car lsts))
+			      (mapcar- f (map cdr lsts))))))))
+    (lambda (f . lsts) (mapcar- f lsts))))
 
 (define (transpose M) (apply mapcar list M))
 
-(letrec ((filter-
-	  (lambda (pred lst accum)
-	    (cond ((null? lst) accum)
-		  ((pred (car lst))
-		   (filter- pred (cdr lst) (cons (car lst) accum)))
-		  (#t
-		   (filter- pred (cdr lst) accum))))))
-  (set! filter
-	(lambda (pred lst) (filter- pred lst ()))))
+(define filter
+  (letrec ((filter-
+	    (lambda (pred lst accum)
+	      (cond ((null? lst) accum)
+		    ((pred (car lst))
+		     (filter- pred (cdr lst) (cons (car lst) accum)))
+		    (#t
+		     (filter- pred (cdr lst) accum))))))
+    (lambda (pred lst) (filter- pred lst ()))))
 
-(letrec ((separate-
-	  (lambda (pred lst yes no)
-	    (cond ((null? lst) (cons yes no))
-		  ((pred (car lst))
-		   (separate- pred (cdr lst) (cons (car lst) yes) no))
-		  (#t
-		   (separate- pred (cdr lst) yes (cons (car lst) no)))))))
-  (set! separate
-	(lambda (pred lst) (separate- pred lst () ()))))
+(define separate
+  (letrec ((separate-
+	    (lambda (pred lst yes no)
+	      (cond ((null? lst) (cons yes no))
+		    ((pred (car lst))
+		     (separate- pred (cdr lst) (cons (car lst) yes) no))
+		    (#t
+		     (separate- pred (cdr lst) yes (cons (car lst) no)))))))
+    (lambda (pred lst) (separate- pred lst () ()))))
 
 (define (nestlist f zero n)
   (if (<= n 0) ()
@@ -271,35 +276,6 @@
 	    (delete-duplicates tail)
 	    (cons elt
 		  (delete-duplicates tail))))))
-
-(letrec ((get-defined-vars-
-	  (lambda (expr)
-	    (cond ((atom? expr) ())
-		  ((and (eq? (car expr) 'define)
-			(pair? (cdr expr)))
-		   (or (and (symbol? (cadr expr))
-			    (list (cadr expr)))
-		       (and (pair? (cadr expr))
-			    (symbol? (caadr expr))
-			    (list (caadr expr)))
-		       ()))
-		  ((eq? (car expr) 'begin)
-		   (apply append (map get-defined-vars- (cdr expr))))
-		  (else ())))))
-  (set! get-defined-vars
-	(lambda (expr) (delete-duplicates (get-defined-vars- expr)))))
-
-; redefine f-body to support internal define
-(let ((f-body- f-body))
-  (set! f-body
-	(lambda (e)
-	  ((lambda (B)
-	     ((lambda (V)
-		(if (null? V)
-		    B
-		    (cons (list 'lambda V B) (map (lambda (x) #f) V))))
-	      (get-defined-vars B)))
-	   (f-body- e)))))
 
 ; backquote -------------------------------------------------------------------
 
@@ -371,9 +347,11 @@
       (list 'quote v)))
 
 (define-macro (let* binds . body)
-  (if (atom? binds) (f-body body)
+  (if (atom? binds) `((lambda () ,@body))
       `((lambda (,(caar binds))
-	  (let* ,(cdr binds) ,@body))
+	  ,@(if (pair? (cdr binds))
+		`((let* ,(cdr binds) ,@body))
+		body))
 	,(cadar binds))))
 
 (define-macro (when   c . body) (list 'if c (cons 'begin body) #f))
@@ -416,7 +394,7 @@
   (let ((v (car var))
         (cnt (cadr var)))
     `(for 0 (- ,cnt 1)
-          (lambda (,v) ,(f-body body)))))
+          (lambda (,v) ,@body))))
 
 (define (map-int f n)
   (if (<= n 0)
@@ -464,12 +442,12 @@
 
 (define-macro (assert expr) `(if ,expr #t (raise '(assert-failed ,expr))))
 
-(letrec ((sample-traced-lambda (lambda args (begin (println (cons 'x args))
-						   (apply #.apply args)))))
-  (set! traced?
-	(lambda (f)
-	  (equal? (function:code f)
-		  (function:code sample-traced-lambda)))))
+(define traced?
+  (letrec ((sample-traced-lambda (lambda args (begin (println (cons 'x args))
+						     (apply #.apply args)))))
+    (lambda (f)
+      (equal? (function:code f)
+	      (function:code sample-traced-lambda)))))
 
 (define (trace sym)
   (let* ((func (top-level-value sym))
@@ -611,6 +589,23 @@
 
 ; toplevel --------------------------------------------------------------------
 
+(define get-defined-vars
+  (letrec ((get-defined-vars-
+	    (lambda (expr)
+	      (cond ((atom? expr) ())
+		    ((and (eq? (car expr) 'define)
+			  (pair? (cdr expr)))
+		     (or (and (symbol? (cadr expr))
+			      (list (cadr expr)))
+			 (and (pair? (cadr expr))
+			      (symbol? (caadr expr))
+			      (list (caadr expr)))
+			 ()))
+		    ((eq? (car expr) 'begin)
+		     (apply append (map get-defined-vars- (cdr expr))))
+		    (else ())))))
+    (lambda (expr) (delete-duplicates (get-defined-vars- expr)))))
+
 (define (macrocall? e) (and (symbol? (car e))
 			    (get *syntax-environment* (car e) #f)))
 
@@ -632,12 +627,23 @@
 		  (macroexpand-in (apply f (cdr e)) env)
 		  (cond ((eq (car e) 'quote) e)
 			((eq (car e) 'lambda)
-			 (nlist* 'lambda (cadr e)
-				 (macroexpand-in (caddr e) env)
-				 (cdddr e)))
+			 (let ((B (if (pair? (cddr e))
+				      (if (pair? (cdddr e))
+					  (cons 'begin (cddr e))
+					  (caddr e))
+				      #f)))
+			   (let ((V  (get-defined-vars B))
+				 (Be (macroexpand-in B env)))
+			     (nlist* 'lambda
+				     (cadr e)
+				     (if (null? V)
+					 Be
+					 (cons (list 'lambda V Be)
+					       (map (lambda (x) #f) V)))
+				     (cdddr e)))))
 			((eq (car e) 'let-syntax)
 			 (let ((binds (cadr e))
-			       (body  (f-body (cddr e))))
+			       (body  `((lambda () ,@(cddr e)))))
 			   (macroexpand-in
 			    body
 			    (nconc

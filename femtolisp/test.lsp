@@ -43,13 +43,14 @@
              (list piv)
              (sort (cdr halves))))))
 
+#|
 (define-macro (dotimes var . body)
   (let ((v   (car var))
         (cnt (cadr var)))
     `(let ((,v 0))
        (while (< ,v ,cnt)
          (prog1
-             ,(f-body body)
+             ,(cons 'begin body)
            (set! ,v (+ ,v 1)))))))
 
 (define (map-int f n)
@@ -63,6 +64,7 @@
 		      (begin (set-cdr! acc (cons (f i) ()))
 			     (map-int- (cdr acc) (+ i 1) n)))))
 	 first 1 n))))
+|#
 
 (define-macro (labl name fn)
   `((lambda (,name) (set! ,name ,fn)) ()))

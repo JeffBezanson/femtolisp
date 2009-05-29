@@ -180,19 +180,6 @@
       (closed  (emit g (aref Is 1) (cadr loc) (caddr loc)))
       (else    (emit g (aref Is 2) s)))))
 
-(define (cond->if form)
-  (cond-clauses->if (cdr form)))
-(define (cond-clauses->if lst)
-  (if (atom? lst)
-      #f
-      (let ((clause (car lst)))
-	(if (or (eq? (car clause) 'else)
-		(eq? (car clause) #t))
-	    (cons 'begin (cdr clause))
-	    `(if ,(car clause)
-		 ,(cons 'begin (cdr clause))
-		 ,(cond-clauses->if (cdr lst)))))))
-
 (define (compile-if g env tail? x)
   (let ((elsel (make-label g))
 	(endl  (make-label g)))
@@ -393,7 +380,6 @@
 	(else
 	 (case (car x)
 	   (quote    (emit g :loadv (cadr x)))
-	   (cond     (compile-in g env tail? (cond->if x)))
 	   (if       (compile-if g env tail? x))
 	   (begin    (compile-begin g env tail? (cdr x)))
 	   (prog1    (compile-prog1 g env x))

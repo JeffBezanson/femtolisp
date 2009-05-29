@@ -4,16 +4,6 @@
 	((null? (cdr e)) (car e))
 	(#t              (cons 'begin e))))
 
-(define (cond->if form)
-  (cond-clauses->if (cdr form)))
-(define (cond-clauses->if lst)
-  (if (atom? lst)
-      #f
-    (let ((clause (car lst)))
-      `(if ,(car clause)
-           ,(cond-body (cdr clause))
-         ,(cond-clauses->if (cdr lst))))))
-
 (define (begin->cps forms k)
   (cond ((atom? forms)       `(,k ,forms))
         ((null? (cdr forms))  (cps- (car forms) k))
@@ -93,9 +83,6 @@
 
           ((eq (car form) 'begin)
            (begin->cps (cdr form) k))
-
-          ((eq (car form) 'cond)
-           (cps- (cond->if form) k))
 
           ((eq (car form) 'if)
            (let ((test (cadr form))
@@ -255,7 +242,7 @@
         (#t form)))
 
 (define-macro (with-delimited-continuations . code)
-  (cps (f-body code)))
+  (cps `((lambda () ,@code))))
 
 (define-macro (define-generator form . body)
   (let ((ko  (gensym))

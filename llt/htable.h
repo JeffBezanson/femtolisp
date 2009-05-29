@@ -1,7 +1,7 @@
 #ifndef __HTABLE_H_
 #define __HTABLE_H_
 
-#define HT_N_INLINE 16
+#define HT_N_INLINE 32
 
 typedef struct {
     size_t size;

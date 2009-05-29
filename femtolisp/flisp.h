@@ -216,7 +216,7 @@ typedef struct {
 } function_t;
 
 #define CPRIM_NWORDS 2
-#define MAX_INL_SIZE 96
+#define MAX_INL_SIZE 384
 
 #define CV_OWNED_BIT  0x1
 #define CV_PARENT_BIT 0x2
