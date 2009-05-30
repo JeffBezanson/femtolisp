@@ -60,11 +60,18 @@
       ((lambda (clause)
 	 (if (or (eq? (car clause) 'else)
 		 (eq? (car clause) #t))
-	     (cons 'begin (cdr clause))
-	     (list 'if
-		   (car clause)
-		   (cons 'begin (cdr clause))
-		   (cond-clauses->if (cdr lst)))))
+	     (if (null? (cdr clause))
+		 (car clause)
+		 (cons 'begin (cdr clause)))
+	     (if (null? (cdr clause))
+		 ; test by itself
+		 (list 'or
+		       (car clause)
+		       (cond-clauses->if (cdr lst)))
+		 (list 'if
+		       (car clause)
+		       (cons 'begin (cdr clause))
+		       (cond-clauses->if (cdr lst))))))
        (car lst))))
 (define-macro (cond . clauses)
   (cond-clauses->if clauses))
