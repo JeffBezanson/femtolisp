@@ -1,9 +1,4 @@
 ; -*- scheme -*-
-(define (cond-body e)
-  (cond ((atom? e)       #f)
-	((null? (cdr e)) (car e))
-	(#t              (cons 'begin e))))
-
 (define (begin->cps forms k)
   (cond ((atom? forms)       `(,k ,forms))
         ((null? (cdr forms))  (cps- (car forms) k))
@@ -100,7 +95,7 @@
            (cond ((atom? (cdr  form)) `(,k #t))
                  ((atom? (cddr form)) (cps- (cadr form) k))
                  (#t
-                  (if (atom k)
+                  (if (atom? k)
                       (cps- (cadr form)
                             `(lambda (,g)
                                (if ,g ,(cps- `(and ,@(cddr form)) k)
