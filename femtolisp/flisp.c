@@ -1566,7 +1566,6 @@ static void lisp_init(void)
         setc(symbol(builtin_names[i]), builtin(i));
     }
     setc(symbol("eq"), builtin(OP_EQ));
-    setc(symbol("equal"), builtin(OP_EQUAL));
     setc(symbol("procedure?"), builtin(OP_FUNCTIONP));
 
 #ifdef LINUX

@@ -58,15 +58,15 @@
 (assert (< (- #uint64(0x8000000000000000)) 0))
 (assert (> (- #int64(0x8000000000000000)) 0))
 
-(assert (not (equal #int64(0x8000000000000000) #uint64(0x8000000000000000))))
-(assert (equal (+ #int64(0x4000000000000000) #int64(0x4000000000000000))
-               #uint64(0x8000000000000000)))
-(assert (equal (* 2 #int64(0x4000000000000000))
-               #uint64(0x8000000000000000)))
+(assert (not (equal? #int64(0x8000000000000000) #uint64(0x8000000000000000))))
+(assert (equal? (+ #int64(0x4000000000000000) #int64(0x4000000000000000))
+		#uint64(0x8000000000000000)))
+(assert (equal? (* 2 #int64(0x4000000000000000))
+		#uint64(0x8000000000000000)))
 
-(assert (equal (uint64 (double -123)) #uint64(0xffffffffffffff85)))
+(assert (equal? (uint64 (double -123)) #uint64(0xffffffffffffff85)))
 
-(assert (equal (string 'sym #byte(65) #wchar(945) "blah") "symA\u03B1blah"))
+(assert (equal? (string 'sym #byte(65) #wchar(945) "blah") "symA\u03B1blah"))
 
 ; NaNs
 (assert (equal? +nan.0 +nan.0))
@@ -100,14 +100,14 @@
 
 ; ok, a couple end-to-end tests as well
 (define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))
-(assert (equal (fib 20) 6765))
+(assert (equal? (fib 20) 6765))
 
 (load "color.lsp")
-(assert (equal (color-pairs (generate-5x5-pairs) '(a b c d e))
-               '((23 . a) (9 . a) (22 . b) (17 . d) (14 . d) (8 . b) (21 . e)
-                 (19 . b) (16 . c) (13 . c) (11 . b) (7 . e) (24 . c) (20 . d)
-                 (18 . e) (15 . a) (12 . a) (10 . e) (6 . d) (5 . c) (4 . e)
-                 (3 . d) (2 . c) (0 . b) (1 . a))))
+(assert (equal? (color-pairs (generate-5x5-pairs) '(a b c d e))
+		'((23 . a) (9 . a) (22 . b) (17 . d) (14 . d) (8 . b) (21 . e)
+		  (19 . b) (16 . c) (13 . c) (11 . b) (7 . e) (24 . c) (20 . d)
+		  (18 . e) (15 . a) (12 . a) (10 . e) (6 . d) (5 . c) (4 . e)
+		  (3 . d) (2 . c) (0 . b) (1 . a))))
 
 ; hashing strange things
 (assert (equal?

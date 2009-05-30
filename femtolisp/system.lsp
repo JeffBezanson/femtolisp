@@ -74,16 +74,11 @@
 
 ; standard procedures ---------------------------------------------------------
 
-(define (append2 l d)
-  (if (null? l) d
-      (cons (car l)
-	    (append2 (cdr l) d))))
-
 (define (append . lsts)
   (cond ((null? lsts) ())
 	((null? (cdr lsts)) (car lsts))
-	(#t (append2 (car lsts)
-		     (apply append (cdr lsts))))))
+	(#t (nconc (copy-list (car lsts))
+		   (apply append (cdr lsts))))))
 
 (define (member item lst)
   (cond ((atom? lst) #f)
@@ -249,11 +244,6 @@
 
 (define (reverse lst) (foldl cons () lst))
 
-(define (copy-tree l)
-  (if (atom? l) l
-    (cons (copy-tree (car l))
-          (copy-tree (cdr l)))))
-
 (define (nreverse l)
   (let ((prev ()))
     (while (pair? l)
@@ -261,6 +251,11 @@
 			  (set-cdr! l (prog1 prev
 					     (set! prev l))))))
     prev))
+
+(define (copy-tree l)
+  (if (atom? l) l
+    (cons (copy-tree (car l))
+          (copy-tree (cdr l)))))
 
 (define (delete-duplicates lst)
   (if (atom? lst)
@@ -609,46 +604,47 @@
 	(if f (apply f (cdr e))
 	    e))))
 
-(define (macroexpand e) (macroexpand-in e ()))
-
-(define (macroexpand-in e env)
-  (if (atom? e) e
-      (let ((f (assq (car e) env)))
-	(if f
-	    (macroexpand-in (apply (cadr f) (cdr e)) (caddr f))
-	    (let ((f (macrocall? e)))
-	      (if f
-		  (macroexpand-in (apply f (cdr e)) env)
-		  (cond ((eq (car e) 'quote) e)
-			((eq (car e) 'lambda)
-			 (let ((B (if (pair? (cddr e))
-				      (if (pair? (cdddr e))
-					  (cons 'begin (cddr e))
-					  (caddr e))
-				      #f)))
-			   (let ((V  (get-defined-vars B))
-				 (Be (macroexpand-in B env)))
-			     (nlist* 'lambda
-				     (cadr e)
-				     (if (null? V)
-					 Be
-					 (cons (list 'lambda V Be)
-					       (map (lambda (x) #f) V)))
-				     (cdddr e)))))
-			((eq (car e) 'let-syntax)
-			 (let ((binds (cadr e))
-			       (body  `((lambda () ,@(cddr e)))))
-			   (macroexpand-in
-			    body
-			    (nconc
-			     (map (lambda (bind)
-				    (list (car bind)
-					  (macroexpand-in (cadr bind) env)
-					  env))
-				  binds)
-			     env))))
-			(else
-			 (map (lambda (x) (macroexpand-in x env)) e)))))))))
+(define (macroexpand e)
+  (define (expand-lambda e env)
+    (let ((B (if (pair? (cddr e))
+		 (if (pair? (cdddr e))
+		     (cons 'begin (cddr e))
+		     (caddr e))
+		 #f)))
+      (let ((V  (get-defined-vars B))
+	    (Be (macroexpand-in B env)))
+	(nlist* 'lambda
+		(cadr e)
+		(if (null? V)
+		    Be
+		    (cons (list 'lambda V Be)
+			  (map (lambda (x) #f) V)))
+		(lastcdr e)))))
+  (define (macroexpand-in e env)
+    (if (atom? e) e
+	(let ((f (assq (car e) env)))
+	  (if f
+	      (macroexpand-in (apply (cadr f) (cdr e)) (caddr f))
+	      (let ((f (macrocall? e)))
+		(if f
+		    (macroexpand-in (apply f (cdr e)) env)
+		    (cond ((eq (car e) 'quote)  e)
+			  ((eq (car e) 'lambda) (expand-lambda e env))
+			  ((eq (car e) 'let-syntax)
+			   (let ((binds (cadr e))
+				 (body  `((lambda () ,@(cddr e)))))
+			     (macroexpand-in
+			      body
+			      (nconc
+			       (map (lambda (bind)
+				      (list (car bind)
+					    (macroexpand-in (cadr bind) env)
+					    env))
+				    binds)
+			       env))))
+			  (else
+			   (map (lambda (x) (macroexpand-in x env)) e)))))))))
+  (macroexpand-in e ()))
 
 (define (expand x) (macroexpand x))
 

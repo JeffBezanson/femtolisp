@@ -176,7 +176,7 @@
               (let ((body (caddr form))
                     (args (cadr form)))
                 (and (pair? body)
-                     (equal (cdr body) args)
+                     (equal? (cdr body) args)
                      (constant? (car (caddr form))))))
          (car (caddr form)))
         (#t (map η-reduce form))))
@@ -269,7 +269,7 @@
    lo))
 
 ; example from Chung-chieh Shan's paper
-(assert (equal
+(assert (equal?
          (with-delimited-continuations
           (cons 'a (reset (cons 'b (shift f (cons 1 (f (f (cons 'c ())))))))))
          '(a 1 b b c)))

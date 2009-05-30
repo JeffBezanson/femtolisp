@@ -44,15 +44,15 @@
 	       (#t
 		(let ((capt (assq p state)))
 		  (if capt
-		      (and (equal expr (cdr capt)) state)
+		      (and (equal? expr (cdr capt)) state)
 		      (cons (cons p expr) state))))))
 	
 	((procedure? p)
 	 (and (p expr) state))
 	
 	((pair? p)
-	 (cond ((eq (car p) '-/)  (and (equal (cadr p) expr)             state))
-	       ((eq (car p) '-^)  (and (not (match- (cadr p) expr state)) state))
+	 (cond ((eq (car p) '-/) (and (equal? (cadr p) expr)             state))
+	       ((eq (car p) '-^) (and (not (match- (cadr p) expr state)) state))
 	       ((eq (car p) '--)
 		(and (match- (caddr p) expr state)
 		     (cons (cons (cadr p) expr) state)))
@@ -60,11 +60,11 @@
 		(match-alt (cdr p) () (list expr) state #f 1))
 	       (#t
 		(and (pair? expr)
-		     (equal (car p) (car expr))
+		     (equal? (car p) (car expr))
 		     (match-seq (cdr p) (cdr expr) state (length (cdr expr)))))))
 	
 	(#t
-	 (and (equal p expr) state))))
+	 (and (equal? p expr) state))))
 
 ; match an alternation
 (define (match-alt alt prest expr state var L)

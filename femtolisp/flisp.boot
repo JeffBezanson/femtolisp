@@ -116,12 +116,10 @@ make-enum-table
 #function("n2c0e130q42;" [#function("r`e0e1g013131c2ms;" [1- length #function("n1e0g00g11f0[g10f0u43;" [put!])]) table])
 make-code-emitter
 #function("n0_e030`Z3;" [table])
-macroexpand-in
-#function("n2f0?6;0f0;c0e1f0Mf132q42;" [#function("rf06M0e0e1f031g00NQ2e2f03142;c3e4g0031q42;" [macroexpand-in cadr caddr #function("rf06F0e0f0g10NQ2g1142;g10Mc1<6T0g10;g10Mc2<6\x920c3e4g1031F6\x8d0e5g1031F6\x830c6e4g1031K5\x8a0e7g10315\x8e0^q42;g10Mc8<6\xc10c9e:g1031e;c2L1_L1e<e4g10313133L1q43;e=c>mg1042;" [macroexpand-in quote lambda #function("rc0e1f031e2f0g2132q43;" [#function("re0c1e2g3031f0A6G0f15Y0c1f0f1L3e3c4mf032Ke5g303144;" [nlist* lambda cadr map #function("n1^;" []) cdddr]) get-defined-vars macroexpand-in]) cddr cdddr begin caddr let-syntax #function("re0f1e1e2c3mf032g213242;" [macroexpand-in nconc map #function("n1f0Me0e1f031g3132g31L3;" [macroexpand-in cadr])]) cadr nconc copy-list map #function("n1e0f0g2142;" [macroexpand-in])]) macrocall?]) assq])
 macroexpand-1
 #function("n1f0?6;0f0;c0e1f031q42;" [#function("rf06?0f0g00Nt2;g00;" []) macrocall?])
 macroexpand
-#function("n1e0f0_42;" [macroexpand-in])
+#function("n1c0^^q43;" [#function("rc0mj02c1mj12f1g00_42;" [#function("n2c0e1f031F6]0e2f031F6T0c3e1f031K5Z0e4f0315^0^q42;" [#function("rc0e1f031g11f0g0132q43;" [#function("re0c1e2g1031f0A6G0f15Y0c1f0f1L3e3c4mf032Ke5g103144;" [nlist* lambda cadr map #function("n1^;" []) lastcdr]) get-defined-vars]) cddr cdddr begin caddr]) #function("n2f0?6;0f0;c0e1f0Mf132q42;" [#function("rf06N0g11e0f031g00NQ2e1f03142;c2e3g0031q42;" [cadr caddr #function("rf06G0g21f0g10NQ2g1142;g10Mc0<6U0g10;g10Mc1<6k0g20g10g1142;g10Mc2<6\x9a0c3e4g1031e5c1L1_L1e6e7g10313133L1q43;e8c9mg1042;" [quote lambda let-syntax #function("rg31f1e0e1c2mf032g213242;" [nconc map #function("n1f0Mg41e0f031g3132g31L3;" [cadr])]) cadr nconc copy-list cddr map #function("n1g31f0g2142;" [])]) macrocall?]) assq])])])
 macrocall?
 #function("n1f0MC16E02e0e1f0M^43;" [get *syntax-environment*])
 lookup-sym
@@ -286,10 +284,8 @@ argc-error
 #function("n2e0e1c2f0c3f1f1aW6J0c45L0c53541;" [error string "compile error: " " expects " " argument." " arguments."])
 arg-counts
 #table(:not 1  :set-cdr! 2  :cons 2  :number? 1  :equal? 2  :cdr 1  :vector? 1  :eqv? 2  := 2  :div0 2  :atom? 1  :aref 2  :compare 2  :< 2  :null? 1  :eq? 2  :car 1  :set-car! 2  :builtin? 1  :aset! 3  :bound? 1  :boolean? 1  :pair? 1  :symbol? 1  :fixnum? 1)
-append2
-#function("n2f0A6;0f1;f0Me0f0Nf132K;" [append2])
 append
-#function("o0f0A6:0_;f0NA6E0f0M;e0f0Me1f0NQ242;" [append2 append])
+#function("o0f0A6:0_;f0NA6E0f0M;e0e1f0M31e2f0NQ242;" [nconc copy-list append])
 any
 #function("n2f1F16O02f0f1M3117O02e0f0f1N42;" [any])
 abs
