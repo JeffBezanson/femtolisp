@@ -214,8 +214,6 @@
 			      (mapcar- f (map cdr lsts))))))))
     (lambda (f . lsts) (mapcar- f lsts))))
 
-(define (transpose M) (apply mapcar list M))
-
 (define filter
   (letrec ((filter-
 	    (lambda (pred lst accum)
@@ -291,12 +289,11 @@
 
 (define-macro (backquote x) (bq-process x))
 
-(define (splice-form? x)
-  (or (and (pair? x) (or (eq (car x) '*comma-at*)
-                         (eq (car x) '*comma-dot*)))
-      (eq x '*comma*)))
-
 (define (bq-process x)
+  (define (splice-form? x)
+    (or (and (pair? x) (or (eq (car x) '*comma-at*)
+			   (eq (car x) '*comma-dot*)))
+	(eq x '*comma*)))
   (cond ((self-evaluating? x)
          (if (vector? x)
              (let ((body (bq-process (vector->list x))))
@@ -570,8 +567,8 @@
 	((odd? k) (string s (string.rep s (- k 1))))
 	(else     (string.rep (string s s) (/ k 2)))))
 
-(define (string.lpad s n c) (string (string.rep c (- n (length s))) s))
-(define (string.rpad s n c) (string s (string.rep c (- n (length s)))))
+(define (string.lpad s n c) (string (string.rep c (- n (string.count s))) s))
+(define (string.rpad s n c) (string s (string.rep c (- n (string.count s)))))
 
 (define (print-to-string v)
   (let ((b (buffer)))

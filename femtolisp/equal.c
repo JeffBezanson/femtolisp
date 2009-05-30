@@ -7,8 +7,8 @@
 #include "llt.h"
 #include "flisp.h"
 
-#define BOUNDED_COMPARE_BOUND 2048
-#define BOUNDED_HASH_BOUND    4096
+#define BOUNDED_COMPARE_BOUND 4096
+#define BOUNDED_HASH_BOUND    16384
 
 // comparable tag
 #define cmptag(v) (isfixnum(v) ? TAG_NUM : tag(v))

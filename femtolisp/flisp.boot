@@ -6,8 +6,6 @@ vector->list
 #function("n1c0e1f031_q43;" [#function("raf0c0ms2f1;" [#function("n1g10g00f0v[g01Kk01;" [])]) length])
 untrace
 #function("n1c0e1f031q42;" [#function("re0f0316K0e1g00e2f031b2[42;^;" [traced? set-top-level-value! function:vals]) top-level-value])
-transpose
-#function("n1e0e1f0t3;" [mapcar list])
 traced?
 #function("n1e0f031e0g0031>;" [function:code] #0=[#function("o0e0c1f0K312c2f0t2;" [println x #.apply] #0#) ()])
 trace
@@ -33,17 +31,15 @@ string.trim
 string.tail
 #function("n2e0f0e1f0`f13342;" [string.sub string.inc])
 string.rpad
-#function("n3e0f0e1f2f1e2f031v3242;" [string string.rep length])
+#function("n3e0f0e1f2f1e2f031v3242;" [string string.rep string.count])
 string.rep
 #function("n2f1b4X6q0e0f1`326G0c1;f1aW6U0e2f041;f1b2W6f0e2f0f042;e2f0f0f043;e3f1316\x8b0e2f0e4f0f1av3242;e4e2f0f032f1b2U242;" [<= "" string odd? string.rep])
 string.map
 #function("n2c0e130e2f131q43;" [#function("rc0`q322e1f041;" [#function("r^f0g01X6`02e0g00g10e1g11f03231322e2g11f032j0520;" [io.putc string.char string.inc]) io.tostring!]) buffer length])
 string.lpad
-#function("n3e0e1f2f1e2f031v32f042;" [string string.rep length])
+#function("n3e0e1f2f1e2f031v32f042;" [string string.rep string.count])
 string.join
 #function("n2f0A6;0c0;c1e230q42;" ["" #function("re0f0g00M322e1c2mg00N322e3f041;" [io.write for-each #function("n1e0g00g11322e0g00f042;" [io.write]) io.tostring!]) buffer])
-splice-form?
-#function("n1f0F16K02f0Mc0<17K02f0Mc1<17U02f0c2<;" [*comma-at* *comma-dot* *comma*])
 simple-sort
 #function("n1f0A17>02f0NA6D0f0;c0f0Mq42;" [#function("rc0e1c2mg00N32q42;" [#function("re0e1f0M31g00L1e1f0N3143;" [nconc simple-sort]) separate #function("n1f0g00X;" [])])])
 set-syntax!
@@ -80,8 +76,6 @@ princ
 #function("o0e0e1f0t3;" [io.princ *output-stream*])
 positive?
 #function("n1e0f0`42;" [>])
-peephole
-#function("n1f0;" [])
 odd?
 #function("n1e0f031@;" [even?])
 nreverse
@@ -195,9 +189,7 @@ eval
 error
 #function("o0e0c1f0K41;" [raise error])
 encode-byte-code
-#function("n1c0e1e2f03131q42;" [#function("rc0e1e2f031b3e3c4mf032T2uc532q42;" [#function("rc0e1g0031q42;" [#function("rc0e1f031`e230e230e330^q47;" [#function("r^f1f0X6\xbc02g00f1[j52f5e0<6k0e1f2g00f1au[e2f431332f1b2uj15\xb90e3f4e4e5e6g1016\x8502e7f5c8326\x920c9f5q325\x940f53231322f1auj12f1f0X6\xb80c:g00f1[q325\xb90^5202e;c<mf3322e=f441;" [:label put! sizeof io.write byte get Instructions memq (:jmp :brt :brf) #function("rf0e0=6<0e1;f0e2=6G0e3;f0e4=6R0e5;^;" [:jmp :jmp.l :brt :brt.l :brf :brf.l]) #function("rc0g05q42;" [#function("re0f0c1326T0e2g14e3g0031322g11auk11;e0f0c4326w0e2g14e5g0031322g11auk11;e0f0c6326\xb60e2g14e5g0031322g11auk112e2g14e5g20g11[31322g11auk11;e0f0c7326\xf40e8g13e9g1431g00332e2g14g306\xe30e35\xe50e:`31322g11auk11;^;" [memv (:loadv.l :loadg.l :setg.l) io.write uint32 (:loada :seta :call :tcall :loadv :loadg :setg :list :+ :- :* :/ :vector :argc :vargc :loadi8 :apply :tapply) uint8 (:loadc :setc) (:jmp :brf :brt) put! sizeof uint16])]) table.foreach #function("n2e0g04f0322e1g04g206L0e25N0e3e4g02f1323142;" [io.seek io.write uint32 uint16 get]) io.tostring!]) length table buffer]) list->vector]) >= length count #function("n1e0f0c142;" [memq (:loadv :loadg :setg :jmp :brt :brf)]) 65536]) peephole nreverse])
-emit-nothing
-#function("n1f0;" [])
+#function("n1c0e1f031q42;" [#function("rc0e1e2f031b3e3c4mf032T2uc532q42;" [#function("rc0e1g0031q42;" [#function("rc0e1f031`e230e230e330^q47;" [#function("r^f1f0X6\xbc02g00f1[j52f5e0<6k0e1f2g00f1au[e2f431332f1b2uj15\xb90e3f4e4e5e6g1016\x8502e7f5c8326\x920c9f5q325\x940f53231322f1auj12f1f0X6\xb80c:g00f1[q325\xb90^5202e;c<mf3322e=f441;" [:label put! sizeof io.write byte get Instructions memq (:jmp :brt :brf) #function("rf0e0=6<0e1;f0e2=6G0e3;f0e4=6R0e5;^;" [:jmp :jmp.l :brt :brt.l :brf :brf.l]) #function("rc0g05q42;" [#function("re0f0c1326T0e2g14e3g0031322g11auk11;e0f0c4326w0e2g14e5g0031322g11auk11;e0f0c6326\xb60e2g14e5g0031322g11auk112e2g14e5g20g11[31322g11auk11;e0f0c7326\xf40e8g13e9g1431g00332e2g14g306\xe30e35\xe50e:`31322g11auk11;^;" [memv (:loadv.l :loadg.l :setg.l) io.write uint32 (:loada :seta :call :tcall :loadv :loadg :setg :list :+ :- :* :/ :vector :argc :vargc :loadi8 :apply :tapply) uint8 (:loadc :setc) (:jmp :brf :brt) put! sizeof uint16])]) table.foreach #function("n2e0g04f0322e1g04g206L0e25N0e3e4g02f1323142;" [io.seek io.write uint32 uint16 get]) io.tostring!]) length table buffer]) list->vector]) >= length count #function("n1e0f0c142;" [memq (:loadv :loadg :setg :jmp :brt :brf)]) 65536]) nreverse])
 emit
 #function("o2e0f1c1326I0c2f0a[q325J0^2f0`e3f1f2Kf0`[32\\2f0;" [memq (:loadv :loadg :setg) #function("rc0g00b2[q42;" [#function("rc0g12Mq42;" [#function("rc0e1g10f0326K0e2g10f0325f0e3g10f0g00332g00auk002g00avq42;" [#function("rg30b2g10\\2f0L1k322e0f0c1326Z0c2g31q32k31;^;" [>= 256 #function("rf0e0=6<0e1;f0e2=6G0e3;f0e4=6R0e5;^;" [:loadv :loadv.l :loadg :loadg.l :setg :setg.l])]) has? get put!])])]) nreconc])
 div
@@ -281,7 +273,7 @@ caaar
 builtin->instruction
 #function("n1c0e1e2c3f03231q42;" [#function("re0e1f03216@02f0;" [has? Instructions]) intern string #\:])
 bq-process
-#function("n1e0f0316T0f0H6Q0c1e2e3f03131q42;f0;f0?6a0c4f0L2;f0Mc5<6y0e2e2e6f0313141;f0Mc7<6\x890e6f041;e8e9f032@6\xa90c:e;f031e<e=f032q43;c>f0_q43;" [self-evaluating? #function("rf0Mc0<6A0e1f0NK;e2e1f0L3;" [list vector apply]) bq-process vector->list quote backquote cadr *comma* any splice-form? #function("rf0A6=0c0f1K;e1c2f1Ke3f031L142;" [list nconc nlist* bq-process]) lastcdr map bq-bracket1 #function("r^f0F16A02f0Mc0<@6Z02e1f0M31f1Kj12f0Nj05202c2f0F6t0e3f1e4f031L1325\x910f0A6\x830e5f1315\x910e3f1e6f031L132q42;" [*comma* bq-bracket #function("rf0NA6<0f0M;c0f0K;" [nconc]) nreconc cadr nreverse bq-process])])
+#function("n1c0^q42;" [#function("rc0mj02e1g00316]0g00H6Y0c2e3e4g003131q42;g00;g00?6l0c5g00L2;g00Mc6<6\x860e3e3e7g00313141;g00Mc8<6\x980e7g0041;e9f0g0032@6\xbb0c:e;g0031e<e=g0032q43;c>g00_q43;" [#function("n1f0F16K02f0Mc0<17K02f0Mc1<17U02f0c2<;" [*comma-at* *comma-dot* *comma*]) self-evaluating? #function("rf0Mc0<6A0e1f0NK;e2e1f0L3;" [list vector apply]) bq-process vector->list quote backquote cadr *comma* any #function("rf0A6=0c0f1K;e1c2f1Ke3f031L142;" [list nconc nlist* bq-process]) lastcdr map bq-bracket1 #function("r^f0F16A02f0Mc0<@6Z02e1f0M31f1Kj12f0Nj05202c2f0F6t0e3f1e4f031L1325\x910f0A6\x830e5f1315\x910e3f1e6f031L132q42;" [*comma* bq-bracket #function("rf0NA6<0f0M;c0f0K;" [nconc]) nreconc cadr nreverse bq-process])])])
 bq-bracket1
 #function("n1f0F16@02f0Mc0<6J0e1f041;e2f041;" [*comma* cadr bq-process])
 bq-bracket

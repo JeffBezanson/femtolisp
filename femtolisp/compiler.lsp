@@ -76,12 +76,10 @@
 			      n))))
   (count- f l 0))
 
-(define (peephole c) c)
-
 ; convert symbolic bytecode representation to a byte array.
 ; labels are fixed-up.
 (define (encode-byte-code e)
-  (let* ((cl (peephole (nreverse e)))
+  (let* ((cl (nreverse e))
 	 (long? (>= (+ (length cl)
 		       (* 3 (count (lambda (i)
 				     (memq i '(:loadv :loadg :setg
@@ -291,8 +289,6 @@
 	       (+ MAX_ARGS 1))
 	(begin (just-compile-args g lst env)
 	       (length lst)))))
-
-(define (emit-nothing g) g)
 
 (define (argc-error head count)
   (error (string "compile error: " head " expects " count
