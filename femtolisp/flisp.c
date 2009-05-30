@@ -702,7 +702,8 @@ static value_t list(value_t *args, uint32_t nargs)
 // perform (apply list* L)
 // like the function list() above, but takes arguments from a list
 // rather than from an array (the stack)
-static value_t apply_liststar(value_t L)
+// if !star, then it performs copy-list
+static value_t apply_liststar(value_t L, int star)
 {
     PUSH(NIL);
     PUSH(NIL);
@@ -712,7 +713,7 @@ static value_t apply_liststar(value_t L)
     value_t *pL = &Stack[SP-1];
     value_t c;
     while (iscons(*pL)) {
-        if (iscons(cdr_(*pL))) {
+        if (!star || iscons(cdr_(*pL))) {
             c = mk_cons();
             car_(c) = car_(*pL);
             cdr_(c) = NIL;
@@ -730,6 +731,27 @@ static value_t apply_liststar(value_t L)
     }
     POPN(2);
     return POP();
+}
+
+value_t fl_copylist(value_t *args, u_int32_t nargs)
+{
+    argcount("copy-list", nargs, 1);
+    return apply_liststar(args[0], 0);
+}
+
+value_t fl_apply_nliststar(value_t *args, u_int32_t nargs)
+{
+    argcount("apply-nlist*", nargs, 1);
+    value_t v = args[0];
+    value_t *plastcdr = &args[0];
+    while (iscons(v)) {
+        if (!iscons(cdr_(v)))
+            *plastcdr = car_(v);
+        else
+            plastcdr = &cdr_(v);
+        v = cdr_(v);
+    }
+    return args[0];
 }
 
 static value_t do_trycatch()
@@ -1020,7 +1042,7 @@ static value_t apply_cl(uint32_t nargs)
         apply_apply:
             v = POP();     // arglist
             if (n > MAX_ARGS) {
-                v = apply_liststar(v);
+                v = apply_liststar(v, 1);
             }
             n = SP-(n-2);  // n-2 == # leading arguments not in the list
             while (iscons(v)) {
@@ -1478,6 +1500,8 @@ static builtinspec_t core_builtin_info[] = {
     { "function:env", fl_function_env },
     { "gensym", fl_gensym },
     { "hash", fl_hash },
+    { "copy-list", fl_copylist },
+    { "apply-nlist*", fl_apply_nliststar },
     { NULL, NULL }
 };
 

@@ -83,7 +83,7 @@ nreverse
 nreconc
 #function("n2e0e1f031f142;" [nconc nreverse])
 nlist*
-#function("o0f0N?6=0f0M;f0e0f0NQ2P;" [nlist*])
+#function("o0e0f041;" [apply-nlist*])
 newline
 #function("n0e0e1312];" [princ *linefeed*])
 nestlist
@@ -143,7 +143,7 @@ list-head
 list->vector
 #function("n1e0f0t2;" [vector])
 list*
-#function("o0f0N?6=0f0M;f0Me0f0NQ2K;" [list*])
+#function("o0e0e1f03141;" [apply-nlist* copy-list])
 length>
 #function("n2f1`X6<0f0;f1`W6N0f0F16M02f0;f0A6Y0f1`X;e0f0Nf1av42;" [length>])
 length=
@@ -204,8 +204,6 @@ count
 #function("n2c0^q42;" [#function("rc0mj02f0g00g01`43;" [#function("n3f1A6;0f2;g00f0f1Nf0f1M316T0f2au5V0f243;" [])])])
 copy-tree
 #function("n1f0?6;0f0;e0f0M31e0f0N31K;" [copy-tree])
-copy-list
-#function("n1f0?6;0f0;f0Me0f0N31K;" [copy-list])
 const-to-idx-vec
 #function("n1c0e1f0b2[31q42;" [#function("re0c1mg00a[322f0;" [table.foreach #function("n2g00f1f0\\;" [])]) vector.alloc])
 compile-while

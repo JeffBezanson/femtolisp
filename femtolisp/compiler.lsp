@@ -467,7 +467,7 @@
 		  (set! i (+ i 1)))
 		 
 		 ((:loada :seta :call :tcall :list :+ :- :* :/ :vector
-			  :argc :vargc :loadi8 :apply :tapply)
+		   :argc :vargc :loadi8 :apply :tapply)
 		  (princ (number->string (aref code i)))
 		  (set! i (+ i 1)))
 		 

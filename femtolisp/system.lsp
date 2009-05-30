@@ -182,15 +182,9 @@
 	((null? lst) (= n 0))
 	(else        (length= (cdr lst) (- n 1)))))
 
-(define (list* . l)
-  (if (atom? (cdr l))
-      (car l)
-      (cons (car l) (apply list* (cdr l)))))
+(define (list* . l) (apply-nlist* (copy-list l)))
 
-(define (nlist* . l)
-  (if (atom? (cdr l))
-      (car l)
-      (set-cdr! l (apply nlist* (cdr l)))))
+(define (nlist* . l) (apply-nlist* l))
 
 (define (lastcdr l)
   (if (atom? l) l
@@ -255,10 +249,6 @@
 
 (define (reverse lst) (foldl cons () lst))
 
-(define (copy-list l)
-  (if (atom? l) l
-    (cons (car l)
-          (copy-list (cdr l)))))
 (define (copy-tree l)
   (if (atom? l) l
     (cons (copy-tree (car l))
