@@ -65,7 +65,7 @@
 ; convert symbolic bytecode representation to a byte array.
 ; labels are fixed-up.
 (define (encode-byte-code e)
-  (let* ((cl (peephole (nreverse e)))
+  (let* ((cl (peephole (reverse! e)))
 	 (long? (>= (+ (length cl)
 		       (* 3 (count (lambda (i)
 				     (memq i '(:loadv :loadg :setg

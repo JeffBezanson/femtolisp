@@ -173,6 +173,12 @@
 	((null? lst) (= n 0))
 	(else        (length= (cdr lst) (- n 1)))))
 
+(define (length> lst n)
+  (cond ((< n 0)     lst)
+	((= n 0)     (and (pair? lst) lst))
+	((null? lst) (< n 0))
+	(else        (length> (cdr lst) (- n 1)))))
+
 (define (list* . l)
   (if (atom? (cdr l))
       (car l)
@@ -231,6 +237,15 @@
         (#t
          (separate- pred (cdr lst) yes (cons (car lst) no)))))
 
+(define (count f l)
+  (define (count- f l n)
+    (if (null? l)
+	n
+	(count- f (cdr l) (if (f (car l))
+			      (+ n 1)
+			      n))))
+  (count- f l 0))
+
 (define (nestlist f zero n)
   (if (<= n 0) ()
       (cons zero (nestlist f (f zero) (- n 1)))))
@@ -254,7 +269,7 @@
     (cons (copy-tree (car l))
           (copy-tree (cdr l)))))
 
-(define (nreverse l)
+(define (reverse! l)
   (let ((prev ()))
     (while (pair? l)
 	   (set! l (prog1 (cdr l)
@@ -301,8 +316,8 @@
 
 ; backquote -------------------------------------------------------------------
 
-(define (revappend l1 l2) (nconc (reverse l1) l2))
-(define (nreconc   l1 l2) (nconc (nreverse l1) l2))
+(define (revappend l1 l2) (nconc (reverse  l1) l2))
+(define (nreconc   l1 l2) (nconc (reverse! l1) l2))
 
 (define (self-evaluating? x)
   (or (and (atom? x)
@@ -341,7 +356,7 @@
 		     (set! p (cdr p)))
 	      (let ((forms
 		     (cond ((pair? p) (nreconc q (list (cadr p))))
-			   ((null? p)  (nreverse q))
+			   ((null? p)  (reverse! q))
 			   (#t        (nreconc q (list (bq-process p)))))))
 		(if (null? (cdr forms))
 		    (car forms)

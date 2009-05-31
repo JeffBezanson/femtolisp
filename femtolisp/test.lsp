@@ -38,7 +38,7 @@
 ; iterative filter
 (define (ifilter pred lst)
   ((label f (lambda (accum lst)
-              (cond ((null? lst) (nreverse accum))
+              (cond ((null? lst) (reverse! accum))
                     ((not (pred (car lst))) (f accum (cdr lst)))
                     (#t (f (cons (car lst) accum) (cdr lst))))))
    () lst))
