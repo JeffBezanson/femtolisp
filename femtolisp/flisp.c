@@ -98,7 +98,7 @@ value_t NIL, FL_T, FL_F, LAMBDA, QUOTE, IF, TRYCATCH;
 value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT, FUNCTION;
 value_t IOError, ParseError, TypeError, ArgError, UnboundError, MemoryError;
 value_t DivideError, BoundsError, Error, KeyError, EnumerationError;
-value_t conssym, symbolsym, fixnumsym, vectorsym, builtinsym, vu8sym;
+value_t pairsym, symbolsym, fixnumsym, vectorsym, builtinsym, vu8sym;
 value_t definesym, defmacrosym, forsym, labelsym, printprettysym, setqsym;
 value_t printwidthsym, printreadablysym;
 value_t tsym, Tsym, fsym, Fsym, booleansym, nullsym, evalsym;
@@ -1541,7 +1541,7 @@ static void lisp_init(void)
     DivideError = symbol("divide-error");
     EnumerationError = symbol("enumeration-error");
     Error = symbol("error");
-    conssym = symbol("cons");
+    pairsym = symbol("pair");
     symbolsym = symbol("symbol");
     fixnumsym = symbol("fixnum");
     vectorsym = symbol("vector");

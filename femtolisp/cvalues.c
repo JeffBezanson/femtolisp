@@ -630,7 +630,7 @@ value_t cvalue_typeof(value_t *args, u_int32_t nargs)
 {
     argcount("typeof", nargs, 1);
     switch(tag(args[0])) {
-    case TAG_CONS: return conssym;
+    case TAG_CONS: return pairsym;
     case TAG_NUM1:
     case TAG_NUM:  return fixnumsym;
     case TAG_SYM:  return symbolsym;
