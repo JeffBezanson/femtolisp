@@ -423,6 +423,7 @@ static builtinspec_t builtin_info[] = {
     { "integer?", fl_integerp },
     { "integer-valued?", fl_integer_valuedp },
     { "nconc", fl_nconc },
+    { "append!", fl_nconc },
     { "assq", fl_assq },
     { "memq", fl_memq },
     { "length", fl_length },

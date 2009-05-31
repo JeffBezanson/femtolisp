@@ -177,14 +177,21 @@
 	((null? lst) (= n 0))
 	(else        (length= (cdr lst) (- n 1)))))
 
-(define (lastcdr l)
-  (if (atom? l) l
-      (lastcdr (cdr l))))
+(define (length> lst n)
+  (cond ((< n 0)     lst)
+	((= n 0)     (and (pair? lst) lst))
+	((null? lst) (< n 0))
+	(else        (length> (cdr lst) (- n 1)))))
 
 (define (last-pair l)
-  (cond ((atom? l)        l)
-        ((atom? (cdr l))  l)
-        (#t               (last-pair (cdr l)))))
+  (if (atom? (cdr l))
+      l
+      (last-pair (cdr l))))
+
+(define (lastcdr l)
+  (if (atom? l)
+      l
+      (cdr (last-pair l))))
 
 (define (to-proper l)
   (cond ((null? l) l)
@@ -226,6 +233,15 @@
 		     (separate- pred (cdr lst) yes (cons (car lst) no)))))))
     (lambda (pred lst) (separate- pred lst () ()))))
 
+(define (count f l)
+  (define (count- f l n)
+    (if (null? l)
+	n
+	(count- f (cdr l) (if (f (car l))
+			      (+ n 1)
+			      n))))
+  (count- f l 0))
+
 (define (nestlist f zero n)
   (if (<= n 0) ()
       (cons zero (nestlist f (f zero) (- n 1)))))
@@ -240,7 +256,7 @@
 
 (define (reverse lst) (foldl cons () lst))
 
-(define (nreverse l)
+(define (reverse! l)
   (let ((prev ()))
     (while (pair? l)
 	   (set! l (prog1 (cdr l)
@@ -265,8 +281,8 @@
 
 ; backquote -------------------------------------------------------------------
 
-(define (revappend l1 l2) (nconc (reverse l1) l2))
-(define (nreconc   l1 l2) (nconc (nreverse l1) l2))
+(define (revappend l1 l2) (nconc (reverse  l1) l2))
+(define (nreconc   l1 l2) (nconc (reverse! l1) l2))
 
 (define (self-evaluating? x)
   (or (and (atom? x)
@@ -305,7 +321,7 @@
 		     (set! p (cdr p)))
 	      (let ((forms
 		     (cond ((pair? p) (nreconc q (list (cadr p))))
-			   ((null? p)  (nreverse q))
+			   ((null? p)  (reverse! q))
 			   (#t        (nreconc q (list (bq-process p)))))))
 		(if (null? (cdr forms))
 		    (car forms)
@@ -754,7 +770,7 @@
 		     (begin
 		       (io.print f s) (io.write f "\n")
 		       (io.print f (top-level-value s)) (io.write f "\n"))))
-	       (nreverse (simple-sort (environment))))
+	       (reverse! (simple-sort (environment))))
      (begin
        (io.close f)
        (set! *print-pretty* pp)))))

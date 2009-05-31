@@ -1,32 +1,31 @@
 ; -*- scheme -*-
 
-(define (make-enum-table offset keys)
-  (let ((e (table)))
+(define Instructions
+  (let ((e (table))
+	(keys 
+	 [:nop :dup :pop :call :tcall :jmp :brf :brt :jmp.l :brf.l :brt.l :ret
+	  
+	  :eq? :eqv? :equal? :atom? :not :null? :boolean? :symbol?
+	  :number? :bound? :pair? :builtin? :vector? :fixnum? :function?
+	  
+	  :cons :list :car :cdr :set-car! :set-cdr!
+	  :apply
+	  
+	  :+ :- :* :/ :div0 := :< :compare
+	  
+	  :vector :aref :aset!
+	  
+	  :loadt :loadf :loadnil :load0 :load1 :loadi8 :loadv :loadv.l
+	  :loadg :loada :loadc :loadg.l
+	  :setg  :seta  :setc  :setg.l
+	  
+	  :closure :argc :vargc :trycatch :copyenv :let :for :tapply
+	  :add2 :sub2 :neg
+	  
+	  dummy_t dummy_f dummy_nil]))
     (for 0 (1- (length keys))
 	 (lambda (i)
-	   (put! e (aref keys i) (+ offset i))))))
-
-(define Instructions
-  (make-enum-table 0
-   [:nop :dup :pop :call :tcall :jmp :brf :brt :jmp.l :brf.l :brt.l :ret
-
-    :eq? :eqv? :equal? :atom? :not :null? :boolean? :symbol?
-    :number? :bound? :pair? :builtin? :vector? :fixnum? :function?
-
-    :cons :list :car :cdr :set-car! :set-cdr!
-    :apply
-
-    :+ :- :* :/ :div0 := :< :compare
-
-    :vector :aref :aset!
-
-    :loadt :loadf :loadnil :load0 :load1 :loadi8 :loadv :loadv.l
-    :loadg :loada :loadc :loadg.l
-    :setg  :seta  :setc  :setg.l
-
-    :closure :argc :vargc :trycatch :copyenv :let :for :tapply :add2 :sub2 :neg
-
-    dummy_t dummy_f dummy_nil]))
+	   (put! e (aref keys i) i)))))
 
 (define arg-counts
   (table :eq?      2      :eqv?     2
@@ -67,19 +66,10 @@
 (define (make-label e)   (gensym))
 (define (mark-label e l) (emit e :label l))
 
-(define (count f l)
-  (define (count- f l n)
-    (if (null? l)
-	n
-	(count- f (cdr l) (if (f (car l))
-			      (+ n 1)
-			      n))))
-  (count- f l 0))
-
 ; convert symbolic bytecode representation to a byte array.
 ; labels are fixed-up.
 (define (encode-byte-code e)
-  (let* ((cl (nreverse e))
+  (let* ((cl (reverse! e))
 	 (long? (>= (+ (length cl)
 		       (* 3 (count (lambda (i)
 				     (memq i '(:loadv :loadg :setg
@@ -265,19 +255,13 @@
 (define (list-partition l n)
   (define (list-part- l n  i subl acc)
     (cond ((atom? l) (if (> i 0)
-			 (cons (nreverse subl) acc)
+			 (cons (reverse! subl) acc)
 			 acc))
-	  ((>= i n)  (list-part- l n 0 () (cons (nreverse subl) acc)))
+	  ((>= i n)  (list-part- l n 0 () (cons (reverse! subl) acc)))
 	  (else      (list-part- (cdr l) n (+ 1 i) (cons (car l) subl) acc))))
   (if (<= n 0)
       (error "list-partition: invalid count")
-      (nreverse (list-part- l n 0 () ()))))
-
-(define (length> lst n)
-  (cond ((< n 0)     lst)
-	((= n 0)     (and (pair? lst) lst))
-	((null? lst) (< n 0))
-	(else        (length> (cdr lst) (- n 1)))))
+      (reverse! (list-part- l n 0 () ()))))
 
 (define (just-compile-args g lst env)
   (for-each (lambda (a)

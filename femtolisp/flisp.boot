@@ -48,6 +48,8 @@ separate
 #function("n2g00f0f1__44;" [] #0=[#function("n4f1A6>0f2f3K;f0f1M316[0g00f0f1Nf1Mf2Kf344;g00f0f1Nf2f1Mf3K44;" [] #0#) ()])
 self-evaluating?
 #function("n1f0?16>02f0C@17_02e0f03116_02f0C16_02f0e1f031<;" [constant? top-level-value])
+reverse!
+#function("n1c0_q42;" [#function("r^g00F6Q02g00Ng00f0g00j02P2k005202f0;" [])])
 reverse
 #function("n1e0e1_f043;" [foldl cons])
 revappend
@@ -78,10 +80,8 @@ positive?
 #function("n1e0f0`42;" [>])
 odd?
 #function("n1e0f031@;" [even?])
-nreverse
-#function("n1c0_q42;" [#function("r^g00F6Q02g00Ng00f0g00j02P2k005202f0;" [])])
 nreconc
-#function("n2e0e1f031f142;" [nconc nreverse])
+#function("n2e0e1f031f142;" [nconc reverse!])
 newline
 #function("n0e0e1312];" [princ *linefeed*])
 nestlist
@@ -107,11 +107,9 @@ map!
 map
 #function("n2f1?6;0f1;f0f1M31e0f0f1N32K;" [map])
 make-system-image
-#function("n1c0e1f0e2e3e434c5e6q44;" [#function("r^i02c1c2mq42;" [*print-pretty* #function("rc0mc1mpf0302;" [#function("n0e0c1me2e3e430313142;" [for-each #function("n1f0E16m02e0f031@16m02e1f031G@16m02e2f0g1132@16m02e3e1f03131@6\x9c0e4g10f0322e5g10c6322e4g10e1f031322e5g10c642;^;" [constant? top-level-value memq iostream? io.print io.write "\n"]) nreverse simple-sort environment]) #function("n1g00302e0f041;" [raise])]) #function("n0e0g00312g02i1;" [io.close *print-pretty*])]) file :write :create :truncate (*linefeed* *directory-separator* *argv* that *print-pretty* *print-width* *print-readably*) *print-pretty*])
+#function("n1c0e1f0e2e3e434c5e6q44;" [#function("r^i02c1c2mq42;" [*print-pretty* #function("rc0mc1mpf0302;" [#function("n0e0c1me2e3e430313142;" [for-each #function("n1f0E16m02e0f031@16m02e1f031G@16m02e2f0g1132@16m02e3e1f03131@6\x9c0e4g10f0322e5g10c6322e4g10e1f031322e5g10c642;^;" [constant? top-level-value memq iostream? io.print io.write "\n"]) reverse! simple-sort environment]) #function("n1g00302e0f041;" [raise])]) #function("n0e0g00312g02i1;" [io.close *print-pretty*])]) file :write :create :truncate (*linefeed* *directory-separator* *argv* that *print-pretty* *print-width* *print-readably*) *print-pretty*])
 make-label
 #function("n1e040;" [gensym])
-make-enum-table
-#function("n2c0e130q42;" [#function("r`e0e1g013131c2ms;" [1- length #function("n1e0g00g11f0[g10f0u43;" [put!])]) table])
 make-code-emitter
 #function("n0_e030`Z3;" [table])
 macroexpand-1
@@ -133,7 +131,7 @@ list-tail
 list-ref
 #function("n2e0f0f132M;" [list-tail])
 list-partition
-#function("n2c0^q42;" [#function("rc0mj02e1g01`326I0e2c341;e4f0g00g01`__3541;" [#function("n5f0?6O0e0f2`326L0e1f331f4K;f4;e2f2f1326o0g00f0f1`_e1f331f4K45;g00f0Nf1af2uf0Mf3Kf445;" [> nreverse >=]) <= error "list-partition: invalid count" nreverse])])
+#function("n2c0^q42;" [#function("rc0mj02e1g01`326I0e2c341;e4f0g00g01`__3541;" [#function("n5f0?6O0e0f2`326L0e1f331f4K;f4;e2f2f1326o0g00f0f1`_e1f331f4K45;g00f0Nf1af2uf0Mf3Kf445;" [> reverse! >=]) <= error "list-partition: invalid count" reverse!])])
 list-head
 #function("n2e0f1`326>0_;f0Me1f0Nf1av32K;" [<= list-head])
 list->vector
@@ -143,9 +141,9 @@ length>
 length=
 #function("n2f1`X6;0^;f1`W6F0f0A;f0A6Q0f1`W;e0f0Nf1av42;" [length=])
 lastcdr
-#function("n1f0?6;0f0;e0f0N41;" [lastcdr])
+#function("n1f0?6;0f0;e0f031N;" [last-pair])
 last-pair
-#function("n1f0?6;0f0;f0N?6E0f0;e0f0N41;" [last-pair])
+#function("n1f0N?6<0f0;e0f0N41;" [last-pair])
 just-compile-args
 #function("n3e0c1mf142;" [for-each #function("n1e0g00g02^f044;" [compile-in])])
 iota
@@ -183,7 +181,7 @@ eval
 error
 #function("o0e0c1f0K41;" [raise error])
 encode-byte-code
-#function("n1c0e1f031q42;" [#function("rc0e1e2f031b3e3c4mf032T2uc532q42;" [#function("rc0e1g0031q42;" [#function("rc0e1f031`e230e230e330^q47;" [#function("r^f1f0X6\xbc02g00f1[j52f5e0<6k0e1f2g00f1au[e2f431332f1b2uj15\xb90e3f4e4e5e6g1016\x8502e7f5c8326\x920c9f5q325\x940f53231322f1auj12f1f0X6\xb80c:g00f1[q325\xb90^5202e;c<mf3322e=f441;" [:label put! sizeof io.write byte get Instructions memq (:jmp :brt :brf) #function("rf0e0=6<0e1;f0e2=6G0e3;f0e4=6R0e5;^;" [:jmp :jmp.l :brt :brt.l :brf :brf.l]) #function("rc0g05q42;" [#function("re0f0c1326T0e2g14e3g0031322g11auk11;e0f0c4326w0e2g14e5g0031322g11auk11;e0f0c6326\xb60e2g14e5g0031322g11auk112e2g14e5g20g11[31322g11auk11;e0f0c7326\xf40e8g13e9g1431g00332e2g14g306\xe30e35\xe50e:`31322g11auk11;^;" [memv (:loadv.l :loadg.l :setg.l) io.write uint32 (:loada :seta :call :tcall :loadv :loadg :setg :list :+ :- :* :/ :vector :argc :vargc :loadi8 :apply :tapply) uint8 (:loadc :setc) (:jmp :brf :brt) put! sizeof uint16])]) table.foreach #function("n2e0g04f0322e1g04g206L0e25N0e3e4g02f1323142;" [io.seek io.write uint32 uint16 get]) io.tostring!]) length table buffer]) list->vector]) >= length count #function("n1e0f0c142;" [memq (:loadv :loadg :setg :jmp :brt :brf)]) 65536]) nreverse])
+#function("n1c0e1f031q42;" [#function("rc0e1e2f031b3e3c4mf032T2uc532q42;" [#function("rc0e1g0031q42;" [#function("rc0e1f031`e230e230e330^q47;" [#function("r^f1f0X6\xbc02g00f1[j52f5e0<6k0e1f2g00f1au[e2f431332f1b2uj15\xb90e3f4e4e5e6g1016\x8502e7f5c8326\x920c9f5q325\x940f53231322f1auj12f1f0X6\xb80c:g00f1[q325\xb90^5202e;c<mf3322e=f441;" [:label put! sizeof io.write byte get Instructions memq (:jmp :brt :brf) #function("rf0e0=6<0e1;f0e2=6G0e3;f0e4=6R0e5;^;" [:jmp :jmp.l :brt :brt.l :brf :brf.l]) #function("rc0g05q42;" [#function("re0f0c1326T0e2g14e3g0031322g11auk11;e0f0c4326w0e2g14e5g0031322g11auk11;e0f0c6326\xb60e2g14e5g0031322g11auk112e2g14e5g20g11[31322g11auk11;e0f0c7326\xf40e8g13e9g1431g00332e2g14g306\xe30e35\xe50e:`31322g11auk11;^;" [memv (:loadv.l :loadg.l :setg.l) io.write uint32 (:loada :seta :call :tcall :loadv :loadg :setg :list :+ :- :* :/ :vector :argc :vargc :loadi8 :apply :tapply) uint8 (:loadc :setc) (:jmp :brf :brt) put! sizeof uint16])]) table.foreach #function("n2e0g04f0322e1g04g206L0e25N0e3e4g02f1323142;" [io.seek io.write uint32 uint16 get]) io.tostring!]) length table buffer]) list->vector]) >= length count #function("n1e0f0c142;" [memq (:loadv :loadg :setg :jmp :brt :brf)]) 65536]) reverse!])
 emit
 #function("o2e0f1c1326I0c2f0a[q325J0^2f0`e3f1f2Kf0`[32\\2f0;" [memq (:loadv :loadg :setg) #function("rc0g00b2[q42;" [#function("rc0g12Mq42;" [#function("rc0e1g10f0326K0e2g10f0325f0e3g10f0g00332g00auk002g00avq42;" [#function("rg30b2g10\\2f0L1k322e0f0c1326Z0c2g31q32k31;^;" [>= 256 #function("rf0e0=6<0e1;f0e2=6G0e3;f0e4=6R0e5;^;" [:loadv :loadv.l :loadg :loadg.l :setg :setg.l])]) has? get put!])])]) nreconc])
 div
@@ -265,7 +263,7 @@ caaar
 builtin->instruction
 #function("n1c0e1e2c3f03231q42;" [#function("re0e1f03216@02f0;" [has? Instructions]) intern string #\:])
 bq-process
-#function("n1c0^q42;" [#function("rc0mj02e1g00316]0g00H6Y0c2e3e4g003131q42;g00;g00?6l0c5g00L2;g00Mc6<6\x860e3e3e7g00313141;g00Mc8<6\x980e7g0041;e9f0g0032@6\xbb0c:e;g0031e<e=g0032q43;c>g00_q43;" [#function("n1f0F16K02f0Mc0<17K02f0Mc1<17U02f0c2<;" [*comma-at* *comma-dot* *comma*]) self-evaluating? #function("rf0Mc0<6A0e1f0NK;e2e1f0L3;" [list vector apply]) bq-process vector->list quote backquote cadr *comma* any #function("rf0A6=0c0f1K;e1c2f1Ke3f031L142;" [list nconc list* bq-process]) lastcdr map bq-bracket1 #function("r^f0F16A02f0Mc0<@6Z02e1f0M31f1Kj12f0Nj05202c2f0F6t0e3f1e4f031L1325\x910f0A6\x830e5f1315\x910e3f1e6f031L132q42;" [*comma* bq-bracket #function("rf0NA6<0f0M;c0f0K;" [nconc]) nreconc cadr nreverse bq-process])])])
+#function("n1c0^q42;" [#function("rc0mj02e1g00316]0g00H6Y0c2e3e4g003131q42;g00;g00?6l0c5g00L2;g00Mc6<6\x860e3e3e7g00313141;g00Mc8<6\x980e7g0041;e9f0g0032@6\xbb0c:e;g0031e<e=g0032q43;c>g00_q43;" [#function("n1f0F16K02f0Mc0<17K02f0Mc1<17U02f0c2<;" [*comma-at* *comma-dot* *comma*]) self-evaluating? #function("rf0Mc0<6A0e1f0NK;e2e1f0L3;" [list vector apply]) bq-process vector->list quote backquote cadr *comma* any #function("rf0A6=0c0f1K;e1c2f1Ke3f031L142;" [list nconc list* bq-process]) lastcdr map bq-bracket1 #function("r^f0F16A02f0Mc0<@6Z02e1f0M31f1Kj12f0Nj05202c2f0F6t0e3f1e4f031L1325\x910f0A6\x830e5f1315\x910e3f1e6f031L132q42;" [*comma* bq-bracket #function("rf0NA6<0f0M;c0f0K;" [nconc]) nreconc cadr reverse! bq-process])])])
 bq-bracket1
 #function("n1f0F16@02f0Mc0<6J0e1f041;e2f041;" [*comma* cadr bq-process])
 bq-bracket
