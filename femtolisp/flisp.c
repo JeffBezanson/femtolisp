@@ -680,7 +680,9 @@ int isnumber(value_t v)
 
 // eval -----------------------------------------------------------------------
 
-static value_t list(value_t *args, uint32_t nargs)
+#define list(a,n) _list((a),(n),0)
+
+static value_t _list(value_t *args, uint32_t nargs, int star)
 {
     cons_t *c;
     uint32_t i;
@@ -692,12 +694,14 @@ static value_t list(value_t *args, uint32_t nargs)
         c->cdr = tagptr(c+1, TAG_CONS);
         c++;
     }
-    if (nargs > MAX_ARGS)
+    if (star || nargs > MAX_ARGS)
         (c-2)->cdr = (c-1)->car;
     else
         (c-1)->cdr = NIL;
     return v;
 }
+
+#define FL_COPYLIST(l) apply_liststar((l),0)
 
 // perform (apply list* L)
 // like the function list() above, but takes arguments from a list
@@ -736,22 +740,18 @@ static value_t apply_liststar(value_t L, int star)
 value_t fl_copylist(value_t *args, u_int32_t nargs)
 {
     argcount("copy-list", nargs, 1);
-    return apply_liststar(args[0], 0);
+    return FL_COPYLIST(args[0]);
 }
 
-value_t fl_apply_nliststar(value_t *args, u_int32_t nargs)
+value_t fl_liststar(value_t *args, u_int32_t nargs)
 {
-    argcount("apply-nlist*", nargs, 1);
-    value_t v = args[0];
-    value_t *plastcdr = &args[0];
-    while (iscons(v)) {
-        if (!iscons(cdr_(v)))
-            *plastcdr = car_(v);
-        else
-            plastcdr = &cdr_(v);
-        v = cdr_(v);
+    if (nargs == 1) return args[0];
+    else if (nargs == 0) argcount("list*", nargs, 1);
+    if (nargs > MAX_ARGS) {
+        args[MAX_ARGS] = apply_liststar(args[MAX_ARGS], 1);
+        return list(args, nargs);
     }
-    return args[0];
+    return _list(args, nargs, 1);
 }
 
 static value_t do_trycatch()
@@ -1501,7 +1501,7 @@ static builtinspec_t core_builtin_info[] = {
     { "gensym", fl_gensym },
     { "hash", fl_hash },
     { "copy-list", fl_copylist },
-    { "apply-nlist*", fl_apply_nliststar },
+    { "list*", fl_liststar },
     { NULL, NULL }
 };
 

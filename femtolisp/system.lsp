@@ -177,10 +177,6 @@
 	((null? lst) (= n 0))
 	(else        (length= (cdr lst) (- n 1)))))
 
-(define (list* . l) (apply-nlist* (copy-list l)))
-
-(define (nlist* . l) (apply-nlist* l))
-
 (define (lastcdr l)
   (if (atom? l) l
       (lastcdr (cdr l))))
@@ -301,7 +297,7 @@
                (forms (map bq-bracket1 x)))
            (if (null? lc)
                (cons 'list forms)
-             (nconc (cons 'nlist* forms) (list (bq-process lc))))))
+             (nconc (cons 'list* forms) (list (bq-process lc))))))
         (#t (let ((p x) (q ()))
 	      (while (and (pair? p)
 			  (not (eq (car p) '*comma*)))
@@ -613,13 +609,13 @@
 		 #f)))
       (let ((V  (get-defined-vars B))
 	    (Be (macroexpand-in B env)))
-	(nlist* 'lambda
-		(cadr e)
-		(if (null? V)
-		    Be
-		    (cons (list 'lambda V Be)
-			  (map (lambda (x) #f) V)))
-		(lastcdr e)))))
+	(list* 'lambda
+	       (cadr e)
+	       (if (null? V)
+		   Be
+		   (cons (list 'lambda V Be)
+			 (map (lambda (x) #f) V)))
+	       (lastcdr e)))))
   (define (macroexpand-in e env)
     (if (atom? e) e
 	(let ((f (assq (car e) env)))

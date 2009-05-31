@@ -82,8 +82,6 @@ nreverse
 #function("n1c0_q42;" [#function("r^g00F6Q02g00Ng00f0g00j02P2k005202f0;" [])])
 nreconc
 #function("n2e0e1f031f142;" [nconc nreverse])
-nlist*
-#function("o0e0f041;" [apply-nlist*])
 newline
 #function("n0e0e1312];" [princ *linefeed*])
 nestlist
@@ -119,7 +117,7 @@ make-code-emitter
 macroexpand-1
 #function("n1f0?6;0f0;c0e1f031q42;" [#function("rf06?0f0g00Nt2;g00;" []) macrocall?])
 macroexpand
-#function("n1c0^^q43;" [#function("rc0mj02c1mj12f1g00_42;" [#function("n2c0e1f031F6]0e2f031F6T0c3e1f031K5Z0e4f0315^0^q42;" [#function("rc0e1f031g11f0g0132q43;" [#function("re0c1e2g1031f0A6G0f15Y0c1f0f1L3e3c4mf032Ke5g103144;" [nlist* lambda cadr map #function("n1^;" []) lastcdr]) get-defined-vars]) cddr cdddr begin caddr]) #function("n2f0?6;0f0;c0e1f0Mf132q42;" [#function("rf06N0g11e0f031g00NQ2e1f03142;c2e3g0031q42;" [cadr caddr #function("rf06G0g21f0g10NQ2g1142;g10Mc0<6U0g10;g10Mc1<6k0g20g10g1142;g10Mc2<6\x9a0c3e4g1031e5c1L1_L1e6e7g10313133L1q43;e8c9mg1042;" [quote lambda let-syntax #function("rg31f1e0e1c2mf032g213242;" [nconc map #function("n1f0Mg41e0f031g3132g31L3;" [cadr])]) cadr nconc copy-list cddr map #function("n1g31f0g2142;" [])]) macrocall?]) assq])])])
+#function("n1c0^^q43;" [#function("rc0mj02c1mj12f1g00_42;" [#function("n2c0e1f031F6]0e2f031F6T0c3e1f031K5Z0e4f0315^0^q42;" [#function("rc0e1f031g11f0g0132q43;" [#function("re0c1e2g1031f0A6G0f15Y0c1f0f1L3e3c4mf032Ke5g103144;" [list* lambda cadr map #function("n1^;" []) lastcdr]) get-defined-vars]) cddr cdddr begin caddr]) #function("n2f0?6;0f0;c0e1f0Mf132q42;" [#function("rf06N0g11e0f031g00NQ2e1f03142;c2e3g0031q42;" [cadr caddr #function("rf06G0g21f0g10NQ2g1142;g10Mc0<6U0g10;g10Mc1<6k0g20g10g1142;g10Mc2<6\x9a0c3e4g1031e5c1L1_L1e6e7g10313133L1q43;e8c9mg1042;" [quote lambda let-syntax #function("rg31f1e0e1c2mf032g213242;" [nconc map #function("n1f0Mg41e0f031g3132g31L3;" [cadr])]) cadr nconc copy-list cddr map #function("n1g31f0g2142;" [])]) macrocall?]) assq])])])
 macrocall?
 #function("n1f0MC16E02e0e1f0M^43;" [get *syntax-environment*])
 lookup-sym
@@ -140,8 +138,6 @@ list-head
 #function("n2e0f1`326>0_;f0Me1f0Nf1av32K;" [<= list-head])
 list->vector
 #function("n1e0f0t2;" [vector])
-list*
-#function("o0e0e1f03141;" [apply-nlist* copy-list])
 length>
 #function("n2f1`X6<0f0;f1`W6N0f0F16M02f0;f0A6Y0f1`X;e0f0Nf1av42;" [length>])
 length=
@@ -269,7 +265,7 @@ caaar
 builtin->instruction
 #function("n1c0e1e2c3f03231q42;" [#function("re0e1f03216@02f0;" [has? Instructions]) intern string #\:])
 bq-process
-#function("n1c0^q42;" [#function("rc0mj02e1g00316]0g00H6Y0c2e3e4g003131q42;g00;g00?6l0c5g00L2;g00Mc6<6\x860e3e3e7g00313141;g00Mc8<6\x980e7g0041;e9f0g0032@6\xbb0c:e;g0031e<e=g0032q43;c>g00_q43;" [#function("n1f0F16K02f0Mc0<17K02f0Mc1<17U02f0c2<;" [*comma-at* *comma-dot* *comma*]) self-evaluating? #function("rf0Mc0<6A0e1f0NK;e2e1f0L3;" [list vector apply]) bq-process vector->list quote backquote cadr *comma* any #function("rf0A6=0c0f1K;e1c2f1Ke3f031L142;" [list nconc nlist* bq-process]) lastcdr map bq-bracket1 #function("r^f0F16A02f0Mc0<@6Z02e1f0M31f1Kj12f0Nj05202c2f0F6t0e3f1e4f031L1325\x910f0A6\x830e5f1315\x910e3f1e6f031L132q42;" [*comma* bq-bracket #function("rf0NA6<0f0M;c0f0K;" [nconc]) nreconc cadr nreverse bq-process])])])
+#function("n1c0^q42;" [#function("rc0mj02e1g00316]0g00H6Y0c2e3e4g003131q42;g00;g00?6l0c5g00L2;g00Mc6<6\x860e3e3e7g00313141;g00Mc8<6\x980e7g0041;e9f0g0032@6\xbb0c:e;g0031e<e=g0032q43;c>g00_q43;" [#function("n1f0F16K02f0Mc0<17K02f0Mc1<17U02f0c2<;" [*comma-at* *comma-dot* *comma*]) self-evaluating? #function("rf0Mc0<6A0e1f0NK;e2e1f0L3;" [list vector apply]) bq-process vector->list quote backquote cadr *comma* any #function("rf0A6=0c0f1K;e1c2f1Ke3f031L142;" [list nconc list* bq-process]) lastcdr map bq-bracket1 #function("r^f0F16A02f0Mc0<@6Z02e1f0M31f1Kj12f0Nj05202c2f0F6t0e3f1e4f031L1325\x910f0A6\x830e5f1315\x910e3f1e6f031L132q42;" [*comma* bq-bracket #function("rf0NA6<0f0M;c0f0K;" [nconc]) nreconc cadr nreverse bq-process])])])
 bq-bracket1
 #function("n1f0F16@02f0Mc0<6J0e1f041;e2f041;" [*comma* cadr bq-process])
 bq-bracket
