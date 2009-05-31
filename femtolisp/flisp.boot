@@ -71,7 +71,7 @@ println
 print-to-string
 #function("n1c0e130q42;" [#function("re0f0g00322e1f041;" [io.print io.tostring!]) buffer])
 print-exception
-#function("n1c0^^q43;" [#function("rc0mj02c1mj12g00F16[02g00Mc2<16[02e3g00b4326\x850f0c4e5g0031c6e7g0031c8352f1e9g0031315H1g00F16\x9f02g00Mc:<16\x9f02g00NF6\xb40f0c;e5g0031c<335H1g00F16\xc402g00Mc=<6\xd90f0c>312f0g00NQ25H1g00F16\xe902g00Mc?<6\x080e@e7g0031312f0cAe5g0031325H1eBg003116\x1d02e3g00b2326:1f0g00McC322cDe5g0031q325H1f0cE312f1g00312f0eF312];" [#function("o0e0e1f0t3;" [io.princ *error-stream*]) #function("o0e0e1f0t3;" [io.print *error-stream*]) type-error length= "type-error: " cadr ": expected " caddr ", got " cadddr unbound-error "unbound-error: eval: variable " " has no value" error "error: " load-error print-exception "in file " list? ": " #function("re0f03117?02f0C6H0g005K0g01f041;" [string?]) "*** Unhandled exception: " *linefeed*])])
+#function("n1c0^^q43;" [#function("rc0mj02c1mj12g00F16[02g00Mc2<16[02e3g00b4326\x850f0c4e5g0031c6e7g0031c8352f1e9g0031315M1g00F16\x9f02g00Mc:<16\x9f02g00NF6\xb40f0c;e5g0031c<335M1g00F16\xc402g00Mc=<6\xd90f0c>312f0g00NQ25M1g00F16\xe902g00Mc?<6\x080e@e7g0031312f0cAe5g0031325M1eBg003116\x1d02e3g00b2326?1f1g00M312f0cC312cDe5g0031q325M1f0cE312f1g00312f0eF312];" [#function("o0e0e1f0t3;" [io.princ *error-stream*]) #function("o0e0e1f0t3;" [io.print *error-stream*]) type-error length= "type-error: " cadr ": expected " caddr ", got " cadddr unbound-error "unbound-error: eval: variable " " has no value" error "error: " load-error print-exception "in file " list? ": " #function("re0f03117?02f0C6H0g005K0g01f041;" [string?]) "*** Unhandled exception: " *linefeed*])])
 print
 #function("o0e0e1f0t3;" [io.print *output-stream*])
 princ

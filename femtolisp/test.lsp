@@ -218,3 +218,11 @@
       (accumulate-while (pair? lst) (f (car lst) i)
                         (begin (set! lst (cdr lst))
                                (set! i (1+ i)))))))
+
+(define (string.findall haystack needle . offs)
+  (define (sub h n offs lst)
+    (let ((i (string.find h n offs)))
+      (if i
+	  (sub h n (string.inc h i) (cons i lst))
+	  (reverse! lst))))
+  (sub haystack needle (if (null? offs) 0 (car offs)) ()))

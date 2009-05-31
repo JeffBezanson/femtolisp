@@ -8,6 +8,7 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <ctype.h>
+#include <wchar.h>
 #include <wctype.h>
 #include <sys/types.h>
 #include <sys/time.h>
@@ -44,6 +45,22 @@ value_t fl_string_count(value_t *args, u_int32_t nargs)
     }
     char *str = cvalue_data(args[0]);
     return size_wrap(u8_charnum(str+start, stop-start));
+}
+
+value_t fl_string_width(value_t *args, u_int32_t nargs)
+{
+    argcount("string.width", nargs, 1);
+    if (iscprim(args[0])) {
+        cprim_t *cp = (cprim_t*)ptr(args[0]);
+        if (cp_class(cp) == wchartype) {
+            int w = wcwidth(*(uint32_t*)cp_data(cp));
+            if (w < 0)
+                return FL_F;
+            return fixnum(w);
+        }
+    }
+    char *s = tostring(args[0], "string.width");
+    return size_wrap(u8_strwidth(s));
 }
 
 value_t fl_string_reverse(value_t *args, u_int32_t nargs)
@@ -373,6 +390,7 @@ static builtinspec_t stringfunc_info[] = {
     { "string", fl_string },
     { "string?", fl_stringp },
     { "string.count", fl_string_count },
+    { "string.width", fl_string_width },
     { "string.split", fl_string_split },
     { "string.sub", fl_string_sub },
     { "string.find", fl_string_find },

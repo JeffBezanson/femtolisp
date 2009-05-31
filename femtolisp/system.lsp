@@ -734,7 +734,8 @@
 
 	((and (list? e)
 	      (length= e 2))
-	 (eprinc (car e) ": ")
+	 (eprint (car e))
+	 (eprinc ": ")
 	 (let ((msg (cadr e)))
 	   ((if (or (string? msg) (symbol? msg))
 		eprinc eprint)
