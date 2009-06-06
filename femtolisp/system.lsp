@@ -169,14 +169,14 @@
 ; work and always terminates.
 (define (length= lst n)
   (cond ((< n 0)     #f)
-	((= n 0)     (null? lst))
-	((null? lst) (= n 0))
+	((= n 0)     (atom? lst))
+	((atom? lst) (= n 0))
 	(else        (length= (cdr lst) (- n 1)))))
 
 (define (length> lst n)
   (cond ((< n 0)     lst)
 	((= n 0)     (and (pair? lst) lst))
-	((null? lst) (< n 0))
+	((atom? lst) (< n 0))
 	(else        (length> (cdr lst) (- n 1)))))
 
 (define (list* . l)
