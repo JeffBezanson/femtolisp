@@ -739,8 +739,15 @@ static value_t apply_liststar(value_t L, int star)
 
 value_t fl_copylist(value_t *args, u_int32_t nargs)
 {
-    argcount("copy-list", nargs, 1);
-    return FL_COPYLIST(args[0]);
+    if (nargs != 2)
+        argcount("copy-list", nargs, 1);
+    value_t l = FL_COPYLIST(args[0]);
+    if (nargs == 2) {
+        if (!iscons(args[0]))
+            return args[1];
+        ((cons_t*)(curheap-sizeof(cons_t)))->cdr = args[1];
+    }
+    return l;
 }
 
 value_t fl_liststar(value_t *args, u_int32_t nargs)
@@ -776,6 +783,20 @@ static value_t do_trycatch()
 #define fn_bcode(f) (((value_t*)ptr(f))[0])
 #define fn_vals(f) (((value_t*)ptr(f))[1])
 #define fn_env(f) (((value_t*)ptr(f))[2])
+
+#if _BYTE_ORDER == __BIG_ENDIAN
+#define GET_UINT32(a, i)                         \
+    ((((uint32_t)a[i+0])<<0)  |                  \
+     (((uint32_t)a[i+1])<<8)  |                  \
+     (((uint32_t)a[i+2])<<16) |                  \
+     (((uint32_t)a[i+3])<<24))
+#define GET_UINT16(a, i)                         \
+    ((((uint16_t)a[i+0])<<0)  |                  \
+     (((uint16_t)a[i+1])<<8))
+#else
+#define GET_UINT32(a, i) (*(uint32_t*)&a[i])
+#define GET_UINT16(a, i) (*(uint16_t*)&a[i])
+#endif
 
 /*
   stack on entry: <func>  <args...>
@@ -837,8 +858,13 @@ static value_t apply_cl(uint32_t nargs)
             if (s > 0) {
                 v = list(&Stack[bp+i], s);
                 if (nargs > MAX_ARGS) {
-                    c = (cons_t*)curheap;
-                    (c-2)->cdr = (c-1)->car;
+                    if (s == 1) {
+                        v = car_(v);
+                    }
+                    else {
+                        c = (cons_t*)curheap;
+                        (c-2)->cdr = (c-1)->car;
+                    }
                 }
                 Stack[bp+i] = v;
                 Stack[bp+i+1] = Stack[bp+nargs];
@@ -852,6 +878,33 @@ static value_t apply_cl(uint32_t nargs)
                 Stack[SP-2] = NIL;
             }
             nargs = i+1;
+            goto next_op;
+        case OP_LARGC:
+        case OP_LVARGC:
+            // move extra arguments from list to stack
+            i = GET_UINT32(code, ip); ip+=4;
+            x = POP();  // cloenv
+            if (nargs > MAX_ARGS) {
+                v = POP();  // list of rest args
+                nargs--;
+            }
+            else v = NIL;
+            while (nargs < i) {
+                if (!iscons(v))
+                    lerror(ArgError, "apply: too few arguments");
+                PUSH(car_(v));
+                nargs++;
+                v = cdr_(v);
+            }
+            if (op == OP_LVARGC) {
+                PUSH(v);
+                nargs++;
+            }
+            else {
+                if (iscons(v))
+                    lerror(ArgError, "apply: too many arguments");
+            }
+            PUSH(x);
             goto next_op;
         case OP_LET:
             // last arg is closure environment to use
@@ -916,26 +969,26 @@ static value_t apply_cl(uint32_t nargs)
             SP = s-n;
             Stack[SP-1] = v;
             goto next_op;
-        case OP_JMP: ip = (uint32_t)*(uint16_t*)&code[ip]; goto next_op;
+        case OP_JMP: ip = (uint32_t)GET_UINT16(code,ip); goto next_op;
         case OP_BRF:
             v = POP();
-            if (v == FL_F) ip = (uint32_t)*(uint16_t*)&code[ip];
+            if (v == FL_F) ip = (uint32_t)GET_UINT16(code,ip);
             else ip += 2;
             goto next_op;
         case OP_BRT:
             v = POP();
-            if (v != FL_F) ip = (uint32_t)*(uint16_t*)&code[ip];
+            if (v != FL_F) ip = (uint32_t)GET_UINT16(code,ip);
             else ip += 2;
             goto next_op;
-        case OP_JMPL: ip = *(uint32_t*)&code[ip]; goto next_op;
+        case OP_JMPL: ip = GET_UINT32(code,ip); goto next_op;
         case OP_BRFL:
             v = POP();
-            if (v == FL_F) ip = *(uint32_t*)&code[ip];
+            if (v == FL_F) ip = GET_UINT32(code,ip);
             else ip += 4;
             goto next_op;
         case OP_BRTL:
             v = POP();
-            if (v != FL_F) ip = *(uint32_t*)&code[ip];
+            if (v != FL_F) ip = GET_UINT32(code,ip);
             else ip += 4;
             goto next_op;
         case OP_RET: v = POP(); return v;
@@ -1304,12 +1357,12 @@ static value_t apply_cl(uint32_t nargs)
             goto next_op;
         case OP_LOADVL:
             v = fn_vals(Stack[bp-1]);
-            v = vector_elt(v, *(uint32_t*)&code[ip]); ip+=4;
+            v = vector_elt(v, GET_UINT32(code,ip)); ip+=4;
             PUSH(v);
             goto next_op;
         case OP_LOADGL:
             v = fn_vals(Stack[bp-1]);
-            v = vector_elt(v, *(uint32_t*)&code[ip]); ip+=4;
+            v = vector_elt(v, GET_UINT32(code,ip)); ip+=4;
             goto do_loadg;
         case OP_LOADG:
             v = fn_vals(Stack[bp-1]);
@@ -1325,7 +1378,7 @@ static value_t apply_cl(uint32_t nargs)
 
         case OP_SETGL:
             v = fn_vals(Stack[bp-1]);
-            v = vector_elt(v, *(uint32_t*)&code[ip]); ip+=4;
+            v = vector_elt(v, GET_UINT32(code,ip)); ip+=4;
             goto do_setg;
         case OP_SETG:
             v = fn_vals(Stack[bp-1]);
@@ -1354,6 +1407,15 @@ static value_t apply_cl(uint32_t nargs)
             }
             PUSH(v);
             goto next_op;
+        case OP_LOADAL:
+            assert(nargs > 0);
+            i = GET_UINT32(code,ip); ip+=4;
+            if (captured)
+                v = vector_elt(Stack[bp], i);
+            else
+                v = Stack[bp+i];
+            PUSH(v);
+            goto next_op;
         case OP_SETA:
             assert(nargs > 0);
             v = Stack[SP-1];
@@ -1369,6 +1431,15 @@ static value_t apply_cl(uint32_t nargs)
                 Stack[bp+i] = v;
             }
             goto next_op;
+        case OP_SETAL:
+            assert(nargs > 0);
+            v = Stack[SP-1];
+            i = GET_UINT32(code,ip); ip+=4;
+            if (captured)
+                vector_elt(Stack[bp], i) = v;
+            else
+                Stack[bp+i] = v;
+            goto next_op;
         case OP_LOADC:
         case OP_SETC:
             s = code[ip++];
@@ -1379,6 +1450,18 @@ static value_t apply_cl(uint32_t nargs)
             assert(isvector(v));
             assert(i < vector_size(v));
             if (op == OP_SETC)
+                vector_elt(v, i) = Stack[SP-1];
+            else
+                PUSH(vector_elt(v, i));
+            goto next_op;
+        case OP_LOADCL:
+        case OP_SETCL:
+            s = GET_UINT32(code,ip); ip+=4;
+            i = GET_UINT32(code,ip); ip+=4;
+            v = Stack[bp+nargs];
+            while (s--)
+                v = vector_elt(v, vector_size(v)-1);
+            if (op == OP_SETCL)
                 vector_elt(v, i) = Stack[SP-1];
             else
                 PUSH(vector_elt(v, i));

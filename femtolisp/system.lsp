@@ -77,8 +77,8 @@
 (define (append . lsts)
   (cond ((null? lsts) ())
 	((null? (cdr lsts)) (car lsts))
-	(#t (nconc (copy-list (car lsts))
-		   (apply append (cdr lsts))))))
+	(#t (copy-list (car lsts)
+		       (apply append (cdr lsts))))))
 
 (define (member item lst)
   (cond ((atom? lst) #f)
@@ -173,14 +173,14 @@
 ; work and always terminates.
 (define (length= lst n)
   (cond ((< n 0)     #f)
-	((= n 0)     (null? lst))
-	((null? lst) (= n 0))
+	((= n 0)     (atom? lst))
+	((atom? lst) (= n 0))
 	(else        (length= (cdr lst) (- n 1)))))
 
 (define (length> lst n)
   (cond ((< n 0)     lst)
 	((= n 0)     (and (pair? lst) lst))
-	((null? lst) (< n 0))
+	((atom? lst) (< n 0))
 	(else        (length> (cdr lst) (- n 1)))))
 
 (define (last-pair l)

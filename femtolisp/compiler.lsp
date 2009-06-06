@@ -15,12 +15,15 @@
 	  
 	  :vector :aref :aset!
 	  
-	  :loadt :loadf :loadnil :load0 :load1 :loadi8 :loadv :loadv.l
-	  :loadg :loada :loadc :loadg.l
-	  :setg  :seta  :setc  :setg.l
+	  :loadt :loadf :loadnil :load0 :load1 :loadi8
+	  :loadv :loadv.l
+	  :loadg :loadg.l
+	  :loada :loada.l :loadc :loadc.l
+	  :setg :setg.l
+	  :seta :seta.l :setc :setc.l
 	  
 	  :closure :argc :vargc :trycatch :copyenv :let :for :tapply
-	  :add2 :sub2 :neg
+	  :add2 :sub2 :neg :largc :lvargc
 	  
 	  dummy_t dummy_f dummy_nil]))
     (for 0 (1- (length keys))
@@ -43,23 +46,33 @@
 	 :div0     2))
 
 (define (make-code-emitter) (vector () (table) 0))
+(define (bcode:code   b) (aref b 0))
+(define (bcode:ctable b) (aref b 1))
+(define (bcode:nconst b) (aref b 2))
+; get an index for a referenced value in a bytecode object
+(define (bcode:indexfor b v)
+  (let ((const-to-idx (bcode:ctable b))
+	(nconst       (bcode:nconst b)))
+    (if (has? const-to-idx v)
+	(get const-to-idx v)
+	(begin (put! const-to-idx v nconst)
+	       (prog1 nconst
+		      (aset! b 2 (+ nconst 1)))))))
 (define (emit e inst . args)
   (if (memq inst '(:loadv :loadg :setg))
-      (let* ((const-to-idx (aref e 1))
-	     (nconst       (aref e 2))
-	     (v            (car args))
-	     (vind (if (has? const-to-idx v)
-		       (get const-to-idx v)
-		       (begin (put! const-to-idx v nconst)
-			      (set! nconst (+ nconst 1))
-			      (- nconst 1)))))
-	(aset! e 2 nconst)
-	(set! args (list vind))
-	(if (>= vind 256)
-	    (set! inst (case inst
-			 (:loadv :loadv.l)
-			 (:loadg :loadg.l)
-			 (:setg  :setg.l))))))
+      (set! args (list (bcode:indexfor e (car args)))))
+  (let ((longform
+	 (assq inst '((:loadv :loadv.l) (:loadg :loadg.l) (:setg  :setg.l)
+		      (:loada :loada.l) (:seta  :seta.l)))))
+    (if (and longform
+	     (> (car args) 255))
+	(set! inst (cadr longform))))
+  (let ((longform
+	 (assq inst '((:loadc :loadc.l) (:setc :setc.l)))))
+    (if (and longform
+	     (or (> (car  args) 255)
+		 (> (cadr args) 255)))
+	(set! inst (cadr longform))))
   (aset! e 0 (nreconc (cons inst args) (aref e 0)))
   e)
 
@@ -70,13 +83,15 @@
 ; labels are fixed-up.
 (define (encode-byte-code e)
   (let* ((cl (reverse! e))
-	 (long? (>= (+ (length cl)
+	 (v  (list->vector cl))
+	 (long? (>= (+ (length v)
 		       (* 3 (count (lambda (i)
-				     (memq i '(:loadv :loadg :setg
-						      :jmp :brt :brf)))
+				     (memq i '(:loadv.l :loadg.l :setg.l
+					       :loada.l :seta.l :loadc.l
+					       :setc.l :jmp :brt :brf
+					       :largc :lvargc)))
 				   cl)))
-		    65536))
-	 (v  (list->vector cl)))
+		    65536)))
     (let ((n              (length v))
 	  (i              0)
 	  (label-to-loc   (table))
@@ -104,7 +119,8 @@
 		(if (< i n)
 		    (let ((nxt (aref v i)))
 		      (case vi
-			((:loadv.l :loadg.l :setg.l)
+			((:loadv.l :loadg.l :setg.l :loada.l :seta.l :largc
+			  :lvargc)
 			 (io.write bcode (uint32 nxt))
 			 (set! i (+ i 1)))
 			
@@ -118,6 +134,12 @@
 			 (io.write bcode (uint8 nxt))
 			 (set! i (+ i 1))
 			 (io.write bcode (uint8 (aref v i)))
+			 (set! i (+ i 1)))
+
+			((:loadc.l :setc.l)  ; 2 uint32 args
+			 (io.write bcode (uint32 nxt))
+			 (set! i (+ i 1))
+			 (io.write bcode (uint32 (aref v i)))
 			 (set! i (+ i 1)))
 			
 			((:jmp :brf :brt)
@@ -135,9 +157,9 @@
       (io.tostring! bcode))))
 
 (define (const-to-idx-vec e)
-  (let ((cvec (vector.alloc (aref e 2))))
+  (let ((cvec (vector.alloc (bcode:nconst e))))
     (table.foreach (lambda (val idx) (aset! cvec idx val))
-		   (aref e 1))
+		   (bcode:ctable e))
     cvec))
 
 (define (index-of item lst start)
@@ -291,7 +313,8 @@
   (let ((head (car x)))
     (if (and (pair? head)
 	     (eq? (car head) 'lambda)
-	     (list? (cadr head)))
+	     (list? (cadr head))
+	     (not (length> (cadr head) MAX_ARGS)))
 	(compile-let  g env tail? x)
 	(compile-call g env tail? x))))
 
@@ -390,12 +413,15 @@
 (define (compile-f env f . let?)
   (let ((g    (make-code-emitter))
 	(args (cadr f)))
-    (cond ((not (null? let?))     (emit g :let))
-	  ((null? (lastcdr args)) (emit g :argc (length args)))
+    (cond ((not (null? let?))      (emit g :let))
+	  ((length> args MAX_ARGS) (emit g (if (null? (lastcdr args))
+					       :largc :lvargc)
+					 (length args)))
+	  ((null? (lastcdr args))  (emit g :argc  (length args)))
 	  (else  (emit g :vargc (if (atom? args) 0 (length args)))))
     (compile-in g (cons (to-proper args) env) #t (caddr f))
     (emit g :ret)
-    (function (encode-byte-code (aref g 0))
+    (function (encode-byte-code (bcode:code g))
 	      (const-to-idx-vec g))))
 
 (define (compile f) (compile-f () f))
@@ -455,11 +481,21 @@
 		  (princ (number->string (aref code i)))
 		  (set! i (+ i 1)))
 		 
+		 ((:loada.l :seta.l :largc :lvargc)
+		  (princ (number->string (ref-uint32-LE code i)))
+		  (set! i (+ i 4)))
+
 		 ((:loadc :setc)
 		  (princ (number->string (aref code i)) " ")
 		  (set! i (+ i 1))
 		  (princ (number->string (aref code i)))
 		  (set! i (+ i 1)))
+		 
+		 ((:loadc.l :setc.l)
+		  (princ (number->string (ref-uint32-LE code i)) " ")
+		  (set! i (+ i 4))
+		  (princ (number->string (ref-uint32-LE code i)))
+		  (set! i (+ i 4)))
 		 
 		 ((:jmp :brf :brt)
 		  (princ "@" (hex5 (ref-uint16-LE code i)))

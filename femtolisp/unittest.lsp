@@ -98,6 +98,22 @@
 ; long argument lists
 (assert (= (apply + (iota 100000)) 4999950000))
 
+(define as (apply list* (map-int (lambda (x) (gensym)) (+ MAX_ARGS 1))))
+(define f (compile `(lambda ,as ,(lastcdr as))))
+(assert (equal? (apply f (iota (+ MAX_ARGS 0))) `()))
+(assert (equal? (apply f (iota (+ MAX_ARGS 1))) `(,MAX_ARGS)))
+(assert (equal? (apply f (iota (+ MAX_ARGS 2))) `(,MAX_ARGS ,(+ MAX_ARGS 1))))
+
+(define as (map-int (lambda (x) (gensym)) 1000))
+(define f (compile `(lambda ,as ,(car (last-pair as)))))
+(assert (equal? (apply f (iota 1000)) 999))
+
+(define as (apply list* (map-int (lambda (x) (gensym)) 995)))
+(define f (compile `(lambda ,as ,(lastcdr as))))
+(assert (equal? (apply f (iota 994))  '()))
+(assert (equal? (apply f (iota 995))  '(994)))
+(assert (equal? (apply f (iota 1000)) '(994 995 996 997 998 999)))
+
 ; ok, a couple end-to-end tests as well
 (define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))
 (assert (equal? (fib 20) 6765))

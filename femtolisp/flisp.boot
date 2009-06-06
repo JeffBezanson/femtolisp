@@ -1,316 +1,324 @@
 zero?
-#function("n1f0`W;" [])
+#function("r1g0`W;" [])
 vector.map
-#function("n2c0e1f131q42;" [#function("rc0e1f031q42;" [#function("r`g00avc0ms2f0;" [#function("n1g00f0g20g21f0[31\\;" [])]) vector.alloc]) length])
+#function("r2c0e1g131u42;" [#function("vc0e1g031u42;" [#function("v`i00azc0qw2g0;" [#function("r1i00g0i20i21g0[31\\;" [])]) vector.alloc]) length])
 vector->list
-#function("n1c0e1f031_q43;" [#function("raf0c0ms2f1;" [#function("n1g10g00f0v[g01Kk01;" [])]) length])
+#function("r1c0e1g031_u43;" [#function("vag0c0qw2g1;" [#function("r1i10i00g0z[i01Ko01;" [])]) length])
 untrace
-#function("n1c0e1f031q42;" [#function("re0f0316K0e1g00e2f031b2[42;^;" [traced? set-top-level-value! function:vals]) top-level-value])
+#function("r1c0e1g031u42;" [#function("ve0g0316K0e1i00e2g031b2[42;^;" [traced? set-top-level-value! function:vals]) top-level-value])
 traced?
-#function("n1e0f031e0g0031>;" [function:code] #0=[#function("o0e0c1f0K312c2f0t2;" [println x #.apply] #0#) ()])
+#function("r1e0g031e0i0031>;" [function:code] #0=[#function("s0e0c1g0K312c2g0x2;" [println x #.apply] #0#) ()])
 trace
-#function("n1c0e1f031q322c2;" [#function("rc0e130q42;" [#function("re0g0031@6p0e1g10e2c3f0c4c5c6c7g10L2f0L3L2c8c7g00L2f0L3L3L33142;^;" [traced? set-top-level-value! eval lambda begin println cons quote apply]) gensym]) top-level-value ok])
+#function("r1c0e1g031u322c2;" [#function("vc0e130u42;" [#function("ve0i0031@6p0e1i10e2c3g0c4c5c6c7i10L2g0L3L2c8c7i00L2g0L3L3L33142;^;" [traced? set-top-level-value! eval lambda begin println cons quote apply]) gensym]) top-level-value ok])
 to-proper
-#function("n1f0A6;0f0;f0?6F0f0L1;f0Me0f0N31K;" [to-proper])
+#function("r1g0A6;0g0;g0?6F0g0L1;g0Me0g0N31K;" [to-proper])
 table.values
-#function("n1e0c1m_f043;" [table.foldl #function("n3f1f2K;" [])])
+#function("r1e0c1q_g043;" [table.foldl #function("r3g1g2K;" [])])
 table.pairs
-#function("n1e0c1m_f043;" [table.foldl #function("n3f0f1Kf2K;" [])])
+#function("r1e0c1q_g043;" [table.foldl #function("r3g0g1Kg2K;" [])])
 table.keys
-#function("n1e0c1m_f043;" [table.foldl #function("n3f0f2K;" [])])
+#function("r1e0c1q_g043;" [table.foldl #function("r3g0g2K;" [])])
 table.invert
-#function("n1c0e130q42;" [#function("re0c1m_g00332f0;" [table.foldl #function("n3e0g00f1f043;" [put!])]) table])
+#function("r1c0e130u42;" [#function("ve0c1q_i00332g0;" [table.foldl #function("r3e0i00g1g043;" [put!])]) table])
 table.foreach
-#function("n2e0c1m_f143;" [table.foldl #function("n3g00f0f1322];" [])])
+#function("r2e0c1q_g143;" [table.foldl #function("r3i00g0g1322];" [])])
 table.clone
-#function("n1c0e130q42;" [#function("re0c1m_g00332f0;" [table.foldl #function("n3e0g00f0f143;" [put!])]) table])
+#function("r1c0e130u42;" [#function("ve0c1q_i00332g0;" [table.foldl #function("r3e0i00g0g143;" [put!])]) table])
 symbol-syntax
-#function("n1e0e1f0^43;" [get *syntax-environment*])
+#function("r1e0e1g0^43;" [get *syntax-environment*])
 string.trim
-#function("n3c0^^q43;" [#function("rc0mj02c1mj12c2e3g0031q42;" [#function("n4f2f3X16J02e0f1e1f0f232326a0g00f0f1e2f0f232f344;f2;" [string.find string.char string.inc]) #function("n3e0f2`3216R02e1f1e2f0e3f0f23232326g0g01f0f1e3f0f23243;f2;" [> string.find string.char string.dec]) #function("re0g10g00g10g11`f034g01g10g12f03343;" [string.sub]) length])])
+#function("r3c0^^u43;" [#function("vc0qm02c1qm12c2e3i0031u42;" [#function("r4g2g3X16J02e0g1e1g0g232326a0i00g0g1e2g0g232g344;g2;" [string.find string.char string.inc]) #function("r3e0g2`3216R02e1g1e2g0e3g0g23232326g0i01g0g1e3g0g23243;g2;" [> string.find string.char string.dec]) #function("ve0i10i00i10i11`g034i01i10i12g03343;" [string.sub]) length])])
 string.tail
-#function("n2e0f0e1f0`f13342;" [string.sub string.inc])
+#function("r2e0g0e1g0`g13342;" [string.sub string.inc])
 string.rpad
-#function("n3e0f0e1f2f1e2f031v3242;" [string string.rep string.count])
+#function("r3e0g0e1g2g1e2g031z3242;" [string string.rep string.count])
 string.rep
-#function("n2f1b4X6q0e0f1`326G0c1;f1aW6U0e2f041;f1b2W6f0e2f0f042;e2f0f0f043;e3f1316\x8b0e2f0e4f0f1av3242;e4e2f0f032f1b2U242;" [<= "" string odd? string.rep])
+#function("r2g1b4X6q0e0g1`326G0c1;g1aW6U0e2g041;g1b2W6f0e2g0g042;e2g0g0g043;e3g1316\x8b0e2g0e4g0g1az3242;e4e2g0g032g1b2U242;" [<= "" string odd? string.rep])
 string.map
-#function("n2c0e130e2f131q43;" [#function("rc0`q322e1f041;" [#function("r^f0g01X6`02e0g00g10e1g11f03231322e2g11f032j0520;" [io.putc string.char string.inc]) io.tostring!]) buffer length])
+#function("r2c0e130e2g131u43;" [#function("vc0`u322e1g041;" [#function("v^g0i01X6`02e0i00i10e1i11g03231322e2i11g032m0520;" [io.putc string.char string.inc]) io.tostring!]) buffer length])
 string.lpad
-#function("n3e0e1f2f1e2f031v32f042;" [string string.rep string.count])
+#function("r3e0e1g2g1e2g031z32g042;" [string string.rep string.count])
 string.join
-#function("n2f0A6;0c0;c1e230q42;" ["" #function("re0f0g00M322e1c2mg00N322e3f041;" [io.write for-each #function("n1e0g00g11322e0g00f042;" [io.write]) io.tostring!]) buffer])
+#function("r2g0A6;0c0;c1e230u42;" ["" #function("ve0g0i00M322e1c2qi00N322e3g041;" [io.write for-each #function("r1e0i00i11322e0i00g042;" [io.write]) io.tostring!]) buffer])
 simple-sort
-#function("n1f0A17>02f0NA6D0f0;c0f0Mq42;" [#function("rc0e1c2mg00N32q42;" [#function("re0e1f0M31g00L1e1f0N3143;" [nconc simple-sort]) separate #function("n1f0g00X;" [])])])
+#function("r1g0A17>02g0NA6D0g0;c0g0Mu42;" [#function("vc0e1c2qi00N32u42;" [#function("ve0e1g0M31i00L1e1g0N3143;" [nconc simple-sort]) separate #function("r1g0i00X;" [])])])
 set-syntax!
-#function("n2e0e1f0f143;" [put! *syntax-environment*])
+#function("r2e0e1g0g143;" [put! *syntax-environment*])
 separate
-#function("n2g00f0f1__44;" [] #0=[#function("n4f1A6>0f2f3K;f0f1M316[0g00f0f1Nf1Mf2Kf344;g00f0f1Nf2f1Mf3K44;" [] #0#) ()])
+#function("r2i00g0g1__44;" [] #0=[#function("r4g1A6>0g2g3K;g0g1M316[0i00g0g1Ng1Mg2Kg344;i00g0g1Ng2g1Mg3K44;" [] #0#) ()])
 self-evaluating?
-#function("n1f0?16>02f0C@17_02e0f03116_02f0C16_02f0e1f031<;" [constant? top-level-value])
+#function("r1g0?16>02g0C@17_02e0g03116_02g0C16_02g0e1g031<;" [constant? top-level-value])
 reverse!
-#function("n1c0_q42;" [#function("r^g00F6Q02g00Ng00f0g00j02P2k005202f0;" [])])
+#function("r1c0_u42;" [#function("v^i00F6Q02i00Ni00g0i00m02P2o005202g0;" [])])
 reverse
-#function("n1e0e1_f043;" [foldl cons])
+#function("r1e0e1_g043;" [foldl cons])
 revappend
-#function("n2e0e1f031f142;" [nconc reverse])
+#function("r2e0e1g031g142;" [nconc reverse])
 repl
-#function("n0c0^^q43;" [#function("rc0mj02c1mj12f1302e240;" [#function("n0e0c1312e2e3312c4c5mc6mpq42;" [princ "> " io.flush *output-stream* #function("re0e131@16H02c2e3f031q42;" [io.eof? *input-stream* #function("re0f0312f0i12];" [print that]) load-process]) #function("n0e040;" [read]) #function("n1e0e1312e2f041;" [io.discardbuffer *input-stream* raise])]) #function("n0c0mc1mp6G0e2302g0140;^;" [#function("n0g003016@02e040;" [newline]) #function("n1e0f041;" [print-exception]) newline]) newline])])
+#function("r0c0^^u43;" [#function("vc0qm02c1qm12g1302e240;" [#function("r0e0c1312e2e3312c4c5qc6qtu42;" [princ "> " io.flush *output-stream* #function("ve0e131@16H02c2e3g031u42;" [io.eof? *input-stream* #function("ve0g0312g0k12];" [print that]) load-process]) #function("r0e040;" [read]) #function("r1e0e1312e2g041;" [io.discardbuffer *input-stream* raise])]) #function("r0c0qc1qt6G0e2302i0140;^;" [#function("r0i003016@02e040;" [newline]) #function("r1e0g041;" [print-exception]) newline]) newline])])
 remainder
-#function("n2f0f0f1Vf1T2v;" [])
+#function("r2g0g0g1Vg1T2z;" [])
 ref-uint32-LE
-#function("n2e0f0f1`u[`32e0f0f1au[b832e0f0f1b2u[b@32e0f0f1b3u[bH32R4;" [ash])
+#function("r2e0g0g1`y[`32e0g0g1ay[b832e0g0g1b2y[b@32e0g0g1b3y[bH32R4;" [ash])
 ref-uint16-LE
-#function("n2e0f0f1`u[`32e0f0f1au[b832u;" [ash])
+#function("r2e0g0g1`y[`32e0g0g1ay[b832y;" [ash])
 random
-#function("n1e0f0316F0e1e230f042;e330f0T2;" [integer? mod rand rand.double])
+#function("r1e0g0316F0e1e230g042;e330g0T2;" [integer? mod rand rand.double])
 quote-value
-#function("n1e0f0316>0f0;c1f0L2;" [self-evaluating? quote])
+#function("r1e0g0316>0g0;c1g0L2;" [self-evaluating? quote])
 println
-#function("o0e0f0Q2e1302;" [print newline])
+#function("s0e0g0Q2e1302;" [print newline])
 print-to-string
-#function("n1c0e130q42;" [#function("re0f0g00322e1f041;" [io.print io.tostring!]) buffer])
+#function("r1c0e130u42;" [#function("ve0g0i00322e1g041;" [io.print io.tostring!]) buffer])
 print-exception
-#function("n1c0^^q43;" [#function("rc0mj02c1mj12g00F16[02g00Mc2<16[02e3g00b4326\x850f0c4e5g0031c6e7g0031c8352f1e9g0031315M1g00F16\x9f02g00Mc:<16\x9f02g00NF6\xb40f0c;e5g0031c<335M1g00F16\xc402g00Mc=<6\xd90f0c>312f0g00NQ25M1g00F16\xe902g00Mc?<6\x080e@e7g0031312f0cAe5g0031325M1eBg003116\x1d02e3g00b2326?1f1g00M312f0cC312cDe5g0031q325M1f0cE312f1g00312f0eF312];" [#function("o0e0e1f0t3;" [io.princ *error-stream*]) #function("o0e0e1f0t3;" [io.print *error-stream*]) type-error length= "type-error: " cadr ": expected " caddr ", got " cadddr unbound-error "unbound-error: eval: variable " " has no value" error "error: " load-error print-exception "in file " list? ": " #function("re0f03117?02f0C6H0g005K0g01f041;" [string?]) "*** Unhandled exception: " *linefeed*])])
+#function("r1c0^^u43;" [#function("vc0qm02c1qm12i00F16[02i00Mc2<16[02e3i00b4326\x850g0c4e5i0031c6e7i0031c8352g1e9i0031315M1i00F16\x9f02i00Mc:<16\x9f02i00NF6\xb40g0c;e5i0031c<335M1i00F16\xc402i00Mc=<6\xd90g0c>312g0i00NQ25M1i00F16\xe902i00Mc?<6\x080e@e7i0031312g0cAe5i0031325M1eBi003116\x1d02e3i00b2326?1g1i00M312g0cC312cDe5i0031u325M1g0cE312g1i00312g0eF312];" [#function("s0e0e1g0x3;" [io.princ *error-stream*]) #function("s0e0e1g0x3;" [io.print *error-stream*]) type-error length= "type-error: " cadr ": expected " caddr ", got " cadddr unbound-error "unbound-error: eval: variable " " has no value" error "error: " load-error print-exception "in file " list? ": " #function("ve0g03117?02g0C6H0i005K0i01g041;" [string?]) "*** Unhandled exception: " *linefeed*])])
 print
-#function("o0e0e1f0t3;" [io.print *output-stream*])
+#function("s0e0e1g0x3;" [io.print *output-stream*])
 princ
-#function("o0e0e1f0t3;" [io.princ *output-stream*])
+#function("s0e0e1g0x3;" [io.princ *output-stream*])
 positive?
-#function("n1e0f0`42;" [>])
+#function("r1e0g0`42;" [>])
 odd?
-#function("n1e0f031@;" [even?])
+#function("r1e0g031@;" [even?])
 nreconc
-#function("n2e0e1f031f142;" [nconc reverse!])
+#function("r2e0e1g031g142;" [nconc reverse!])
 newline
-#function("n0e0e1312];" [princ *linefeed*])
+#function("r0e0e1312];" [princ *linefeed*])
 nestlist
-#function("n3e0f2`326>0_;f1e1f0f0f131f2av33K;" [<= nestlist])
+#function("r3e0g2`326>0_;g1e1g0g0g131g2az33K;" [<= nestlist])
 negative?
-#function("n1f0`X;" [])
+#function("r1g0`X;" [])
 mod0
-#function("n2f0f0f1Vf1T2v;" [])
+#function("r2g0g0g1Vg1T2z;" [])
 mod
-#function("n2f0e0f0f132f1T2v;" [div])
+#function("r2g0e0g0g132g1T2z;" [div])
 memv
-#function("n2f1?6:0^;f1Mf0=6F0f1;e0f0f1N42;" [memv])
+#function("r2g1?6:0^;g1Mg0=6F0g1;e0g0g1N42;" [memv])
 member
-#function("n2f1?6:0^;f1Mf0>6F0f1;e0f0f1N42;" [member])
+#function("r2g1?6:0^;g1Mg0>6F0g1;e0g0g1N42;" [member])
 mark-label
-#function("n2e0f0e1f143;" [emit :label])
+#function("r2e0g0e1g143;" [emit :label])
 mapcar
-#function("o1g00f0f142;" [] #0=[#function("n2f1A6=0f040;f1M?6H0f1M;f0e0e1f132Q2g00f0e0e2f13232K;" [map car cdr] #0#) ()])
+#function("s1i00g0g142;" [] #0=[#function("r2g1A6=0g040;g1M?6H0g1M;g0e0e1g132Q2i00g0e0e2g13232K;" [map car cdr] #0#) ()])
 map-int
-#function("n2e0f1`326>0_;c1f0`31_K_q43;" [<= #function("rf0j12ag01avc0ms2f0;" [#function("n1g01g10f031_KP2g01Nk01;" [])])])
+#function("r2e0g1`326>0_;c1g0`31_K_u43;" [<= #function("vg0m12ai01azc0qw2g0;" [#function("r1i01i10g031_KP2i01No01;" [])])])
 map!
-#function("n2f1^f1F6O02f1f0f1M31O2f1Nj15502;" [])
+#function("r2g1^g1F6O02g1g0g1M31O2g1Nm15502;" [])
 map
-#function("n2f1?6;0f1;f0f1M31e0f0f1N32K;" [map])
+#function("r2g1?6;0g1;g0g1M31e0g0g1N32K;" [map])
 make-system-image
-#function("n1c0e1f0e2e3e434c5e6q44;" [#function("r^i02c1c2mq42;" [*print-pretty* #function("rc0mc1mpf0302;" [#function("n0e0c1me2e3e430313142;" [for-each #function("n1f0E16m02e0f031@16m02e1f031G@16m02e2f0g1132@16m02e3e1f03131@6\x9c0e4g10f0322e5g10c6322e4g10e1f031322e5g10c642;^;" [constant? top-level-value memq iostream? io.print io.write "\n"]) reverse! simple-sort environment]) #function("n1g00302e0f041;" [raise])]) #function("n0e0g00312g02i1;" [io.close *print-pretty*])]) file :write :create :truncate (*linefeed* *directory-separator* *argv* that *print-pretty* *print-width* *print-readably*) *print-pretty*])
+#function("r1c0e1g0e2e3e434c5e6u44;" [#function("v^k02c1c2qu42;" [*print-pretty* #function("vc0qc1qtg0302;" [#function("r0e0c1qe2e3e430313142;" [for-each #function("r1g0E16m02e0g031@16m02e1g031G@16m02e2g0i1132@16m02e3e1g03131@6\x9c0e4i10g0322e5i10c6322e4i10e1g031322e5i10c642;^;" [constant? top-level-value memq iostream? io.print io.write "\n"]) reverse! simple-sort environment]) #function("r1i00302e0g041;" [raise])]) #function("r0e0i00312i02k1;" [io.close *print-pretty*])]) file :write :create :truncate (*linefeed* *directory-separator* *argv* that *print-pretty* *print-width* *print-readably*) *print-pretty*])
 make-label
-#function("n1e040;" [gensym])
+#function("r1e040;" [gensym])
 make-code-emitter
-#function("n0_e030`Z3;" [table])
+#function("r0_e030`Z3;" [table])
 macroexpand-1
-#function("n1f0?6;0f0;c0e1f031q42;" [#function("rf06?0f0g00Nt2;g00;" []) macrocall?])
+#function("r1g0?6;0g0;c0e1g031u42;" [#function("vg06?0g0i00Nx2;i00;" []) macrocall?])
 macroexpand
-#function("n1c0^^q43;" [#function("rc0mj02c1mj12f1g00_42;" [#function("n2c0e1f031F6]0e2f031F6T0c3e1f031K5Z0e4f0315^0^q42;" [#function("rc0e1f031g11f0g0132q43;" [#function("re0c1e2g1031f0A6G0f15Y0c1f0f1L3e3c4mf032Ke5g103144;" [list* lambda cadr map #function("n1^;" []) lastcdr]) get-defined-vars]) cddr cdddr begin caddr]) #function("n2f0?6;0f0;c0e1f0Mf132q42;" [#function("rf06N0g11e0f031g00NQ2e1f03142;c2e3g0031q42;" [cadr caddr #function("rf06G0g21f0g10NQ2g1142;g10Mc0<6U0g10;g10Mc1<6k0g20g10g1142;g10Mc2<6\x9a0c3e4g1031e5c1L1_L1e6e7g10313133L1q43;e8c9mg1042;" [quote lambda let-syntax #function("rg31f1e0e1c2mf032g213242;" [nconc map #function("n1f0Mg41e0f031g3132g31L3;" [cadr])]) cadr nconc copy-list cddr map #function("n1g31f0g2142;" [])]) macrocall?]) assq])])])
+#function("r1c0^^u43;" [#function("vc0qm02c1qm12g1i00_42;" [#function("r2c0e1g031F6]0e2g031F6T0c3e1g031K5Z0e4g0315^0^u42;" [#function("vc0e1g031i11g0i0132u43;" [#function("ve0c1e2i1031g0A6G0g15Y0c1g0g1L3e3c4qg032Ke5i103144;" [list* lambda cadr map #function("r1^;" []) lastcdr]) get-defined-vars]) cddr cdddr begin caddr]) #function("r2g0?6;0g0;c0e1g0Mg132u42;" [#function("vg06N0i11e0g031i00NQ2e1g03142;c2e3i0031u42;" [cadr caddr #function("vg06G0i21g0i10NQ2i1142;i10Mc0<6U0i10;i10Mc1<6k0i20i10i1142;i10Mc2<6\x9a0c3e4i1031e5c1L1_L1e6e7i10313133L1u43;e8c9qi1042;" [quote lambda let-syntax #function("vi31g1e0e1c2qg032i213242;" [nconc map #function("r1g0Mi41e0g031i3132i31L3;" [cadr])]) cadr nconc copy-list cddr map #function("r1i31g0i2142;" [])]) macrocall?]) assq])])])
 macrocall?
-#function("n1f0MC16E02e0e1f0M^43;" [get *syntax-environment*])
+#function("r1g0MC16E02e0e1g0M^43;" [get *syntax-environment*])
 lookup-sym
-#function("n4f1A6;0c0;c1f1Mq42;" [(global) #function("rc0e1g00f0`33q42;" [#function("rf06M0g136C0c0f0L2;c1g12f0L3;e2g10g11Ng1317b02g00A6k0g125p0g12au^44;" [arg closed lookup-sym]) index-of])])
+#function("r4g1A6;0c0;c1g1Mu42;" [(global) #function("vc0e1i00g0`33u42;" [#function("vg06M0i136C0c0g0L2;c1i12g0L3;e2i10i11Ni1317b02i00A6k0i125p0i12ay^44;" [arg closed lookup-sym]) index-of])])
 load-process
-#function("n1e0f041;" [eval])
+#function("r1e0g041;" [eval])
 load
-#function("n1c0e1f0e232q42;" [#function("rc0mc1mp;" [#function("n0c0^q32^^^43;" [#function("rc0mj0;" [#function("n3e0g1031@6R0g00e1g1031f0e2f13143;e3g10312e2f141;" [io.eof? read load-process io.close])])]) #function("n1e0g00312e1c2g10f0L341;" [io.close raise load-error])]) file :read])
+#function("r1c0e1g0e232u42;" [#function("vc0qc1qt;" [#function("r0c0^u32^^^43;" [#function("vc0qm0;" [#function("r3e0i1031@6R0i00e1i1031g0e2g13143;e3i10312e2g141;" [io.eof? read load-process io.close])])]) #function("r1e0i00312e1c2i10g0L341;" [io.close raise load-error])]) file :read])
 list?
-#function("n1f0A17I02f0F16I02e0f0N41;" [list?])
+#function("r1g0A17I02g0F16I02e0g0N41;" [list?])
 list-tail
-#function("n2e0f1`326?0f0;e1f0Nf1av42;" [<= list-tail])
+#function("r2e0g1`326?0g0;e1g0Ng1az42;" [<= list-tail])
 list-ref
-#function("n2e0f0f132M;" [list-tail])
+#function("r2e0g0g132M;" [list-tail])
 list-partition
-#function("n2c0^q42;" [#function("rc0mj02e1g01`326I0e2c341;e4f0g00g01`__3541;" [#function("n5f0?6O0e0f2`326L0e1f331f4K;f4;e2f2f1326o0g00f0f1`_e1f331f4K45;g00f0Nf1af2uf0Mf3Kf445;" [> reverse! >=]) <= error "list-partition: invalid count" reverse!])])
+#function("r2c0^u42;" [#function("vc0qm02e1i01`326I0e2c341;e4g0i00i01`__3541;" [#function("r5g0?6O0e0g2`326L0e1g331g4K;g4;e2g2g1326o0i00g0g1`_e1g331g4K45;i00g0Ng1ag2yg0Mg3Kg445;" [> reverse! >=]) <= error "list-partition: invalid count" reverse!])])
 list-head
-#function("n2e0f1`326>0_;f0Me1f0Nf1av32K;" [<= list-head])
+#function("r2e0g1`326>0_;g0Me1g0Ng1az32K;" [<= list-head])
 list->vector
-#function("n1e0f0t2;" [vector])
+#function("r1e0g0x2;" [vector])
 length>
-#function("n2f1`X6<0f0;f1`W6N0f0F16M02f0;f0A6Y0f1`X;e0f0Nf1av42;" [length>])
+#function("r2g1`X6<0g0;g1`W6N0g0F16M02g0;g0?6Y0g1`X;e0g0Ng1az42;" [length>])
 length=
-#function("n2f1`X6;0^;f1`W6F0f0A;f0A6Q0f1`W;e0f0Nf1av42;" [length=])
+#function("r2g1`X6;0^;g1`W6F0g0?;g0?6Q0g1`W;e0g0Ng1az42;" [length=])
 lastcdr
-#function("n1f0?6;0f0;e0f031N;" [last-pair])
+#function("r1g0?6;0g0;e0g031N;" [last-pair])
 last-pair
-#function("n1f0N?6<0f0;e0f0N41;" [last-pair])
+#function("r1g0N?6<0g0;e0g0N41;" [last-pair])
 just-compile-args
-#function("n3e0c1mf142;" [for-each #function("n1e0g00g02^f044;" [compile-in])])
+#function("r3e0c1qg142;" [for-each #function("r1e0i00i02^g044;" [compile-in])])
 iota
-#function("n1e0e1f042;" [map-int identity])
+#function("r1e0e1g042;" [map-int identity])
 io.readline
-#function("n1e0f0c142;" [io.readuntil #\x000a])
+#function("r1e0g0c142;" [io.readuntil #\x000a])
 index-of
-#function("n3f1A6:0^;f0f1M<6F0f2;e0f0f1Nf2au43;" [index-of])
+#function("r3g1A6:0^;g0g1M<6F0g2;e0g0g1Ng2ay43;" [index-of])
 in-env?
-#function("n2e0c1mf142;" [any #function("n1e0g00f042;" [memq])])
+#function("r2e0c1qg142;" [any #function("r1e0i00g042;" [memq])])
 identity
-#function("n1f0;" [])
+#function("r1g0;" [])
 hex5
-#function("n1e0e1f0b@32b5c243;" [string.lpad number->string #\0])
+#function("r1e0e1g0b@32b5c243;" [string.lpad number->string #\0])
 get-defined-vars
-#function("n1e0g00f03141;" [delete-duplicates] #0=[#function("n1f0?6:0_;f0Mc0<16I02f0NF6\x8c0e1f031C16`02e1f031L117\x8b02e1f031F16\x8502e2f031C16\x8502e2f031L117\x8b02_;f0Mc3<6\xa40e4e5g00f0N32t2;_;" [define cadr caadr begin append map] #0#) ()])
+#function("r1e0i00g03141;" [delete-duplicates] #0=[#function("r1g0?6:0_;g0Mc0<16I02g0NF6\x8c0e1g031C16`02e1g031L117\x8b02e1g031F16\x8502e2g031C16\x8502e2g031L117\x8b02_;g0Mc3<6\xa40e4e5i00g0N32x2;_;" [define cadr caadr begin append map] #0#) ()])
 for-each
-#function("n2f1F6J0f0f1M312e0f0f1N42;];" [for-each])
+#function("r2g1F6J0g0g1M312e0g0g1N42;];" [for-each])
 foldr
-#function("n3f2A6;0f1;f0f2Me0f0f1f2N3342;" [foldr])
+#function("r3g2A6;0g1;g0g2Me0g0g1g2N3342;" [foldr])
 foldl
-#function("n3f2A6;0f1;e0f0f0f2Mf132f2N43;" [foldl])
+#function("r3g2A6;0g1;e0g0g0g2Mg132g2N43;" [foldl])
 fits-i8
-#function("n1f0I16O02e0f0b\xb03216O02e1f0b\xaf42;" [>= <=])
+#function("r1g0I16O02e0g0b\xb03216O02e1g0b\xaf42;" [>= <=])
 filter
-#function("n2g00f0f1_43;" [] #0=[#function("n3f1A6;0f2;f0f1M316V0g00f0f1Nf1Mf2K43;g00f0f1Nf243;" [] #0#) ()])
+#function("r2i00g0g1_43;" [] #0=[#function("r3g1A6;0g2;g0g1M316V0i00g0g1Ng1Mg2K43;i00g0g1Ng243;" [] #0#) ()])
 expand
-#function("n1e0f041;" [macroexpand])
+#function("r1e0g041;" [macroexpand])
 every
-#function("n2f1?17O02f0f1M3116O02e0f0f1N42;" [every])
+#function("r2g1?17O02g0g1M3116O02e0g0g1N42;" [every])
 even?
-#function("n1e0f0a32`W;" [logand])
+#function("r1e0g0a32`W;" [logand])
 eval
-#function("n1e0e1f0313140;" [compile-thunk expand])
+#function("r1e0e1g0313140;" [compile-thunk expand])
 error
-#function("o0e0c1f0K41;" [raise error])
+#function("s0e0c1g0K41;" [raise error])
 encode-byte-code
-#function("n1c0e1f031q42;" [#function("rc0e1e2f031b3e3c4mf032T2uc532q42;" [#function("rc0e1g0031q42;" [#function("rc0e1f031`e230e230e330^q47;" [#function("r^f1f0X6\xbc02g00f1[j52f5e0<6k0e1f2g00f1au[e2f431332f1b2uj15\xb90e3f4e4e5e6g1016\x8502e7f5c8326\x920c9f5q325\x940f53231322f1auj12f1f0X6\xb80c:g00f1[q325\xb90^5202e;c<mf3322e=f441;" [:label put! sizeof io.write byte get Instructions memq (:jmp :brt :brf) #function("rf0e0=6<0e1;f0e2=6G0e3;f0e4=6R0e5;^;" [:jmp :jmp.l :brt :brt.l :brf :brf.l]) #function("rc0g05q42;" [#function("re0f0c1326T0e2g14e3g0031322g11auk11;e0f0c4326w0e2g14e5g0031322g11auk11;e0f0c6326\xb60e2g14e5g0031322g11auk112e2g14e5g20g11[31322g11auk11;e0f0c7326\xf40e8g13e9g1431g00332e2g14g306\xe30e35\xe50e:`31322g11auk11;^;" [memv (:loadv.l :loadg.l :setg.l) io.write uint32 (:loada :seta :call :tcall :loadv :loadg :setg :list :+ :- :* :/ :vector :argc :vargc :loadi8 :apply :tapply) uint8 (:loadc :setc) (:jmp :brf :brt) put! sizeof uint16])]) table.foreach #function("n2e0g04f0322e1g04g206L0e25N0e3e4g02f1323142;" [io.seek io.write uint32 uint16 get]) io.tostring!]) length table buffer]) list->vector]) >= length count #function("n1e0f0c142;" [memq (:loadv :loadg :setg :jmp :brt :brf)]) 65536]) reverse!])
+#function("r1c0e1g031u42;" [#function("vc0e1g031u42;" [#function("vc0e1e2g031b3e3c4qi0032T2yc532u42;" [#function("vc0e1i0031`e230e230e330^u47;" [#function("v^g1g0X6\xbc02i10g1[m52g5e0<6k0e1g2i10g1ay[e2g431332g1b2ym15\xb90e3g4e4e5e6i0016\x8502e7g5c8326\x920c9g5u325\x940g53231322g1aym12g1g0X6\xb80c:i10g1[u325\xb90^5202e;c<qg3322e=g441;" [:label put! sizeof io.write byte get Instructions memq (:jmp :brt :brf) #function("vg0e0=6<0e1;g0e2=6G0e3;g0e4=6R0e5;^;" [:jmp :jmp.l :brt :brt.l :brf :brf.l]) #function("vc0i05u42;" [#function("ve0g0c1326T0e2i14e3i0031322i11ayo11;e0g0c4326w0e2i14e5i0031322i11ayo11;e0g0c6326\xb60e2i14e5i0031322i11ayo112e2i14e5i30i11[31322i11ayo11;e0g0c7326\xf50e2i14e3i0031322i11ayo112e2i14e3i30i11[31322i11ayo11;e0g0c832631e9i13e:i1431i00332e2i14i206\"0e35$0e;`31322i11ayo11;^;" [memv (:loadv.l :loadg.l :setg.l :loada.l :seta.l :largc :lvargc) io.write uint32 (:loada :seta :call :tcall :loadv :loadg :setg :list :+ :- :* :/ :vector :argc :vargc :loadi8 :apply :tapply) uint8 (:loadc :setc) (:loadc.l :setc.l) (:jmp :brf :brt) put! sizeof uint16])]) table.foreach #function("r2e0i04g0322e1i04i106L0e25N0e3e4i02g1323142;" [io.seek io.write uint32 uint16 get]) io.tostring!]) length table buffer]) >= length count #function("r1e0g0c142;" [memq (:loadv.l :loadg.l :setg.l :loada.l :seta.l :loadc.l :setc.l :jmp :brt :brf :largc :lvargc)]) 65536]) list->vector]) reverse!])
 emit
-#function("o2e0f1c1326I0c2f0a[q325J0^2f0`e3f1f2Kf0`[32\\2f0;" [memq (:loadv :loadg :setg) #function("rc0g00b2[q42;" [#function("rc0g12Mq42;" [#function("rc0e1g10f0326K0e2g10f0325f0e3g10f0g00332g00auk002g00avq42;" [#function("rg30b2g10\\2f0L1k322e0f0c1326Z0c2g31q32k31;^;" [>= 256 #function("rf0e0=6<0e1;f0e2=6G0e3;f0e4=6R0e5;^;" [:loadv :loadv.l :loadg :loadg.l :setg :setg.l])]) has? get put!])])]) nreconc])
+#function("s2e0g1c1326M0e2g0g2M32L1m25N0^2c3e4g1c532u322c6e4g1c732u322g0`e8g1g2Kg0`[32\\2g0;" [memq (:loadv :loadg :setg) bcode:indexfor #function("vg016B02e0i02Mc1326O0e2g031o01;^;" [> 255 cadr]) assq ((:loadv :loadv.l) (:loadg :loadg.l) (:setg :setg.l) (:loada :loada.l) (:seta :seta.l)) #function("vg016T02e0i02Mc13217T02e0e2i0231c1326a0e2g031o01;^;" [> 255 cadr]) ((:loadc :loadc.l) (:setc :setc.l)) nreconc])
 div
-#function("n2f0f1Vf0`X16Q02f1`X16J02a17Q02b/17W02`u;" [])
+#function("r2g0g1Vg0`X16Q02g1`X16J02a17Q02b/17W02`y;" [])
 display
-#function("n1e0f0312];" [princ])
+#function("r1e0g0312];" [princ])
 disassemble
-#function("o1f1A6J0e0f0`322e1302];5K0^2c2f1Me3f031e4f031q44;" [disassemble newline #function("rc0^q42;" [#function("rc0mj02c1`e2g0131q43;" [#function("n1f0J16>02f0G@6T0e0c1312e2f0g10au42;e3f041;" [princ "\n" disassemble print]) #function("r^f0f1X6M02c0e1c2m^e333q32520;" [#function("re0g00`326C0e1305D0^2`g20avc2ms2e3e4g0031c5e6e7f031a32c8342g00auk002c9f0q42;" [> newline #function("n1e0c141;" [princ "\t"]) princ hex5 ":  " string.tail string "\t" #function("re0f0c1326Z0g20g32e2g31g1032[312g10b4uk10;e0f0c3326\x7f0g20g32g31g10[[312g10auk10;e0f0c4326\xa30e5e6g31g10[31312g10auk10;e0f0c7326\xe20e5e6g31g10[31c8322g10auk102e5e6g31g10[31312g10auk10;e0f0c9326\x0c0e5c:e;e<g31g103231322g10b2uk10;e0f0c=32661e5c:e;e2g31g103231322g10b4uk10;^;" [memv (:loadv.l :loadg.l :setg.l) ref-uint32-LE (:loadv :loadg :setg) (:loada :seta :call :tcall :list :+ :- :* :/ :vector :argc :vargc :loadi8 :apply :tapply) princ number->string (:loadc :setc) " " (:jmp :brf :brt) "@" hex5 ref-uint16-LE (:jmp.l :brf.l :brt.l)])]) table.foldl #function("n3f217J02f1g21g00[<16J02f0;" []) Instructions]) length])]) function:code function:vals])
+#function("s1g1A6J0e0g0`322e1302];5K0^2c2g1Me3g031e4g031u44;" [disassemble newline #function("vc0^u42;" [#function("vc0qm02c1`e2i0131u43;" [#function("r1g0J16>02g0G@6T0e0c1312e2g0i10ay42;e3g041;" [princ "\n" disassemble print]) #function("v^g0g1X6M02c0e1c2q^e333u32520;" [#function("ve0i00`326C0e1305D0^2`i20azc2qw2e3e4i0031c5e6e7g031a32c8342i00ayo002c9g0u42;" [> newline #function("r1e0c141;" [princ "\t"]) princ hex5 ":  " string.tail string "\t" #function("ve0g0c1326Z0i20i32e2i31i1032[312i10b4yo10;e0g0c3326\x7f0i20i32i31i10[[312i10ayo10;e0g0c4326\xa30e5e6i31i10[31312i10ayo10;e0g0c7326\xcb0e5e6e2i31i103231312i10b4yo10;e0g0c8326\x0a0e5e6i31i10[31c9322i10ayo102e5e6i31i10[31312i10ayo10;e0g0c:326Q1e5e6e2i31i103231c9322i10b4yo102e5e6e2i31i103231312i10b4yo10;e0g0c;326{1e5c<e=e>i31i103231322i10b2yo10;e0g0c?326\xa51e5c<e=e2i31i103231322i10b4yo10;^;" [memv (:loadv.l :loadg.l :setg.l) ref-uint32-LE (:loadv :loadg :setg) (:loada :seta :call :tcall :list :+ :- :* :/ :vector :argc :vargc :loadi8 :apply :tapply) princ number->string (:loada.l :seta.l :largc :lvargc) (:loadc :setc) " " (:loadc.l :setc.l) (:jmp :brf :brt) "@" hex5 ref-uint16-LE (:jmp.l :brf.l :brt.l)])]) table.foldl #function("r3g217J02g1i21i00[<16J02g0;" []) Instructions]) length])]) function:code function:vals])
 delete-duplicates
-#function("n1f0?6;0f0;c0f0Mf0Nq43;" [#function("re0f0f1326C0e1f141;f0e1f131K;" [member delete-duplicates])])
+#function("r1g0?6;0g0;c0g0Mg0Nu43;" [#function("ve0g0g1326C0e1g141;g0e1g131K;" [member delete-duplicates])])
 count
-#function("n2c0^q42;" [#function("rc0mj02f0g00g01`43;" [#function("n3f1A6;0f2;g00f0f1Nf0f1M316T0f2au5V0f243;" [])])])
+#function("r2c0^u42;" [#function("vc0qm02g0i00i01`43;" [#function("r3g1A6;0g2;i00g0g1Ng0g1M316T0g2ay5V0g243;" [])])])
 copy-tree
-#function("n1f0?6;0f0;e0f0M31e0f0N31K;" [copy-tree])
+#function("r1g0?6;0g0;e0g0M31e0g0N31K;" [copy-tree])
 const-to-idx-vec
-#function("n1c0e1f0b2[31q42;" [#function("re0c1mg00a[322f0;" [table.foreach #function("n2g00f1f0\\;" [])]) vector.alloc])
+#function("r1c0e1e2g03131u42;" [#function("ve0c1qe2i0031322g0;" [table.foreach #function("r2i00g1g0\\;" []) bcode:ctable]) vector.alloc bcode:nconst])
 compile-while
-#function("n4c0e1f031e1f031q43;" [#function("re0g00g01^^342e1g00f0322e0g00g01^g02342e2g00e3f1332e2g00e4322e0g00g01^g03342e2g00e5f0332e1g00f142;" [compile-in mark-label emit :brf :pop :jmp]) make-label])
+#function("r4c0e1g031e1g031u43;" [#function("ve0i00i01^^342e1i00g0322e0i00i01^i02342e2i00e3g1332e2i00e4322e0i00i01^i03342e2i00e5g0332e1i00g142;" [compile-in mark-label emit :brf :pop :jmp]) make-label])
 compile-thunk
-#function("n1e0c1_f0L341;" [compile lambda])
+#function("r1e0c1_g0L341;" [compile lambda])
 compile-sym
-#function("n4c0e1f2f1`]34q42;" [#function("rc0f0Mq42;" [#function("rf0c0=6M0e1g10g13`[e2g003143;f0c3=6p0e1g10g13a[e2g0031e4g003144;e1g10g13b2[g1243;" [arg emit cadr closed caddr])]) lookup-sym])
+#function("r4c0e1g2g1`]34u42;" [#function("vc0g0Mu42;" [#function("vg0c0=6M0e1i10i13`[e2i003143;g0c3=6p0e1i10i13a[e2i0031e4i003144;e1i10i13b2[i1243;" [arg emit cadr closed caddr])]) lookup-sym])
 compile-short-circuit
-#function("n6f3?6E0e0f0f1f2f444;f3N?6Z0e0f0f1f2f3M44;c1e2f031q42;" [compile-in #function("re0g00g01^g03M342e1g00e2322e1g00g05f0332e1g00e3322e4g00g01g02g03Ng04g05362e5g00f042;" [compile-in emit :dup :pop compile-short-circuit mark-label]) make-label])
+#function("r6g3?6E0e0g0g1g2g444;g3N?6Z0e0g0g1g2g3M44;c1e2g031u42;" [compile-in #function("ve0i00i01^i03M342e1i00e2322e1i00i05g0332e1i00e3322e4i00i01i02i03Ni04i05362e5i00g042;" [compile-in emit :dup :pop compile-short-circuit mark-label]) make-label])
 compile-prog1
-#function("n3e0f0f1^e1f231342e2f231F6e0e3f0f1^e2f231342e4f0e542;^;" [compile-in cadr cddr compile-begin emit :pop])
+#function("r3e0g0g1^e1g231342e2g231F6e0e3g0g1^e2g231342e4g0e542;^;" [compile-in cadr cddr compile-begin emit :pop])
 compile-or
-#function("n4e0f0f1f2f3^e146;" [compile-short-circuit :brt])
+#function("r4e0g0g1g2g3^e146;" [compile-short-circuit :brt])
 compile-let
-#function("n4c0f3Mf3Nq43;" [#function("re0f1e1e2f03131326H0^5T0e3e4c5f032312e6g00e7e8g01f0]33332c9e:g00g01f133q42;" [length= length cadr error string "apply: incorrect number of arguments to " emit :loadv compile-f #function("re0g10e1322e0g10g126K0e25M0e3af0u43;" [emit :copyenv :tcall :call]) compile-arglist])])
+#function("r4c0g3Mg3Nu43;" [#function("ve0g1e1e2g03131326H0^5T0e3e4c5g032312e6i00e7e8i01g0]33332c9e:i00i01g133u42;" [length= length cadr error string "apply: incorrect number of arguments to " emit :loadv compile-f #function("ve0i10e1322e0i10i126K0e25M0e3ag0y43;" [emit :copyenv :tcall :call]) compile-arglist])])
 compile-in
-#function("n4f3C6E0e0f0f1f3c144;f3?6\xba0f3`<6[0e2f0e342;f3a<6k0e2f0e442;f3]<6{0e2f0e542;f3^<6\x8b0e2f0e642;f3_<6\x9b0e2f0e742;e8f3316\xaf0e2f0e9f343;e2f0e:f343;c;f3Mq42;" [compile-sym [:loada :loadc :loadg] emit :load0 :load1 :loadt :loadf :loadnil fits-i8 :loadi8 :loadv #function("rf0c0=6J0e1g00e2e3g033143;f0c4=6c0e5g00g01g02g0344;f0c6=6}0e7g00g01g02g03N44;f0c8=6\x930e9g00g01g0343;f0c:=6\xb90e1g00e2e;g01g0332332e1g00e<42;f0c==6\xd30e>g00g01g02g03N44;f0c?=6\xed0e@g00g01g02g03N44;f0cA=6\x110eBg00g01e3g0331c6eCg0331K44;f0cD=691eEg00g01e3g0331eFg0331eGg033145;f0cH=6^1eIg00g01]e3g0331342e1g00eJ42;f0cK=6\x8d1eIg00g01^eFg0331342eLg00g01e3g0331cM44;f0cN=6\xe31eIg00g01^c:_e3g0331L3342eOeFg0331316\xbf1^5\xc51ePcQ312eIg00g01^eFg0331342e1g00eR42;eSg00g01g02g0344;" [quote emit :loadv cadr if compile-if begin compile-begin prog1 compile-prog1 lambda compile-f :closure and compile-and or compile-or while compile-while cddr for compile-for caddr cadddr return compile-in :ret set! compile-sym [:seta :setc :setg] trycatch 1arg-lambda? error "trycatch: second form must be a 1-argument lambda" :trycatch compile-app])])
+#function("r4g3C6E0e0g0g1g3c144;g3?6\xba0g3`<6[0e2g0e342;g3a<6k0e2g0e442;g3]<6{0e2g0e542;g3^<6\x8b0e2g0e642;g3_<6\x9b0e2g0e742;e8g3316\xaf0e2g0e9g343;e2g0e:g343;c;g3Mu42;" [compile-sym [:loada :loadc :loadg] emit :load0 :load1 :loadt :loadf :loadnil fits-i8 :loadi8 :loadv #function("vg0c0=6J0e1i00e2e3i033143;g0c4=6c0e5i00i01i02i0344;g0c6=6}0e7i00i01i02i03N44;g0c8=6\x930e9i00i01i0343;g0c:=6\xb90e1i00e2e;i01i0332332e1i00e<42;g0c==6\xd30e>i00i01i02i03N44;g0c?=6\xed0e@i00i01i02i03N44;g0cA=6\x110eBi00i01e3i0331c6eCi0331K44;g0cD=691eEi00i01e3i0331eFi0331eGi033145;g0cH=6^1eIi00i01]e3i0331342e1i00eJ42;g0cK=6\x8d1eIi00i01^eFi0331342eLi00i01e3i0331cM44;g0cN=6\xe31eIi00i01^c:_e3i0331L3342eOeFi0331316\xbf1^5\xc51ePcQ312eIi00i01^eFi0331342e1i00eR42;eSi00i01i02i0344;" [quote emit :loadv cadr if compile-if begin compile-begin prog1 compile-prog1 lambda compile-f :closure and compile-and or compile-or while compile-while cddr for compile-for caddr cadddr return compile-in :ret set! compile-sym [:seta :setc :setg] trycatch 1arg-lambda? error "trycatch: second form must be a 1-argument lambda" :trycatch compile-app])])
 compile-if
-#function("n4c0e1f031e1f031e2f331e3f331e4f331F6_0e5f3315`0^q46;" [#function("rf2]<6H0e0g00g01g02f344;f2^<6_0e0g00g01g02f444;e0g00g01^f2342e1g00e2f0332e0g00g01g02f3342g026\x9b0e1g00e3325\xa60e1g00e4f1332e5g00f0322e0g00g01g02f4342e5g00f142;" [compile-in emit :brf :ret :jmp mark-label]) make-label cadr caddr cdddr cadddr])
+#function("r4c0e1g031e1g031e2g331e3g331e4g331F6_0e5g3315`0^u46;" [#function("vg2]<6H0e0i00i01i02g344;g2^<6_0e0i00i01i02g444;e0i00i01^g2342e1i00e2g0332e0i00i01i02g3342i026\x9b0e1i00e3325\xa60e1i00e4g1332e5i00g0322e0i00i01i02g4342e5i00g142;" [compile-in emit :brf :ret :jmp mark-label]) make-label cadr caddr cdddr cadddr])
 compile-for
-#function("n5e0f4316h0e1f0f1^f2342e1f0f1^f3342e1f0f1^f4342e2f0e342;e4c541;" [1arg-lambda? compile-in emit :for error "for: third form must be a 1-argument lambda"])
+#function("r5e0g4316h0e1g0g1^g2342e1g0g1^g3342e1g0g1^g4342e2g0e342;e4c541;" [1arg-lambda? compile-in emit :for error "for: third form must be a 1-argument lambda"])
 compile-f
-#function("o2c0e130e2f131q43;" [#function("rg02A@6D0e0f0e1325w0e2f131A6_0e0f0e3e4f131335w0e0f0e5f1?6o0`5u0e4f131332e6f0e7f131g00K]e8g0131342e0f0e9322e:e;f0`[31e<f03142;" [emit :let lastcdr :argc length :vargc compile-in to-proper caddr :ret function encode-byte-code const-to-idx-vec]) make-code-emitter cadr])
+#function("s2c0e130e2g131u43;" [#function("vi02A@6D0e0g0e1325\xa20e2g1e3326o0e0g0e4g131A6b0e55d0e6e7g131335\xa20e4g131A6\x8a0e0g0e8e7g131335\xa20e0g0e9g1?6\x9a0`5\xa00e7g131332e:g0e;g131i00K]e<i0131342e0g0e=322e>e?e@g03131eAg03142;" [emit :let length> MAX_ARGS lastcdr :largc :lvargc length :argc :vargc compile-in to-proper caddr :ret function encode-byte-code bcode:code const-to-idx-vec]) make-code-emitter cadr])
 compile-call
-#function("n4c0f3Mq42;" [#function("rc0f0C16d02e1f0g0132@16d02f0E16d02e2f03116d02e3f031G6p0e3f0315r0f0q42;" [#function("rc0f0G16A02e1f031q42;" [#function("rf0@6H0e0g20g21^g00345I0^2c1e2g20g21g23N33q42;" [compile-in #function("rg006G0c0e1e2g00^33q42;e3g30g326W0e45Y0e5f043;" [#function("rf016C02e0g43Nf032@6R0e1g20f0325S0^2c2g10q42;" [length= argc-error #function("rf0e0=6Y0g10`W6K0e1g50e242;e1g50g20g1043;f0e3=6\x940g10`W6s0e1g50e442;g10b2W6\x860e1g50e542;e1g50g20g1043;f0e6=6\xe00g10`W6\xad0e7g30a42;g10aW6\xbf0e1g50e842;g10b2W6\xd20e1g50e942;e1g50g20g1043;f0e:=6\x080g10`W6\xfa0e1g50e;42;e1g50g20g1043;f0e<=6/0g10`W6!0e7g30a42;e1g50g20g1043;f0e==6Y1g10`W6K1e1g50e>c?43;e1g50g20g1043;f0e@=6\x8c1g10b2X6t1e7g30b242;e1g50g526\x841eA5\x861e@g1043;e1g50g2042;" [:list emit :loadnil :+ :load0 :add2 :- argc-error :neg :sub2 :* :load1 :/ :vector :loadv [] :apply :tapply])]) get arg-counts emit :tcall :call]) compile-arglist]) builtin->instruction]) in-env? constant? top-level-value])])
+#function("r4c0g3Mu42;" [#function("vc0g0C16d02e1g0i0132@16d02g0E16d02e2g03116d02e3g031G6p0e3g0315r0g0u42;" [#function("vc0g0G16A02e1g031u42;" [#function("vg0@6H0e0i20i21^i00345I0^2c1e2i20i21i23N33u42;" [compile-in #function("vi006G0c0e1e2i00^33u42;e3i30i326W0e45Y0e5g043;" [#function("vg016C02e0i43Ng032@6R0e1i20g0325S0^2c2i10u42;" [length= argc-error #function("vg0e0=6Y0i10`W6K0e1i50e242;e1i50i20i1043;g0e3=6\x940i10`W6s0e1i50e442;i10b2W6\x860e1i50e542;e1i50i20i1043;g0e6=6\xe00i10`W6\xad0e7i30a42;i10aW6\xbf0e1i50e842;i10b2W6\xd20e1i50e942;e1i50i20i1043;g0e:=6\x080i10`W6\xfa0e1i50e;42;e1i50i20i1043;g0e<=6/0i10`W6!0e7i30a42;e1i50i20i1043;g0e==6Y1i10`W6K1e1i50e>c?43;e1i50i20i1043;g0e@=6\x8c1i10b2X6t1e7i30b242;e1i50i526\x841eA5\x861e@i1043;e1i50i2042;" [:list emit :loadnil :+ :load0 :add2 :- argc-error :neg :sub2 :* :load1 :/ :vector :loadv [] :apply :tapply])]) get arg-counts emit :tcall :call]) compile-arglist]) builtin->instruction]) in-env? constant? top-level-value])])
 compile-begin
-#function("n4f3?6D0e0f0f1f2^44;f3N?6Y0e0f0f1f2f3M44;e0f0f1^f3M342e1f0e2322e3f0f1f2f3N44;" [compile-in emit :pop compile-begin])
+#function("r4g3?6D0e0g0g1g2^44;g3N?6Y0e0g0g1g2g3M44;e0g0g1^g3M342e1g0e2322e3g0g1g2g3N44;" [compile-in emit :pop compile-begin])
 compile-arglist
-#function("n3c0e1f2e232q42;" [#function("rf06g0e0g00e1g02e232g01332c3e4e5c6me7f0e23232Kq322e2au;e0g00g02g01332e8g0241;" [just-compile-args list-head MAX_ARGS #function("re0g10g11^f044;" [compile-in]) nconc map #function("n1e0f0K;" [list]) list-partition length]) length> MAX_ARGS])
+#function("r3c0e1g2e232u42;" [#function("vg06g0e0i00e1i02e232i01332c3e4e5c6qe7g0e23232Ku322e2ay;e0i00i02i01332e8i0241;" [just-compile-args list-head MAX_ARGS #function("ve0i10i11^g044;" [compile-in]) nconc map #function("r1e0g0K;" [list]) list-partition length]) length> MAX_ARGS])
 compile-app
-#function("n4c0f3Mq42;" [#function("rf0F16N02f0Mc0<16N02e1e2f031316b0e3g00g01g02g0344;e4g00g01g02g0344;" [lambda list? cadr compile-let compile-call])])
+#function("r4c0g3Mu42;" [#function("vg0F16`02g0Mc0<16`02e1e2g0313116`02e3e2g031e432@6t0e5i00i01i02i0344;e6i00i01i02i0344;" [lambda list? cadr length> MAX_ARGS compile-let compile-call])])
 compile-and
-#function("n4e0f0f1f2f3]e146;" [compile-short-circuit :brf])
+#function("r4e0g0g1g2g3]e146;" [compile-short-circuit :brf])
 compile
-#function("n1e0_f042;" [compile-f])
+#function("r1e0_g042;" [compile-f])
 char?
-#function("n1e0f031c1<;" [typeof wchar])
+#function("r1e0g031c1<;" [typeof wchar])
 cddr
-#function("n1f0NN;" [])
+#function("r1g0NN;" [])
 cdddr
-#function("n1f0NNN;" [])
+#function("r1g0NNN;" [])
 cddar
-#function("n1f0MNN;" [])
+#function("r1g0MNN;" [])
 cdar
-#function("n1f0MN;" [])
+#function("r1g0MN;" [])
 cdadr
-#function("n1f0NMN;" [])
+#function("r1g0NMN;" [])
 cdaar
-#function("n1f0MMN;" [])
+#function("r1g0MMN;" [])
 cadr
-#function("n1f0NM;" [])
+#function("r1g0NM;" [])
 caddr
-#function("n1f0NNM;" [])
+#function("r1g0NNM;" [])
 cadddr
-#function("n1f0NNNM;" [])
+#function("r1g0NNNM;" [])
 cadar
-#function("n1f0MNM;" [])
+#function("r1g0MNM;" [])
 caar
-#function("n1f0MM;" [])
+#function("r1g0MM;" [])
 caadr
-#function("n1f0NMM;" [])
+#function("r1g0NMM;" [])
 caaar
-#function("n1f0MMM;" [])
+#function("r1g0MMM;" [])
 builtin->instruction
-#function("n1c0e1e2c3f03231q42;" [#function("re0e1f03216@02f0;" [has? Instructions]) intern string #\:])
+#function("r1c0e1e2c3g03231u42;" [#function("ve0e1g03216@02g0;" [has? Instructions]) intern string #\:])
 bq-process
-#function("n1c0^q42;" [#function("rc0mj02e1g00316]0g00H6Y0c2e3e4g003131q42;g00;g00?6l0c5g00L2;g00Mc6<6\x860e3e3e7g00313141;g00Mc8<6\x980e7g0041;e9f0g0032@6\xbb0c:e;g0031e<e=g0032q43;c>g00_q43;" [#function("n1f0F16K02f0Mc0<17K02f0Mc1<17U02f0c2<;" [*comma-at* *comma-dot* *comma*]) self-evaluating? #function("rf0Mc0<6A0e1f0NK;e2e1f0L3;" [list vector apply]) bq-process vector->list quote backquote cadr *comma* any #function("rf0A6=0c0f1K;e1c2f1Ke3f031L142;" [list nconc list* bq-process]) lastcdr map bq-bracket1 #function("r^f0F16A02f0Mc0<@6Z02e1f0M31f1Kj12f0Nj05202c2f0F6t0e3f1e4f031L1325\x910f0A6\x830e5f1315\x910e3f1e6f031L132q42;" [*comma* bq-bracket #function("rf0NA6<0f0M;c0f0K;" [nconc]) nreconc cadr reverse! bq-process])])])
+#function("r1c0^u42;" [#function("vc0qm02e1i00316]0i00H6Y0c2e3e4i003131u42;i00;i00?6l0c5i00L2;i00Mc6<6\x860e3e3e7i00313141;i00Mc8<6\x980e7i0041;e9g0i0032@6\xbb0c:e;i0031e<e=i0032u43;c>i00_u43;" [#function("r1g0F16K02g0Mc0<17K02g0Mc1<17U02g0c2<;" [*comma-at* *comma-dot* *comma*]) self-evaluating? #function("vg0Mc0<6A0e1g0NK;e2e1g0L3;" [list vector apply]) bq-process vector->list quote backquote cadr *comma* any #function("vg0A6=0c0g1K;e1c2g1Ke3g031L142;" [list nconc list* bq-process]) lastcdr map bq-bracket1 #function("v^g0F16A02g0Mc0<@6Z02e1g0M31g1Km12g0Nm05202c2g0F6t0e3g1e4g031L1325\x910g0A6\x830e5g1315\x910e3g1e6g031L132u42;" [*comma* bq-bracket #function("vg0NA6<0g0M;c0g0K;" [nconc]) nreconc cadr reverse! bq-process])])])
 bq-bracket1
-#function("n1f0F16@02f0Mc0<6J0e1f041;e2f041;" [*comma* cadr bq-process])
+#function("r1g0F16@02g0Mc0<6J0e1g041;e2g041;" [*comma* cadr bq-process])
 bq-bracket
-#function("n1f0?6C0e0e1f031L2;f0Mc2<6W0e0e3f031L2;f0Mc4<6k0c5e3f031L2;f0Mc6<6{0e3f041;e0e1f031L2;" [list bq-process *comma* cadr *comma-at* copy-list *comma-dot*])
+#function("r1g0?6C0e0e1g031L2;g0Mc2<6W0e0e3g031L2;g0Mc4<6k0c5e3g031L2;g0Mc6<6{0e3g041;e0e1g031L2;" [list bq-process *comma* cadr *comma-at* copy-list *comma-dot*])
+bcode:nconst
+#function("r1g0b2[;" [])
+bcode:indexfor
+#function("r2c0e1g031e2g031u43;" [#function("ve0g0i01326G0e1g0i0142;e2g0i01g1332g1i00b2g1ay\\2;" [has? get put!]) bcode:ctable bcode:nconst])
+bcode:ctable
+#function("r1g0a[;" [])
+bcode:code
+#function("r1g0`[;" [])
 assv
-#function("n2f1?6:0^;e0f131f0=6J0f1M;e1f0f1N42;" [caar assv])
+#function("r2g1?6:0^;e0g131g0=6J0g1M;e1g0g1N42;" [caar assv])
 assoc
-#function("n2f1?6:0^;e0f131f0>6J0f1M;e1f0f1N42;" [caar assoc])
+#function("r2g1?6:0^;e0g131g0>6J0g1M;e1g0g1N42;" [caar assoc])
 array?
-#function("n1f0H17E02c0e1f031q42;" [#function("rf0F16?02f0Mc0<;" [array]) typeof])
+#function("r1g0H17E02c0e1g031u42;" [#function("vg0F16?02g0Mc0<;" [array]) typeof])
 argc-error
-#function("n2e0e1c2f0c3f1f1aW6J0c45L0c53541;" [error string "compile error: " " expects " " argument." " arguments."])
+#function("r2e0e1c2g0c3g1g1aW6J0c45L0c53541;" [error string "compile error: " " expects " " argument." " arguments."])
 arg-counts
 #table(:not 1  :set-cdr! 2  :cons 2  :number? 1  :equal? 2  :cdr 1  :vector? 1  :eqv? 2  := 2  :div0 2  :atom? 1  :aref 2  :compare 2  :< 2  :null? 1  :eq? 2  :car 1  :set-car! 2  :builtin? 1  :aset! 3  :bound? 1  :boolean? 1  :pair? 1  :symbol? 1  :fixnum? 1)
 append
-#function("o0f0A6:0_;f0NA6E0f0M;e0e1f0M31e2f0NQ242;" [nconc copy-list append])
+#function("s0g0A6:0_;g0NA6E0g0M;e0g0Me1g0NQ242;" [copy-list append])
 any
-#function("n2f1F16O02f0f1M3117O02e0f0f1N42;" [any])
+#function("r2g1F16O02g0g1M3117O02e0g0g1N42;" [any])
 abs
-#function("n1f0`X6=0f0w;f0;" [])
+#function("r1g0`X6=0g0{;g0;" [])
 __start
-#function("n1e0302f0NF6Q0f0Ni12e2e3f031315a0f0i12e4e5312e6302e7`41;" [__init_globals *argv* __script cadr princ *banner* repl exit])
+#function("r1e0302g0NF6Q0g0Nk12e2e3g031315a0g0k12e4e5312e6302e7`41;" [__init_globals *argv* __script cadr princ *banner* repl exit])
 __script
-#function("n1c0mc1mp;" [#function("n0e0g0041;" [load]) #function("n1e0f0312e1a41;" [print-exception exit])])
+#function("r1c0qc1qt;" [#function("r0e0i0041;" [load]) #function("r1e0g0312e1a41;" [print-exception exit])])
 __init_globals
-#function("n0e0c1<17K02e0c2<17K02e0c3<6Z0c4i52c6i75c0c8i52c9i72e:i;2e<i=2e>i?;" [*os-name* win32 win64 windows "\\" *directory-separator* "\r\n" *linefeed* "/" "\n" *stdout* *output-stream* *stdin* *input-stream* *stderr* *error-stream*])
+#function("r0e0c1<17K02e0c2<17K02e0c3<6Z0c4k52c6k75c0c8k52c9k72e:k;2e<k=2e>k?;" [*os-name* win32 win64 windows "\\" *directory-separator* "\r\n" *linefeed* "/" "\n" *stdout* *output-stream* *stdin* *input-stream* *stderr* *error-stream*])
 MAX_ARGS
 127
 Instructions
-#table(:sub2 70  :nop 0  :set-cdr! 32  :/ 37  :setc 59  :tapply 68  :cons 27  dummy_nil 74  :equal? 14  :cdr 30  :call 3  :eqv? 13  := 39  :setg.l 60  :list 28  :atom? 15  :aref 43  :load0 48  :let 66  dummy_t 72  :argc 62  :< 40  :null? 17  :loadg 53  :load1 49  :car 29  :brt.l 10  :vargc 63  :loada 54  :set-car! 31  :setg 57  :aset! 44  :bound? 21  :pair? 22  :symbol? 19  :fixnum? 25  :loadi8 50  :not 16  :* 36  :neg 71  :pop 2  :loadnil 47  :brf 6  :vector 42  :- 35  :loadv 51  :closure 61  dummy_f 73  :number? 20  :trycatch 64  :add2 69  :loadv.l 52  :vector? 24  :brf.l 9  :seta 58  :apply 33  :dup 1  :div0 38  :copyenv 65  :for 67  :loadc 55  :compare 41  :eq? 12  :function? 26  :+ 34  :jmp 5  :loadt 45  :brt 7  :builtin? 23  :loadg.l 56  :tcall 4  :ret 11  :boolean? 18  :loadf 46  :jmp.l 8)
+#table(:sub2 74  :nop 0  :set-cdr! 32  :/ 37  :setc 63  :tapply 72  :lvargc 77  :cons 27  dummy_nil 80  :equal? 14  :cdr 30  :call 3  :eqv? 13  := 39  :setg.l 60  :list 28  :atom? 15  :aref 43  :load0 48  :let 70  dummy_t 78  :argc 66  :< 40  :null? 17  :loadg 53  :load1 49  :car 29  :brt.l 10  :vargc 67  :loada 55  :set-car! 31  :setg 59  :aset! 44  :bound? 21  :pair? 22  :symbol? 19  :fixnum? 25  :loadi8 50  :not 16  :* 36  :neg 75  :pop 2  :largc 76  :loadnil 47  :brf 6  :vector 42  :- 35  :loadv 51  :loada.l 56  :seta.l 62  :closure 65  dummy_f 79  :number? 20  :trycatch 68  :add2 73  :loadv.l 52  :vector? 24  :brf.l 9  :seta 61  :apply 33  :dup 1  :div0 38  :setc.l 64  :copyenv 69  :for 71  :loadc 57  :loadc.l 58  :compare 41  :eq? 12  :function? 26  :+ 34  :jmp 5  :loadt 45  :brt 7  :builtin? 23  :loadg.l 54  :tcall 4  :ret 11  :boolean? 18  :loadf 46  :jmp.l 8)
 >=
-#function("n2f1f0X17A02f0f1W;" [])
+#function("r2g1g0X17A02g0g1W;" [])
 >
-#function("n2f1f0X;" [])
+#function("r2g1g0X;" [])
 <=
-#function("n2f0f1X17A02f0f1W;" [])
+#function("r2g0g1X17A02g0g1W;" [])
 1arg-lambda?
-#function("n1f0F16e02f0Mc0<16e02f0NF16e02e1f031F16e02e2e1f031a42;" [lambda cadr length=])
+#function("r1g0F16e02g0Mc0<16e02g0NF16e02e1g031F16e02e2e1g031a42;" [lambda cadr length=])
 1-
-#function("n1f0av;" [])
+#function("r1g0az;" [])
 1+
-#function("n1f0au;" [])
+#function("r1g0ay;" [])
 /=
-#function("n2f0f1W@;" [])
+#function("r2g0g1W@;" [])
 *whitespace*
 "\t\n\v\f\r \u0085  ᠎           \u2028\u2029  　"
 *syntax-environment*
-#table(define #function("o1f0C6B0c0f0f1ML3;c0f0Mc1f0Nf1KKL3;" [set! lambda])  letrec #function("o1c0e1e2f032e3e1c4mf032f132KKe1c5mf032K;" [lambda map car nconc #function("n1c0f0K;" [set!]) #function("n1^;" [])])  backquote #function("n1e0f041;" [bq-process])  assert #function("n1c0f0]c1c2c3f0L2L2L2L4;" [if raise quote assert-failed])  label #function("n2c0f0L1c1f0f1L3L3^L2;" [lambda set!])  do #function("o2c0e130f1Me2e3f032e2e4f032e2c5mf032q46;" [#function("rc0f0c1f2c2f1e3c4L1e5g01N3132e3c4L1e5g0231e3f0L1e5f43132L133L4L3L2L1e3f0L1e5f33132L3;" [letrec lambda if nconc begin copy-list]) gensym map car cadr #function("n1e0f031F6C0e1f041;f0M;" [cddr caddr])])  when #function("o1c0f0c1f1K^L4;" [if begin])  unwind-protect #function("n2c0e130e130q43;" [#function("rc0f1c1_g01L3L2L1c2c3g00c1f0L1c4f1L1c5f0L2L3L3L3f1L1L3L3;" [let lambda prog1 trycatch begin raise]) gensym])  dotimes #function("o1c0f0Me1f031q43;" [#function("rc0`c1f1aL3e2c3L1f0L1L1e4g013133L4;" [for - nconc lambda copy-list]) cadr])  define-macro #function("o1c0c1f0ML2c2f0Nf1KKL3;" [set-syntax! quote lambda])  unless #function("o1c0f0^c1f1KL4;" [if begin])  let #function("o1c0^q42;" [#function("rg00C6P0g00j02g01Mk002g01Nk015Q0^2c0c1e2c3mg0032g01KKe2c4mg0032q43;" [#function("rg006C0c0g00f0L35E0f0f1K;" [label]) lambda map #function("n1f0F6<0f0M;f0;" []) #function("n1f0F6?0e0f041;^;" [cadr])])])  cond #function("o0c0^q42;" [#function("rc0mj02f0g0041;" [#function("n1f0?6:0^;c0f0Mq42;" [#function("rf0Mc0<17A02f0M]<6V0f0NA6O0f0M;c1f0NK;f0NA6n0c2f0Mg10g00N31L3;c3f0Mc1f0NKg10g00N31L4;" [else begin or if])])])])  throw #function("n2c0c1c2c3L2f0f1L4L2;" [raise list quote thrown-value])  time #function("n1c0e130q42;" [#function("rc0f0c1L1L2L1c2g00c3c4c5c1L1f0L3c6L4L3L3;" [let time.now prog1 princ "Elapsed time: " - " seconds\n"]) gensym])  let* #function("o1f0?6L0e0c1L1_L1e2f13133L1;e0c1L1e3f031L1L1e2f0NF6}0e0c4L1f0NL1e2f13133L15\x7F0f13133e5f031L2;" [nconc lambda copy-list caar let* cadar])  case #function("o1c0^q42;" [#function("rc0mj02c1e230q42;" [#function("n2f1c0<6=0c0;f1A6E0^;f1?6X0c1f0e2f131L3;f1NA6m0c1f0e2f1M31L3;c3f0c4f1L2L3;" [else eqv? quote-value memv quote]) #function("rc0f0g10L2L1e1c2L1e3e4c5mg11323132L3;" [let nconc cond copy-list map #function("n1g10g00f0M32f0NK;" [])]) gensym])])  catch #function("n2c0e130q42;" [#function("rc0g01c1f0L1c2c3c4f0L2c5c6f0L2c7c8L2L3c5c9f0L2g00L3L4c:f0L2c;f0L2L4L3L3;" [trycatch lambda if and pair? eq car quote thrown-value cadr caddr raise]) gensym]))
+#table(define #function("s1g0C6B0c0g0g1ML3;c0g0Mc1g0Ng1KKL3;" [set! lambda])  letrec #function("s1c0e1e2g032e3e1c4qg032g132KKe1c5qg032K;" [lambda map car nconc #function("r1c0g0K;" [set!]) #function("r1^;" [])])  backquote #function("r1e0g041;" [bq-process])  assert #function("r1c0g0]c1c2c3g0L2L2L2L4;" [if raise quote assert-failed])  label #function("r2c0g0L1c1g0g1L3L3^L2;" [lambda set!])  do #function("s2c0e130g1Me2e3g032e2e4g032e2c5qg032u46;" [#function("vc0g0c1g2c2g1e3c4L1e5i01N3132e3c4L1e5i0231e3g0L1e5g43132L133L4L3L2L1e3g0L1e5g33132L3;" [letrec lambda if nconc begin copy-list]) gensym map car cadr #function("r1e0g031F6C0e1g041;g0M;" [cddr caddr])])  when #function("s1c0g0c1g1K^L4;" [if begin])  unwind-protect #function("r2c0e130e130u43;" [#function("vc0g1c1_i01L3L2L1c2c3i00c1g0L1c4g1L1c5g0L2L3L3L3g1L1L3L3;" [let lambda prog1 trycatch begin raise]) gensym])  dotimes #function("s1c0g0Me1g031u43;" [#function("vc0`c1g1aL3e2c3L1g0L1L1e4i013133L4;" [for - nconc lambda copy-list]) cadr])  define-macro #function("s1c0c1g0ML2c2g0Ng1KKL3;" [set-syntax! quote lambda])  unless #function("s1c0g0^c1g1KL4;" [if begin])  let #function("s1c0^u42;" [#function("vi00C6P0i00m02i01Mo002i01No015Q0^2c0c1e2c3qi0032i01KKe2c4qi0032u43;" [#function("vi006C0c0i00g0L35E0g0g1K;" [label]) lambda map #function("r1g0F6<0g0M;g0;" []) #function("r1g0F6?0e0g041;^;" [cadr])])])  cond #function("s0c0^u42;" [#function("vc0qm02g0i0041;" [#function("r1g0?6:0^;c0g0Mu42;" [#function("vg0Mc0<17A02g0M]<6V0g0NA6O0g0M;c1g0NK;g0NA6n0c2g0Mi10i00N31L3;c3g0Mc1g0NKi10i00N31L4;" [else begin or if])])])])  throw #function("r2c0c1c2c3L2g0g1L4L2;" [raise list quote thrown-value])  time #function("r1c0e130u42;" [#function("vc0g0c1L1L2L1c2i00c3c4c5c1L1g0L3c6L4L3L3;" [let time.now prog1 princ "Elapsed time: " - " seconds\n"]) gensym])  let* #function("s1g0?6L0e0c1L1_L1e2g13133L1;e0c1L1e3g031L1L1e2g0NF6}0e0c4L1g0NL1e2g13133L15\x7F0g13133e5g031L2;" [nconc lambda copy-list caar let* cadar])  case #function("s1c0^u42;" [#function("vc0qm02c1e230u42;" [#function("r2g1c0<6=0c0;g1A6E0^;g1?6X0c1g0e2g131L3;g1NA6m0c1g0e2g1M31L3;c3g0c4g1L2L3;" [else eqv? quote-value memv quote]) #function("vc0g0i10L2L1e1c2L1e3e4c5qi11323132L3;" [let nconc cond copy-list map #function("r1i10i00g0M32g0NK;" [])]) gensym])])  catch #function("r2c0e130u42;" [#function("vc0i01c1g0L1c2c3c4g0L2c5c6g0L2c7c8L2L3c5c9g0L2i00L3L4c:g0L2c;g0L2L4L3L3;" [trycatch lambda if and pair? eq car quote thrown-value cadr caddr raise]) gensym]))
 *banner*
 ";  _\n; |_ _ _ |_ _ |  . _ _\n; | (-||||_(_)|__|_)|_)\n;-------------------|----------------------------------------------------------\n\n"
