@@ -24,6 +24,7 @@
 	  
 	  :closure :argc :vargc :trycatch :copyenv :let :for :tapply
 	  :add2 :sub2 :neg :largc :lvargc
+	  :loada0 :loada1 :loadc00 :loadc01
 	  
 	  dummy_t dummy_f dummy_nil]))
     (for 0 (1- (length keys))
@@ -73,6 +74,20 @@
 	     (or (> (car  args) 255)
 		 (> (cadr args) 255)))
 	(set! inst (cadr longform))))
+  (if (eq? inst :loada)
+      (cond ((equal? args '(0))
+	     (set! inst :loada0)
+	     (set! args ()))
+	    ((equal? args '(1))
+	     (set! inst :loada1)
+	     (set! args ()))))
+  (if (eq? inst :loadc)
+      (cond ((equal? args '(0 0))
+	     (set! inst :loadc00)
+	     (set! args ()))
+	    ((equal? args '(0 1))
+	     (set! inst :loadc01)
+	     (set! args ()))))
   (aset! e 0 (nreconc (cons inst args) (aref e 0)))
   e)
 

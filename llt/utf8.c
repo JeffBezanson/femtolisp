@@ -438,11 +438,11 @@ int u8_escape_wchar(char *buf, size_t sz, u_int32_t ch)
     else if (ch == L'\\')
         return buf_put2c(buf, "\\\\");
     else if (ch < 32 || ch == 0x7f)
-        return snprintf(buf, sz, "\\x%.2hhX", (unsigned char)ch);
+        return snprintf(buf, sz, "\\x%.2hhx", (unsigned char)ch);
     else if (ch > 0xFFFF)
-        return snprintf(buf, sz, "\\U%.8X", (u_int32_t)ch);
+        return snprintf(buf, sz, "\\U%.8x", (u_int32_t)ch);
     else if (ch >= 0x80)
-        return snprintf(buf, sz, "\\u%.4hX", (unsigned short)ch);
+        return snprintf(buf, sz, "\\u%.4hx", (unsigned short)ch);
 
     buf[0] = (char)ch;
     buf[1] = '\0';

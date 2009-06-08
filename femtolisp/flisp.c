@@ -1407,6 +1407,20 @@ static value_t apply_cl(uint32_t nargs)
             }
             PUSH(v);
             goto next_op;
+        case OP_LOADA0:
+            if (captured)
+                v = vector_elt(Stack[bp], 0);
+            else
+                v = Stack[bp];
+            PUSH(v);
+            goto next_op;
+        case OP_LOADA1:
+            if (captured)
+                v = vector_elt(Stack[bp], 1);
+            else
+                v = Stack[bp+1];
+            PUSH(v);
+            goto next_op;
         case OP_LOADAL:
             assert(nargs > 0);
             i = GET_UINT32(code,ip); ip+=4;
@@ -1453,6 +1467,12 @@ static value_t apply_cl(uint32_t nargs)
                 vector_elt(v, i) = Stack[SP-1];
             else
                 PUSH(vector_elt(v, i));
+            goto next_op;
+        case OP_LOADC00:
+            PUSH(vector_elt(Stack[bp+nargs], 0));
+            goto next_op;
+        case OP_LOADC01:
+            PUSH(vector_elt(Stack[bp+nargs], 1));
             goto next_op;
         case OP_LOADCL:
         case OP_SETCL:

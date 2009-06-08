@@ -234,12 +234,24 @@ value_t fl_iowrite(value_t *args, u_int32_t nargs)
 
 value_t fl_dump(value_t *args, u_int32_t nargs)
 {
-    argcount("dump", nargs, 1);
+    if (nargs < 1 || nargs > 3)
+        argcount("dump", nargs, 1);
     ios_t *s = toiostream(symbol_value(outstrsym), "dump");
     char *data;
-    size_t sz;
+    size_t sz, offs=0, nb;
     to_sized_ptr(args[0], "dump", &data, &sz);
-    hexdump(s, data, sz, 0);
+    nb = sz;
+    if (nargs > 1) {
+        offs = toulong(args[1], "dump");
+        if (nargs > 2)
+            nb = toulong(args[2], "dump");
+        else
+            nb = sz - offs;
+        if (offs >= sz || offs+nb > sz)
+            bounds_error("dump", args[0], args[1]);
+        data += offs;
+    }
+    hexdump(s, data, nb, offs);
     return FL_T;
 }
 
