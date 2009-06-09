@@ -14,7 +14,7 @@ FLAGS = -Wall -Wextra -Wno-strict-aliasing $(CFLAGS)
 LIBS =
 
 DEBUGFLAGS = -g -DDEBUG $(FLAGS)
-SHIPFLAGS = -O2 -DNDEBUG $(FLAGS)
+SHIPFLAGS = -O3 -DNDEBUG $(FLAGS)
 
 default: release
 

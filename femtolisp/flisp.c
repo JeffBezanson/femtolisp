@@ -819,12 +819,12 @@ static value_t apply_cl(uint32_t nargs)
     uint8_t *code;
 
     // temporary variables (not necessary to preserve across calls)
-    uint32_t op, envsz;
-    int64_t accum;
+    uint32_t op;
     symbol_t *sym;
-    cons_t *c;
-    value_t func, v, x, e;
-    value_t *lenv, *pv;
+    static cons_t *c;
+    static value_t *pv;
+    static int64_t accum;
+    static value_t func, v, e;
 
  apply_cl_top:
     captured = 0;
@@ -883,7 +883,7 @@ static value_t apply_cl(uint32_t nargs)
         case OP_LVARGC:
             // move extra arguments from list to stack
             i = GET_UINT32(code, ip); ip+=4;
-            x = POP();  // cloenv
+            e = POP();  // cloenv
             if (nargs > MAX_ARGS) {
                 v = POP();  // list of rest args
                 nargs--;
@@ -904,7 +904,7 @@ static value_t apply_cl(uint32_t nargs)
                 if (iscons(v))
                     lerror(ArgError, "apply: too many arguments");
             }
-            PUSH(x);
+            PUSH(e);
             goto next_op;
         case OP_LET:
             // last arg is closure environment to use
@@ -1396,10 +1396,10 @@ static value_t apply_cl(uint32_t nargs)
             assert(nargs > 0);
             i = code[ip++];
             if (captured) {
-                x = Stack[bp];
-                assert(isvector(x));
-                assert(i < vector_size(x));
-                v = vector_elt(x, i);
+                e = Stack[bp];
+                assert(isvector(e));
+                assert(i < vector_size(e));
+                v = vector_elt(e, i);
             }
             else {
                 assert(bp+i < SP);
@@ -1435,10 +1435,10 @@ static value_t apply_cl(uint32_t nargs)
             v = Stack[SP-1];
             i = code[ip++];
             if (captured) {
-                x = Stack[bp];
-                assert(isvector(x));
-                assert(i < vector_size(x));
-                vector_elt(x, i) = v;
+                e = Stack[bp];
+                assert(isvector(e));
+                assert(i < vector_size(e));
+                vector_elt(e, i) = v;
             }
             else {
                 assert(bp+i < SP);
@@ -1492,14 +1492,15 @@ static value_t apply_cl(uint32_t nargs)
             // build a closure (lambda args body . env)
             if (nargs > 0 && !captured) {
                 // save temporary environment to the heap
-                lenv = &Stack[bp];
-                envsz = nargs+1;
-                pv = alloc_words(envsz + 1);
+                //lenv = &Stack[bp];
+                n = nargs;
+                pv = alloc_words(n + 2);
                 PUSH(tagptr(pv, TAG_VECTOR));
-                pv[0] = fixnum(envsz);
+                pv[0] = fixnum(n+1);
                 pv++;
-                while (envsz--)
-                    *pv++ = *lenv++;
+                do {
+                  pv[n] = Stack[bp+n];
+                } while (n--);
                 // environment representation changed; install
                 // the new representation so everybody can see it
                 captured = 1;
@@ -1510,10 +1511,10 @@ static value_t apply_cl(uint32_t nargs)
             }
             if (op == OP_CLOSURE) {
                 pv = alloc_words(4);
-                x = Stack[SP-2];  // closure to copy
+                e = Stack[SP-2];  // closure to copy
                 assert(isfunction(x));
-                pv[0] = ((value_t*)ptr(x))[0];
-                pv[1] = ((value_t*)ptr(x))[1];
+                pv[0] = ((value_t*)ptr(e))[0];
+                pv[1] = ((value_t*)ptr(e))[1];
                 pv[2] = Stack[SP-1];  // env
                 POPN(1);
                 Stack[SP-1] = tagptr(pv, TAG_FUNCTION);
