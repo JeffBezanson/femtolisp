@@ -799,7 +799,7 @@ static value_t do_trycatch()
 #endif
 
 /*
-  stack on entry: <func>  <args...>
+  stack on entry: <func>  <up to MAX_ARGS args...>  <arglist if nargs>MAX_ARGS>
   caller's responsibility:
   - put the stack in this state
   - provide arg count
@@ -819,7 +819,7 @@ static value_t apply_cl(uint32_t nargs)
     uint8_t *code;
 
     // temporary variables (not necessary to preserve across calls)
-    uint32_t op;
+    uint8_t op;
     symbol_t *sym;
     static cons_t *c;
     static value_t *pv;
@@ -935,9 +935,10 @@ static value_t apply_cl(uint32_t nargs)
                     v = apply_cl(n);
                 }
                 else {
-                    op = uintval(func);
-                    if (op > OP_ASET)
+                    i = uintval(func);
+                    if (i > OP_ASET)
                         type_error("apply", "function", func);
+                    op = (uint8_t)i;
                     s = builtin_arg_counts[op];
                     if (s >= 0)
                         argcount(builtin_names[op], n, s);

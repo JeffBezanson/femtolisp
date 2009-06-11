@@ -21,8 +21,15 @@
 (define (symbol-syntax s) (get *syntax-environment* s #f))
 
 (define (map f lst)
-  (if (atom? lst) lst
-      (cons (f (car lst)) (map f (cdr lst)))))
+  ((lambda (first acc)
+     (begin
+       (set! first acc)
+       (while (pair? lst)
+	      (begin (set! acc
+			   (cdr (set-cdr! acc (cons (f (car lst)) ()))))
+		     (set! lst (cdr lst))))
+       (cdr first)))
+   () (list ())))
 
 (define-macro (label name fn)
   (list (list 'lambda (list name) (list 'set! name fn)) #f))
@@ -362,8 +369,11 @@
   (define (vals->cond key v)
     (cond ((eq? v 'else)   'else)
 	  ((null? v)       #f)
+	  ((symbol? v)     `(eq?  ,key ,(quote-value v)))
           ((atom? v)       `(eqv? ,key ,(quote-value v)))
 	  ((null? (cdr v)) `(eqv? ,key ,(quote-value (car v))))
+	  ((every symbol? v)
+	                   `(memq ,key ',v))
 	  (else            `(memv ,key ',v))))
   (let ((g (gensym)))
     `(let ((,g ,key))

@@ -60,35 +60,38 @@
 	       (prog1 nconst
 		      (aset! b 2 (+ nconst 1)))))))
 (define (emit e inst . args)
-  (if (memq inst '(:loadv :loadg :setg))
-      (set! args (list (bcode:indexfor e (car args)))))
-  (let ((longform
-	 (assq inst '((:loadv :loadv.l) (:loadg :loadg.l) (:setg  :setg.l)
-		      (:loada :loada.l) (:seta  :seta.l)))))
-    (if (and longform
-	     (> (car args) 255))
-	(set! inst (cadr longform))))
-  (let ((longform
-	 (assq inst '((:loadc :loadc.l) (:setc :setc.l)))))
-    (if (and longform
-	     (or (> (car  args) 255)
-		 (> (cadr args) 255)))
-	(set! inst (cadr longform))))
-  (if (eq? inst :loada)
-      (cond ((equal? args '(0))
-	     (set! inst :loada0)
-	     (set! args ()))
-	    ((equal? args '(1))
-	     (set! inst :loada1)
-	     (set! args ()))))
-  (if (eq? inst :loadc)
-      (cond ((equal? args '(0 0))
-	     (set! inst :loadc00)
-	     (set! args ()))
-	    ((equal? args '(0 1))
-	     (set! inst :loadc01)
-	     (set! args ()))))
-  (aset! e 0 (nreconc (cons inst args) (aref e 0)))
+  (if (null? args)
+      (aset! e 0 (cons inst (aref e 0)))
+      (begin
+	(if (memq inst '(:loadv :loadg :setg))
+	    (set! args (list (bcode:indexfor e (car args)))))
+	(let ((longform
+	       (assq inst '((:loadv :loadv.l) (:loadg :loadg.l) (:setg :setg.l)
+			    (:loada :loada.l) (:seta  :seta.l)))))
+	  (if (and longform
+		   (> (car args) 255))
+	      (set! inst (cadr longform))))
+	(let ((longform
+	       (assq inst '((:loadc :loadc.l) (:setc :setc.l)))))
+	  (if (and longform
+		   (or (> (car  args) 255)
+		       (> (cadr args) 255)))
+	      (set! inst (cadr longform))))
+	(if (eq? inst :loada)
+	    (cond ((equal? args '(0))
+		   (set! inst :loada0)
+		   (set! args ()))
+		  ((equal? args '(1))
+		   (set! inst :loada1)
+		   (set! args ()))))
+	(if (eq? inst :loadc)
+	    (cond ((equal? args '(0 0))
+		   (set! inst :loadc00)
+		   (set! args ()))
+		  ((equal? args '(0 1))
+		   (set! inst :loadc01)
+		   (set! args ()))))
+	(aset! e 0 (nreconc (cons inst args) (aref e 0)))))
   e)
 
 (define (make-label e)   (gensym))
@@ -99,8 +102,11 @@
 (define (encode-byte-code e)
   (let* ((cl (reverse! e))
 	 (v  (list->vector cl))
-	 (long? (>= (+ (length v)
-		       (* 3 (count (lambda (i)
+	 (long? (>= (+ (length v)  ; 1 byte for each entry, plus...
+		       ; at most half the entries in this vector can be
+		       ; instructions accepting 32-bit arguments
+		       (* 3 (div0 (length v) 2))
+		       #;(* 3 (count (lambda (i)
 				     (memq i '(:loadv.l :loadg.l :setg.l
 					       :loada.l :seta.l :loadc.l
 					       :setc.l :jmp :brt :brf
@@ -112,7 +118,8 @@
 	  (label-to-loc   (table))
 	  (fixup-to-label (table))
 	  (bcode          (buffer))
-	  (vi             #f))
+	  (vi             #f)
+	  (nxt            #f))
       (while (< i n)
 	(begin
 	  (set! vi (aref v i))
@@ -123,46 +130,44 @@
 		(io.write bcode
 			  (byte
 			   (get Instructions
-				(if (and long?
-					 (memq vi '(:jmp :brt :brf)))
+				(if long?
 				    (case vi
 				      (:jmp :jmp.l)
 				      (:brt :brt.l)
-				      (:brf :brf.l))
+				      (:brf :brf.l)
+				      (else vi))
 				    vi))))
 		(set! i (+ i 1))
-		(if (< i n)
-		    (let ((nxt (aref v i)))
-		      (case vi
-			((:loadv.l :loadg.l :setg.l :loada.l :seta.l :largc
-			  :lvargc)
-			 (io.write bcode (uint32 nxt))
-			 (set! i (+ i 1)))
-			
-			((:loada :seta :call :tcall :loadv :loadg :setg
-			  :list :+ :- :* :/ :vector :argc :vargc :loadi8
-			  :apply :tapply)
-			 (io.write bcode (uint8 nxt))
-			 (set! i (+ i 1)))
-			
-			((:loadc :setc)  ; 2 uint8 args
-			 (io.write bcode (uint8 nxt))
-			 (set! i (+ i 1))
-			 (io.write bcode (uint8 (aref v i)))
-			 (set! i (+ i 1)))
+		(set! nxt (if (< i n) (aref v i) #f))
+		(cond ((memq vi '(:jmp :brf :brt))
+		       (put! fixup-to-label (sizeof bcode) nxt)
+		       (io.write bcode ((if long? uint32 uint16) 0))
+		       (set! i (+ i 1)))
+		      ((number? nxt)
+		       (case vi
+			 ((:loadv.l :loadg.l :setg.l :loada.l :seta.l
+			   :largc :lvargc)
+			  (io.write bcode (uint32 nxt))
+			  (set! i (+ i 1)))
+			 
+			 ((:loadc :setc)  ; 2 uint8 args
+			  (io.write bcode (uint8 nxt))
+			  (set! i (+ i 1))
+			  (io.write bcode (uint8 (aref v i)))
+			  (set! i (+ i 1)))
+			 
+			 ((:loadc.l :setc.l)  ; 2 uint32 args
+			  (io.write bcode (uint32 nxt))
+			  (set! i (+ i 1))
+			  (io.write bcode (uint32 (aref v i)))
+			  (set! i (+ i 1)))
+			 
+			 (else
+			  ; other number arguments are always uint8
+			  (io.write bcode (uint8 nxt))
+			  (set! i (+ i 1)))))
+		      (else #f))))))
 
-			((:loadc.l :setc.l)  ; 2 uint32 args
-			 (io.write bcode (uint32 nxt))
-			 (set! i (+ i 1))
-			 (io.write bcode (uint32 (aref v i)))
-			 (set! i (+ i 1)))
-			
-			((:jmp :brf :brt)
-			 (put! fixup-to-label (sizeof bcode) nxt)
-			 (io.write bcode ((if long? uint32 uint16) 0))
-			 (set! i (+ i 1)))
-			
-			(else #f))))))))
       (table.foreach
        (lambda (addr labl)
 	 (begin (io.seek bcode addr)

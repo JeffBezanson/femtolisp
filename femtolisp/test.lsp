@@ -226,3 +226,35 @@
 	  (sub h n (string.inc h i) (cons i lst))
 	  (reverse! lst))))
   (sub haystack needle (if (null? offs) 0 (car offs)) ()))
+
+(let ((*profiles* (table)))
+  (set! profile
+	(lambda (s)
+	  (let ((f (top-level-value s)))
+	    (set-top-level-value! s
+	     (lambda args
+	       (define tt (get *profiles* s 0))
+	       (define t0 (time.now))
+	       (define v (apply f args))
+	       (put! *profiles* s (+ tt (- (time.now) t0)))
+	       v)))))
+  (set! show-profiles
+	(lambda ()
+	  (define (swapad c) (cons (cdr c) (car c)))
+	  (for-each (lambda (p)
+		      (princ (cdr p) "\t\t" (car p))
+		      (newline))
+		    (simple-sort (map swapad (table.pairs *profiles*)))))))
+
+#;(for-each profile
+	  '(emit encode-byte-code const-to-idx-vec
+	    index-of lookup-sym in-env?
+	    compile-sym compile-if compile-begin
+	    list-partition just-compile-args
+	    compile-arglist
+	    compile-app compile-let compile-call
+	    compile-in compile compile-f
+	    map length> length= count filter append
+	    lastcdr to-proper reverse reverse! list->vector
+	    table.foreach list-head list-tail assq memq assoc member
+	    assv memv nreconc bq-process))
