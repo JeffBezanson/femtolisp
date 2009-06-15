@@ -105,7 +105,7 @@
 	((eqv?       (caar lst) item) (car lst))
 	(#t          (assv item (cdr lst)))))
 
-(define =   eqv?)
+(define (=  a b) (eqv? a b))
 (define (/= a b) (not (eqv? a b)))
 (define (>  a b) (< b a))
 (define (<= a b) (not (< b a)))
