@@ -21,15 +21,14 @@
 (define (symbol-syntax s) (get *syntax-environment* s #f))
 
 (define (map f lst)
-  ((lambda (first acc)
-     (begin
-       (set! first acc)
+  ((lambda (acc)
+     (cdr
+      (prog1 acc
        (while (pair? lst)
 	      (begin (set! acc
 			   (cdr (set-cdr! acc (cons (f (car lst)) ()))))
-		     (set! lst (cdr lst))))
-       (cdr first)))
-   () (list ())))
+		     (set! lst (cdr lst)))))))
+   (list ())))
 
 (define-macro (label name fn)
   (list (list 'lambda (list name) (list 'set! name fn)) #f))
@@ -80,12 +79,6 @@
   (cond-clauses->if clauses))
 
 ; standard procedures ---------------------------------------------------------
-
-(define (append . lsts)
-  (cond ((null? lsts) ())
-	((null? (cdr lsts)) (car lsts))
-	(#t (copy-list (car lsts)
-		       (apply append (cdr lsts))))))
 
 (define (member item lst)
   (cond ((atom? lst) #f)

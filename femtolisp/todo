@@ -1048,3 +1048,54 @@ new evaluator todo:
   loadf+brt => nothing
   loadt+brt => jmp
   loadf+brf => jmp
+
+-----------------------------------------------------------------------------
+
+new stack organization:
+
+func
+arg1
+...
+argn
+cloenv         |
+prev           |
+args	       |
+nargs	       |
+ip	       | 
+capt?	       |
+
+to call:
+push func and arguments
+args[nargs+4] = ip    // save my state in my frame
+args[nargs+5] = capt?
+assign nargs
+goto top
+
+on entry:
+push cloenv
+push curr_frame  (a global initialized to 0)
+push args
+push nargs
+SP += 2
+curr_frame = SP
+
+to return:
+v = POP();
+SP = curr_frame
+pop top 4 words into corresponding local vars
+curr_frame = pop()
+pop cloenv
+pop arguments
+Stack[SP-1] = v
+goto next_op
+
+to relocate stack:
+curr_top = SP
+f = curr_frame
+while (1) {
+  for i=f, i<curr_top, i++
+    relocate stack[i]
+  if (f == 0) break;
+  curr_top = f - 6
+  f = stack[f - 5]
+}

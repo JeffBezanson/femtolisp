@@ -567,6 +567,7 @@ void gc(int mustgrow)
 // apply function with n args on the stack
 static value_t _applyn(uint32_t n)
 {
+    assert(n <= MAX_ARGS+1);
     value_t f = Stack[SP-n-1];
     uint32_t saveSP = SP;
     value_t v;
@@ -598,7 +599,6 @@ value_t apply(value_t f, value_t l)
         v = cdr_(v);
     }
     n = SP - n - 1;
-    assert(n <= MAX_ARGS+1);
     v = _applyn(n);
     POPN(n+1);
     return v;
@@ -606,6 +606,7 @@ value_t apply(value_t f, value_t l)
 
 value_t applyn(uint32_t n, value_t f, ...)
 {
+    assert(n <= MAX_ARGS);
     va_list ap;
     va_start(ap, f);
     size_t i;
@@ -739,15 +740,46 @@ static value_t apply_liststar(value_t L, int star)
 
 value_t fl_copylist(value_t *args, u_int32_t nargs)
 {
-    if (nargs != 2)
-        argcount("copy-list", nargs, 1);
-    value_t l = FL_COPYLIST(args[0]);
-    if (nargs == 2) {
-        if (!iscons(args[0]))
-            return args[1];
-        ((cons_t*)(curheap-sizeof(cons_t)))->cdr = args[1];
+    argcount("copy-list", nargs, 1);
+    return FL_COPYLIST(args[0]);
+}
+
+value_t fl_append(value_t *args, u_int32_t nargs)
+{
+    if (nargs == 0)
+        return NIL;
+    value_t first=NIL, lst, lastcons=NIL;
+    fl_gc_handle(&first);
+    fl_gc_handle(&lastcons);
+    uint32_t i=0;
+    while (1) {
+        if (i >= MAX_ARGS) {
+            lst = car_(args[MAX_ARGS]);
+            args[MAX_ARGS] = cdr_(args[MAX_ARGS]);
+            if (!iscons(args[MAX_ARGS])) break;
+        }
+        else {
+            lst = args[i++];
+            if (i >= nargs) break;
+        }
+        if (iscons(lst)) {
+            lst = FL_COPYLIST(lst);
+            if (first == NIL)
+                first = lst;
+            else
+                cdr_(lastcons) = lst;
+            lastcons = tagptr((((cons_t*)curheap)-1), TAG_CONS);
+        }
+        else if (lst != NIL) {
+            type_error("append", "cons", lst);
+        }
     }
-    return l;
+    if (first == NIL)
+        first = lst;
+    else
+        cdr_(lastcons) = lst;
+    fl_free_gc_handles(2);
+    return first;
 }
 
 value_t fl_liststar(value_t *args, u_int32_t nargs)
@@ -785,17 +817,17 @@ static value_t do_trycatch()
 #define fn_env(f) (((value_t*)ptr(f))[2])
 
 #if _BYTE_ORDER == __BIG_ENDIAN
-#define GET_UINT32(a, i)                         \
-    ((((uint32_t)a[i+0])<<0)  |                  \
-     (((uint32_t)a[i+1])<<8)  |                  \
-     (((uint32_t)a[i+2])<<16) |                  \
-     (((uint32_t)a[i+3])<<24))
-#define GET_UINT16(a, i)                         \
-    ((((uint16_t)a[i+0])<<0)  |                  \
-     (((uint16_t)a[i+1])<<8))
+#define GET_INT32(a)                            \
+    ((((int32_t)a[0])<<0)  |                    \
+     (((int32_t)a[1])<<8)  |                    \
+     (((int32_t)a[2])<<16) |                    \
+     (((int32_t)a[3])<<24))
+#define GET_INT16(a)                            \
+    ((((int16_t)a[0])<<0)  |                    \
+     (((int16_t)a[1])<<8))
 #else
-#define GET_UINT32(a, i) (*(uint32_t*)&a[i])
-#define GET_UINT16(a, i) (*(uint16_t*)&a[i])
+#define GET_INT32(a) (*(int32_t*)a)
+#define GET_INT16(a) (*(int16_t*)a)
 #endif
 
 /*
@@ -814,12 +846,14 @@ static value_t do_trycatch()
 static value_t apply_cl(uint32_t nargs)
 {
     // frame variables
-    uint32_t i, n, ip, bp, captured;
+    uint32_t n, captured;
+    value_t *bp;
+    const uint8_t *ip;
     fixnum_t s, hi;
-    uint8_t *code;
 
     // temporary variables (not necessary to preserve across calls)
     uint8_t op;
+    uint32_t i;
     symbol_t *sym;
     static cons_t *c;
     static value_t *pv;
@@ -829,21 +863,19 @@ static value_t apply_cl(uint32_t nargs)
  apply_cl_top:
     captured = 0;
     func = Stack[SP-nargs-1];
-    code = cv_data((cvalue_t*)ptr(fn_bcode(func)));
-    assert(!ismanaged((uptrint_t)code));
-    assert(ismanaged(func));
+    ip = cv_data((cvalue_t*)ptr(fn_bcode(func)));
+    assert(!ismanaged((uptrint_t)ip));
 
-    bp = SP-nargs;
+    bp = &Stack[SP-nargs];
     PUSH(fn_env(func));
 
-    ip = 0;
-    { 
+    {
     next_op:
-        op = code[ip++];
+        op = *ip++;
     dispatch:
         switch (op) {
         case OP_ARGC:
-            n = code[ip++];
+            n = *ip++;
             if (nargs != n) {
                 if (nargs > n)
                     lerror(ArgError, "apply: too many arguments");
@@ -852,11 +884,11 @@ static value_t apply_cl(uint32_t nargs)
             }
             goto next_op;
         case OP_VARGC:
-            i = code[ip++];
+            i = *ip++;
             s = (fixnum_t)nargs - (fixnum_t)i;
             v = NIL;
             if (s > 0) {
-                v = list(&Stack[bp+i], s);
+                v = list(&bp[i], s);
                 if (nargs > MAX_ARGS) {
                     if (s == 1) {
                         v = car_(v);
@@ -866,8 +898,8 @@ static value_t apply_cl(uint32_t nargs)
                         (c-2)->cdr = (c-1)->car;
                     }
                 }
-                Stack[bp+i] = v;
-                Stack[bp+i+1] = Stack[bp+nargs];
+                bp[i] = v;
+                bp[i+1] = bp[nargs];
             }
             else if (s < 0) {
                 lerror(ArgError, "apply: too few arguments");
@@ -882,7 +914,7 @@ static value_t apply_cl(uint32_t nargs)
         case OP_LARGC:
         case OP_LVARGC:
             // move extra arguments from list to stack
-            i = GET_UINT32(code, ip); ip+=4;
+            i = GET_INT32(ip); ip+=4;
             e = POP();  // cloenv
             if (nargs > MAX_ARGS) {
                 v = POP();  // list of rest args
@@ -915,18 +947,18 @@ static value_t apply_cl(uint32_t nargs)
         case OP_DUP: SP++; Stack[SP-1] = Stack[SP-2]; goto next_op;
         case OP_POP: POPN(1); goto next_op;
         case OP_TCALL:
-            n = code[ip++];  // nargs
+            n = *ip++;  // nargs
         do_tcall:
             if (isfunction(Stack[SP-n-1])) {
                 for(s=-1; s < (fixnum_t)n; s++)
-                    Stack[bp+s] = Stack[SP-n+s];
-                SP = bp+n;
+                    bp[s] = Stack[SP-n+s];
+                SP = (bp-Stack)+n;
                 nargs = n;
                 goto apply_cl_top;
             }
             goto do_call;
         case OP_CALL:
-            n = code[ip++];  // nargs
+            n = *ip++;  // nargs
         do_call:
             func = Stack[SP-n-1];
             s = SP;
@@ -970,26 +1002,26 @@ static value_t apply_cl(uint32_t nargs)
             SP = s-n;
             Stack[SP-1] = v;
             goto next_op;
-        case OP_JMP: ip = (uint32_t)GET_UINT16(code,ip); goto next_op;
+        case OP_JMP: ip += (ptrint_t)GET_INT16(ip); goto next_op;
         case OP_BRF:
             v = POP();
-            if (v == FL_F) ip = (uint32_t)GET_UINT16(code,ip);
+            if (v == FL_F) ip += (ptrint_t)GET_INT16(ip);
             else ip += 2;
             goto next_op;
         case OP_BRT:
             v = POP();
-            if (v != FL_F) ip = (uint32_t)GET_UINT16(code,ip);
+            if (v != FL_F) ip += (ptrint_t)GET_INT16(ip);
             else ip += 2;
             goto next_op;
-        case OP_JMPL: ip = GET_UINT32(code,ip); goto next_op;
+        case OP_JMPL: ip += (ptrint_t)GET_INT32(ip); goto next_op;
         case OP_BRFL:
             v = POP();
-            if (v == FL_F) ip = GET_UINT32(code,ip);
+            if (v == FL_F) ip += (ptrint_t)GET_INT32(ip);
             else ip += 4;
             goto next_op;
         case OP_BRTL:
             v = POP();
-            if (v != FL_F) ip = GET_UINT32(code,ip);
+            if (v != FL_F) ip += (ptrint_t)GET_INT32(ip);
             else ip += 4;
             goto next_op;
         case OP_RET: v = POP(); return v;
@@ -1078,7 +1110,7 @@ static value_t apply_cl(uint32_t nargs)
             cdr(Stack[SP-2]) = Stack[SP-1];
             POPN(1); goto next_op;
         case OP_LIST:
-            n = code[ip++];
+            n = *ip++;
         apply_list:
             if (n > 0) {
                 v = list(&Stack[SP-n], n);
@@ -1092,7 +1124,7 @@ static value_t apply_cl(uint32_t nargs)
 
         case OP_TAPPLY:
         case OP_APPLY:
-            n = code[ip++];
+            n = *ip++;
         apply_apply:
             v = POP();     // arglist
             if (n > MAX_ARGS) {
@@ -1112,7 +1144,7 @@ static value_t apply_cl(uint32_t nargs)
             else goto do_call;
 
         case OP_ADD:
-            n = code[ip++];
+            n = *ip++;
         apply_add:
             s = 0;
             i = SP-n;
@@ -1151,7 +1183,7 @@ static value_t apply_cl(uint32_t nargs)
             Stack[SP-1] = v;
             goto next_op;
         case OP_SUB:
-            n = code[ip++];
+            n = *ip++;
         apply_sub:
             if (n == 2) goto do_sub2;
             if (n == 1) goto do_neg;
@@ -1190,7 +1222,7 @@ static value_t apply_cl(uint32_t nargs)
             Stack[SP-1] = v;
             goto next_op;
         case OP_MUL:
-            n = code[ip++];
+            n = *ip++;
         apply_mul:
             accum = 1;
             i = SP-n;
@@ -1215,7 +1247,7 @@ static value_t apply_cl(uint32_t nargs)
             PUSH(v);
             goto next_op;
         case OP_DIV:
-            n = code[ip++];
+            n = *ip++;
         apply_div:
             i = SP-n;
             if (n == 1) {
@@ -1270,7 +1302,7 @@ static value_t apply_cl(uint32_t nargs)
             goto next_op;
 
         case OP_VECTOR:
-            n = code[ip++];
+            n = *ip++;
         apply_vector:
             if (n > MAX_ARGS) {
                 i = llength(Stack[SP-1])-1;
@@ -1333,12 +1365,12 @@ static value_t apply_cl(uint32_t nargs)
             //f = Stack[SP-1];
             v = FL_F;
             SP += 2;
-            i = SP;
+            n = SP;
             for(; s <= hi; s++) {
                 Stack[SP-2] = Stack[SP-3];
                 Stack[SP-1] = fixnum(s);
                 v = apply_cl(1);
-                SP = i;
+                SP = n;
             }
             POPN(4);
             Stack[SP-1] = v;
@@ -1349,26 +1381,26 @@ static value_t apply_cl(uint32_t nargs)
         case OP_LOADNIL: PUSH(NIL); goto next_op;
         case OP_LOAD0: PUSH(fixnum(0)); goto next_op;
         case OP_LOAD1: PUSH(fixnum(1)); goto next_op;
-        case OP_LOADI8: s = (int8_t)code[ip++]; PUSH(fixnum(s)); goto next_op;
+        case OP_LOADI8: s = (int8_t)*ip++; PUSH(fixnum(s)); goto next_op;
         case OP_LOADV:
-            v = fn_vals(Stack[bp-1]);
-            assert(code[ip] < vector_size(v));
-            v = vector_elt(v, code[ip]); ip++;
+            v = fn_vals(bp[-1]);
+            assert(*ip < vector_size(v));
+            v = vector_elt(v, *ip); ip++;
             PUSH(v);
             goto next_op;
         case OP_LOADVL:
-            v = fn_vals(Stack[bp-1]);
-            v = vector_elt(v, GET_UINT32(code,ip)); ip+=4;
+            v = fn_vals(bp[-1]);
+            v = vector_elt(v, GET_INT32(ip)); ip+=4;
             PUSH(v);
             goto next_op;
         case OP_LOADGL:
-            v = fn_vals(Stack[bp-1]);
-            v = vector_elt(v, GET_UINT32(code,ip)); ip+=4;
+            v = fn_vals(bp[-1]);
+            v = vector_elt(v, GET_INT32(ip)); ip+=4;
             goto do_loadg;
         case OP_LOADG:
-            v = fn_vals(Stack[bp-1]);
-            assert(code[ip] < vector_size(v));
-            v = vector_elt(v, code[ip]); ip++;
+            v = fn_vals(bp[-1]);
+            assert(*ip < vector_size(v));
+            v = vector_elt(v, *ip); ip++;
         do_loadg:
             assert(issymbol(v));
             sym = (symbol_t*)ptr(v);
@@ -1378,13 +1410,13 @@ static value_t apply_cl(uint32_t nargs)
             goto next_op;
 
         case OP_SETGL:
-            v = fn_vals(Stack[bp-1]);
-            v = vector_elt(v, GET_UINT32(code,ip)); ip+=4;
+            v = fn_vals(bp[-1]);
+            v = vector_elt(v, GET_INT32(ip)); ip+=4;
             goto do_setg;
         case OP_SETG:
-            v = fn_vals(Stack[bp-1]);
-            assert(code[ip] < vector_size(v));
-            v = vector_elt(v, code[ip]); ip++;
+            v = fn_vals(bp[-1]);
+            assert(*ip < vector_size(v));
+            v = vector_elt(v, *ip); ip++;
         do_setg:
             assert(issymbol(v));
             sym = (symbol_t*)ptr(v);
@@ -1395,71 +1427,69 @@ static value_t apply_cl(uint32_t nargs)
 
         case OP_LOADA:
             assert(nargs > 0);
-            i = code[ip++];
+            i = *ip++;
             if (captured) {
-                e = Stack[bp];
+                e = *bp;
                 assert(isvector(e));
                 assert(i < vector_size(e));
                 v = vector_elt(e, i);
             }
             else {
-                assert(bp+i < SP);
-                v = Stack[bp+i];
+                v = bp[i];
             }
             PUSH(v);
             goto next_op;
         case OP_LOADA0:
             if (captured)
-                v = vector_elt(Stack[bp], 0);
+                v = vector_elt(*bp, 0);
             else
-                v = Stack[bp];
+                v = *bp;
             PUSH(v);
             goto next_op;
         case OP_LOADA1:
             if (captured)
-                v = vector_elt(Stack[bp], 1);
+                v = vector_elt(*bp, 1);
             else
-                v = Stack[bp+1];
+                v = bp[1];
             PUSH(v);
             goto next_op;
         case OP_LOADAL:
             assert(nargs > 0);
-            i = GET_UINT32(code,ip); ip+=4;
+            i = GET_INT32(ip); ip+=4;
             if (captured)
-                v = vector_elt(Stack[bp], i);
+                v = vector_elt(*bp, i);
             else
-                v = Stack[bp+i];
+                v = bp[i];
             PUSH(v);
             goto next_op;
         case OP_SETA:
             assert(nargs > 0);
             v = Stack[SP-1];
-            i = code[ip++];
+            i = *ip++;
             if (captured) {
-                e = Stack[bp];
+                e = *bp;
                 assert(isvector(e));
                 assert(i < vector_size(e));
                 vector_elt(e, i) = v;
             }
             else {
-                assert(bp+i < SP);
-                Stack[bp+i] = v;
+                bp[i] = v;
             }
             goto next_op;
         case OP_SETAL:
             assert(nargs > 0);
             v = Stack[SP-1];
-            i = GET_UINT32(code,ip); ip+=4;
+            i = GET_INT32(ip); ip+=4;
             if (captured)
-                vector_elt(Stack[bp], i) = v;
+                vector_elt(*bp, i) = v;
             else
-                Stack[bp+i] = v;
+                bp[i] = v;
             goto next_op;
         case OP_LOADC:
         case OP_SETC:
-            s = code[ip++];
-            i = code[ip++];
-            v = Stack[bp+nargs];
+            s = *ip++;
+            i = *ip++;
+            v = bp[nargs];
             while (s--)
                 v = vector_elt(v, vector_size(v)-1);
             assert(isvector(v));
@@ -1470,16 +1500,16 @@ static value_t apply_cl(uint32_t nargs)
                 PUSH(vector_elt(v, i));
             goto next_op;
         case OP_LOADC00:
-            PUSH(vector_elt(Stack[bp+nargs], 0));
+            PUSH(vector_elt(bp[nargs], 0));
             goto next_op;
         case OP_LOADC01:
-            PUSH(vector_elt(Stack[bp+nargs], 1));
+            PUSH(vector_elt(bp[nargs], 1));
             goto next_op;
         case OP_LOADCL:
         case OP_SETCL:
-            s = GET_UINT32(code,ip); ip+=4;
-            i = GET_UINT32(code,ip); ip+=4;
-            v = Stack[bp+nargs];
+            s = GET_INT32(ip); ip+=4;
+            i = GET_INT32(ip); ip+=4;
+            v = bp[nargs];
             while (s--)
                 v = vector_elt(v, vector_size(v)-1);
             if (op == OP_SETCL)
@@ -1493,27 +1523,26 @@ static value_t apply_cl(uint32_t nargs)
             // build a closure (lambda args body . env)
             if (nargs > 0 && !captured) {
                 // save temporary environment to the heap
-                //lenv = &Stack[bp];
                 n = nargs;
                 pv = alloc_words(n + 2);
                 PUSH(tagptr(pv, TAG_VECTOR));
                 pv[0] = fixnum(n+1);
                 pv++;
                 do {
-                  pv[n] = Stack[bp+n];
+                  pv[n] = bp[n];
                 } while (n--);
                 // environment representation changed; install
                 // the new representation so everybody can see it
                 captured = 1;
-                Stack[bp] = Stack[SP-1];
+                *bp = Stack[SP-1];
             }
             else {
-                PUSH(Stack[bp]); // env has already been captured; share
+                PUSH(*bp); // env has already been captured; share
             }
             if (op == OP_CLOSURE) {
                 pv = alloc_words(4);
                 e = Stack[SP-2];  // closure to copy
-                assert(isfunction(x));
+                assert(isfunction(e));
                 pv[0] = ((value_t*)ptr(e))[0];
                 pv[1] = ((value_t*)ptr(e))[1];
                 pv[2] = Stack[SP-1];  // env
@@ -1606,6 +1635,7 @@ static builtinspec_t core_builtin_info[] = {
     { "gensym", fl_gensym },
     { "hash", fl_hash },
     { "copy-list", fl_copylist },
+    { "append", fl_append },
     { "list*", fl_liststar },
     { NULL, NULL }
 };
@@ -1708,13 +1738,7 @@ static void lisp_init(void)
 
 value_t toplevel_eval(value_t expr)
 {
-    value_t v;
-    uint32_t saveSP = SP;
-    PUSH(symbol_value(evalsym));
-    PUSH(expr);
-    v = apply_cl(1);
-    SP = saveSP;
-    return v;
+    return applyn(1, symbol_value(evalsym), expr);
 }
 
 static value_t argv_list(int argc, char *argv[])

@@ -188,29 +188,25 @@
 ;(tt)
 
 (define-macro (accumulate-while cnd what . body)
-  (let ((first (gensym))
-        (acc   (gensym)))
-    `(let ((,first ())
-           (,acc (list ())))
-       (set! ,first ,acc)
-       (while ,cnd
-	      (begin (set! ,acc
-			   (cdr (set-cdr! ,acc (cons ,what ()))))
-		     ,@body))
-       (cdr ,first))))
+  (let ((acc (gensym)))
+    `(let ((,acc (list ())))
+       (cdr
+	(prog1 ,acc
+	 (while ,cnd
+		(begin (set! ,acc
+			     (cdr (set-cdr! ,acc (cons ,what ()))))
+		       ,@body)))))))
 
 (define-macro (accumulate-for var lo hi what . body)
-  (let ((first (gensym))
-        (acc   (gensym)))
-    `(let ((,first ())
-           (,acc (list ())))
-       (set! ,first ,acc)
-       (for ,lo ,hi
-            (lambda (,var)
-              (begin (set! ,acc
-                           (cdr (set-cdr! ,acc (cons ,what ()))))
-                     ,@body)))
-       (cdr ,first))))
+  (let ((acc   (gensym)))
+    `(let ((,acc (list ())))
+       (cdr
+	(prog1 ,acc
+	 (for ,lo ,hi
+	      (lambda (,var)
+		(begin (set! ,acc
+			     (cdr (set-cdr! ,acc (cons ,what ()))))
+		       ,@body))))))))
 
 (define (map-indexed f lst)
   (if (atom? lst) lst
@@ -231,27 +227,54 @@
   (set! profile
 	(lambda (s)
 	  (let ((f (top-level-value s)))
+	    (put! *profiles* s (cons 0 0))
 	    (set-top-level-value! s
 	     (lambda args
-	       (define tt (get *profiles* s 0))
+	       (define tt (get *profiles* s))
+	       (define count (car tt))
+	       (define time  (cdr tt))
 	       (define t0 (time.now))
 	       (define v (apply f args))
-	       (put! *profiles* s (+ tt (- (time.now) t0)))
+	       (set-cdr! tt (+ time (- (time.now) t0)))
+	       (set-car! tt (+ count 1))
 	       v)))))
   (set! show-profiles
 	(lambda ()
-	  (define (swapad c) (cons (cdr c) (car c)))
-	  (for-each (lambda (p)
-		      (princ (cdr p) "\t\t" (car p))
-		      (newline))
-		    (simple-sort (map swapad (table.pairs *profiles*)))))))
+	  (define (max a b) (if (< a b) b a))
+	  (define pr (filter (lambda (x) (> (cadr x) 0))
+			     (table.pairs *profiles*)))
+	  (define width (+ 4
+			   (foldl max 0
+				  (map (lambda (x)
+					 (length (string x)))
+				       (cons 'Function
+					     (map car pr))))))
+	  (princ (string.rpad "Function" width #\ )
+		 "#Calls     Time (seconds)")
+	  (newline)
+	  (princ (string.rpad "--------" width #\ )
+		 "------     --------------")
+	  (newline)
+	  (for-each
+	   (lambda (p)
+	     (princ (string.rpad (string (caddr p)) width #\ )
+		    (string.rpad (string (cadr p)) 11 #\ )
+		    (car p))
+	     (newline))
+	   (simple-sort (map (lambda (l) (reverse (to-proper l)))
+			     pr)))))
+  (set! clear-profiles
+	(lambda ()
+	  (for-each (lambda (k)
+		      (put! *profiles* k (cons 0 0)))
+		    (table.keys *profiles*)))))
 
 #;(for-each profile
 	  '(emit encode-byte-code const-to-idx-vec
-	    index-of lookup-sym in-env?
+	    index-of lookup-sym in-env? any every
 	    compile-sym compile-if compile-begin
 	    list-partition just-compile-args
-	    compile-arglist
+	    compile-arglist macroexpand builtin->instruction
 	    compile-app compile-let compile-call
 	    compile-in compile compile-f
 	    map length> length= count filter append

@@ -141,13 +141,13 @@
 		(set! nxt (if (< i n) (aref v i) #f))
 		(cond ((memq vi '(:jmp :brf :brt))
 		       (put! fixup-to-label (sizeof bcode) nxt)
-		       (io.write bcode ((if long? uint32 uint16) 0))
+		       (io.write bcode ((if long? int32 int16) 0))
 		       (set! i (+ i 1)))
 		      ((number? nxt)
 		       (case vi
 			 ((:loadv.l :loadg.l :setg.l :loada.l :seta.l
 			   :largc :lvargc)
-			  (io.write bcode (uint32 nxt))
+			  (io.write bcode (int32 nxt))
 			  (set! i (+ i 1)))
 			 
 			 ((:loadc :setc)  ; 2 uint8 args
@@ -156,10 +156,10 @@
 			  (io.write bcode (uint8 (aref v i)))
 			  (set! i (+ i 1)))
 			 
-			 ((:loadc.l :setc.l)  ; 2 uint32 args
-			  (io.write bcode (uint32 nxt))
+			 ((:loadc.l :setc.l)  ; 2 int32 args
+			  (io.write bcode (int32 nxt))
 			  (set! i (+ i 1))
-			  (io.write bcode (uint32 (aref v i)))
+			  (io.write bcode (int32 (aref v i)))
 			  (set! i (+ i 1)))
 			 
 			 (else
@@ -171,8 +171,9 @@
       (table.foreach
        (lambda (addr labl)
 	 (begin (io.seek bcode addr)
-		(io.write bcode ((if long? uint32 uint16)
-				 (get label-to-loc labl)))))
+		(io.write bcode ((if long? int32 int16)
+				 (- (get label-to-loc labl)
+				    addr)))))
        fixup-to-label)
       (io.tostring! bcode))))
 
@@ -348,9 +349,22 @@
       (emit g :copyenv)
       (emit g (if tail? :tcall :call) (+ 1 nargs)))))
 
-(define (builtin->instruction b)
-  (let ((sym (intern (string #\: b))))
-    (and (has? Instructions sym) sym)))
+(define builtin->instruction
+  (let ((b2i (table number? :number?  cons :cons
+		    fixnum? :fixnum?  equal? :equal?
+		    eq? :eq?  symbol? :symbol?
+		    div0 :div0  builtin? :builtin?
+		    aset! :aset!  - :-  boolean? :boolean?  not :not
+		    apply :apply  atom? :atom?
+		    set-cdr! :set-cdr!  / :/
+		    function? :function?  vector :vector
+		    list :list  bound? :bound?
+		    < :<  * :* cdr :cdr  null? :null?
+		    + :+  eqv? :eqv? compare :compare  aref :aref
+		    set-car! :set-car!  car :car
+		    pair? :pair?  = :=  vector? :vector?)))
+    (lambda (b)
+      (get b2i b #f))))
 
 (define (compile-call g env tail? x)
   (let ((head  (car x)))
@@ -448,15 +462,15 @@
 
 (define (compile-thunk expr) (compile `(lambda () ,expr)))
 
-(define (ref-uint32-LE a i)
-  (+ (ash (aref a (+ i 0)) 0)
-     (ash (aref a (+ i 1)) 8)
-     (ash (aref a (+ i 2)) 16)
-     (ash (aref a (+ i 3)) 24)))
+(define (ref-int32-LE a i)
+  (int32 (+ (ash (aref a (+ i 0)) 0)
+	    (ash (aref a (+ i 1)) 8)
+	    (ash (aref a (+ i 2)) 16)
+	    (ash (aref a (+ i 3)) 24))))
 
-(define (ref-uint16-LE a i)
-  (+ (ash (aref a (+ i 0)) 0)
-     (ash (aref a (+ i 1)) 8)))
+(define (ref-int16-LE a i)
+  (int16 (+ (ash (aref a (+ i 0)) 0)
+	    (ash (aref a (+ i 1)) 8))))
 
 (define (hex5 n)
   (string.lpad (number->string n 16) 5 #\0))
@@ -489,7 +503,7 @@
 	       (set! i (+ i 1))
 	       (case inst
 		 ((:loadv.l :loadg.l :setg.l)
-		  (print-val (aref vals (ref-uint32-LE code i)))
+		  (print-val (aref vals (ref-int32-LE code i)))
 		  (set! i (+ i 4)))
 		 
 		 ((:loadv :loadg :setg)
@@ -502,7 +516,7 @@
 		  (set! i (+ i 1)))
 		 
 		 ((:loada.l :seta.l :largc :lvargc)
-		  (princ (number->string (ref-uint32-LE code i)))
+		  (princ (number->string (ref-int32-LE code i)))
 		  (set! i (+ i 4)))
 
 		 ((:loadc :setc)
@@ -512,17 +526,17 @@
 		  (set! i (+ i 1)))
 		 
 		 ((:loadc.l :setc.l)
-		  (princ (number->string (ref-uint32-LE code i)) " ")
+		  (princ (number->string (ref-int32-LE code i)) " ")
 		  (set! i (+ i 4))
-		  (princ (number->string (ref-uint32-LE code i)))
+		  (princ (number->string (ref-int32-LE code i)))
 		  (set! i (+ i 4)))
 		 
 		 ((:jmp :brf :brt)
-		  (princ "@" (hex5 (ref-uint16-LE code i)))
+		  (princ "@" (hex5 (+ i (ref-int16-LE code i))))
 		  (set! i (+ i 2)))
 		 
 		 ((:jmp.l :brf.l :brt.l)
-		  (princ "@" (hex5 (ref-uint32-LE code i)))
+		  (princ "@" (hex5 (+ i (ref-int32-LE code i))))
 		  (set! i (+ i 4)))
 		 
 		 (else #f)))))))
