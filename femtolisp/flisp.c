@@ -825,9 +825,11 @@ static value_t do_trycatch()
 #define GET_INT16(a)                            \
     ((((int16_t)a[0])<<0)  |                    \
      (((int16_t)a[1])<<8))
+#define PUT_INT32(a,i) (*(int32_t*)(a) = bswap_32((int32_t)(i)))
 #else
 #define GET_INT32(a) (*(int32_t*)a)
 #define GET_INT16(a) (*(int16_t*)a)
+#define PUT_INT32(a,i) (*(int32_t*)(a) = (int32_t)(i))
 #endif
 
 /*
@@ -852,7 +854,7 @@ static value_t apply_cl(uint32_t nargs)
     fixnum_t s, hi;
 
     // temporary variables (not necessary to preserve across calls)
-    uint8_t op;
+    uint32_t op;
     uint32_t i;
     symbol_t *sym;
     static cons_t *c;
@@ -865,6 +867,9 @@ static value_t apply_cl(uint32_t nargs)
     func = Stack[SP-nargs-1];
     ip = cv_data((cvalue_t*)ptr(fn_bcode(func)));
     assert(!ismanaged((uptrint_t)ip));
+    if (SP+GET_INT32(ip) > N_STACK)
+        lerror(MemoryError, "stack overflow");
+    ip += 4;
 
     bp = &Stack[SP-nargs];
     PUSH(fn_env(func));
@@ -1556,10 +1561,125 @@ static value_t apply_cl(uint32_t nargs)
             POPN(1);
             Stack[SP-1] = v;
             goto next_op;
+
+        default:
+            goto dispatch;
         }
     }
-    assert(0);
-    return UNBOUND;
+    goto dispatch;
+}
+
+static uint32_t compute_maxstack(uint8_t *code, size_t len)
+{
+    uint8_t *ip = code+4, *end = code+len;
+    uint8_t op;
+    uint32_t n, sp = 0, maxsp = 0;
+
+    while (1) {
+        if ((int32_t)sp > (int32_t)maxsp) maxsp = sp;
+        if (ip >= end) break;
+        op = *ip++;
+        switch (op) {
+        case OP_ARGC:
+            n = *ip++;
+            break;
+        case OP_VARGC:
+            n = *ip++;
+            sp += (n+2);
+            break;
+        case OP_LARGC:
+            n = GET_INT32(ip); ip+=4;
+            sp += (n+2);
+            break;
+        case OP_LVARGC:
+            // move extra arguments from list to stack
+            n = GET_INT32(ip); ip+=4;
+            sp += (n+3);
+            break;
+        case OP_LET: break;
+
+        case OP_TCALL: case OP_CALL:
+            n = *ip++;  // nargs
+            sp -= n;
+            break;
+        case OP_JMP:  ip += 2; break;
+        case OP_JMPL: ip += 4; break;
+        case OP_BRF: case OP_BRT:
+            ip+=2;
+            sp--;
+            break;
+        case OP_BRFL: case OP_BRTL:
+            ip += 4;
+            sp--;
+            break;
+        case OP_RET: sp--; break;
+
+        case OP_CONS: case OP_SETCAR: case OP_SETCDR: case OP_POP:
+        case OP_EQ: case OP_EQV: case OP_EQUAL: case OP_ADD2: case OP_SUB2:
+        case OP_IDIV: case OP_NUMEQ: case OP_LT: case OP_COMPARE:
+        case OP_AREF: case OP_TRYCATCH:
+            sp--;
+            break;
+
+        case OP_PAIRP: case OP_ATOMP: case OP_NOT: case OP_NULLP:
+        case OP_BOOLEANP: case OP_SYMBOLP: case OP_NUMBERP: case OP_FIXNUMP:
+        case OP_BOUNDP: case OP_BUILTINP: case OP_FUNCTIONP: case OP_VECTORP:
+        case OP_NOP: case OP_CAR: case OP_CDR: case OP_NEG: case OP_CLOSURE:
+            break;
+
+        case OP_TAPPLY: case OP_APPLY:
+            if (sp+MAX_ARGS+1 > maxsp) maxsp = sp+MAX_ARGS+1;
+            n = *ip++;
+            sp -= (n-1);
+            break;
+
+        case OP_LIST: case OP_ADD: case OP_SUB: case OP_MUL: case OP_DIV:
+        case OP_VECTOR:
+            n = *ip++;
+            sp -= (n-1);
+            break;
+
+        case OP_ASET:
+            sp -= 2;
+            break;
+        case OP_FOR:
+            if (sp+2 > maxsp) maxsp = sp+2;
+            sp -=2;
+            break;
+
+        case OP_LOADT: case OP_LOADF: case OP_LOADNIL: case OP_LOAD0:
+        case OP_LOAD1: case OP_LOADA0: case OP_LOADA1: case OP_LOADC00:
+        case OP_LOADC01: case OP_COPYENV: case OP_DUP:
+            sp++;
+            break;
+
+        case OP_LOADI8: case OP_LOADV: case OP_LOADG: case OP_LOADA:
+            ip++;
+            sp++;
+            break;
+        case OP_LOADVL: case OP_LOADGL: case OP_LOADAL:
+            ip+=4;
+            sp++;
+            break;
+
+        case OP_SETG: case OP_SETA:
+            ip++;
+            break;
+        case OP_SETGL: case OP_SETAL:
+            ip+=4;
+            break;
+
+        case OP_LOADC: ip+=2; sp++; break;
+        case OP_SETC:
+            ip+=2;
+            break;
+        case OP_LOADCL: ip+=8; sp++; break;
+        case OP_SETCL:
+            ip+=8;
+            break;
+        }
+    }
+    return maxsp+6;
 }
 
 // initialization -------------------------------------------------------------
@@ -1588,12 +1708,14 @@ static value_t fl_function(value_t *args, uint32_t nargs)
     cvalue_t *arr = (cvalue_t*)ptr(args[0]);
     cv_pin(arr);
     char *data = cv_data(arr);
-    if (data[0] >= N_OPCODES) {
+    if (data[4] >= N_OPCODES) {
         // read syntax, shifted 48 for compact text representation
         size_t i, sz = cv_len(arr);
         for(i=0; i < sz; i++)
             data[i] -= 48;
     }
+    uint32_t ms = compute_maxstack((uint8_t*)data, cv_len(arr));
+    PUT_INT32(data, ms);
     function_t *fn = (function_t*)alloc_words(4);
     value_t fv = tagptr(fn, TAG_FUNCTION);
     fn->bcode = args[0];

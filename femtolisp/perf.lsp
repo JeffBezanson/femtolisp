@@ -15,9 +15,18 @@
 (princ "mexpand: ")
 (time (dotimes (n 5000) (macroexpand '(dotimes (i 100) body1 body2))))
 
+(define (my-append . lsts)
+  (cond ((null? lsts) ())
+        ((null? (cdr lsts)) (car lsts))
+        (else ((label append2 (lambda (l d)
+				(if (null? l) d
+				    (cons (car l)
+					  (append2 (cdr l) d)))))
+	       (car lsts) (apply my-append (cdr lsts))))))
+
 (princ "append: ")
 (set! L (map-int (lambda (x) (map-int identity 20)) 20))
-(time (dotimes (n 1000) (apply append L)))
+(time (dotimes (n 1000) (apply my-append L)))
 
 (path.cwd "ast")
 (princ "p-lambda: ")

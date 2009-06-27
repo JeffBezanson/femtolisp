@@ -1082,20 +1082,29 @@ curr_frame = SP
 to return:
 v = POP();
 SP = curr_frame
-pop top 4 words into corresponding local vars
-curr_frame = pop()
-pop cloenv
-pop arguments
+curr_frame = Stack[SP-5]
+if (args == top_args) return v;
+SP -= (6+nargs);
+move Stack[curr_frame-4] through Stack[curr_frame-1] back into locals
 Stack[SP-1] = v
 goto next_op
 
 to relocate stack:
-curr_top = SP
-f = curr_frame
-while (1) {
-  for i=f, i<curr_top, i++
-    relocate stack[i]
-  if (f == 0) break;
-  curr_top = f - 6
-  f = stack[f - 5]
+for each segment {
+  curr_top = SP
+  f = curr_frame
+  while (1) {
+    for i=f, i<curr_top, i++
+      relocate stack[i]
+    if (f == 0) break;
+    curr_top = f - 6
+    f = stack[f - 5]
+  }
 }
+
+typedef struct {
+    value_t *Stack;
+    uint32_t size;
+    uint32_t SP;
+    uint32_t curr_frame;
+} stackseg_t;

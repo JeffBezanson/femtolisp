@@ -120,6 +120,7 @@
 	  (bcode          (buffer))
 	  (vi             #f)
 	  (nxt            #f))
+      (io.write bcode #int32(0))
       (while (< i n)
 	(begin
 	  (set! vi (aref v i))
@@ -488,7 +489,9 @@
 	  (begin (princ "\n")
 		 (disassemble v (+ lev 1)))
 	  (print v)))
-    (let ((i 0)
+    (dotimes (xx lev) (princ "\t"))
+    (princ "maxstack " (ref-int32-LE code 0) "\n")
+    (let ((i 4)
 	  (N (length code)))
       (while (< i N)
 	     ; find key whose value matches the current byte
@@ -496,9 +499,9 @@
 					(or z (and (eq? v (aref code i))
 						   k)))
 				      #f Instructions)))
-	       (if (> i 0) (newline))
+	       (if (> i 4) (newline))
 	       (dotimes (xx lev) (princ "\t"))
-	       (princ (hex5 i) ":  "
+	       (princ (hex5 (- i 4)) ":  "
 		      (string.tail (string inst) 1) "\t")
 	       (set! i (+ i 1))
 	       (case inst
