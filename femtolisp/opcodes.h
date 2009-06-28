@@ -32,4 +32,44 @@ enum {
     N_OPCODES
 };
 
+#ifdef USE_COMPUTED_GOTO
+#define VM_LABELS                                                       \
+    static void *vm_labels[] = {                                        \
+&&L_OP_NOP, &&L_OP_DUP, &&L_OP_POP, &&L_OP_CALL, &&L_OP_TCALL, &&L_OP_JMP, \
+    &&L_OP_BRF, &&L_OP_BRT,                                             \
+    &&L_OP_JMPL, &&L_OP_BRFL, &&L_OP_BRTL, &&L_OP_RET,                  \
+                                                                        \
+    &&L_OP_EQ, &&L_OP_EQV, &&L_OP_EQUAL, &&L_OP_ATOMP, &&L_OP_NOT,      \
+    &&L_OP_NULLP, &&L_OP_BOOLEANP,                                      \
+    &&L_OP_SYMBOLP, &&L_OP_NUMBERP, &&L_OP_BOUNDP, &&L_OP_PAIRP,        \
+    &&L_OP_BUILTINP, &&L_OP_VECTORP,                                    \
+    &&L_OP_FIXNUMP, &&L_OP_FUNCTIONP,                                   \
+                                                                        \
+    &&L_OP_CONS, &&L_OP_LIST, &&L_OP_CAR, &&L_OP_CDR, &&L_OP_SETCAR,    \
+    &&L_OP_SETCDR, &&L_OP_APPLY,                                        \
+                                                                        \
+    &&L_OP_ADD, &&L_OP_SUB, &&L_OP_MUL, &&L_OP_DIV, &&L_OP_IDIV, &&L_OP_NUMEQ, \
+    &&L_OP_LT, &&L_OP_COMPARE,                                          \
+                                                                        \
+    &&L_OP_VECTOR, &&L_OP_AREF, &&L_OP_ASET,                            \
+                                                                        \
+    &&L_OP_LOADT, &&L_OP_LOADF, &&L_OP_LOADNIL, &&L_OP_LOAD0, &&L_OP_LOAD1, \
+    &&L_OP_LOADI8,                                                      \
+    &&L_OP_LOADV, &&L_OP_LOADVL,                                        \
+    &&L_OP_LOADG, &&L_OP_LOADGL,                                        \
+    &&L_OP_LOADA, &&L_OP_LOADAL, &&L_OP_LOADC, &&L_OP_LOADCL,           \
+    &&L_OP_SETG, &&L_OP_SETGL,                                          \
+    &&L_OP_SETA, &&L_OP_SETAL, &&L_OP_SETC, &&L_OP_SETCL,               \
+                                                                        \
+    &&L_OP_CLOSURE, &&L_OP_ARGC, &&L_OP_VARGC, &&L_OP_TRYCATCH,         \
+    &&L_OP_COPYENV,                                                     \
+    &&L_OP_LET, &&L_OP_FOR,                                             \
+    &&L_OP_TAPPLY, &&L_OP_ADD2, &&L_OP_SUB2, &&L_OP_NEG, &&L_OP_LARGC,  \
+    &&L_OP_LVARGC,                                                      \
+    &&L_OP_LOADA0, &&L_OP_LOADA1, &&L_OP_LOADC00, &&L_OP_LOADC01        \
+    }
+#else
+#define VM_LABELS
+#endif
+
 #endif

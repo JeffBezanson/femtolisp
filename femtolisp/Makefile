@@ -8,11 +8,11 @@ EXENAME = $(NAME)
 LLTDIR = ../llt
 LLT = $(LLTDIR)/libllt.a
 
-FLAGS = -falign-functions -Wall -Wextra -Wno-strict-aliasing -I$(LLTDIR) $(CFLAGS)
+FLAGS = -falign-functions -Wall -Wextra -Wno-strict-aliasing -I$(LLTDIR) $(CFLAGS) -DUSE_COMPUTED_GOTO
 LIBS = $(LLT) -lm
 
 DEBUGFLAGS = -g -DDEBUG $(FLAGS)
-SHIPFLAGS = -O3 -DNDEBUG -fomit-frame-pointer -march=native $(FLAGS)
+SHIPFLAGS = -O2 -DNDEBUG -fomit-frame-pointer -march=native $(FLAGS)
 
 default: release test
 

@@ -832,6 +832,16 @@ static value_t do_trycatch()
 #define PUT_INT32(a,i) (*(int32_t*)(a) = (int32_t)(i))
 #endif
 
+#ifdef USE_COMPUTED_GOTO
+#define OP(x) L_##x:
+#define NEXT_OP goto *vm_labels[*ip++]
+#define DISPATCH goto *vm_labels[op]
+#else
+#define OP(x) case x:
+#define NEXT_OP goto next_op
+#define DISPATCH goto dispatch
+#endif
+
 /*
   stack on entry: <func>  <up to MAX_ARGS args...>  <arglist if nargs>MAX_ARGS>
   caller's responsibility:
@@ -847,9 +857,10 @@ static value_t do_trycatch()
 */
 static value_t apply_cl(uint32_t nargs)
 {
+    VM_LABELS;
     // frame variables
     uint32_t n, captured;
-    value_t *bp;
+    uint32_t bp;
     const uint8_t *ip;
     fixnum_t s, hi;
 
@@ -871,15 +882,20 @@ static value_t apply_cl(uint32_t nargs)
         lerror(MemoryError, "stack overflow");
     ip += 4;
 
-    bp = &Stack[SP-nargs];
+    bp = SP-nargs;
     PUSH(fn_env(func));
 
     {
+#ifdef USE_COMPUTED_GOTO
+    {
+        NEXT_OP;
+#else
     next_op:
         op = *ip++;
     dispatch:
         switch (op) {
-        case OP_ARGC:
+#endif
+        OP(OP_ARGC)
             n = *ip++;
             if (nargs != n) {
                 if (nargs > n)
@@ -887,13 +903,13 @@ static value_t apply_cl(uint32_t nargs)
                 else
                     lerror(ArgError, "apply: too few arguments");
             }
-            goto next_op;
-        case OP_VARGC:
+            NEXT_OP;
+        OP(OP_VARGC)
             i = *ip++;
             s = (fixnum_t)nargs - (fixnum_t)i;
             v = NIL;
             if (s > 0) {
-                v = list(&bp[i], s);
+                v = list(&Stack[bp+i], s);
                 if (nargs > MAX_ARGS) {
                     if (s == 1) {
                         v = car_(v);
@@ -903,8 +919,8 @@ static value_t apply_cl(uint32_t nargs)
                         (c-2)->cdr = (c-1)->car;
                     }
                 }
-                bp[i] = v;
-                bp[i+1] = bp[nargs];
+                Stack[bp+i] = v;
+                Stack[bp+i+1] = Stack[bp+nargs];
             }
             else if (s < 0) {
                 lerror(ArgError, "apply: too few arguments");
@@ -915,9 +931,9 @@ static value_t apply_cl(uint32_t nargs)
                 Stack[SP-2] = NIL;
             }
             nargs = i+1;
-            goto next_op;
-        case OP_LARGC:
-        case OP_LVARGC:
+            NEXT_OP;
+        OP(OP_LARGC)
+        OP(OP_LVARGC)
             // move extra arguments from list to stack
             i = GET_INT32(ip); ip+=4;
             e = POP();  // cloenv
@@ -933,7 +949,7 @@ static value_t apply_cl(uint32_t nargs)
                 nargs++;
                 v = cdr_(v);
             }
-            if (op == OP_LVARGC) {
+            if (ip[-5] == OP_LVARGC) {
                 PUSH(v);
                 nargs++;
             }
@@ -942,27 +958,27 @@ static value_t apply_cl(uint32_t nargs)
                     lerror(ArgError, "apply: too many arguments");
             }
             PUSH(e);
-            goto next_op;
-        case OP_LET:
+            NEXT_OP;
+        OP(OP_LET)
             // last arg is closure environment to use
             nargs--;
             POPN(1);
-            goto next_op;
-        case OP_NOP: goto next_op;
-        case OP_DUP: SP++; Stack[SP-1] = Stack[SP-2]; goto next_op;
-        case OP_POP: POPN(1); goto next_op;
-        case OP_TCALL:
+            NEXT_OP;
+        OP(OP_NOP) NEXT_OP;
+        OP(OP_DUP) SP++; Stack[SP-1] = Stack[SP-2]; NEXT_OP;
+        OP(OP_POP) POPN(1); NEXT_OP;
+        OP(OP_TCALL)
             n = *ip++;  // nargs
         do_tcall:
             if (isfunction(Stack[SP-n-1])) {
                 for(s=-1; s < (fixnum_t)n; s++)
-                    bp[s] = Stack[SP-n+s];
-                SP = (bp-Stack)+n;
+                    Stack[bp+s] = Stack[SP-n+s];
+                SP = bp+n;
                 nargs = n;
                 goto apply_cl_top;
             }
             goto do_call;
-        case OP_CALL:
+        OP(OP_CALL)
             n = *ip++;  // nargs
         do_call:
             func = Stack[SP-n-1];
@@ -994,7 +1010,7 @@ static value_t apply_cl(uint32_t nargs)
                     case OP_MUL:    goto apply_mul;
                     case OP_DIV:    goto apply_div;
                     default:
-                        goto dispatch;
+                        DISPATCH;
                     }
                 }
             }
@@ -1006,35 +1022,35 @@ static value_t apply_cl(uint32_t nargs)
             }
             SP = s-n;
             Stack[SP-1] = v;
-            goto next_op;
-        case OP_JMP: ip += (ptrint_t)GET_INT16(ip); goto next_op;
-        case OP_BRF:
+            NEXT_OP;
+        OP(OP_JMP) ip += (ptrint_t)GET_INT16(ip); NEXT_OP;
+        OP(OP_BRF)
             v = POP();
             if (v == FL_F) ip += (ptrint_t)GET_INT16(ip);
             else ip += 2;
-            goto next_op;
-        case OP_BRT:
+            NEXT_OP;
+        OP(OP_BRT)
             v = POP();
             if (v != FL_F) ip += (ptrint_t)GET_INT16(ip);
             else ip += 2;
-            goto next_op;
-        case OP_JMPL: ip += (ptrint_t)GET_INT32(ip); goto next_op;
-        case OP_BRFL:
+            NEXT_OP;
+        OP(OP_JMPL) ip += (ptrint_t)GET_INT32(ip); NEXT_OP;
+        OP(OP_BRFL)
             v = POP();
             if (v == FL_F) ip += (ptrint_t)GET_INT32(ip);
             else ip += 4;
-            goto next_op;
-        case OP_BRTL:
+            NEXT_OP;
+        OP(OP_BRTL)
             v = POP();
             if (v != FL_F) ip += (ptrint_t)GET_INT32(ip);
             else ip += 4;
-            goto next_op;
-        case OP_RET: v = POP(); return v;
+            NEXT_OP;
+        OP(OP_RET) v = POP(); return v;
 
-        case OP_EQ:
+        OP(OP_EQ)
             Stack[SP-2] = ((Stack[SP-2] == Stack[SP-1]) ? FL_T : FL_F);
-            POPN(1); goto next_op;
-        case OP_EQV:
+            POPN(1); NEXT_OP;
+        OP(OP_EQV)
             if (Stack[SP-2] == Stack[SP-1]) {
                 v = FL_T;
             }
@@ -1045,8 +1061,8 @@ static value_t apply_cl(uint32_t nargs)
                 v = equal(Stack[SP-2], Stack[SP-1]);
             }
             Stack[SP-2] = v; POPN(1);
-            goto next_op;
-        case OP_EQUAL:
+            NEXT_OP;
+        OP(OP_EQUAL)
             if (Stack[SP-2] == Stack[SP-1]) {
                 v = FL_T;
             }
@@ -1054,42 +1070,42 @@ static value_t apply_cl(uint32_t nargs)
                 v = equal(Stack[SP-2], Stack[SP-1]);
             }
             Stack[SP-2] = v; POPN(1);
-            goto next_op;
-        case OP_PAIRP:
-            Stack[SP-1] = (iscons(Stack[SP-1]) ? FL_T : FL_F); goto next_op;
-        case OP_ATOMP:
-            Stack[SP-1] = (iscons(Stack[SP-1]) ? FL_F : FL_T); goto next_op;
-        case OP_NOT:
-            Stack[SP-1] = ((Stack[SP-1]==FL_F) ? FL_T : FL_F); goto next_op;
-        case OP_NULLP:
-            Stack[SP-1] = ((Stack[SP-1]==NIL) ? FL_T : FL_F); goto next_op;
-        case OP_BOOLEANP:
+            NEXT_OP;
+        OP(OP_PAIRP)
+            Stack[SP-1] = (iscons(Stack[SP-1]) ? FL_T : FL_F); NEXT_OP;
+        OP(OP_ATOMP)
+            Stack[SP-1] = (iscons(Stack[SP-1]) ? FL_F : FL_T); NEXT_OP;
+        OP(OP_NOT)
+            Stack[SP-1] = ((Stack[SP-1]==FL_F) ? FL_T : FL_F); NEXT_OP;
+        OP(OP_NULLP)
+            Stack[SP-1] = ((Stack[SP-1]==NIL) ? FL_T : FL_F); NEXT_OP;
+        OP(OP_BOOLEANP)
             v = Stack[SP-1];
-            Stack[SP-1] = ((v == FL_T || v == FL_F) ? FL_T:FL_F); goto next_op;
-        case OP_SYMBOLP:
-            Stack[SP-1] = (issymbol(Stack[SP-1]) ? FL_T : FL_F); goto next_op;
-        case OP_NUMBERP:
+            Stack[SP-1] = ((v == FL_T || v == FL_F) ? FL_T:FL_F); NEXT_OP;
+        OP(OP_SYMBOLP)
+            Stack[SP-1] = (issymbol(Stack[SP-1]) ? FL_T : FL_F); NEXT_OP;
+        OP(OP_NUMBERP)
             v = Stack[SP-1];
-            Stack[SP-1] = (isfixnum(v) || iscprim(v) ? FL_T:FL_F); goto next_op;
-        case OP_FIXNUMP:
-            Stack[SP-1] = (isfixnum(Stack[SP-1]) ? FL_T : FL_F); goto next_op;
-        case OP_BOUNDP:
+            Stack[SP-1] = (isfixnum(v) || iscprim(v) ? FL_T:FL_F); NEXT_OP;
+        OP(OP_FIXNUMP)
+            Stack[SP-1] = (isfixnum(Stack[SP-1]) ? FL_T : FL_F); NEXT_OP;
+        OP(OP_BOUNDP)
             sym = tosymbol(Stack[SP-1], "bound?");
             Stack[SP-1] = ((sym->binding == UNBOUND) ? FL_F : FL_T);
-            goto next_op;
-        case OP_BUILTINP:
+            NEXT_OP;
+        OP(OP_BUILTINP)
             v = Stack[SP-1];
             Stack[SP-1] = (isbuiltin(v) || iscbuiltin(v)) ? FL_T : FL_F;
-            goto next_op;
-        case OP_FUNCTIONP:
+            NEXT_OP;
+        OP(OP_FUNCTIONP)
             v = Stack[SP-1];
             Stack[SP-1] = ((tag(v)==TAG_FUNCTION &&v!=FL_F&&v!=FL_T&&v!=NIL) ||
                            iscbuiltin(v)) ? FL_T : FL_F;
-            goto next_op;
-        case OP_VECTORP:
-            Stack[SP-1] = (isvector(Stack[SP-1]) ? FL_T : FL_F); goto next_op;
+            NEXT_OP;
+        OP(OP_VECTORP)
+            Stack[SP-1] = (isvector(Stack[SP-1]) ? FL_T : FL_F); NEXT_OP;
 
-        case OP_CONS:
+        OP(OP_CONS)
             if (curheap > lim)
                 gc(0);
             c = (cons_t*)curheap;
@@ -1097,24 +1113,24 @@ static value_t apply_cl(uint32_t nargs)
             c->car = Stack[SP-2];
             c->cdr = Stack[SP-1];
             Stack[SP-2] = tagptr(c, TAG_CONS);
-            POPN(1); goto next_op;
-        case OP_CAR:
+            POPN(1); NEXT_OP;
+        OP(OP_CAR)
             v = Stack[SP-1];
             if (!iscons(v)) type_error("car", "cons", v);
             Stack[SP-1] = car_(v);
-            goto next_op;
-        case OP_CDR:
+            NEXT_OP;
+        OP(OP_CDR)
             v = Stack[SP-1];
             if (!iscons(v)) type_error("cdr", "cons", v);
             Stack[SP-1] = cdr_(v);
-            goto next_op;
-        case OP_SETCAR:
+            NEXT_OP;
+        OP(OP_SETCAR)
             car(Stack[SP-2]) = Stack[SP-1];
-            POPN(1); goto next_op;
-        case OP_SETCDR:
+            POPN(1); NEXT_OP;
+        OP(OP_SETCDR)
             cdr(Stack[SP-2]) = Stack[SP-1];
-            POPN(1); goto next_op;
-        case OP_LIST:
+            POPN(1); NEXT_OP;
+        OP(OP_LIST)
             n = *ip++;
         apply_list:
             if (n > 0) {
@@ -1125,10 +1141,13 @@ static value_t apply_cl(uint32_t nargs)
             else {
                 PUSH(NIL);
             }
-            goto next_op;
+            NEXT_OP;
 
-        case OP_TAPPLY:
-        case OP_APPLY:
+        OP(OP_TAPPLY)
+        OP(OP_APPLY)
+#ifdef USE_COMPUTED_GOTO
+            op = ip[-1];
+#endif
             n = *ip++;
         apply_apply:
             v = POP();     // arglist
@@ -1148,7 +1167,7 @@ static value_t apply_cl(uint32_t nargs)
             if (op==OP_TAPPLY) goto do_tcall;
             else goto do_call;
 
-        case OP_ADD:
+        OP(OP_ADD)
             n = *ip++;
         apply_add:
             s = 0;
@@ -1172,8 +1191,8 @@ static value_t apply_cl(uint32_t nargs)
                 v = fixnum(s);
             POPN(n);
             PUSH(v);
-            goto next_op;
-        case OP_ADD2:
+            NEXT_OP;
+        OP(OP_ADD2)
             if (bothfixnums(Stack[SP-1], Stack[SP-2])) {
                 s = numval(Stack[SP-1]) + numval(Stack[SP-2]);
                 if (fits_fixnum(s))
@@ -1186,8 +1205,8 @@ static value_t apply_cl(uint32_t nargs)
             }
             POPN(1);
             Stack[SP-1] = v;
-            goto next_op;
-        case OP_SUB:
+            NEXT_OP;
+        OP(OP_SUB)
             n = *ip++;
         apply_sub:
             if (n == 2) goto do_sub2;
@@ -1202,15 +1221,15 @@ static value_t apply_cl(uint32_t nargs)
             v = fl_add_any(&Stack[i], 2, 0);
             POPN(n);
             PUSH(v);
-            goto next_op;
-        case OP_NEG:
+            NEXT_OP;
+        OP(OP_NEG)
         do_neg:
             if (isfixnum(Stack[SP-1]))
                 Stack[SP-1] = fixnum(-numval(Stack[SP-1]));
             else
                 Stack[SP-1] = fl_neg(Stack[SP-1]);
-            goto next_op;
-        case OP_SUB2:
+            NEXT_OP;
+        OP(OP_SUB2)
         do_sub2:
             if (bothfixnums(Stack[SP-2], Stack[SP-1])) {
                 s = numval(Stack[SP-2]) - numval(Stack[SP-1]);
@@ -1225,8 +1244,8 @@ static value_t apply_cl(uint32_t nargs)
             }
             POPN(1);
             Stack[SP-1] = v;
-            goto next_op;
-        case OP_MUL:
+            NEXT_OP;
+        OP(OP_MUL)
             n = *ip++;
         apply_mul:
             accum = 1;
@@ -1250,8 +1269,8 @@ static value_t apply_cl(uint32_t nargs)
             }
             POPN(n);
             PUSH(v);
-            goto next_op;
-        case OP_DIV:
+            NEXT_OP;
+        OP(OP_DIV)
             n = *ip++;
         apply_div:
             i = SP-n;
@@ -1269,8 +1288,8 @@ static value_t apply_cl(uint32_t nargs)
                 POPN(n);
                 PUSH(v);
             }
-            goto next_op;
-        case OP_IDIV:
+            NEXT_OP;
+        OP(OP_IDIV)
             v = Stack[SP-2]; e = Stack[SP-1];
             if (bothfixnums(v, e)) {
                 if (e==0) DivideByZeroError();
@@ -1280,8 +1299,8 @@ static value_t apply_cl(uint32_t nargs)
                 v = fl_idiv2(v, e);
             POPN(1);
             Stack[SP-1] = v;
-            goto next_op;
-        case OP_NUMEQ:
+            NEXT_OP;
+        OP(OP_NUMEQ)
             v = Stack[SP-2]; e = Stack[SP-1];
             if (bothfixnums(v, e))
                 v = (v == e) ? FL_T : FL_F;
@@ -1289,8 +1308,8 @@ static value_t apply_cl(uint32_t nargs)
                 v = (!numeric_compare(v,e,1,0,"=")) ? FL_T : FL_F;
             POPN(1);
             Stack[SP-1] = v;
-            goto next_op;
-        case OP_LT:
+            NEXT_OP;
+        OP(OP_LT)
             if (bothfixnums(Stack[SP-2], Stack[SP-1])) {
                 v = (numval(Stack[SP-2]) < numval(Stack[SP-1])) ? FL_T : FL_F;
             }
@@ -1300,13 +1319,13 @@ static value_t apply_cl(uint32_t nargs)
             }
             POPN(1);
             Stack[SP-1] = v;
-            goto next_op;
-        case OP_COMPARE:
+            NEXT_OP;
+        OP(OP_COMPARE)
             Stack[SP-2] = compare(Stack[SP-2], Stack[SP-1]);
             POPN(1);
-            goto next_op;
+            NEXT_OP;
 
-        case OP_VECTOR:
+        OP(OP_VECTOR)
             n = *ip++;
         apply_vector:
             if (n > MAX_ARGS) {
@@ -1328,9 +1347,9 @@ static value_t apply_cl(uint32_t nargs)
                 }
             }
             PUSH(v);
-            goto next_op;
+            NEXT_OP;
 
-        case OP_AREF:
+        OP(OP_AREF)
             v = Stack[SP-2];
             if (isvector(v)) {
                 i = tofixnum(Stack[SP-1], "aref");
@@ -1346,8 +1365,8 @@ static value_t apply_cl(uint32_t nargs)
             }
             POPN(1);
             Stack[SP-1] = v;
-            goto next_op;
-        case OP_ASET:
+            NEXT_OP;
+        OP(OP_ASET)
             e = Stack[SP-3];
             if (isvector(e)) {
                 i = tofixnum(Stack[SP-2], "aset!");
@@ -1363,8 +1382,8 @@ static value_t apply_cl(uint32_t nargs)
             }
             POPN(2);
             Stack[SP-1] = v;
-            goto next_op;
-        case OP_FOR:
+            NEXT_OP;
+        OP(OP_FOR)
             s  = tofixnum(Stack[SP-3], "for");
             hi = tofixnum(Stack[SP-2], "for");
             //f = Stack[SP-1];
@@ -1379,31 +1398,31 @@ static value_t apply_cl(uint32_t nargs)
             }
             POPN(4);
             Stack[SP-1] = v;
-            goto next_op;
+            NEXT_OP;
 
-        case OP_LOADT: PUSH(FL_T); goto next_op;
-        case OP_LOADF: PUSH(FL_F); goto next_op;
-        case OP_LOADNIL: PUSH(NIL); goto next_op;
-        case OP_LOAD0: PUSH(fixnum(0)); goto next_op;
-        case OP_LOAD1: PUSH(fixnum(1)); goto next_op;
-        case OP_LOADI8: s = (int8_t)*ip++; PUSH(fixnum(s)); goto next_op;
-        case OP_LOADV:
-            v = fn_vals(bp[-1]);
+        OP(OP_LOADT) PUSH(FL_T); NEXT_OP;
+        OP(OP_LOADF) PUSH(FL_F); NEXT_OP;
+        OP(OP_LOADNIL) PUSH(NIL); NEXT_OP;
+        OP(OP_LOAD0) PUSH(fixnum(0)); NEXT_OP;
+        OP(OP_LOAD1) PUSH(fixnum(1)); NEXT_OP;
+        OP(OP_LOADI8) s = (int8_t)*ip++; PUSH(fixnum(s)); NEXT_OP;
+        OP(OP_LOADV)
+            v = fn_vals(Stack[bp-1]);
             assert(*ip < vector_size(v));
             v = vector_elt(v, *ip); ip++;
             PUSH(v);
-            goto next_op;
-        case OP_LOADVL:
-            v = fn_vals(bp[-1]);
+            NEXT_OP;
+        OP(OP_LOADVL)
+            v = fn_vals(Stack[bp-1]);
             v = vector_elt(v, GET_INT32(ip)); ip+=4;
             PUSH(v);
-            goto next_op;
-        case OP_LOADGL:
-            v = fn_vals(bp[-1]);
+            NEXT_OP;
+        OP(OP_LOADGL)
+            v = fn_vals(Stack[bp-1]);
             v = vector_elt(v, GET_INT32(ip)); ip+=4;
             goto do_loadg;
-        case OP_LOADG:
-            v = fn_vals(bp[-1]);
+        OP(OP_LOADG)
+            v = fn_vals(Stack[bp-1]);
             assert(*ip < vector_size(v));
             v = vector_elt(v, *ip); ip++;
         do_loadg:
@@ -1412,14 +1431,14 @@ static value_t apply_cl(uint32_t nargs)
             if (sym->binding == UNBOUND)
                 raise(list2(UnboundError, v));
             PUSH(sym->binding);
-            goto next_op;
+            NEXT_OP;
 
-        case OP_SETGL:
-            v = fn_vals(bp[-1]);
+        OP(OP_SETGL)
+            v = fn_vals(Stack[bp-1]);
             v = vector_elt(v, GET_INT32(ip)); ip+=4;
             goto do_setg;
-        case OP_SETG:
-            v = fn_vals(bp[-1]);
+        OP(OP_SETG)
+            v = fn_vals(Stack[bp-1]);
             assert(*ip < vector_size(v));
             v = vector_elt(v, *ip); ip++;
         do_setg:
@@ -1428,103 +1447,113 @@ static value_t apply_cl(uint32_t nargs)
             v = Stack[SP-1];
             if (sym->syntax != TAG_CONST)
                 sym->binding = v;
-            goto next_op;
+            NEXT_OP;
 
-        case OP_LOADA:
+        OP(OP_LOADA)
             assert(nargs > 0);
             i = *ip++;
             if (captured) {
-                e = *bp;
+                e = Stack[bp];
                 assert(isvector(e));
                 assert(i < vector_size(e));
                 v = vector_elt(e, i);
             }
             else {
-                v = bp[i];
+                v = Stack[bp+i];
             }
             PUSH(v);
-            goto next_op;
-        case OP_LOADA0:
+            NEXT_OP;
+        OP(OP_LOADA0)
             if (captured)
-                v = vector_elt(*bp, 0);
+                v = vector_elt(Stack[bp], 0);
             else
-                v = *bp;
+                v = Stack[bp];
             PUSH(v);
-            goto next_op;
-        case OP_LOADA1:
+            NEXT_OP;
+        OP(OP_LOADA1)
             if (captured)
-                v = vector_elt(*bp, 1);
+                v = vector_elt(Stack[bp], 1);
             else
-                v = bp[1];
+                v = Stack[bp+1];
             PUSH(v);
-            goto next_op;
-        case OP_LOADAL:
+            NEXT_OP;
+        OP(OP_LOADAL)
             assert(nargs > 0);
             i = GET_INT32(ip); ip+=4;
             if (captured)
-                v = vector_elt(*bp, i);
+                v = vector_elt(Stack[bp], i);
             else
-                v = bp[i];
+                v = Stack[bp+i];
             PUSH(v);
-            goto next_op;
-        case OP_SETA:
+            NEXT_OP;
+        OP(OP_SETA)
             assert(nargs > 0);
             v = Stack[SP-1];
             i = *ip++;
             if (captured) {
-                e = *bp;
+                e = Stack[bp];
                 assert(isvector(e));
                 assert(i < vector_size(e));
                 vector_elt(e, i) = v;
             }
             else {
-                bp[i] = v;
+                Stack[bp+i] = v;
             }
-            goto next_op;
-        case OP_SETAL:
+            NEXT_OP;
+        OP(OP_SETAL)
             assert(nargs > 0);
             v = Stack[SP-1];
             i = GET_INT32(ip); ip+=4;
             if (captured)
-                vector_elt(*bp, i) = v;
+                vector_elt(Stack[bp], i) = v;
             else
-                bp[i] = v;
-            goto next_op;
-        case OP_LOADC:
-        case OP_SETC:
+                Stack[bp+i] = v;
+            NEXT_OP;
+        OP(OP_LOADC)
             s = *ip++;
             i = *ip++;
-            v = bp[nargs];
+            v = Stack[bp+nargs];
             while (s--)
                 v = vector_elt(v, vector_size(v)-1);
             assert(isvector(v));
             assert(i < vector_size(v));
-            if (op == OP_SETC)
-                vector_elt(v, i) = Stack[SP-1];
-            else
-                PUSH(vector_elt(v, i));
-            goto next_op;
-        case OP_LOADC00:
-            PUSH(vector_elt(bp[nargs], 0));
-            goto next_op;
-        case OP_LOADC01:
-            PUSH(vector_elt(bp[nargs], 1));
-            goto next_op;
-        case OP_LOADCL:
-        case OP_SETCL:
-            s = GET_INT32(ip); ip+=4;
-            i = GET_INT32(ip); ip+=4;
-            v = bp[nargs];
+            PUSH(vector_elt(v, i));
+            NEXT_OP;
+        OP(OP_SETC)
+            s = *ip++;
+            i = *ip++;
+            v = Stack[bp+nargs];
             while (s--)
                 v = vector_elt(v, vector_size(v)-1);
-            if (op == OP_SETCL)
-                vector_elt(v, i) = Stack[SP-1];
-            else
-                PUSH(vector_elt(v, i));
-            goto next_op;
+            assert(isvector(v));
+            assert(i < vector_size(v));
+            vector_elt(v, i) = Stack[SP-1];
+            NEXT_OP;
+        OP(OP_LOADC00)
+            PUSH(vector_elt(Stack[bp+nargs], 0));
+            NEXT_OP;
+        OP(OP_LOADC01)
+            PUSH(vector_elt(Stack[bp+nargs], 1));
+            NEXT_OP;
+        OP(OP_LOADCL)
+            s = GET_INT32(ip); ip+=4;
+            i = GET_INT32(ip); ip+=4;
+            v = Stack[bp+nargs];
+            while (s--)
+                v = vector_elt(v, vector_size(v)-1);
+            PUSH(vector_elt(v, i));
+            NEXT_OP;
+        OP(OP_SETCL)
+            s = GET_INT32(ip); ip+=4;
+            i = GET_INT32(ip); ip+=4;
+            v = Stack[bp+nargs];
+            while (s--)
+                v = vector_elt(v, vector_size(v)-1);
+            vector_elt(v, i) = Stack[SP-1];
+            NEXT_OP;
 
-        case OP_CLOSURE:
-        case OP_COPYENV:
+        OP(OP_CLOSURE)
+        OP(OP_COPYENV)
             // build a closure (lambda args body . env)
             if (nargs > 0 && !captured) {
                 // save temporary environment to the heap
@@ -1534,17 +1563,17 @@ static value_t apply_cl(uint32_t nargs)
                 pv[0] = fixnum(n+1);
                 pv++;
                 do {
-                  pv[n] = bp[n];
+                  pv[n] = Stack[bp+n];
                 } while (n--);
                 // environment representation changed; install
                 // the new representation so everybody can see it
                 captured = 1;
-                *bp = Stack[SP-1];
+                Stack[bp] = Stack[SP-1];
             }
             else {
-                PUSH(*bp); // env has already been captured; share
+                PUSH(Stack[bp]); // env has already been captured; share
             }
-            if (op == OP_CLOSURE) {
+            if (ip[-1] == OP_CLOSURE) {
                 pv = alloc_words(4);
                 e = Stack[SP-2];  // closure to copy
                 assert(isfunction(e));
@@ -1554,19 +1583,25 @@ static value_t apply_cl(uint32_t nargs)
                 POPN(1);
                 Stack[SP-1] = tagptr(pv, TAG_FUNCTION);
             }
-            goto next_op;
+            NEXT_OP;
 
-        case OP_TRYCATCH:
+        OP(OP_TRYCATCH)
             v = do_trycatch();
             POPN(1);
             Stack[SP-1] = v;
-            goto next_op;
+            NEXT_OP;
 
+#ifndef USE_COMPUTED_GOTO
         default:
             goto dispatch;
+#endif
         }
     }
+#ifdef USE_COMPUTED_GOTO
+    return UNBOUND;  // not reached
+#else
     goto dispatch;
+#endif
 }
 
 static uint32_t compute_maxstack(uint8_t *code, size_t len)
