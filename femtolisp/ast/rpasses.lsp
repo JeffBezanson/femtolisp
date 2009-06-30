@@ -21,7 +21,7 @@
 
 (let ((ctr 0))
   (set! r-gensym (lambda ()
-		   (prog1 (intern (string "%r:" ctr))
+		   (prog1 (symbol (string "%r:" ctr))
 			  (set! ctr (+ ctr 1))))))
 
 (define (dollarsign-transform e)

@@ -175,7 +175,7 @@
       (else    (emit g (aref Is 2) s)))))
 
 (define (builtin->instruction b)
-  (let ((sym (intern (string #\: b))))
+  (let ((sym (symbol (string #\: b))))
     (and (has? Instructions sym) sym)))
 
 (define (cond->if form)

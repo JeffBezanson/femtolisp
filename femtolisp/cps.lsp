@@ -32,7 +32,7 @@
       (k (apply f args))))
 (define *funcall/cc-names*
   (list->vector
-   (map (lambda (i) (intern (string 'funcall/cc- i)))
+   (map (lambda (i) (symbol (string 'funcall/cc- i)))
         (iota 6))))
 (define-macro (def-funcall/cc-n args)
   (let ((name (aref *funcall/cc-names* (length args))))

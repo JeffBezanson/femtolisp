@@ -2,7 +2,7 @@
 ; utilities for AST processing
 
 (define (symconcat s1 s2)
-  (intern (string s1 s2)))
+  (symbol (string s1 s2)))
 
 (define (list-adjoin item lst)
   (if (member item lst)
