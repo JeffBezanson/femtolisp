@@ -1,35 +1,29 @@
 /*
   femtoLisp
 
-  a minimal interpreter for a minimal lisp dialect
+  a compact interpreter for a minimal lisp/scheme dialect
 
-  this lisp dialect uses lexical scope and self-evaluating lambda.
-  it supports 30-bit integers, symbols, conses, and full macros.
-  it is case-sensitive.
-  it features a simple compacting copying garbage collector.
-  it uses a Scheme-style evaluation rule where any expression may appear in
-    head position as long as it evaluates to a function.
-  it uses Scheme-style varargs (dotted formal argument lists)
-  lambdas can have only 1 body expression; use (begin ...) for multiple
-    expressions. this is due to the closure representation
-    (lambda args body . env)
+  characteristics:
+  * lexical scope, lisp-1
+  * unrestricted macros
+  * data types: 30-bit integer, symbol, pair, vector, char, string, table
+      iostream, procedure, low-level data types
+  * case-sensitive
+  * simple compacting copying garbage collector
+  * Scheme-style varargs (dotted formal argument lists)
+  * "human-readable" bytecode with self-hosted compiler
 
-  This is a fully fleshed-out lisp built up from femtoLisp. It has all the
-  remaining features needed to be taken seriously:
+  extra features:
   * circular structure can be printed and read
-  * #. read macro for eval-when-read and correctly printing builtins
+  * #. read macro for eval-when-read and readably printing builtins
   * read macros for backquote
   * symbol character-escaping printer
-  * vectors
   * exceptions
   * gensyms (can be usefully read back in, too)
-  * #| multiline comments |#
+  * #| multiline comments |#, lots of other lexical syntax
   * generic compare function, cyclic equal
   * cvalues system providing C data types and a C FFI
   * constructor notation for nicely printing arbitrary values
-  * strings
-  * hash tables
-  * I/O streams
 
   by Jeff Bezanson (C) 2009
   Distributed under the BSD License
@@ -736,61 +730,6 @@ static value_t apply_liststar(value_t L, int star)
     }
     POPN(2);
     return POP();
-}
-
-value_t fl_copylist(value_t *args, u_int32_t nargs)
-{
-    argcount("copy-list", nargs, 1);
-    return FL_COPYLIST(args[0]);
-}
-
-value_t fl_append(value_t *args, u_int32_t nargs)
-{
-    if (nargs == 0)
-        return NIL;
-    value_t first=NIL, lst, lastcons=NIL;
-    fl_gc_handle(&first);
-    fl_gc_handle(&lastcons);
-    uint32_t i=0;
-    while (1) {
-        if (i >= MAX_ARGS) {
-            lst = car_(args[MAX_ARGS]);
-            args[MAX_ARGS] = cdr_(args[MAX_ARGS]);
-            if (!iscons(args[MAX_ARGS])) break;
-        }
-        else {
-            lst = args[i++];
-            if (i >= nargs) break;
-        }
-        if (iscons(lst)) {
-            lst = FL_COPYLIST(lst);
-            if (first == NIL)
-                first = lst;
-            else
-                cdr_(lastcons) = lst;
-            lastcons = tagptr((((cons_t*)curheap)-1), TAG_CONS);
-        }
-        else if (lst != NIL) {
-            type_error("append", "cons", lst);
-        }
-    }
-    if (first == NIL)
-        first = lst;
-    else
-        cdr_(lastcons) = lst;
-    fl_free_gc_handles(2);
-    return first;
-}
-
-value_t fl_liststar(value_t *args, u_int32_t nargs)
-{
-    if (nargs == 1) return args[0];
-    else if (nargs == 0) argcount("list*", nargs, 1);
-    if (nargs > MAX_ARGS) {
-        args[MAX_ARGS] = apply_liststar(args[MAX_ARGS], 1);
-        return list(args, nargs);
-    }
-    return _list(args, nargs, 1);
 }
 
 static value_t do_trycatch()
@@ -1717,12 +1656,7 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len)
     return maxsp+6;
 }
 
-// initialization -------------------------------------------------------------
-
-extern void builtins_init();
-extern void comparehash_init();
-
-static char *EXEDIR = NULL;
+// builtins -------------------------------------------------------------------
 
 void assign_global_builtins(builtinspec_t *b)
 {
@@ -1784,6 +1718,61 @@ static value_t fl_function_env(value_t *args, uint32_t nargs)
     return fn_env(v);
 }
 
+value_t fl_copylist(value_t *args, u_int32_t nargs)
+{
+    argcount("copy-list", nargs, 1);
+    return FL_COPYLIST(args[0]);
+}
+
+value_t fl_append(value_t *args, u_int32_t nargs)
+{
+    if (nargs == 0)
+        return NIL;
+    value_t first=NIL, lst, lastcons=NIL;
+    fl_gc_handle(&first);
+    fl_gc_handle(&lastcons);
+    uint32_t i=0;
+    while (1) {
+        if (i >= MAX_ARGS) {
+            lst = car_(args[MAX_ARGS]);
+            args[MAX_ARGS] = cdr_(args[MAX_ARGS]);
+            if (!iscons(args[MAX_ARGS])) break;
+        }
+        else {
+            lst = args[i++];
+            if (i >= nargs) break;
+        }
+        if (iscons(lst)) {
+            lst = FL_COPYLIST(lst);
+            if (first == NIL)
+                first = lst;
+            else
+                cdr_(lastcons) = lst;
+            lastcons = tagptr((((cons_t*)curheap)-1), TAG_CONS);
+        }
+        else if (lst != NIL) {
+            type_error("append", "cons", lst);
+        }
+    }
+    if (first == NIL)
+        first = lst;
+    else
+        cdr_(lastcons) = lst;
+    fl_free_gc_handles(2);
+    return first;
+}
+
+value_t fl_liststar(value_t *args, u_int32_t nargs)
+{
+    if (nargs == 1) return args[0];
+    else if (nargs == 0) argcount("list*", nargs, 1);
+    if (nargs > MAX_ARGS) {
+        args[MAX_ARGS] = apply_liststar(args[MAX_ARGS], 1);
+        return list(args, nargs);
+    }
+    return _list(args, nargs, 1);
+}
+
 static builtinspec_t core_builtin_info[] = {
     { "function", fl_function },
     { "function:code", fl_function_code },
@@ -1796,6 +1785,13 @@ static builtinspec_t core_builtin_info[] = {
     { "list*", fl_liststar },
     { NULL, NULL }
 };
+
+// initialization -------------------------------------------------------------
+
+extern void builtins_init();
+extern void comparehash_init();
+
+static char *EXEDIR = NULL;
 
 static void lisp_init(void)
 {
@@ -1870,6 +1866,9 @@ static void lisp_init(void)
     setc(symbol("*os-name*"), symbol("unknown"));
 #endif
 
+    the_empty_vector = tagptr(alloc_words(1), TAG_VECTOR);
+    vector_setsize(the_empty_vector, 0);
+
     cvalues_init();
 
     char buf[1024];
@@ -1882,9 +1881,6 @@ static void lisp_init(void)
 
     memory_exception_value = list2(MemoryError,
                                    cvalue_static_cstring("out of memory"));
-
-    the_empty_vector = tagptr(alloc_words(1), TAG_VECTOR);
-    vector_setsize(the_empty_vector, 0);
 
     assign_global_builtins(core_builtin_info);
 

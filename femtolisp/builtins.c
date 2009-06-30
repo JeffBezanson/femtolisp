@@ -130,11 +130,11 @@ static value_t fl_exit(value_t *args, u_int32_t nargs)
     return NIL;
 }
 
-static value_t fl_intern(value_t *args, u_int32_t nargs)
+static value_t fl_symbol(value_t *args, u_int32_t nargs)
 {
-    argcount("intern", nargs, 1);
+    argcount("symbol", nargs, 1);
     if (!isstring(args[0]))
-        type_error("intern", "string", args[0]);
+        type_error("symbol", "string", args[0]);
     return symbol(cvalue_data(args[0]));
 }
 
@@ -416,7 +416,7 @@ static builtinspec_t builtin_info[] = {
     { "set-top-level-value!", fl_set_top_level_value },
     { "raise", fl_raise },
     { "exit", fl_exit },
-    { "intern", fl_intern },
+    { "symbol", fl_symbol },
 
     { "fixnum", fl_fixnum },
     { "truncate", fl_truncate },
