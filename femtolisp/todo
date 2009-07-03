@@ -1059,33 +1059,30 @@ arg1
 argn
 cloenv         |
 prev           |
-args	       |
 nargs	       |
-ip	       | 
-capt?	       |
+ip	       |
+captured       | 
 
 to call:
 push func and arguments
-args[nargs+4] = ip    // save my state in my frame
-args[nargs+5] = capt?
+args[nargs+3] = ip    // save my state in my frame
 assign nargs
 goto top
 
 on entry:
 push cloenv
 push curr_frame  (a global initialized to 0)
-push args
 push nargs
-SP += 2
+SP += 1
 curr_frame = SP
 
 to return:
 v = POP();
 SP = curr_frame
-curr_frame = Stack[SP-5]
+curr_frame = Stack[SP-4]
 if (args == top_args) return v;
-SP -= (6+nargs);
-move Stack[curr_frame-4] through Stack[curr_frame-1] back into locals
+SP -= (5+nargs);
+move Stack[curr_frame-...] back into locals
 Stack[SP-1] = v
 goto next_op
 
@@ -1097,8 +1094,8 @@ for each segment {
     for i=f, i<curr_top, i++
       relocate stack[i]
     if (f == 0) break;
-    curr_top = f - 6
-    f = stack[f - 5]
+    curr_top = f - 4
+    f = stack[f - 4]
   }
 }
 

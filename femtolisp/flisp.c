@@ -77,9 +77,10 @@ static short builtin_arg_counts[] =
       ANYARGS, -1, ANYARGS, -1, 2,  2, 2, 2,
       ANYARGS, 2, 3 };
 
-#define N_STACK 262144
-static value_t Stack[N_STACK];
+static uint32_t N_STACK;
+static value_t *Stack;
 static uint32_t SP = 0;
+static uint32_t curr_frame = 0;
 #define PUSH(v) (Stack[SP++] = (v))
 #define POP()   (Stack[--SP])
 #define POPN(n) (SP-=(n))
@@ -128,6 +129,8 @@ static uint32_t *consflags;
 typedef struct _ectx_t {
     jmp_buf buf;
     uint32_t sp;
+    uint32_t frame;
+    uint32_t ngchnd;
     readstate_t *rdst;
     struct _ectx_t *prev;
 } exception_context_t;
@@ -137,8 +140,8 @@ static value_t lasterror;
 
 #define FL_TRY \
   exception_context_t _ctx; int l__tr, l__ca; \
-  _ctx.sp=SP; _ctx.rdst=readstate; _ctx.prev=ctx; \
-  ctx = &_ctx; \
+  _ctx.sp=SP; _ctx.frame=curr_frame; _ctx.rdst=readstate; _ctx.prev=ctx; \
+  _ctx.ngchnd = N_GCHND; ctx = &_ctx;                                    \
   if (!setjmp(_ctx.buf)) \
       for (l__tr=1; l__tr; l__tr=0, (void)(ctx->prev && (ctx=ctx->prev)))
 
@@ -155,6 +158,8 @@ void raise(value_t e)
         readstate = readstate->prev;
     }
     SP = ctx->sp;
+    curr_frame = ctx->frame;
+    N_GCHND = ctx->ngchnd;
     exception_context_t *thisctx = ctx;
     if (ctx->prev)   // don't throw past toplevel
         ctx = ctx->prev;
@@ -498,14 +503,21 @@ void gc(int mustgrow)
 {
     static int grew = 0;
     void *temp;
-    uint32_t i;
+    uint32_t i, f, top;
     readstate_t *rs;
 
     curheap = tospace;
     lim = curheap+heapsize-sizeof(cons_t);
 
-    for (i=0; i < SP; i++)
-        Stack[i] = relocate(Stack[i]);
+    top = SP;
+    f = curr_frame;
+    while (1) {
+        for (i=f; i < top; i++)
+            Stack[i] = relocate(Stack[i]);
+        if (f == 0) break;
+        top = f - 4;
+        f = Stack[f-4];
+    }
     for (i=0; i < N_GCHND; i++)
         *GCHandleStack[i] = relocate(*GCHandleStack[i]);
     trace_globals(symtab);
@@ -781,6 +793,16 @@ static value_t do_trycatch()
 #define DISPATCH goto dispatch
 #endif
 
+static void grow_stack()
+{
+    size_t newsz = N_STACK + (N_STACK>>1);
+    value_t *ns = realloc(Stack, newsz*sizeof(value_t));
+    if (ns == NULL)
+        lerror(MemoryError, "stack overflow");
+    Stack = ns;
+    N_STACK = newsz;
+}
+
 /*
   stack on entry: <func>  <up to MAX_ARGS args...>  <arglist if nargs>MAX_ARGS>
   caller's responsibility:
@@ -797,6 +819,7 @@ static value_t do_trycatch()
 static value_t apply_cl(uint32_t nargs)
 {
     VM_LABELS;
+    uint32_t top_frame = curr_frame;
     // frame variables
     uint32_t n, captured;
     uint32_t bp;
@@ -817,12 +840,18 @@ static value_t apply_cl(uint32_t nargs)
     func = Stack[SP-nargs-1];
     ip = cv_data((cvalue_t*)ptr(fn_bcode(func)));
     assert(!ismanaged((uptrint_t)ip));
-    if (SP+GET_INT32(ip) > N_STACK)
-        lerror(MemoryError, "stack overflow");
+    while (SP+GET_INT32(ip) > N_STACK) {
+        grow_stack();
+    }
     ip += 4;
 
     bp = SP-nargs;
     PUSH(fn_env(func));
+    PUSH(curr_frame);
+    PUSH(nargs);
+    PUSH(0); //ip
+    PUSH(0); //captured?
+    curr_frame = SP;
 
     {
 #ifdef USE_COMPUTED_GOTO
@@ -846,7 +875,6 @@ static value_t apply_cl(uint32_t nargs)
         OP(OP_VARGC)
             i = *ip++;
             s = (fixnum_t)nargs - (fixnum_t)i;
-            v = NIL;
             if (s > 0) {
                 v = list(&Stack[bp+i], s);
                 if (nargs > MAX_ARGS) {
@@ -859,15 +887,28 @@ static value_t apply_cl(uint32_t nargs)
                     }
                 }
                 Stack[bp+i] = v;
-                Stack[bp+i+1] = Stack[bp+nargs];
+                if (s > 1) {
+                    Stack[bp+i+1] = Stack[bp+nargs+0];
+                    Stack[bp+i+2] = Stack[bp+nargs+1];
+                    Stack[bp+i+3] = i+1;
+                    Stack[bp+i+4] = 0;
+                    Stack[bp+i+5] = 0;
+                    SP =  bp+i+6;
+                    curr_frame = SP;
+                }
             }
             else if (s < 0) {
                 lerror(ArgError, "apply: too few arguments");
             }
             else {
-                PUSH(NIL);
+                SP++;
                 Stack[SP-1] = Stack[SP-2];
-                Stack[SP-2] = NIL;
+                Stack[SP-2] = Stack[SP-3];
+                Stack[SP-3] = i+1;
+                Stack[SP-4] = Stack[SP-5];
+                Stack[SP-5] = Stack[SP-6];
+                Stack[SP-6] = NIL;
+                curr_frame = SP;
             }
             nargs = i+1;
             NEXT_OP;
@@ -875,7 +916,9 @@ static value_t apply_cl(uint32_t nargs)
         OP(OP_LVARGC)
             // move extra arguments from list to stack
             i = GET_INT32(ip); ip+=4;
-            e = POP();  // cloenv
+            e = Stack[curr_frame-5];  // cloenv
+            n = Stack[curr_frame-4];  // prev curr_frame
+            POPN(5);
             if (nargs > MAX_ARGS) {
                 v = POP();  // list of rest args
                 nargs--;
@@ -897,11 +940,19 @@ static value_t apply_cl(uint32_t nargs)
                     lerror(ArgError, "apply: too many arguments");
             }
             PUSH(e);
+            PUSH(n);
+            PUSH(nargs);
+            PUSH(0);
+            PUSH(0);
+            curr_frame = SP;
             NEXT_OP;
         OP(OP_LET)
             // last arg is closure environment to use
             nargs--;
+            Stack[SP-5] = Stack[SP-4];
+            Stack[SP-4] = nargs;
             POPN(1);
+            curr_frame = SP;
             NEXT_OP;
         OP(OP_NOP) NEXT_OP;
         OP(OP_DUP) SP++; Stack[SP-1] = Stack[SP-2]; NEXT_OP;
@@ -910,6 +961,7 @@ static value_t apply_cl(uint32_t nargs)
             n = *ip++;  // nargs
         do_tcall:
             if (isfunction(Stack[SP-n-1])) {
+                curr_frame = Stack[curr_frame-4];
                 for(s=-1; s < (fixnum_t)n; s++)
                     Stack[bp+s] = Stack[SP-n+s];
                 SP = bp+n;
@@ -924,7 +976,9 @@ static value_t apply_cl(uint32_t nargs)
             s = SP;
             if (tag(func) == TAG_FUNCTION) {
                 if (func > (N_BUILTINS<<3)) {
-                    v = apply_cl(n);
+                    Stack[curr_frame-2] = (uptrint_t)ip;
+                    nargs = n;
+                    goto apply_cl_top;
                 }
                 else {
                     i = uintval(func);
@@ -984,7 +1038,18 @@ static value_t apply_cl(uint32_t nargs)
             if (v != FL_F) ip += (ptrint_t)GET_INT32(ip);
             else ip += 4;
             NEXT_OP;
-        OP(OP_RET) v = POP(); return v;
+        OP(OP_RET)
+            v = POP();
+            SP = curr_frame;
+            curr_frame = Stack[SP-4];
+            if (curr_frame == top_frame) return v;
+            SP -= (5+nargs);
+            captured     = Stack[curr_frame-1];
+            ip = (uint8_t*)Stack[curr_frame-2];
+            nargs        = Stack[curr_frame-3];
+            bp           = curr_frame - 5 - nargs;
+            Stack[SP-1] = v;
+            NEXT_OP;
 
         OP(OP_EQ)
             Stack[SP-2] = ((Stack[SP-2] == Stack[SP-1]) ? FL_T : FL_F);
@@ -1507,6 +1572,7 @@ static value_t apply_cl(uint32_t nargs)
                 // environment representation changed; install
                 // the new representation so everybody can see it
                 captured = 1;
+                Stack[curr_frame-1] = 1;
                 Stack[bp] = Stack[SP-1];
             }
             else {
@@ -1653,7 +1719,7 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len)
             break;
         }
     }
-    return maxsp+6;
+    return maxsp+5;
 }
 
 // builtins -------------------------------------------------------------------
@@ -1806,6 +1872,8 @@ static void lisp_init(void)
     consflags = bitvector_new(heapsize/sizeof(cons_t), 1);
     htable_new(&printconses, 32);
     comparehash_init();
+    N_STACK = 262144;
+    Stack = malloc(N_STACK*sizeof(value_t));
 
     NIL = builtin(OP_THE_EMPTY_LIST);
     FL_T = builtin(OP_BOOL_CONST_T);

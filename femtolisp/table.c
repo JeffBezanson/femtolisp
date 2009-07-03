@@ -168,23 +168,28 @@ value_t fl_table_del(value_t *args, uint32_t nargs)
 value_t fl_table_foldl(value_t *args, uint32_t nargs)
 {
     argcount("table.foldl", nargs, 3);
-    htable_t *h = totable(args[2], "table.foldl");
+    value_t f=args[0], zero=args[1], t=args[2];
+    htable_t *h = totable(t, "table.foldl");
     size_t i, n = h->size;
     void **table = h->table;
+    fl_gc_handle(&f);
+    fl_gc_handle(&zero);
+    fl_gc_handle(&t);
     for(i=0; i < n; i+=2) {
         if (table[i+1] != HT_NOTFOUND) {
-            args[1] = applyn(3, args[0],
-                             (value_t)table[i],
-                             (value_t)table[i+1],
-                             args[1]);
+            zero = applyn(3, f,
+                          (value_t)table[i],
+                          (value_t)table[i+1],
+                          zero);
             // reload pointer
-            h = (htable_t*)cv_data((cvalue_t*)ptr(args[2]));
+            h = (htable_t*)cv_data((cvalue_t*)ptr(t));
             if (h->size != n)
                 lerror(EnumerationError, "table.foldl: table modified");
             table = h->table;
         }
     }
-    return args[1];
+    fl_free_gc_handles(3);
+    return zero;
 }
 
 static builtinspec_t tablefunc_info[] = {
