@@ -151,7 +151,7 @@ static value_t fl_set_top_level_value(value_t *args, u_int32_t nargs)
 {
     argcount("set-top-level-value!", nargs, 2);
     symbol_t *sym = tosymbol(args[0], "set-top-level-value!");
-    if (sym->syntax != TAG_CONST)
+    if (!sym->isconst)
         sym->binding = args[1];
     return args[1];
 }

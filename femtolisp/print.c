@@ -1,14 +1,19 @@
+extern void *memrchr(const void *s, int c, size_t n);
+
 static htable_t printconses;
 static u_int32_t printlabel;
 static int print_pretty;
 static int print_princ;
 static int SCR_WIDTH = 80;
 
-static int HPOS, VPOS;
+static int HPOS=0, VPOS;
 static void outc(char c, ios_t *f)
 {
     ios_putc(c, f);
-    HPOS++;
+    if (c == '\n')
+        HPOS = 0;
+    else
+        HPOS++;
 }
 static void outs(char *s, ios_t *f)
 {
@@ -392,20 +397,25 @@ void fl_print_child(ios_t *f, value_t v)
         else {
             assert(isclosure(v));
             if (print_circle_prefix(f, v)) return;
-            function_t *fn = (function_t*)ptr(v);
-            outs("#function(", f);
-            char *data = cvalue_data(fn->bcode);
-            size_t i, sz = cvalue_len(fn->bcode);
-            for(i=0; i < sz; i++) data[i] += 48;
-            fl_print_child(f, fn->bcode);
-            for(i=0; i < sz; i++) data[i] -= 48;
-            outc(' ', f);
-            fl_print_child(f, fn->vals);
-            if (fn->env != NIL) {
+            if (!print_princ) {
+                function_t *fn = (function_t*)ptr(v);
+                outs("#function(", f);
+                char *data = cvalue_data(fn->bcode);
+                size_t i, sz = cvalue_len(fn->bcode);
+                for(i=0; i < sz; i++) data[i] += 48;
+                fl_print_child(f, fn->bcode);
+                for(i=0; i < sz; i++) data[i] -= 48;
                 outc(' ', f);
-                fl_print_child(f, fn->env);
+                fl_print_child(f, fn->vals);
+                if (fn->env != NIL) {
+                    outc(' ', f);
+                    fl_print_child(f, fn->env);
+                }
+                outc(')', f);
             }
-            outc(')', f);
+            else {
+                outs("#<function>", f);
+            }
         }
         break;
     case TAG_CVALUE:
@@ -611,6 +621,13 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             if (eltype == bytesym) {
                 if (print_princ) {
                     ios_write(f, data, len);
+                    /*
+                    char *nl = memrchr(data, '\n', len);
+                    if (nl)
+                        HPOS = u8_strwidth(nl+1);
+                    else
+                        HPOS += u8_strwidth(data);
+                    */
                 }
                 else {
                     print_string(f, (char*)data, len);

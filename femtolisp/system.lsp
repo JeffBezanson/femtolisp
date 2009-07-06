@@ -704,11 +704,32 @@
 	     #t))))
   (define (reploop)
     (when (trycatch (and (prompt) (newline))
-		    (lambda (e) (print-exception e)))
+		    (lambda (e)
+		      (print-exception e)
+		      (print-stack-trace (stacktrace))
+		      #t))
 	  (begin (newline)
 		 (reploop))))
   (reploop)
   (newline))
+
+(define (print-stack-trace st)
+  (define (fn-name f e)
+    (let ((m (filter (lambda (s) (and (bound? s)
+				      (eq? (top-level-value s) f)))
+		     e)))
+      (if (null? m) '? (car m))))
+  (let ((st (reverse! (list-tail st 5)))
+	(e (environment))
+	(n 0))
+    (for-each
+     (lambda (f)
+       (princ "#" n " ")
+       (print (cons (fn-name (aref f 0) e)
+		    (cdr (vector->list f))))
+       (newline)
+       (set! n (+ n 1)))
+     st)))
 
 (define (print-exception e)
   (define (eprinc . args) (apply io.princ *error-stream* args))
@@ -747,8 +768,7 @@
 	(else (eprinc "*** Unhandled exception: ")
 	      (eprint e)))
 
-  (eprinc *linefeed*)
-  #t)
+  (eprinc *linefeed*))
 
 (define (simple-sort l)
   (if (or (null? l) (null? (cdr l))) l

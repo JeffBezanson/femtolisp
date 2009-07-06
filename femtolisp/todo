@@ -1024,10 +1024,10 @@ new evaluator todo:
 * make (for ...) a special form
 * trycatch should require 2nd arg to be a lambda expression
 * immediate load int8 instruction
-- unlimited lambda lists
+* unlimited lambda lists
   . need 32-bit argument versions of loada, seta, loadc, setc
   . largs instruction to move args after MAX_ARGS from list to stack
-- maxstack calculation, make Stack growable
+* maxstack calculation, make Stack growable
   - stack traces and better debugging support
 - let eversion
 - lambda lifting

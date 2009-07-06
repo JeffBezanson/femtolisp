@@ -15,7 +15,7 @@ typedef struct {
 } cons_t;
 
 typedef struct _symbol_t {
-    value_t syntax;    // syntax environment entry
+    value_t isconst;
     value_t binding;   // global value binding
     struct _fltype_t *type;
     uint32_t hash;
@@ -39,7 +39,6 @@ typedef struct _symbol_t {
 #define TAG_CONS     0x7
 #define UNBOUND      ((value_t)0x1) // an invalid value
 #define TAG_FWD      UNBOUND
-#define TAG_CONST    ((value_t)-2)  // in sym->syntax for constants
 #define tag(x) ((x)&0x7)
 #define ptr(x) ((void*)((x)&(~(value_t)0x7)))
 #define tagptr(p,t) (((value_t)(p)) | (t))
@@ -84,9 +83,9 @@ typedef struct _symbol_t {
 #define cdr(v)  (tocons((v),"cdr")->cdr)
 
 #define set(s, v)  (((symbol_t*)ptr(s))->binding = (v))
-#define setc(s, v) do { ((symbol_t*)ptr(s))->syntax = TAG_CONST; \
+#define setc(s, v) do { ((symbol_t*)ptr(s))->isconst = 1; \
                         ((symbol_t*)ptr(s))->binding = (v); } while (0)
-#define isconstant(s) (((symbol_t*)ptr(s))->syntax == TAG_CONST)
+#define isconstant(s) (((symbol_t*)ptr(s))->isconst)
 #define symbol_value(s) (((symbol_t*)ptr(s))->binding)
 #define ismanaged(v) ((((unsigned char*)ptr(v)) >= fromspace) && \
                       (((unsigned char*)ptr(v)) < fromspace+heapsize))

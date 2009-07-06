@@ -137,6 +137,7 @@ typedef struct _ectx_t {
 
 static exception_context_t *ctx = NULL;
 static value_t lasterror;
+static uint32_t throwing_frame=0;  // active frame when exception was thrown
 
 #define FL_TRY \
   exception_context_t _ctx; int l__tr, l__ca; \
@@ -147,7 +148,8 @@ static value_t lasterror;
 
 #define FL_CATCH \
   else \
-      for (l__ca=1; l__ca; l__ca=0, lasterror=NIL)
+      for (l__ca=1; l__ca; l__ca=0, \
+           lasterror=NIL, throwing_frame=0, SP=_ctx.sp, curr_frame=_ctx.frame)
 
 void raise(value_t e)
 {
@@ -157,8 +159,8 @@ void raise(value_t e)
         free_readstate(readstate);
         readstate = readstate->prev;
     }
-    SP = ctx->sp;
-    curr_frame = ctx->frame;
+    if (throwing_frame == 0)
+        throwing_frame = curr_frame;
     N_GCHND = ctx->ngchnd;
     exception_context_t *thisctx = ctx;
     if (ctx->prev)   // don't throw past toplevel
@@ -236,7 +238,7 @@ static symbol_t *mk_symbol(char *str)
     }
     else {
         sym->binding = UNBOUND;
-        sym->syntax = 0;
+        sym->isconst = 0;
     }
     sym->type = sym->dlcache = NULL;
     sym->hash = memhash32(str, len)^0xAAAAAAAA;
@@ -271,7 +273,7 @@ value_t symbol(char *str)
 }
 
 typedef struct {
-    value_t syntax;    // syntax environment entry
+    value_t isconst;
     value_t binding;   // global value binding
     fltype_t *type;
     uint32_t id;
@@ -289,7 +291,7 @@ value_t fl_gensym(value_t *args, uint32_t nargs)
     gensym_t *gs = (gensym_t*)alloc_words(sizeof(gensym_t)/sizeof(void*));
     gs->id = _gensym_ctr++;
     gs->binding = UNBOUND;
-    gs->syntax = 0;
+    gs->isconst = 0;
     gs->type = NULL;
     return tagptr(gs, TAG_SYM);
 }
@@ -468,13 +470,11 @@ static value_t relocate(value_t v)
         gensym_t *ng = (gensym_t*)alloc_words(sizeof(gensym_t)/sizeof(void*));
         ng->id = gs->id;
         ng->binding = gs->binding;
-        ng->syntax = gs->syntax;
+        ng->isconst = 0;
         nc = tagptr(ng, TAG_SYM);
         forward(v, nc);
         if (ng->binding != UNBOUND)
             ng->binding = relocate(ng->binding);
-        if (iscons(ng->syntax))
-            ng->syntax = relocate(ng->syntax);
         return nc;
     }
     return v;
@@ -490,8 +490,6 @@ static void trace_globals(symbol_t *root)
     while (root != NULL) {
         if (root->binding != UNBOUND)
             root->binding = relocate(root->binding);
-        if (iscons(root->syntax) || iscvalue(root->syntax))
-            root->syntax = relocate(root->syntax);
         trace_globals(root->left);
         root = root->right;
     }
@@ -509,8 +507,14 @@ void gc(int mustgrow)
     curheap = tospace;
     lim = curheap+heapsize-sizeof(cons_t);
 
-    top = SP;
-    f = curr_frame;
+    if (throwing_frame > curr_frame) {
+        top = throwing_frame - 4;
+        f = Stack[throwing_frame-4];
+    }
+    else {
+        top = SP;
+        f = curr_frame;
+    }
     while (1) {
         for (i=f; i < top; i++)
             Stack[i] = relocate(Stack[i]);
@@ -756,7 +760,9 @@ static value_t do_trycatch()
         v = apply_cl(0);
     }
     FL_CATCH {
-        Stack[SP-1] = lasterror;
+        v = Stack[saveSP-2];
+        PUSH(v);
+        PUSH(lasterror);
         v = apply_cl(1);
     }
     SP = saveSP;
@@ -849,7 +855,7 @@ static value_t apply_cl(uint32_t nargs)
     PUSH(fn_env(func));
     PUSH(curr_frame);
     PUSH(nargs);
-    PUSH(0); //ip
+    SP++;//PUSH(0); //ip
     PUSH(0); //captured?
     curr_frame = SP;
 
@@ -891,7 +897,7 @@ static value_t apply_cl(uint32_t nargs)
                     Stack[bp+i+1] = Stack[bp+nargs+0];
                     Stack[bp+i+2] = Stack[bp+nargs+1];
                     Stack[bp+i+3] = i+1;
-                    Stack[bp+i+4] = 0;
+                    //Stack[bp+i+4] = 0;
                     Stack[bp+i+5] = 0;
                     SP =  bp+i+6;
                     curr_frame = SP;
@@ -901,9 +907,7 @@ static value_t apply_cl(uint32_t nargs)
                 lerror(ArgError, "apply: too few arguments");
             }
             else {
-                SP++;
-                Stack[SP-1] = Stack[SP-2];
-                Stack[SP-2] = Stack[SP-3];
+                PUSH(0);
                 Stack[SP-3] = i+1;
                 Stack[SP-4] = Stack[SP-5];
                 Stack[SP-5] = Stack[SP-6];
@@ -942,7 +946,7 @@ static value_t apply_cl(uint32_t nargs)
             PUSH(e);
             PUSH(n);
             PUSH(nargs);
-            PUSH(0);
+            SP++;//PUSH(0);
             PUSH(0);
             curr_frame = SP;
             NEXT_OP;
@@ -952,6 +956,7 @@ static value_t apply_cl(uint32_t nargs)
             Stack[SP-5] = Stack[SP-4];
             Stack[SP-4] = nargs;
             POPN(1);
+            Stack[SP-1] = 0;
             curr_frame = SP;
             NEXT_OP;
         OP(OP_NOP) NEXT_OP;
@@ -1449,7 +1454,7 @@ static value_t apply_cl(uint32_t nargs)
             assert(issymbol(v));
             sym = (symbol_t*)ptr(v);
             v = Stack[SP-1];
-            if (sym->syntax != TAG_CONST)
+            if (!sym->isconst)
                 sym->binding = v;
             NEXT_OP;
 
@@ -1722,6 +1727,31 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len)
     return maxsp+5;
 }
 
+// top = top frame pointer to start at
+static value_t _stacktrace(uint32_t top)
+{
+    uint32_t bp, sz;
+    value_t v, lst = NIL;
+    fl_gc_handle(&lst);
+    while (top > 0) {
+        sz = Stack[top-3]+1;
+        bp = top-5-sz;
+        v = alloc_vector(sz, 0);
+        if (Stack[top-1] /*captured*/) {
+            vector_elt(v, 0) = Stack[bp];
+            memcpy(&vector_elt(v, 1),
+                   &vector_elt(Stack[bp+1],0), (sz-1)*sizeof(value_t));
+        }
+        else {
+            memcpy(&vector_elt(v,0), &Stack[bp], sz*sizeof(value_t));
+        }
+        lst = fl_cons(v, lst);
+        top = Stack[top-4];
+    }
+    fl_free_gc_handles(1);
+    return lst;
+}
+
 // builtins -------------------------------------------------------------------
 
 void assign_global_builtins(builtinspec_t *b)
@@ -1839,11 +1869,19 @@ value_t fl_liststar(value_t *args, u_int32_t nargs)
     return _list(args, nargs, 1);
 }
 
+value_t fl_stacktrace(value_t *args, u_int32_t nargs)
+{
+    (void)args;
+    argcount("stacktrace", nargs, 0);
+    return _stacktrace(throwing_frame ? throwing_frame : curr_frame);
+}
+
 static builtinspec_t core_builtin_info[] = {
     { "function", fl_function },
     { "function:code", fl_function_code },
     { "function:vals", fl_function_vals },
     { "function:env", fl_function_env },
+    { "stacktrace", fl_stacktrace },
     { "gensym", fl_gensym },
     { "hash", fl_hash },
     { "copy-list", fl_copylist },
