@@ -535,11 +535,11 @@
 		  (set! i (+ i 4)))
 		 
 		 ((:jmp :brf :brt)
-		  (princ "@" (hex5 (+ i (ref-int16-LE code i))))
+		  (princ "@" (hex5 (+ i -4 (ref-int16-LE code i))))
 		  (set! i (+ i 2)))
 		 
 		 ((:jmp.l :brf.l :brt.l)
-		  (princ "@" (hex5 (+ i (ref-int32-LE code i))))
+		  (princ "@" (hex5 (+ i -4 (ref-int32-LE code i))))
 		  (set! i (+ i 4)))
 		 
 		 (else #f)))))))

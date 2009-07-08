@@ -100,14 +100,12 @@ member
 #function("8000r2\x7f?640^;\x7fM~>640\x7f;e0~\x7fN42;" [member])
 mark-label
 #function("9000r2e0~e1\x7f43;" [emit :label])
-mapcar
-#function(";000s1\x80~\x7f42;" [] #0=[#function("\xb7000r2\x7fA660~40;\x7fM?650\x7fM;~e0e1\x7f32Q2\x80~e0e2\x7f3232K;" [map car cdr] #0#) ()])
 map-int
 #function("9000r2e0\x7f`32640_;c1~`31_K_u43;" [<= #function(":000v~m12a\x81azc0qw2~;" [#function("8000r1\x81i10~31_KP2\x81No01;" [])])])
 map!
 #function("9000r2\x7f^\x7fF6B02\x7f~\x7fM31O2\x7fNm15\x1d/2;" [])
 map
-#function("8000r2c0_L1u42;" [#function("9000v~^\x81F6H02~\x80\x81M31_KPNm02\x81No015\x17/2N;" [])])
+#function("=000s2g2A6;0c0_L1u42;c1^u32~\x7fg2K42;" [#function("9000v~^\x81F6H02~\x80\x81M31_KPNm02\x81No015\x17/2N;" []) #function("6000vc0qm0;" [#function("\xb7000r2\x7fMA640_;~e0e1\x7f32Q2\x80~e0e2\x7f3232K;" [map car cdr])])])
 make-system-image
 #function(";000r1c0e1~e2e3e434c5e6u44;" [#function("8000v^k02c1c2qu42;" [*print-pretty* #function("7000vc0qc1qt~302;" [#function(":000r0e0c1qe2e3e430313142;" [for-each #function("9000r1~E16b02e0~31@16W02e1~31G@16K02e2~i1132@16=02e3e1~3131@6\\0e4i10~322e5i10c6322e4i10e1~31322e5i10c642;^;" [constant? top-level-value memq iostream? io.print io.write "\n"]) reverse! simple-sort environment]) #function("7000r1\x80302e0~41;" [raise])]) #function("7000r0e0\x80312i02k1;" [io.close *print-pretty*])]) file :write :create :truncate (*linefeed* *directory-separator* *argv* that *print-pretty* *print-width* *print-readably*) *print-pretty*])
 make-label
@@ -191,7 +189,7 @@ div
 display
 #function("7000r1e0~312];" [princ])
 disassemble
-#function("=000s1\x7fA6C0e0~`322e1302];530^2c2\x7fMe3~31e4~31u44;" [disassemble newline #function("8000vc0^u42;" [#function(":000vc0qm02`\x80azc1qw2e2c3e4\x81`32c5332c6b4e7\x8131u43;" [#function("9000r1~J16602~G@6D0e0c1312e2~i10ay42;e3~41;" [princ "\n" disassemble print]) #function("7000r1e0c141;" [princ "\t"]) princ "maxstack " ref-int32-LE "\n" #function(":000v^~\x7fX6E02c0e1c2q^e333u325\x19/;" [#function("<000ve0\x80b432690e130530^2`i20azc2qw2e3e4\x80b4z31c5e6e7~31a32c8342\x80ayo002c9~u42;" [> newline #function("7000r1e0c141;" [princ "\t"]) princ hex5 ":  " string.tail string "\t" #function("<000ve0~c1326P0i20i32e2i31i1032[312i10b4yo10;e0~c3326L0i20i32i31i10[[312i10ayo10;e0~c4326K0e5e6i31i10[31312i10ayo10;e0~c7326O0e5e6e2i31i103231312i10b4yo10;e0~c8326f0e5e6i31i10[31c9322i10ayo102e5e6i31i10[31312i10ayo10;e0~c:326n0e5e6e2i31i103231c9322i10b4yo102e5e6e2i31i103231312i10b4yo10;e0~c;326U0e5c<e=i10e>i31i1032y31322i10b2yo10;e0~c?326U0e5c<e=i10e2i31i1032y31322i10b4yo10;^;" [memq (:loadv.l :loadg.l :setg.l) ref-int32-LE (:loadv :loadg :setg) (:loada :seta :call :tcall :list :+ :- :* :/ :vector :argc :vargc :loadi8 :apply :tapply) princ number->string (:loada.l :seta.l :largc :lvargc) (:loadc :setc) " " (:loadc.l :setc.l) (:jmp :brf :brt) "@" hex5 ref-int16-LE (:jmp.l :brf.l :brt.l)])]) table.foldl #function("8000r3g217@02\x7fi21\x80[<16402~;" []) Instructions]) length])]) function:code function:vals])
+#function("=000s1\x7fA6C0e0~`322e1302];530^2c2\x7fMe3~31e4~31u44;" [disassemble newline #function("8000vc0^u42;" [#function(":000vc0qm02`\x80azc1qw2e2c3e4\x81`32c5332c6b4e7\x8131u43;" [#function("9000r1~J16602~G@6D0e0c1312e2~i10ay42;e3~41;" [princ "\n" disassemble print]) #function("7000r1e0c141;" [princ "\t"]) princ "maxstack " ref-int32-LE "\n" #function(":000v^~\x7fX6E02c0e1c2q^e333u325\x19/;" [#function("<000ve0\x80b432690e130530^2`i20azc2qw2e3e4\x80b4z31c5e6e7~31a32c8342\x80ayo002c9~u42;" [> newline #function("7000r1e0c141;" [princ "\t"]) princ hex5 ":  " string.tail string "\t" #function("=000ve0~c1326P0i20i32e2i31i1032[312i10b4yo10;e0~c3326L0i20i32i31i10[[312i10ayo10;e0~c4326K0e5e6i31i10[31312i10ayo10;e0~c7326O0e5e6e2i31i103231312i10b4yo10;e0~c8326f0e5e6i31i10[31c9322i10ayo102e5e6i31i10[31312i10ayo10;e0~c:326n0e5e6e2i31i103231c9322i10b4yo102e5e6e2i31i103231312i10b4yo10;e0~c;326X0e5c<e=i10b,e>i31i1032R331322i10b2yo10;e0~c?326X0e5c<e=i10b,e2i31i1032R331322i10b4yo10;^;" [memq (:loadv.l :loadg.l :setg.l) ref-int32-LE (:loadv :loadg :setg) (:loada :seta :call :tcall :list :+ :- :* :/ :vector :argc :vargc :loadi8 :apply :tapply) princ number->string (:loada.l :seta.l :largc :lvargc) (:loadc :setc) " " (:loadc.l :setc.l) (:jmp :brf :brt) "@" hex5 ref-int16-LE (:jmp.l :brf.l :brt.l)])]) table.foldl #function("8000r3g217@02\x7fi21\x80[<16402~;" []) Instructions]) length])]) function:code function:vals])
 delete-duplicates
 #function("9000r1~?640~;c0~M~Nu43;" [#function("8000ve0~\x7f32680e1\x7f41;~e1\x7f31K;" [member delete-duplicates])])
 count

@@ -20,18 +20,26 @@
 
 (define (symbol-syntax s) (get *syntax-environment* s #f))
 
-(define (map f lst)
-  ((lambda (acc)
-     (cdr
-      (prog1 acc
-       (while (pair? lst)
-	      (begin (set! acc
-			   (cdr (set-cdr! acc (cons (f (car lst)) ()))))
-		     (set! lst (cdr lst)))))))
-   (list ())))
-
 (define-macro (label name fn)
   (list (list 'lambda (list name) (list 'set! name fn)) #f))
+
+(define (map f lst . lsts)
+  (if (null? lsts)
+      ((lambda (acc)
+	 (cdr
+	  (prog1 acc
+	   (while (pair? lst)
+		  (begin (set! acc
+			       (cdr (set-cdr! acc (cons (f (car lst)) ()))))
+			 (set! lst (cdr lst)))))))
+       (list ()))
+      ((label mapn
+	      (lambda (f lsts)
+		(if (null? (car lsts))
+		    ()
+		    (cons (apply f (map car lsts))
+			  (mapn  f (map cdr lsts))))))
+       f (cons lst lsts))))
 
 (define-macro (let binds . body)
   ((lambda (lname)
@@ -203,15 +211,6 @@
 	 (while (pair? lst)
 		(set-car! lst (f (car lst)))
 		(set! lst (cdr lst)))))
-
-(define mapcar
-  (letrec ((mapcar-
-	    (lambda (f lsts)
-	      (cond ((null? lsts) (f))
-		    ((atom? (car lsts)) (car lsts))
-		    (#t (cons (apply   f (map car lsts))
-			      (mapcar- f (map cdr lsts))))))))
-    (lambda (f . lsts) (mapcar- f lsts))))
 
 (define filter
   (letrec ((filter-
