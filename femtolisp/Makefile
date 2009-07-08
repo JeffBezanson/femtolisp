@@ -12,7 +12,7 @@ FLAGS = -falign-functions -Wall -Wextra -Wno-strict-aliasing -I$(LLTDIR) $(CFLAG
 LIBS = $(LLT) -lm
 
 DEBUGFLAGS = -g -DDEBUG $(FLAGS)
-SHIPFLAGS = -O2 -DNDEBUG -fomit-frame-pointer -march=native $(FLAGS)
+SHIPFLAGS = -O2 -DNDEBUG -march=native $(FLAGS)
 
 default: release test
 

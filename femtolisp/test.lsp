@@ -240,11 +240,10 @@
 	       v)))))
   (set! show-profiles
 	(lambda ()
-	  (define (max a b) (if (< a b) b a))
 	  (define pr (filter (lambda (x) (> (cadr x) 0))
 			     (table.pairs *profiles*)))
 	  (define width (+ 4
-			   (foldl max 0
+			   (apply max
 				  (map (lambda (x)
 					 (length (string x)))
 				       (cons 'Function

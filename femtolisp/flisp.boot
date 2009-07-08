@@ -64,6 +64,8 @@ ref-int16-LE
 #function(";000r2e0e1~\x7f`y[`32e1~\x7fay[b832y41;" [int16 ash])
 random
 #function("8000r1e0~316<0e1e230~42;e330~T2;" [integer? mod rand rand.double])
+quotient
+#.div0
 quote-value
 #function("7000r1e0~31640~;c1~L2;" [self-evaluating? quote])
 println
@@ -94,10 +96,14 @@ mod0
 #function("8000r2~~\x7fV\x7fT2z;" [])
 mod
 #function("9000r2~e0~\x7f32\x7fT2z;" [div])
+min
+#function("<000s1\x7fA640~;e0c1q~\x7f43;" [foldl #function("7000r2~\x7fX640~;\x7f;" [])])
 memv
 #function("8000r2\x7f?640^;\x7fM~=640\x7f;e0~\x7fN42;" [memv])
 member
 #function("8000r2\x7f?640^;\x7fM~>640\x7f;e0~\x7fN42;" [member])
+max
+#function("<000s1\x7fA640~;e0c1q~\x7f43;" [foldl #function("7000r2~\x7fX640\x7f;~;" [])])
 mark-label
 #function("9000r2e0~e1\x7f43;" [emit :label])
 map-int
@@ -105,9 +111,9 @@ map-int
 map!
 #function("9000r2\x7f^\x7fF6B02\x7f~\x7fM31O2\x7fNm15\x1d/2;" [])
 map
-#function("=000s2g2A6;0c0_L1u42;c1^u32~\x7fg2K42;" [#function("9000v~^\x81F6H02~\x80\x81M31_KPNm02\x81No015\x17/2N;" []) #function("6000vc0qm0;" [#function("\xb7000r2\x7fMA640_;~e0e1\x7f32Q2\x80~e0e2\x7f3232K;" [map car cdr])])])
+#function("=000s2c0^^u43;" [#function("9000vc0qm02c1qm12i02A6;0~\x80\x81_L143;\x7f\x80\x81i02K42;" [#function("9000r3g2^\x7fF6H02g2~\x7fM31_KPNm22\x7fNm15\x17/2N;" []) #function("\xb7000r2\x7fMA640_;~\x80e0\x7f32Q2\x81~\x80e1\x7f3232K;" [car cdr])])])
 make-system-image
-#function(";000r1c0e1~e2e3e434c5e6u44;" [#function("8000v^k02c1c2qu42;" [*print-pretty* #function("7000vc0qc1qt~302;" [#function(":000r0e0c1qe2e3e430313142;" [for-each #function("9000r1~E16b02e0~31@16W02e1~31G@16K02e2~i1132@16=02e3e1~3131@6\\0e4i10~322e5i10c6322e4i10e1~31322e5i10c642;^;" [constant? top-level-value memq iostream? io.print io.write "\n"]) reverse! simple-sort environment]) #function("7000r1\x80302e0~41;" [raise])]) #function("7000r0e0\x80312i02k1;" [io.close *print-pretty*])]) file :write :create :truncate (*linefeed* *directory-separator* *argv* that *print-pretty* *print-width* *print-readably*) *print-pretty*])
+#function(";000r1c0e1~e2e3e434c5e6u44;" [#function("8000v^k02c1c2qu42;" [*print-pretty* #function("7000vc0qc1qt~302;" [#function(":000r0e0c1qe2e3e430313142;" [for-each #function("9000r1~E16w02e0~31@16l02e1~31G@17C02e2~31e2e1~3131>@16K02e3~i1132@16=02e4e1~3131@6\\0e5i10~322e6i10c7322e5i10e1~31322e6i10c742;^;" [constant? top-level-value string memq iostream? io.print io.write "\n"]) reverse! simple-sort environment]) #function("7000r1\x80302e0~41;" [raise])]) #function("7000r0e0\x80312i02k1;" [io.close *print-pretty*])]) file :write :create :truncate (*linefeed* *directory-separator* *argv* that *print-pretty* *print-width* *print-readably*) *print-pretty*])
 make-label
 #function("6000r1e040;" [gensym])
 make-code-emitter

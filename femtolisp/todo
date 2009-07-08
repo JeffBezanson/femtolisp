@@ -952,7 +952,7 @@ switch to miser mode, otherwise default is ok, for example:
 
 -----------------------------------------------------------------------------
 
-consolidated todo list as of 8/30:
+consolidated todo list as of 7/8:
 * new cvalues, types representation
 * use the unused tag for TAG_PRIM, add smaller prim representation
 * finalizers in gc
@@ -965,6 +965,14 @@ consolidated todo list as of 8/30:
 - eliminate string copy in lerror() when possible
 * fix printing lists of short strings
 
+- evaluator improvements, perf & debugging (below)
+* fix make-system-image to save aliases of builtins
+- reading named characters, e.g. #\newline etc.
+- #+, #- reader macros
+- printing improvements: *print-big*, keep track of horiz. position
+  per-stream so indenting works across print calls
+- improve bootstrapping process so compiled version can recompile
+  itself for a broader set of changes
 - remaining c types
 - remaining cvalues functions
 - finish ios
@@ -1033,7 +1041,7 @@ new evaluator todo:
 - lambda lifting
 * let optimization
 - fix equal? on functions
-- store function name and signature
+- store function name
 * have macroexpand use its own global syntax table
 * be able to create/load an image file
 * fix trace and untrace

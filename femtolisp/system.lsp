@@ -24,22 +24,21 @@
   (list (list 'lambda (list name) (list 'set! name fn)) #f))
 
 (define (map f lst . lsts)
+  (define (map1 f lst acc)
+    (cdr
+     (prog1 acc
+      (while (pair? lst)
+	     (begin (set! acc
+			  (cdr (set-cdr! acc (cons (f (car lst)) ()))))
+		    (set! lst (cdr lst)))))))
+  (define (mapn f lsts)
+    (if (null? (car lsts))
+	()
+	(cons (apply f (map1 car lsts))
+	      (mapn  f (map1 cdr lsts)))))
   (if (null? lsts)
-      ((lambda (acc)
-	 (cdr
-	  (prog1 acc
-	   (while (pair? lst)
-		  (begin (set! acc
-			       (cdr (set-cdr! acc (cons (f (car lst)) ()))))
-			 (set! lst (cdr lst)))))))
-       (list ()))
-      ((label mapn
-	      (lambda (f lsts)
-		(if (null? (car lsts))
-		    ()
-		    (cons (apply f (map car lsts))
-			  (mapn  f (map cdr lsts))))))
-       f (cons lst lsts))))
+      (map1 f lst (list ()))
+      (mapn f (cons lst lsts))))
 
 (define-macro (let binds . body)
   ((lambda (lname)
@@ -115,6 +114,7 @@
 (define (positive? x) (> x 0))
 (define (even? x) (= (logand x 1) 0))
 (define (odd? x) (not (even? x)))
+(define (identity x) x)
 (define (1+ n) (+ n 1))
 (define (1- n) (- n 1))
 (define (mod0 x y) (- x (* (div0 x y) y)))
@@ -124,13 +124,19 @@
 				  -1))
 			 0)))
 (define (mod x y) (- x (* (div x y) y)))
+(define quotient div0)
 (define remainder mod0)
 (define (random n)
   (if (integer? n)
       (mod (rand) n)
       (* (rand.double) n)))
 (define (abs x)   (if (< x 0) (- x) x))
-(define (identity x) x)
+(define (max x0 . xs)
+  (if (null? xs) x0
+      (foldl (lambda (a b) (if (< a b) b a)) x0 xs)))
+(define (min x0 . xs)
+  (if (null? xs) x0
+      (foldl (lambda (a b) (if (< a b) a b)) x0 xs)))
 (define (char? x) (eq? (typeof x) 'wchar))
 (define (array? x) (or (vector? x)
 		       (let ((t (typeof x)))
@@ -787,7 +793,9 @@
      (for-each (lambda (s)
 		 (if (and (bound? s)
 			  (not (constant? s))
-			  (not (builtin? (top-level-value s)))
+			  (or (not (builtin? (top-level-value s)))
+			      (not (equal? (string s)
+					   (string (top-level-value s)))))
 			  (not (memq s excludes))
 			  (not (iostream? (top-level-value s))))
 		     (begin
