@@ -16,7 +16,8 @@
 (define-macro (define form . body)
   (if (symbol? form)
       (list 'set! form (car body))
-      (list 'set! (car form) (cons 'lambda (cons (cdr form) body)))))
+      (list 'set! (car form)
+	    (list* 'lambda (cdr form) (append body (car form))))))
 
 (define (symbol-syntax s) (get *syntax-environment* s #f))
 
@@ -141,6 +142,7 @@
 (define (array? x) (or (vector? x)
 		       (let ((t (typeof x)))
 			 (and (pair? t) (eq? (car t) 'array)))))
+(define (closure? x) (and (function? x) (not (builtin? x))))
 
 (define (caar x) (car (car x)))
 (define (cadr x) (car (cdr x)))
@@ -719,13 +721,28 @@
   (newline))
 
 (define (print-stack-trace st)
+  (define (find-in-f f tgt path)
+    (let ((path (cons (function:name f) path)))
+      (if (eq? (function:code f) (function:code tgt))
+	  (throw 'ffound path)
+	  (let ((v (function:vals f)))
+	    (for 0 (1- (length v))
+		 (lambda (i) (if (closure? (aref v i))
+				 (find-in-f (aref v i) tgt path))))))))
   (define (fn-name f e)
-    (let ((m (filter (lambda (s) (and (bound? s)
-				      (eq? (top-level-value s) f)))
-		     e)))
-      (if (null? m) '? (car m))))
+    (let ((p (catch 'ffound
+		    (begin
+		      (for-each (lambda (topfun)
+				  (find-in-f topfun f ()))
+				e)
+		      #f))))
+      (if p
+	  (symbol (string.join (map string (reverse! p)) "/"))
+	  'lambda)))
   (let ((st (reverse! (list-tail st 5)))
-	(e (environment))
+	(e (filter closure? (map (lambda (s) (and (bound? s)
+						  (top-level-value s)))
+				 (environment))))
 	(n 0))
     (for-each
      (lambda (f)
@@ -794,7 +811,7 @@
 		 (if (and (bound? s)
 			  (not (constant? s))
 			  (or (not (builtin? (top-level-value s)))
-			      (not (equal? (string s)
+			      (not (equal? (string s) ; alias of builtin
 					   (string (top-level-value s)))))
 			  (not (memq s excludes))
 			  (not (iostream? (top-level-value s))))

@@ -212,6 +212,7 @@ typedef struct {
     value_t bcode;
     value_t vals;
     value_t env;
+    value_t name;
 } function_t;
 
 #define CPRIM_NWORDS 2

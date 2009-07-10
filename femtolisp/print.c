@@ -396,8 +396,8 @@ void fl_print_child(ios_t *f, value_t v)
         }
         else {
             assert(isclosure(v));
-            if (print_circle_prefix(f, v)) return;
             if (!print_princ) {
+                if (print_circle_prefix(f, v)) return;
                 function_t *fn = (function_t*)ptr(v);
                 outs("#function(", f);
                 char *data = cvalue_data(fn->bcode);
@@ -410,6 +410,10 @@ void fl_print_child(ios_t *f, value_t v)
                 if (fn->env != NIL) {
                     outc(' ', f);
                     fl_print_child(f, fn->env);
+                }
+                if (fn->name != LAMBDA) {
+                    outc(' ', f);
+                    fl_print_child(f, fn->name);
                 }
                 outc(')', f);
             }

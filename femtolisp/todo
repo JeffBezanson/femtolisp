@@ -1036,7 +1036,7 @@ new evaluator todo:
   . need 32-bit argument versions of loada, seta, loadc, setc
   . largs instruction to move args after MAX_ARGS from list to stack
 * maxstack calculation, make Stack growable
-  - stack traces and better debugging support
+  * stack traces and better debugging support
 - let eversion
 - lambda lifting
 * let optimization

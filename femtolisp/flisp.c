@@ -463,6 +463,7 @@ static value_t relocate(value_t v)
         nfn->env = relocate(fn->env);
         nfn->vals = relocate(nfn->vals);
         nfn->bcode = relocate(nfn->bcode);
+        nfn->name = fn->name;
         return nc;
     }
     else if (t == TAG_SYM) {
@@ -689,6 +690,10 @@ int isnumber(value_t v)
 
 #include "read.c"
 
+// equal ----------------------------------------------------------------------
+
+#include "equal.c"
+
 // eval -----------------------------------------------------------------------
 
 #define list(a,n) _list((a),(n),0)
@@ -772,6 +777,7 @@ static value_t do_trycatch()
 #define fn_bcode(f) (((value_t*)ptr(f))[0])
 #define fn_vals(f) (((value_t*)ptr(f))[1])
 #define fn_env(f) (((value_t*)ptr(f))[2])
+#define fn_name(f) (((value_t*)ptr(f))[3])
 
 #if _BYTE_ORDER == __BIG_ENDIAN
 #define GET_INT32(a)                            \
@@ -1067,7 +1073,7 @@ static value_t apply_cl(uint32_t nargs)
                 v = FL_F;
             }
             else {
-                v = equal(Stack[SP-2], Stack[SP-1]);
+                v = (compare_(Stack[SP-2], Stack[SP-1], 1)==0 ? FL_T : FL_F);
             }
             Stack[SP-2] = v; POPN(1);
             NEXT_OP;
@@ -1076,7 +1082,7 @@ static value_t apply_cl(uint32_t nargs)
                 v = FL_T;
             }
             else {
-                v = equal(Stack[SP-2], Stack[SP-1]);
+                v = (compare_(Stack[SP-2], Stack[SP-1], 1)==0 ? FL_T : FL_F);
             }
             Stack[SP-2] = v; POPN(1);
             NEXT_OP;
@@ -1330,7 +1336,7 @@ static value_t apply_cl(uint32_t nargs)
             Stack[SP-1] = v;
             NEXT_OP;
         OP(OP_COMPARE)
-            Stack[SP-2] = compare(Stack[SP-2], Stack[SP-1]);
+            Stack[SP-2] = compare_(Stack[SP-2], Stack[SP-1], 0);
             POPN(1);
             NEXT_OP;
 
@@ -1361,9 +1367,13 @@ static value_t apply_cl(uint32_t nargs)
         OP(OP_AREF)
             v = Stack[SP-2];
             if (isvector(v)) {
-                i = tofixnum(Stack[SP-1], "aref");
+                e = Stack[SP-1];
+                if (isfixnum(e))
+                    i = numval(e);
+                else
+                    i = (uint32_t)toulong(e, "aref");
                 if ((unsigned)i >= vector_size(v))
-                    bounds_error("aref", v, Stack[SP-1]);
+                    bounds_error("aref", v, e);
                 v = vector_elt(v, i);
             }
             else if (isarray(v)) {
@@ -1590,6 +1600,7 @@ static value_t apply_cl(uint32_t nargs)
                 pv[0] = ((value_t*)ptr(e))[0];
                 pv[1] = ((value_t*)ptr(e))[1];
                 pv[2] = Stack[SP-1];  // env
+                pv[3] = ((value_t*)ptr(e))[3];
                 POPN(1);
                 Stack[SP-1] = tagptr(pv, TAG_FUNCTION);
             }
@@ -1764,7 +1775,7 @@ void assign_global_builtins(builtinspec_t *b)
 
 static value_t fl_function(value_t *args, uint32_t nargs)
 {
-    if (nargs != 3)
+    if (nargs < 2 || nargs > 4)
         argcount("function", nargs, 2);
     if (!isstring(args[0]))
         type_error("function", "string", args[0]);
@@ -1785,10 +1796,23 @@ static value_t fl_function(value_t *args, uint32_t nargs)
     value_t fv = tagptr(fn, TAG_FUNCTION);
     fn->bcode = args[0];
     fn->vals = args[1];
-    if (nargs == 3)
-        fn->env = args[2];
-    else
-        fn->env = NIL;
+    fn->env = NIL;
+    fn->name = LAMBDA;
+    if (nargs > 2) {
+        if (issymbol(args[2])) {
+            fn->name = args[2];
+            if (nargs > 3)
+                fn->env = args[3];
+        }
+        else {
+            fn->env = args[2];
+            if (nargs > 3) {
+                if (!issymbol(args[3]))
+                    type_error("function", "symbol", args[3]);
+                fn->name = args[3];
+            }
+        }
+    }
     return fv;
 }
 
@@ -1812,6 +1836,13 @@ static value_t fl_function_env(value_t *args, uint32_t nargs)
     value_t v = args[0];
     if (!isclosure(v)) type_error("function:env", "function", v);
     return fn_env(v);
+}
+static value_t fl_function_name(value_t *args, uint32_t nargs)
+{
+    argcount("function:name", nargs, 1);
+    value_t v = args[0];
+    if (!isclosure(v)) type_error("function:name", "function", v);
+    return fn_name(v);
 }
 
 value_t fl_copylist(value_t *args, u_int32_t nargs)
@@ -1881,6 +1912,7 @@ static builtinspec_t core_builtin_info[] = {
     { "function:code", fl_function_code },
     { "function:vals", fl_function_vals },
     { "function:env", fl_function_env },
+    { "function:name", fl_function_name },
     { "stacktrace", fl_stacktrace },
     { "gensym", fl_gensym },
     { "hash", fl_hash },

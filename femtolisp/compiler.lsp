@@ -457,7 +457,7 @@
     (compile-in g (cons (to-proper args) env) #t (caddr f))
     (emit g :ret)
     (function (encode-byte-code (bcode:code g))
-	      (const-to-idx-vec g))))
+	      (const-to-idx-vec g) (lastcdr f))))
 
 (define (compile f) (compile-f () f))
 

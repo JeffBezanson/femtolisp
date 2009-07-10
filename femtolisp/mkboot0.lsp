@@ -1,9 +1,9 @@
 ; -*- scheme -*-
 
-(if (not (bound? 'top-level-value)) (set! top-level-value %eval))
-(if (not (bound? 'set-top-level-value!)) (set! set-top-level-value! set))
+;(if (not (bound? 'top-level-value)) (set! top-level-value %eval))
+;(if (not (bound? 'set-top-level-value!)) (set! set-top-level-value! set))
 
-(load "compiler.lsp")
+;(load "compiler.lsp")
 
 (define (compile-file inf)
   (let ((in  (file inf :read)))

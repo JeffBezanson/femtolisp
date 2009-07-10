@@ -1,12 +1,3 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
-#include <string.h>
-#include <assert.h>
-#include <sys/types.h>
-#include "llt.h"
-#include "flisp.h"
-
 #define BOUNDED_COMPARE_BOUND 4096
 #define BOUNDED_HASH_BOUND    16384
 
@@ -54,7 +45,7 @@ static value_t bounded_vector_compare(value_t a, value_t b, int bound, int eq)
 }
 
 // strange comparisons are resolved arbitrarily but consistently.
-// ordering: number < cprim < builtin < cvalue < vector < symbol < cons
+// ordering: number < cprim < function < vector < cvalue < symbol < cons
 static value_t bounded_compare(value_t a, value_t b, int bound, int eq)
 {
     value_t d;
