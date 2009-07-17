@@ -976,6 +976,8 @@ consolidated todo list as of 7/8:
 - remaining c types
 - remaining cvalues functions
 - finish ios
+- optional and keyword arguments
+- some kind of record, struct, or object system
 
 - special efficient reader for #array
 - reimplement vectors as (array lispvalue)
@@ -1037,11 +1039,12 @@ new evaluator todo:
   . largs instruction to move args after MAX_ARGS from list to stack
 * maxstack calculation, make Stack growable
   * stack traces and better debugging support
+  - make maxstack calculation robust against invalid bytecode
 - let eversion
-- lambda lifting
+* lambda lifting
 * let optimization
-- fix equal? on functions
-- store function name
+* fix equal? on functions
+* store function name
 * have macroexpand use its own global syntax table
 * be able to create/load an image file
 * fix trace and untrace

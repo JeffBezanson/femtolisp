@@ -138,6 +138,14 @@ static value_t fl_symbol(value_t *args, u_int32_t nargs)
     return symbol(cvalue_data(args[0]));
 }
 
+static value_t fl_keywordp(value_t *args, u_int32_t nargs)
+{
+    argcount("keyword?", nargs, 1);
+    symbol_t *sym = tosymbol(args[0], "keyword?");
+    char *str = sym->name;
+    return fl_is_keyword_name(str, strlen(str)) ? FL_T : FL_F;
+}
+
 static value_t fl_top_level_value(value_t *args, u_int32_t nargs)
 {
     argcount("top-level-value", nargs, 1);
@@ -417,6 +425,7 @@ static builtinspec_t builtin_info[] = {
     { "raise", fl_raise },
     { "exit", fl_exit },
     { "symbol", fl_symbol },
+    { "keyword?", fl_keywordp },
 
     { "fixnum", fl_fixnum },
     { "truncate", fl_truncate },

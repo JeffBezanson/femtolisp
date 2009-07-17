@@ -46,10 +46,11 @@
          :aref     2      :aset!    3
 	 :div0     2))
 
-(define (make-code-emitter) (vector () (table) 0))
+(define (make-code-emitter) (vector () (table) 0 +inf.0))
 (define (bcode:code   b) (aref b 0))
 (define (bcode:ctable b) (aref b 1))
 (define (bcode:nconst b) (aref b 2))
+(define (bcode:cdepth b d) (aset! b 3 (min (aref b 3) d)))
 ; get an index for a referenced value in a bytecode object
 (define (bcode:indexfor b v)
   (let ((const-to-idx (bcode:ctable b))
@@ -205,11 +206,16 @@
 			(if (or arg? (null? curr)) lev (+ lev 1))
 			#f)))))
 
+; number of non-nulls
+(define (nnn e) (count (lambda (x) (not (null? x))) e))
+
 (define (compile-sym g env s Is)
   (let ((loc (lookup-sym s env 0 #t)))
     (case (car loc)
       (arg     (emit g (aref Is 0) (cadr loc)))
-      (closed  (emit g (aref Is 1) (cadr loc) (caddr loc)))
+      (closed  (emit g (aref Is 1) (cadr loc) (caddr loc))
+	       ; update index of most distant captured frame
+	       (bcode:cdepth g (- (nnn (cdr env)) 1 (cadr loc))))
       (else    (emit g (aref Is 2) s)))))
 
 (define (compile-if g env tail? x)
@@ -345,7 +351,9 @@
 	(args (cdr x)))
     (unless (length= args (length (cadr head)))
 	    (error (string "apply: incorrect number of arguments to " head)))
-    (emit g :loadv (compile-f env head #t))
+    (receive (the-f dept) (compile-f- env head #t)
+      (emit g :loadv the-f)
+      (bcode:cdepth g dept))
     (let ((nargs (compile-arglist g env args)))
       (emit g :copyenv)
       (emit g (if tail? :tcall :call) (+ 1 nargs)))))
@@ -428,8 +436,11 @@
 	   (if       (compile-if g env tail? x))
 	   (begin    (compile-begin g env tail? (cdr x)))
 	   (prog1    (compile-prog1 g env x))
-	   (lambda   (begin (emit g :loadv (compile-f env x))
-			    (emit g :closure)))
+	   (lambda   (receive (the-f dept) (compile-f- env x)
+		       (begin (emit g :loadv the-f)
+			      (bcode:cdepth g dept)
+			      (if (< dept (nnn env))
+				  (emit g :closure)))))
 	   (and      (compile-and g env tail? (cdr x)))
 	   (or       (compile-or  g env tail? (cdr x)))
 	   (while    (compile-while g env (cadr x) (cons 'begin (cddr x))))
@@ -446,6 +457,11 @@
 	   (else   (compile-app g env tail? x))))))
 
 (define (compile-f env f . let?)
+  (receive (ff ignore)
+	   (apply compile-f- env f let?)
+	   ff))
+
+(define (compile-f- env f . let?)
   (let ((g    (make-code-emitter))
 	(args (cadr f)))
     (cond ((not (null? let?))      (emit g :let))
@@ -456,8 +472,9 @@
 	  (else  (emit g :vargc (if (atom? args) 0 (length args)))))
     (compile-in g (cons (to-proper args) env) #t (caddr f))
     (emit g :ret)
-    (function (encode-byte-code (bcode:code g))
-	      (const-to-idx-vec g) (lastcdr f))))
+    (values (function (encode-byte-code (bcode:code g))
+		      (const-to-idx-vec g) (lastcdr f))
+	    (aref g 3))))
 
 (define (compile f) (compile-f () f))
 

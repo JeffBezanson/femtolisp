@@ -224,6 +224,11 @@ SAFECAST_OP(string,char*,    cvalue_data)
 
 symbol_t *symtab = NULL;
 
+int fl_is_keyword_name(char *str, size_t len)
+{
+    return ((str[0] == ':' || str[len-1] == ':') && str[1] != '\0');
+}
+
 static symbol_t *mk_symbol(char *str)
 {
     symbol_t *sym;
@@ -232,7 +237,7 @@ static symbol_t *mk_symbol(char *str)
     sym = (symbol_t*)malloc(sizeof(symbol_t)-sizeof(void*) + len + 1);
     assert(((uptrint_t)sym & 0x7) == 0); // make sure malloc aligns 8
     sym->left = sym->right = NULL;
-    if (str[0] == ':') {
+    if (fl_is_keyword_name(str, len)) {
         value_t s = tagptr(sym, TAG_SYM);
         setc(s, s);
     }
@@ -773,11 +778,6 @@ static value_t do_trycatch()
     SP = saveSP;
     return v;
 }
-
-#define fn_bcode(f) (((value_t*)ptr(f))[0])
-#define fn_vals(f) (((value_t*)ptr(f))[1])
-#define fn_env(f) (((value_t*)ptr(f))[2])
-#define fn_name(f) (((value_t*)ptr(f))[3])
 
 #if _BYTE_ORDER == __BIG_ENDIAN
 #define GET_INT32(a)                            \
@@ -2050,7 +2050,7 @@ extern value_t fl_file(value_t *args, uint32_t nargs);
 
 int main(int argc, char *argv[])
 {
-    value_t e, v;
+    value_t e;
     int saveSP;
     symbol_t *sym;
     char fname_buf[1024];
@@ -2083,10 +2083,15 @@ int main(int argc, char *argv[])
                 SP = saveSP;
             }
             else {
-                // stage 1 format: symbol/value pairs
-                sym = tosymbol(e, "bootstrap");
-                v = read_sexpr(Stack[SP-1]);
-                sym->binding = v;
+                // stage 1 format: list alternating symbol/value
+                while (iscons(e)) {
+                    sym = tosymbol(car_(e), "bootstrap");
+                    e = cdr_(e);
+                    (void)tocons(e, "bootstrap");
+                    sym->binding = car_(e);
+                    e = cdr_(e);
+                }
+                break;
             }
         }
         ios_close(value2c(ios_t*,Stack[SP-1]));

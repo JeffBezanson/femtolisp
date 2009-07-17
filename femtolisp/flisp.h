@@ -81,6 +81,10 @@ typedef struct _symbol_t {
 #define cdr_(v) (((cons_t*)ptr(v))->cdr)
 #define car(v)  (tocons((v),"car")->car)
 #define cdr(v)  (tocons((v),"cdr")->cdr)
+#define fn_bcode(f) (((value_t*)ptr(f))[0])
+#define fn_vals(f) (((value_t*)ptr(f))[1])
+#define fn_env(f) (((value_t*)ptr(f))[2])
+#define fn_name(f) (((value_t*)ptr(f))[3])
 
 #define set(s, v)  (((symbol_t*)ptr(s))->binding = (v))
 #define setc(s, v) do { ((symbol_t*)ptr(s))->isconst = 1; \
@@ -135,6 +139,7 @@ value_t list2(value_t a, value_t b);
 value_t listn(size_t n, ...);
 value_t symbol(char *str);
 char *symbol_name(value_t v);
+int fl_is_keyword_name(char *str, size_t len);
 value_t alloc_vector(size_t n, int init);
 size_t llength(value_t v);
 value_t compare(value_t a, value_t b);  // -1, 0, or 1

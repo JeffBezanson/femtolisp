@@ -89,9 +89,18 @@ static value_t bounded_compare(value_t a, value_t b, int bound, int eq)
         }
         break;
     case TAG_FUNCTION:
-        if (uintval(a) > N_BUILTINS || uintval(b) > N_BUILTINS)
-            return fixnum(1);
         if (tagb == TAG_FUNCTION) {
+            if (uintval(a) > N_BUILTINS && uintval(b) > N_BUILTINS) {
+                function_t *fa = (function_t*)ptr(a);
+                function_t *fb = (function_t*)ptr(b);
+                d = bounded_compare(fa->bcode, fb->bcode, bound-1, eq);
+                if (d==NIL || numval(d) != 0) return d;
+                d = bounded_compare(fa->vals, fb->vals, bound-1, eq);
+                if (d==NIL || numval(d) != 0) return d;
+                d = bounded_compare(fa->env, fb->env, bound-1, eq);
+                if (d==NIL || numval(d) != 0) return d;
+                return fixnum(0);
+            }
             return (uintval(a) < uintval(b)) ? fixnum(-1) : fixnum(1);
         }
         break;
@@ -122,12 +131,12 @@ static value_t cyc_vector_compare(value_t a, value_t b, htable_t *table,
         xb = vector_elt(b,i);
         if (leafp(xa) || leafp(xb)) {
             d = bounded_compare(xa, xb, 1, eq);
-            if (numval(d)!=0) return d;
+            if (d!=NIL && numval(d)!=0) return d;
         }
-        else if (cmptag(xa) < cmptag(xb)) {
+        else if (tag(xa) < tag(xb)) {
             return fixnum(-1);
         }
-        else if (cmptag(xa) > cmptag(xb)) {
+        else if (tag(xa) > tag(xb)) {
             return fixnum(1);
         }
     }
@@ -142,7 +151,7 @@ static value_t cyc_vector_compare(value_t a, value_t b, htable_t *table,
     for (i = 0; i < m; i++) {
         xa = vector_elt(a,i);
         xb = vector_elt(b,i);
-        if (!leafp(xa) && !leafp(xb)) {
+        if (!leafp(xa) || tag(xa)==TAG_FUNCTION) {
             d = cyc_compare(xa, xb, table, eq);
             if (numval(d)!=0)
                 return d;
@@ -156,6 +165,7 @@ static value_t cyc_vector_compare(value_t a, value_t b, htable_t *table,
 
 static value_t cyc_compare(value_t a, value_t b, htable_t *table, int eq)
 {
+    value_t d, ca, cb;
  cyc_compare_top:
     if (a==b)
         return fixnum(0);
@@ -163,12 +173,11 @@ static value_t cyc_compare(value_t a, value_t b, htable_t *table, int eq)
         if (iscons(b)) {
             value_t aa = car_(a); value_t da = cdr_(a);
             value_t ab = car_(b); value_t db = cdr_(b);
-            int tagaa = cmptag(aa); int tagda = cmptag(da);
-            int tagab = cmptag(ab); int tagdb = cmptag(db);
-            value_t d, ca, cb;
+            int tagaa = tag(aa); int tagda = tag(da);
+            int tagab = tag(ab); int tagdb = tag(db);
             if (leafp(aa) || leafp(ab)) {
                 d = bounded_compare(aa, ab, 1, eq);
-                if (numval(d)!=0) return d;
+                if (d!=NIL && numval(d)!=0) return d;
             }
             else if (tagaa < tagab)
                 return fixnum(-1);
@@ -176,7 +185,7 @@ static value_t cyc_compare(value_t a, value_t b, htable_t *table, int eq)
                 return fixnum(1);
             if (leafp(da) || leafp(db)) {
                 d = bounded_compare(da, db, 1, eq);
-                if (numval(d)!=0) return d;
+                if (d!=NIL && numval(d)!=0) return d;
             }
             else if (tagda < tagdb)
                 return fixnum(-1);
@@ -201,6 +210,24 @@ static value_t cyc_compare(value_t a, value_t b, htable_t *table, int eq)
     }
     else if (isvector(a) && isvector(b)) {
         return cyc_vector_compare(a, b, table, eq);
+    }
+    else if (isclosure(a) && isclosure(b)) {
+        function_t *fa = (function_t*)ptr(a);
+        function_t *fb = (function_t*)ptr(b);
+        d = bounded_compare(fa->bcode, fb->bcode, 1, eq);
+        if (numval(d) != 0) return d;
+        
+        ca = eq_class(table, a);
+        cb = eq_class(table, b);
+        if (ca!=NIL && ca==cb)
+            return fixnum(0);
+        
+        eq_union(table, a, b, ca, cb);
+        d = cyc_compare(fa->vals, fb->vals, table, eq);
+        if (numval(d) != 0) return d;
+        a = fa->env;
+        b = fb->env;
+        goto cyc_compare_top;
     }
     return bounded_compare(a, b, 1, eq);
 }

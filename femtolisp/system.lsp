@@ -35,8 +35,8 @@
   (define (mapn f lsts)
     (if (null? (car lsts))
 	()
-	(cons (apply f (map1 car lsts))
-	      (mapn  f (map1 cdr lsts)))))
+	(cons (apply f (map1 car lsts (list ())))
+	      (mapn  f (map1 cdr lsts (list ()))))))
   (if (null? lsts)
       (map1 f lst (list ()))
       (mapn f (cons lst lsts))))
@@ -157,6 +157,19 @@
 (define (cddar x) (cdr (cdr (car x))))
 (define (cdddr x) (cdr (cdr (cdr x))))
 (define (cadddr x) (car (cdr (cdr (cdr x)))))
+
+(let ((*values* (list '*values*)))
+  (set! values
+	(lambda vs
+	  (if (and (pair? vs) (null? (cdr vs)))
+	      (car vs)
+	      (cons *values* vs))))
+  (set! call-with-values
+	(lambda (producer consumer)
+	  (let ((res (producer)))
+	    (if (and (pair? res) (eq? *values* (car res)))
+		(apply consumer (cdr res))
+		(consumer res))))))
 
 ; list utilities --------------------------------------------------------------
 
@@ -400,6 +413,11 @@
 			     ,@commands
 			     (,loop ,@steps))))))
        (,loop ,@inits))))
+
+; SRFI 8
+(define-macro (receive formals expr . body)
+  `(call-with-values (lambda () ,expr)
+     (lambda ,formals ,@body)))
 
 (define-macro (dotimes var . body)
   (let ((v (car var))
@@ -807,18 +825,17 @@
 	(pp *print-pretty*))
     (set! *print-pretty* #f)
     (unwind-protect
-     (for-each (lambda (s)
-		 (if (and (bound? s)
-			  (not (constant? s))
-			  (or (not (builtin? (top-level-value s)))
-			      (not (equal? (string s) ; alias of builtin
-					   (string (top-level-value s)))))
-			  (not (memq s excludes))
-			  (not (iostream? (top-level-value s))))
-		     (begin
-		       (io.print f s) (io.write f "\n")
-		       (io.print f (top-level-value s)) (io.write f "\n"))))
-	       (reverse! (simple-sort (environment))))
+     (let ((syms (filter (lambda (s)
+			   (and (bound? s)
+				(not (constant? s))
+				(or (not (builtin? (top-level-value s)))
+				    (not (equal? (string s) ; alias of builtin
+						 (string (top-level-value s)))))
+				(not (memq s excludes))
+				(not (iostream? (top-level-value s)))))
+			 (simple-sort (environment)))))
+       (io.print f (apply nconc (map list syms (map top-level-value syms))))
+       (io.write f *linefeed*))
      (begin
        (io.close f)
        (set! *print-pretty* pp)))))
