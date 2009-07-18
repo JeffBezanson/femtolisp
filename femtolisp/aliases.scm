@@ -1,6 +1,8 @@
 ; definitions of standard scheme procedures in terms of
 ; femtolisp procedures
 
+(define top-level-bound? bound?)
+
 (define vector-ref aref)
 (define vector-set! aset!)
 (define vector-length length)

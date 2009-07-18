@@ -418,6 +418,12 @@
 		  (else      (emit g b))))
 	      (emit g (if tail? :tcall :call) nargs)))))))
 
+(define (expand-define form body)
+  (if (symbol? form)
+      `(set! ,form ,(car body))
+      `(set! ,(car form)
+	     (lambda ,(cdr form) ,@body . ,(car form)))))
+
 (define (fits-i8 x) (and (fixnum? x) (>= x -128) (<= x 127)))
 
 (define (compile-in g env tail? x)
@@ -449,6 +455,8 @@
 		     (emit g :ret))
 	   (set!     (compile-in g env #f (caddr x))
 		     (compile-sym g env (cadr x) [:seta :setc :setg]))
+	   (define   (compile-in g env tail?
+				 (expand-define (cadr x) (cddr x))))
 	   (trycatch (compile-in g env #f `(lambda () ,(cadr x)))
 		     (unless (1arg-lambda? (caddr x))
 			     (error "trycatch: second form must be a 1-argument lambda"))
@@ -461,24 +469,66 @@
 	   (apply compile-f- env f let?)
 	   ff))
 
-(define (compile-f- env f . let?)
-  (let ((g    (make-code-emitter))
-	(args (cadr f)))
-    (cond ((not (null? let?))      (emit g :let))
-	  ((length> args MAX_ARGS) (emit g (if (null? (lastcdr args))
-					       :largc :lvargc)
-					 (length args)))
-	  ((null? (lastcdr args))  (emit g :argc  (length args)))
-	  (else  (emit g :vargc (if (atom? args) 0 (length args)))))
-    (compile-in g (cons (to-proper args) env) #t (caddr f))
-    (emit g :ret)
-    (values (function (encode-byte-code (bcode:code g))
-		      (const-to-idx-vec g) (lastcdr f))
-	    (aref g 3))))
+(define get-defined-vars
+  (letrec ((get-defined-vars-
+	    (lambda (expr)
+	      (cond ((atom? expr) ())
+		    ((and (eq? (car expr) 'define)
+			  (pair? (cdr expr)))
+		     (or (and (symbol? (cadr expr))
+			      (list (cadr expr)))
+			 (and (pair? (cadr expr))
+			      (symbol? (caadr expr))
+			      (list (caadr expr)))
+			 ()))
+		    ((eq? (car expr) 'begin)
+		     (apply append (map get-defined-vars- (cdr expr))))
+		    (else ())))))
+    (lambda (expr) (delete-duplicates (get-defined-vars- expr)))))
+
+(define compile-f-
+  (let ((*defines-processed-token* (gensym)))
+    ; to eval a top-level expression we need to avoid internal define
+    (set-top-level-value!
+     'compile-thunk
+     (lambda (expr)
+       (compile `(lambda () ,expr . ,*defines-processed-token*))))
+
+    (lambda (env f . let?)
+      ; convert lambda to one body expression and process internal defines
+      (define (lambda-body e)
+	(let ((B (if (pair? (cddr e))
+		     (if (pair? (cdddr e))
+			 (cons 'begin (cddr e))
+			 (caddr e))
+		     #f)))
+	  (let ((V (get-defined-vars B)))
+	    (if (null? V)
+		B
+		(cons (list* 'lambda V B *defines-processed-token*)
+		      (map (lambda (x) #f) V))))))
+      
+      (let ((g    (make-code-emitter))
+	    (args (cadr f))
+	    (name (if (eq? (lastcdr f) *defines-processed-token*)
+		      'lambda
+		      (lastcdr f))))
+	(cond ((not (null? let?))      (emit g :let))
+	      ((length> args MAX_ARGS) (emit g (if (null? (lastcdr args))
+						   :largc :lvargc)
+					     (length args)))
+	      ((null? (lastcdr args))  (emit g :argc  (length args)))
+	      (else  (emit g :vargc (if (atom? args) 0 (length args)))))
+	(compile-in g (cons (to-proper args) env) #t
+		    (if (eq? (lastcdr f) *defines-processed-token*)
+			(caddr f)
+			(lambda-body f)))
+	(emit g :ret)
+	(values (function (encode-byte-code (bcode:code g))
+			  (const-to-idx-vec g) name)
+		(aref g 3))))))
 
 (define (compile f) (compile-f () f))
-
-(define (compile-thunk expr) (compile `(lambda () ,expr)))
 
 (define (ref-int32-LE a i)
   (int32 (+ (ash (aref a (+ i 0)) 0)

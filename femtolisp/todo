@@ -159,6 +159,7 @@ bugs:
   . write a function to evaluate directly from list to list, use it for
     Nth arg and for user function rest args
   . modify vararg builtins accordingly
+- filter should be stable. right now it reverses.
 
 
 femtoLisp3...with symbolic C interface
@@ -1040,6 +1041,8 @@ new evaluator todo:
 * maxstack calculation, make Stack growable
   * stack traces and better debugging support
   - make maxstack calculation robust against invalid bytecode
+* improve internal define
+- try removing MAX_ARGS trickery
 - let eversion
 * lambda lifting
 * let optimization

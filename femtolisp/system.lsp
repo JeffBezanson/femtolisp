@@ -3,26 +3,18 @@
 ; by Jeff Bezanson (C) 2009
 ; Distributed under the BSD License
 
-(set! *syntax-environment* (table))
+(if (not (bound? '*syntax-environment*))
+    (define *syntax-environment* (table)))
 
-(set! set-syntax!
-      (lambda (s v) (put! *syntax-environment* s v)))
-
-(set-syntax! 'define-macro
-             (lambda (form . body)
-               (list 'set-syntax! (list 'quote (car form))
-                     (cons 'lambda (cons (cdr form) body)))))
-
-(define-macro (define form . body)
-  (if (symbol? form)
-      (list 'set! form (car body))
-      (list 'set! (car form)
-	    (list* 'lambda (cdr form) (append body (car form))))))
-
+(define (set-syntax! s v) (put! *syntax-environment* s v))
 (define (symbol-syntax s) (get *syntax-environment* s #f))
 
+(define-macro (define-macro form . body)
+  `(set-syntax! ',(car form)
+		(lambda ,(cdr form) ,@body)))
+
 (define-macro (label name fn)
-  (list (list 'lambda (list name) (list 'set! name fn)) #f))
+  `((lambda (,name) (set! ,name ,fn)) #f))
 
 (define (map f lst . lsts)
   (define (map1 f lst acc)
@@ -42,28 +34,27 @@
       (mapn f (cons lst lsts))))
 
 (define-macro (let binds . body)
-  ((lambda (lname)
-     (begin
-       (if (symbol? binds)
-	   (begin (set! lname binds)
-		  (set! binds (car body))
-		  (set! body (cdr body))))
-       ((lambda (thelambda theargs)
-	  (cons (if lname
-		    (list 'label lname thelambda)
-		    thelambda)
-		theargs))
-	(cons 'lambda
-	      (cons (map (lambda (c) (if (pair? c) (car c) c)) binds)
-		    body))
-	(map (lambda (c) (if (pair? c) (cadr c) #f)) binds))))
-   #f))
+  (let (lname)
+    (if (symbol? binds)
+	(begin (set! lname binds)
+	       (set! binds (car body))
+	       (set! body (cdr body))))
+    (let ((thelambda
+	   `(lambda ,(map (lambda (c) (if (pair? c) (car c) c))
+			  binds)
+	      ,@body))
+	  (theargs
+	   (map (lambda (c) (if (pair? c) (cadr c) #f)) binds)))
+      (cons (if lname
+		`(label ,lname ,thelambda)
+		thelambda)
+	    theargs))))
 
 (define-macro (letrec binds . body)
-  (cons (cons 'lambda (cons (map car binds)
-			    (nconc (map (lambda (b) (cons 'set! b)) binds)
-				   body)))
-	(map (lambda (x) #f) binds)))
+  `((lambda ,(map car binds)
+      ,.(map (lambda (b) `(set! ,@b)) binds)
+      ,@body)
+    ,.(map (lambda (x) #f) binds)))
 
 (define-macro (cond . clauses)
   (define (cond-clauses->if lst)
@@ -390,7 +381,7 @@
 	  (else            `(memv ,key ',v))))
   (let ((g (gensym)))
     `(let ((,g ,key))
-       (cond ,@(map (lambda (clause)
+       (cond ,.(map (lambda (clause)
 		      (cons (vals->cond g (car clause))
 			    (cdr clause)))
 		    clauses)))))
@@ -411,8 +402,8 @@
 			     ,@(cdr test-spec))
 			   (begin
 			     ,@commands
-			     (,loop ,@steps))))))
-       (,loop ,@inits))))
+			     (,loop ,.steps))))))
+       (,loop ,.inits))))
 
 ; SRFI 8
 (define-macro (receive formals expr . body)
@@ -618,23 +609,6 @@
 
 ; toplevel --------------------------------------------------------------------
 
-(define get-defined-vars
-  (letrec ((get-defined-vars-
-	    (lambda (expr)
-	      (cond ((atom? expr) ())
-		    ((and (eq? (car expr) 'define)
-			  (pair? (cdr expr)))
-		     (or (and (symbol? (cadr expr))
-			      (list (cadr expr)))
-			 (and (pair? (cadr expr))
-			      (symbol? (caadr expr))
-			      (list (caadr expr)))
-			 ()))
-		    ((eq? (car expr) 'begin)
-		     (apply append (map get-defined-vars- (cdr expr))))
-		    (else ())))))
-    (lambda (expr) (delete-duplicates (get-defined-vars- expr)))))
-
 (define (macrocall? e) (and (symbol? (car e))
 			    (get *syntax-environment* (car e) #f)))
 
@@ -645,21 +619,6 @@
 	    e))))
 
 (define (macroexpand e)
-  (define (expand-lambda e env)
-    (let ((B (if (pair? (cddr e))
-		 (if (pair? (cdddr e))
-		     (cons 'begin (cddr e))
-		     (caddr e))
-		 #f)))
-      (let ((V  (get-defined-vars B))
-	    (Be (macroexpand-in B env)))
-	(list* 'lambda
-	       (cadr e)
-	       (if (null? V)
-		   Be
-		   (cons (list 'lambda V Be)
-			 (map (lambda (x) #f) V)))
-	       (lastcdr e)))))
   (define (macroexpand-in e env)
     (if (atom? e) e
 	(let ((f (assq (car e) env)))
@@ -669,7 +628,15 @@
 		(if f
 		    (macroexpand-in (apply f (cdr e)) env)
 		    (cond ((eq (car e) 'quote)  e)
-			  ((eq (car e) 'lambda) (expand-lambda e env))
+			  ((eq (car e) 'lambda)
+			   `(lambda ,(cadr e)
+			      ,.(map (lambda (x) (macroexpand-in x env))
+				     (cddr e))
+			      . ,(lastcdr e)))
+			  ((eq (car e) 'define)
+			   `(define ,(cadr e)
+			      ,.(map (lambda (x) (macroexpand-in x env))
+				     (cddr e))))
 			  ((eq (car e) 'let-syntax)
 			   (let ((binds (cadr e))
 				 (body  `((lambda () ,@(cddr e)))))
