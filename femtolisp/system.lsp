@@ -141,6 +141,19 @@
 (define (cdddr x) (cdr (cdr (cdr x))))
 (define (cadddr x) (car (cdr (cdr (cdr x)))))
 
+(let ((*values* (list '*values*)))
+  (set! values
+	(lambda vs
+	  (if (and (pair? vs) (null? (cdr vs)))
+	      (car vs)
+	      (cons *values* vs))))
+  (set! call-with-values
+	(lambda (producer consumer)
+	  (let ((res (producer)))
+	    (if (and (pair? res) (eq? *values* (car res)))
+		(apply consumer (cdr res))
+		(consumer res))))))
+
 ; list utilities --------------------------------------------------------------
 
 (define (every pred lst)
@@ -430,6 +443,11 @@
 			     ,@commands
 			     (,loop ,@steps))))))
        (,loop ,@inits))))
+
+; SRFI 8
+(define-macro (receive formals expr . body)
+  `(call-with-values (lambda () ,expr)
+     (lambda ,formals ,@body)))
 
 (define-macro (dotimes var . body)
   (let ((v (car var))
