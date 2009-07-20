@@ -209,6 +209,8 @@
 ; number of non-nulls
 (define (nnn e) (count (lambda (x) (not (null? x))) e))
 
+(define (printable? x) (not (iostream? x)))
+
 (define (compile-sym g env s Is)
   (let ((loc (lookup-sym s env 0 #t)))
     (case (car loc)
@@ -216,7 +218,11 @@
       (closed  (emit g (aref Is 1) (cadr loc) (caddr loc))
 	       ; update index of most distant captured frame
 	       (bcode:cdepth g (- (nnn (cdr env)) 1 (cadr loc))))
-      (else    (emit g (aref Is 2) s)))))
+      (else
+       (if (and (constant? s)
+		(printable? (top-level-value s)))
+	   (emit g :loadv (top-level-value s))
+	   (emit g (aref Is 2) s))))))
 
 (define (compile-if g env tail? x)
   (let ((elsel (make-label g))
@@ -300,8 +306,6 @@
 (define (compile-or g env tail? forms)
   (compile-short-circuit g env tail? forms #f :brt))
 
-(define MAX_ARGS 127)
-
 (define (list-partition l n)
   (define (list-part- l n  i subl acc)
     (cond ((atom? l) (if (> i 0)
@@ -313,23 +317,16 @@
       (error "list-partition: invalid count")
       (reverse! (list-part- l n 0 () ()))))
 
-(define (just-compile-args g lst env)
-  (for-each (lambda (a)
-	      (compile-in g env #f a))
-	    lst))
+(define (make-nested-arglist args n)
+  (cons nconc
+	(map (lambda (l) (cons list l))
+	     (list-partition args n))))
 
 (define (compile-arglist g env lst)
-  (let ((argtail (length> lst MAX_ARGS)))
-    (if argtail
-	(begin (just-compile-args g (list-head lst MAX_ARGS) env)
-	       (let ((rest
-		      (cons nconc
-			    (map (lambda (l) (cons list l))
-				 (list-partition argtail MAX_ARGS)))))
-		 (compile-in g env #f rest))
-	       (+ MAX_ARGS 1))
-	(begin (just-compile-args g lst env)
-	       (length lst)))))
+  (for-each (lambda (a)
+	      (compile-in g env #f a))
+	    lst)
+  (length lst))
 
 (define (argc-error head count)
   (error (string "compile error: " head " expects " count
@@ -342,7 +339,7 @@
     (if (and (pair? head)
 	     (eq? (car head) 'lambda)
 	     (list? (cadr head))
-	     (not (length> (cadr head) MAX_ARGS)))
+	     (not (length> (cadr head) 255)))
 	(compile-let  g env tail? x)
 	(compile-call g env tail? x))))
 
@@ -375,6 +372,33 @@
     (lambda (b)
       (get b2i b #f))))
 
+(define (compile-builtin-call g env tail? x head b nargs)
+  (let ((count (get arg-counts b #f)))
+    (if (and count
+	     (not (length= (cdr x) count)))
+	(argc-error head count))
+    (case b  ; handle special cases of vararg builtins
+      (:list (if (= nargs 0) (emit g :loadnil) (emit g b nargs)))
+      (:+    (cond ((= nargs 0) (emit g :load0))
+		   ((= nargs 2) (emit g :add2))
+		   (else (emit g b nargs))))
+      (:-    (cond ((= nargs 0) (argc-error head 1))
+		   ((= nargs 1) (emit g :neg))
+		   ((= nargs 2) (emit g :sub2))
+		   (else (emit g b nargs))))
+      (:*    (if (= nargs 0) (emit g :load1)
+		 (emit g b nargs)))
+      (:/    (if (= nargs 0)
+		 (argc-error head 1)
+		 (emit g b nargs)))
+      (:vector   (if (= nargs 0)
+		     (emit g :loadv [])
+		     (emit g b nargs)))
+      (:apply    (if (< nargs 2)
+		     (argc-error head 2)
+		     (emit g (if tail? :tapply :apply) nargs)))
+      (else      (emit g b)))))
+
 (define (compile-call g env tail? x)
   (let ((head  (car x)))
     (let ((head
@@ -385,38 +409,19 @@
 		    (builtin? (top-level-value head)))
 	       (top-level-value head)
 	       head)))
-      (let ((b (and (builtin? head)
-		    (builtin->instruction head))))
-	(if (not b)
-	    (compile-in g env #f head))
-	(let ((nargs (compile-arglist g env (cdr x))))
-	  (if b
-	      (let ((count (get arg-counts b #f)))
-		(if (and count
-			 (not (length= (cdr x) count)))
-		    (argc-error head count))
-		(case b  ; handle special cases of vararg builtins
-		  (:list (if (= nargs 0) (emit g :loadnil) (emit g b nargs)))
-		  (:+    (cond ((= nargs 0) (emit g :load0))
-			       ((= nargs 2) (emit g :add2))
-			       (else (emit g b nargs))))
-		  (:-    (cond ((= nargs 0) (argc-error head 1))
-			       ((= nargs 1) (emit g :neg))
-			       ((= nargs 2) (emit g :sub2))
-			       (else (emit g b nargs))))
-		  (:*    (if (= nargs 0) (emit g :load1)
-			     (emit g b nargs)))
-		  (:/    (if (= nargs 0)
-			     (argc-error head 1)
-			     (emit g b nargs)))
-		  (:vector   (if (= nargs 0)
-				 (emit g :loadv [])
-				 (emit g b nargs)))
-		  (:apply    (if (< nargs 2)
-				 (argc-error head 2)
-				 (emit g (if tail? :tapply :apply) nargs)))
-		  (else      (emit g b))))
-	      (emit g (if tail? :tcall :call) nargs)))))))
+      (if (length> (cdr x) 255)
+	  ; argument count is a uint8, so for more than 255 arguments
+	  ; we use apply on a list built from sublists that fit the limit
+	  (compile-in g env tail?
+		      `(#.apply ,head ,(make-nested-arglist (cdr x) 255)))
+	  (let ((b (and (builtin? head)
+			(builtin->instruction head))))
+	    (if (not b)
+		(compile-in g env #f head))
+	    (let ((nargs (compile-arglist g env (cdr x))))
+	      (if b
+		  (compile-builtin-call g env tail? x head b nargs)
+		  (emit g (if tail? :tcall :call) nargs))))))))
 
 (define (expand-define form body)
   (if (symbol? form)
@@ -514,7 +519,7 @@
 		      'lambda
 		      (lastcdr f))))
 	(cond ((not (null? let?))      (emit g :let))
-	      ((length> args MAX_ARGS) (emit g (if (null? (lastcdr args))
+	      ((length> args 255)      (emit g (if (null? (lastcdr args))
 						   :largc :lvargc)
 					     (length args)))
 	      ((null? (lastcdr args))  (emit g :argc  (length args)))

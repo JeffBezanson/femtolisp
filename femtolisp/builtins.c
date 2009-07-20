@@ -35,15 +35,8 @@ static value_t fl_nconc(value_t *args, u_int32_t nargs)
     cons_t *c;
     uint32_t i=0;
     while (1) {
-        if (i >= MAX_ARGS) {
-            lst = car_(args[MAX_ARGS]);
-            args[MAX_ARGS] = cdr_(args[MAX_ARGS]);
-            if (!iscons(args[MAX_ARGS])) break;
-        }
-        else {
-            lst = args[i++];
-            if (i >= nargs) break;
-        }
+        lst = args[i++];
+        if (i >= nargs) break;
         if (iscons(lst)) {
             *pcdr = lst;
             c = (cons_t*)ptr(lst);

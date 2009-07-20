@@ -578,12 +578,21 @@ void gc(int mustgrow)
         gc(0);
 }
 
+static void grow_stack()
+{
+    size_t newsz = N_STACK + (N_STACK>>1);
+    value_t *ns = realloc(Stack, newsz*sizeof(value_t));
+    if (ns == NULL)
+        lerror(MemoryError, "stack overflow");
+    Stack = ns;
+    N_STACK = newsz;
+}
+
 // utils ----------------------------------------------------------------------
 
 // apply function with n args on the stack
 static value_t _applyn(uint32_t n)
 {
-    assert(n <= MAX_ARGS+1);
     value_t f = Stack[SP-n-1];
     uint32_t saveSP = SP;
     value_t v;
@@ -607,10 +616,8 @@ value_t apply(value_t f, value_t l)
 
     PUSH(f);
     while (iscons(v)) {
-        if ((SP-n-1) == MAX_ARGS) {
-            PUSH(v);
-            break;
-        }
+        if (SP >= N_STACK)
+            grow_stack();
         PUSH(car_(v));
         v = cdr_(v);
     }
@@ -622,12 +629,13 @@ value_t apply(value_t f, value_t l)
 
 value_t applyn(uint32_t n, value_t f, ...)
 {
-    assert(n <= MAX_ARGS);
     va_list ap;
     va_start(ap, f);
     size_t i;
 
     PUSH(f);
+    while (SP+n > N_STACK)
+        grow_stack();
     for(i=0; i < n; i++) {
         value_t a = va_arg(ap, value_t);
         PUSH(a);
@@ -644,6 +652,8 @@ value_t listn(size_t n, ...)
     uint32_t si = SP;
     size_t i;
 
+    while (SP+n > N_STACK)
+        grow_stack();
     for(i=0; i < n; i++) {
         value_t a = va_arg(ap, value_t);
         PUSH(a);
@@ -715,7 +725,7 @@ static value_t _list(value_t *args, uint32_t nargs, int star)
         c->cdr = tagptr(c+1, TAG_CONS);
         c++;
     }
-    if (star || nargs > MAX_ARGS)
+    if (star)
         (c-2)->cdr = (c-1)->car;
     else
         (c-1)->cdr = NIL;
@@ -805,18 +815,8 @@ static value_t do_trycatch()
 #define DISPATCH goto dispatch
 #endif
 
-static void grow_stack()
-{
-    size_t newsz = N_STACK + (N_STACK>>1);
-    value_t *ns = realloc(Stack, newsz*sizeof(value_t));
-    if (ns == NULL)
-        lerror(MemoryError, "stack overflow");
-    Stack = ns;
-    N_STACK = newsz;
-}
-
 /*
-  stack on entry: <func>  <up to MAX_ARGS args...>  <arglist if nargs>MAX_ARGS>
+  stack on entry: <func>  <nargs args...>
   caller's responsibility:
   - put the stack in this state
   - provide arg count
@@ -886,18 +886,10 @@ static value_t apply_cl(uint32_t nargs)
             NEXT_OP;
         OP(OP_VARGC)
             i = *ip++;
+        do_vargc:
             s = (fixnum_t)nargs - (fixnum_t)i;
             if (s > 0) {
                 v = list(&Stack[bp+i], s);
-                if (nargs > MAX_ARGS) {
-                    if (s == 1) {
-                        v = car_(v);
-                    }
-                    else {
-                        c = (cons_t*)curheap;
-                        (c-2)->cdr = (c-1)->car;
-                    }
-                }
                 Stack[bp+i] = v;
                 if (s > 1) {
                     Stack[bp+i+1] = Stack[bp+nargs+0];
@@ -923,39 +915,17 @@ static value_t apply_cl(uint32_t nargs)
             nargs = i+1;
             NEXT_OP;
         OP(OP_LARGC)
-        OP(OP_LVARGC)
-            // move extra arguments from list to stack
-            i = GET_INT32(ip); ip+=4;
-            e = Stack[curr_frame-5];  // cloenv
-            n = Stack[curr_frame-4];  // prev curr_frame
-            POPN(5);
-            if (nargs > MAX_ARGS) {
-                v = POP();  // list of rest args
-                nargs--;
-            }
-            else v = NIL;
-            while (nargs < i) {
-                if (!iscons(v))
-                    lerror(ArgError, "apply: too few arguments");
-                PUSH(car_(v));
-                nargs++;
-                v = cdr_(v);
-            }
-            if (ip[-5] == OP_LVARGC) {
-                PUSH(v);
-                nargs++;
-            }
-            else {
-                if (iscons(v))
+            n = GET_INT32(ip); ip+=4;
+            if (nargs != n) {
+                if (nargs > n)
                     lerror(ArgError, "apply: too many arguments");
+                else
+                    lerror(ArgError, "apply: too few arguments");
             }
-            PUSH(e);
-            PUSH(n);
-            PUSH(nargs);
-            SP++;//PUSH(0);
-            PUSH(0);
-            curr_frame = SP;
             NEXT_OP;
+        OP(OP_LVARGC)
+            i = GET_INT32(ip); ip+=4;
+            goto do_vargc;
         OP(OP_LET)
             // last arg is closure environment to use
             nargs--;
@@ -1166,15 +1136,10 @@ static value_t apply_cl(uint32_t nargs)
             n = *ip++;
         apply_apply:
             v = POP();     // arglist
-            if (n > MAX_ARGS) {
-                v = apply_liststar(v, 1);
-            }
             n = SP-(n-2);  // n-2 == # leading arguments not in the list
             while (iscons(v)) {
-                if (SP-n == MAX_ARGS) {
-                    PUSH(v);
-                    break;
-                }
+                if (SP >= N_STACK)
+                    grow_stack();
                 PUSH(car_(v));
                 v = cdr_(v);
             }
@@ -1187,7 +1152,6 @@ static value_t apply_cl(uint32_t nargs)
         apply_add:
             s = 0;
             i = SP-n;
-            if (n > MAX_ARGS) goto add_ovf;
             for (; i < SP; i++) {
                 if (isfixnum(Stack[i])) {
                     s += numval(Stack[i]);
@@ -1265,13 +1229,11 @@ static value_t apply_cl(uint32_t nargs)
         apply_mul:
             accum = 1;
             i = SP-n;
-            if (n > MAX_ARGS) goto mul_ovf;
             for (; i < SP; i++) {
                 if (isfixnum(Stack[i])) {
                     accum *= numval(Stack[i]);
                 }
                 else {
-                mul_ovf:
                     v = fl_mul_any(&Stack[i], SP-i, accum);
                     break;
                 }
@@ -1343,23 +1305,10 @@ static value_t apply_cl(uint32_t nargs)
         OP(OP_VECTOR)
             n = *ip++;
         apply_vector:
-            if (n > MAX_ARGS) {
-                i = llength(Stack[SP-1])-1;
-            }
-            else i = 0;
-            v = alloc_vector(n+i, 0);
+            v = alloc_vector(n, 0);
             if (n) {
                 memcpy(&vector_elt(v,0), &Stack[SP-n], n*sizeof(value_t));
-                e = POP();
-                POPN(n-1);
-            }
-            if (n > MAX_ARGS) {
-                i = n-1;
-                while (iscons(e)) {
-                    vector_elt(v,i) = car_(e);
-                    i++;
-                    e = cdr_(e);
-                }
+                POPN(n);
             }
             PUSH(v);
             NEXT_OP;
@@ -1684,7 +1633,6 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len)
             break;
 
         case OP_TAPPLY: case OP_APPLY:
-            if (sp+MAX_ARGS+1 > maxsp) maxsp = sp+MAX_ARGS+1;
             n = *ip++;
             sp -= (n-1);
             break;
@@ -1860,15 +1808,8 @@ value_t fl_append(value_t *args, u_int32_t nargs)
     fl_gc_handle(&lastcons);
     uint32_t i=0;
     while (1) {
-        if (i >= MAX_ARGS) {
-            lst = car_(args[MAX_ARGS]);
-            args[MAX_ARGS] = cdr_(args[MAX_ARGS]);
-            if (!iscons(args[MAX_ARGS])) break;
-        }
-        else {
-            lst = args[i++];
-            if (i >= nargs) break;
-        }
+        lst = args[i++];
+        if (i >= nargs) break;
         if (iscons(lst)) {
             lst = FL_COPYLIST(lst);
             if (first == NIL)
@@ -1893,10 +1834,6 @@ value_t fl_liststar(value_t *args, u_int32_t nargs)
 {
     if (nargs == 1) return args[0];
     else if (nargs == 0) argcount("list*", nargs, 1);
-    if (nargs > MAX_ARGS) {
-        args[MAX_ARGS] = apply_liststar(args[MAX_ARGS], 1);
-        return list(args, nargs);
-    }
     return _list(args, nargs, 1);
 }
 

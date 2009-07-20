@@ -309,6 +309,11 @@
     (or (and (pair? x) (or (eq (car x) '*comma-at*)
 			   (eq (car x) '*comma-dot*)))
 	(eq x '*comma*)))
+  ; bracket without splicing
+  (define (bq-bracket1 x)
+    (if (and (pair? x) (eq (car x) '*comma*))
+	(cadr x)
+	(bq-process x)))
   (cond ((self-evaluating? x)
          (if (vector? x)
              (let ((body (bq-process (vector->list x))))
@@ -344,12 +349,6 @@
         ((eq (car x) '*comma-at*)   (list 'copy-list (cadr x)))
         ((eq (car x) '*comma-dot*)  (cadr x))
         (#t                         (list list (bq-process x)))))
-
-; bracket without splicing
-(define (bq-bracket1 x)
-  (if (and (pair? x) (eq (car x) '*comma*))
-      (cadr x)
-      (bq-process x)))
 
 ; standard macros -------------------------------------------------------------
 

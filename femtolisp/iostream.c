@@ -171,7 +171,7 @@ value_t fl_ioseek(value_t *args, u_int32_t nargs)
 
 static void do_ioprint(value_t *args, u_int32_t nargs, char *fname)
 {
-    if (nargs < 2 || nargs > MAX_ARGS)
+    if (nargs < 2)
         argcount(fname, nargs, 2);
     ios_t *s = toiostream(args[0], fname);
     unsigned i;

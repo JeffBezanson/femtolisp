@@ -102,22 +102,13 @@ typedef struct _symbol_t {
 void fl_gc_handle(value_t *pv);
 void fl_free_gc_handles(int n);
 
-// maximum number of explicit arguments. the 128th arg is a list of rest args.
-// the largest value nargs can have is MAX_ARGS+1
-#define MAX_ARGS 127
-
 #include "opcodes.h"
 
 // utility for iterating over all arguments in a builtin
 // i=index, i0=start index, arg = var for each arg, args = arg array
 // assumes "nargs" is the argument count
-// modifies args[MAX_ARGS] when nargs==MAX_ARGS+1
-#define FOR_ARGS(i, i0, arg, args)                                      \
-    for(i=i0; (((size_t)i<nargs ||                                      \
-                (i>MAX_ARGS && iscons(args[MAX_ARGS]))) &&              \
-               ((i>=MAX_ARGS?(arg=car_(args[MAX_ARGS]),                 \
-                              args[MAX_ARGS]=cdr_(args[MAX_ARGS])) :    \
-                 (arg = args[i])) || 1)); i++)
+#define FOR_ARGS(i, i0, arg, args)     \
+    for(i=i0; ((size_t)i)<nargs && ((arg=args[i]) || 1); i++)
 
 #define N_BUILTINS ((int)N_OPCODES)
 

@@ -98,6 +98,8 @@
 ; long argument lists
 (assert (= (apply + (iota 100000)) 4999950000))
 
+(define MAX_ARGS 255)
+
 (define as (apply list* (map-int (lambda (x) (gensym)) (+ MAX_ARGS 1))))
 (define f (compile `(lambda ,as ,(lastcdr as))))
 (assert (equal? (apply f (iota (+ MAX_ARGS 0))) `()))
