@@ -808,11 +808,9 @@ static value_t do_trycatch()
 #ifdef USE_COMPUTED_GOTO
 #define OP(x) L_##x:
 #define NEXT_OP goto *vm_labels[*ip++]
-#define DISPATCH goto *vm_labels[op]
 #else
 #define OP(x) case x:
 #define NEXT_OP goto next_op
-#define DISPATCH goto dispatch
 #endif
 
 /*
@@ -831,6 +829,7 @@ static value_t do_trycatch()
 static value_t apply_cl(uint32_t nargs)
 {
     VM_LABELS;
+    VM_APPLY_LABELS;
     uint32_t top_frame = curr_frame;
     // frame variables
     uint32_t n, captured;
@@ -839,7 +838,9 @@ static value_t apply_cl(uint32_t nargs)
     fixnum_t s, hi;
 
     // temporary variables (not necessary to preserve across calls)
+#ifndef USE_COMPUTED_GOTO
     uint32_t op;
+#endif
     uint32_t i;
     symbol_t *sym;
     static cons_t *c;
@@ -877,6 +878,7 @@ static value_t apply_cl(uint32_t nargs)
 #endif
         OP(OP_ARGC)
             n = *ip++;
+        do_argc:
             if (nargs != n) {
                 if (nargs > n)
                     lerror(ArgError, "apply: too many arguments");
@@ -916,13 +918,7 @@ static value_t apply_cl(uint32_t nargs)
             NEXT_OP;
         OP(OP_LARGC)
             n = GET_INT32(ip); ip+=4;
-            if (nargs != n) {
-                if (nargs > n)
-                    lerror(ArgError, "apply: too many arguments");
-                else
-                    lerror(ArgError, "apply: too few arguments");
-            }
-            NEXT_OP;
+            goto do_argc;
         OP(OP_LVARGC)
             i = GET_INT32(ip); ip+=4;
             goto do_vargc;
@@ -941,20 +937,62 @@ static value_t apply_cl(uint32_t nargs)
         OP(OP_TCALL)
             n = *ip++;  // nargs
         do_tcall:
-            if (isfunction(Stack[SP-n-1])) {
-                curr_frame = Stack[curr_frame-4];
-                for(s=-1; s < (fixnum_t)n; s++)
-                    Stack[bp+s] = Stack[SP-n+s];
-                SP = bp+n;
-                nargs = n;
-                goto apply_cl_top;
+            func = Stack[SP-n-1];
+            if (tag(func) == TAG_FUNCTION) {
+                if (func > (N_BUILTINS<<3)) {
+                    curr_frame = Stack[curr_frame-4];
+                    for(s=-1; s < (fixnum_t)n; s++)
+                        Stack[bp+s] = Stack[SP-n+s];
+                    SP = bp+n;
+                    nargs = n;
+                    goto apply_cl_top;
+                }
+                else {
+                    i = uintval(func);
+                    if (i <= OP_ASET) {
+                        s = builtin_arg_counts[i];
+                        if (s >= 0)
+                            argcount(builtin_names[i], n, s);
+                        else if (s != ANYARGS && (signed)n < -s)
+                            argcount(builtin_names[i], n, -s);
+                        // remove function arg
+                        for(s=SP-n-1; s < (int)SP-1; s++)
+                            Stack[s] = Stack[s+1];
+                        SP--;
+#ifdef USE_COMPUTED_GOTO
+                        if (i == OP_APPLY)
+                            goto apply_tapply;
+                        goto *vm_apply_labels[i];
+#else
+                        switch (i) {
+                        case OP_LIST:   goto apply_list;
+                        case OP_VECTOR: goto apply_vector;
+                        case OP_APPLY:  goto apply_tapply;
+                        case OP_ADD:    goto apply_add;
+                        case OP_SUB:    goto apply_sub;
+                        case OP_MUL:    goto apply_mul;
+                        case OP_DIV:    goto apply_div;
+                        default:
+                            op = (uint8_t)i;
+                            goto dispatch;
+                        }
+#endif
+                    }
+                }
             }
-            goto do_call;
+            else if (iscbuiltin(func)) {
+                s = SP;
+                v = (((builtin_t*)ptr(func))[3])(&Stack[SP-n], n);
+                SP = s-n;
+                Stack[SP-1] = v;
+                NEXT_OP;
+            }
+            type_error("apply", "function", func);
+        // WARNING: repeated code ahead
         OP(OP_CALL)
             n = *ip++;  // nargs
         do_call:
             func = Stack[SP-n-1];
-            s = SP;
             if (tag(func) == TAG_FUNCTION) {
                 if (func > (N_BUILTINS<<3)) {
                     Stack[curr_frame-2] = (uptrint_t)ip;
@@ -963,40 +1001,43 @@ static value_t apply_cl(uint32_t nargs)
                 }
                 else {
                     i = uintval(func);
-                    if (i > OP_ASET)
-                        type_error("apply", "function", func);
-                    op = (uint8_t)i;
-                    s = builtin_arg_counts[op];
-                    if (s >= 0)
-                        argcount(builtin_names[op], n, s);
-                    else if (s != ANYARGS && (signed)n < -s)
-                        argcount(builtin_names[op], n, -s);
-                    // remove function arg
-                    for(s=SP-n-1; s < (int)SP-1; s++)
-                        Stack[s] = Stack[s+1];
-                    SP--;
-                    switch (op) {
-                    case OP_LIST:   goto apply_list;
-                    case OP_VECTOR: goto apply_vector;
-                    case OP_APPLY:  goto apply_apply;
-                    case OP_ADD:    goto apply_add;
-                    case OP_SUB:    goto apply_sub;
-                    case OP_MUL:    goto apply_mul;
-                    case OP_DIV:    goto apply_div;
-                    default:
-                        DISPATCH;
+                    if (i <= OP_ASET) {
+                        s = builtin_arg_counts[i];
+                        if (s >= 0)
+                            argcount(builtin_names[i], n, s);
+                        else if (s != ANYARGS && (signed)n < -s)
+                            argcount(builtin_names[i], n, -s);
+                        // remove function arg
+                        for(s=SP-n-1; s < (int)SP-1; s++)
+                            Stack[s] = Stack[s+1];
+                        SP--;
+#ifdef USE_COMPUTED_GOTO
+                        goto *vm_apply_labels[i];
+#else
+                        switch (i) {
+                        case OP_LIST:   goto apply_list;
+                        case OP_VECTOR: goto apply_vector;
+                        case OP_APPLY:  goto apply_apply;
+                        case OP_ADD:    goto apply_add;
+                        case OP_SUB:    goto apply_sub;
+                        case OP_MUL:    goto apply_mul;
+                        case OP_DIV:    goto apply_div;
+                        default:
+                            op = (uint8_t)i;
+                            goto dispatch;
+                        }
+#endif
                     }
                 }
             }
             else if (iscbuiltin(func)) {
+                s = SP;
                 v = (((builtin_t*)ptr(func))[3])(&Stack[SP-n], n);
+                SP = s-n;
+                Stack[SP-1] = v;
+                NEXT_OP;
             }
-            else {
-                type_error("apply", "function", func);
-            }
-            SP = s-n;
-            Stack[SP-1] = v;
-            NEXT_OP;
+            type_error("apply", "function", func);
         OP(OP_JMP) ip += (ptrint_t)GET_INT16(ip); NEXT_OP;
         OP(OP_BRF)
             v = POP();
@@ -1129,10 +1170,19 @@ static value_t apply_cl(uint32_t nargs)
             NEXT_OP;
 
         OP(OP_TAPPLY)
+            n = *ip++;
+        apply_tapply:
+            v = POP();     // arglist
+            n = SP-(n-2);  // n-2 == # leading arguments not in the list
+            while (iscons(v)) {
+                if (SP >= N_STACK)
+                    grow_stack();
+                PUSH(car_(v));
+                v = cdr_(v);
+            }
+            n = SP-n;
+            goto do_tcall;
         OP(OP_APPLY)
-#ifdef USE_COMPUTED_GOTO
-            op = ip[-1];
-#endif
             n = *ip++;
         apply_apply:
             v = POP();     // arglist
@@ -1144,8 +1194,7 @@ static value_t apply_cl(uint32_t nargs)
                 v = cdr_(v);
             }
             n = SP-n;
-            if (op==OP_TAPPLY) goto do_tcall;
-            else goto do_call;
+            goto do_call;
 
         OP(OP_ADD)
             n = *ip++;
@@ -1594,12 +1643,10 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len)
             break;
         case OP_LARGC:
             n = GET_INT32(ip); ip+=4;
-            sp += (n+2);
             break;
         case OP_LVARGC:
-            // move extra arguments from list to stack
             n = GET_INT32(ip); ip+=4;
-            sp += (n+3);
+            sp += (n+2);
             break;
         case OP_LET: break;
 

@@ -68,8 +68,30 @@ enum {
     &&L_OP_LVARGC,                                                      \
     &&L_OP_LOADA0, &&L_OP_LOADA1, &&L_OP_LOADC00, &&L_OP_LOADC01        \
     }
+
+#define VM_APPLY_LABELS                                                 \
+    static void *vm_apply_labels[] = {                                  \
+&&L_OP_NOP, &&L_OP_DUP, &&L_OP_POP, &&L_OP_CALL, &&L_OP_TCALL, &&L_OP_JMP, \
+    &&L_OP_BRF, &&L_OP_BRT,                                             \
+    &&L_OP_JMPL, &&L_OP_BRFL, &&L_OP_BRTL, &&L_OP_RET,                  \
+                                                                        \
+    &&L_OP_EQ, &&L_OP_EQV, &&L_OP_EQUAL, &&L_OP_ATOMP, &&L_OP_NOT,      \
+    &&L_OP_NULLP, &&L_OP_BOOLEANP,                                      \
+    &&L_OP_SYMBOLP, &&L_OP_NUMBERP, &&L_OP_BOUNDP, &&L_OP_PAIRP,        \
+    &&L_OP_BUILTINP, &&L_OP_VECTORP,                                    \
+    &&L_OP_FIXNUMP, &&L_OP_FUNCTIONP,                                   \
+                                                                        \
+    &&L_OP_CONS, &&apply_list, &&L_OP_CAR, &&L_OP_CDR, &&L_OP_SETCAR,    \
+    &&L_OP_SETCDR, &&apply_apply,                                        \
+                                                                        \
+    &&apply_add, &&apply_sub, &&apply_mul, &&apply_div, &&L_OP_IDIV, &&L_OP_NUMEQ, \
+    &&L_OP_LT, &&L_OP_COMPARE,                                          \
+                                                                        \
+    &&apply_vector, &&L_OP_AREF, &&L_OP_ASET                            \
+    }
 #else
 #define VM_LABELS
+#define VM_APPLY_LABELS
 #endif
 
 #endif
