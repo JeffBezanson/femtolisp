@@ -878,10 +878,10 @@ IOStream API
  io.trunc
  io.read!     - destructively take data
 *io.tostring!
- io.readlines
+*io.readlines
  io.readall
- print-to-string
- princ-to-string
+*print-to-string
+*princ-to-string
 
 
  path.combine

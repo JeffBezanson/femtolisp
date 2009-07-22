@@ -503,6 +503,17 @@
 
 (define (io.readline s) (io.readuntil s #\x0a))
 
+; call f on a stream until the stream runs out of data
+(define (read-all-of f s)
+  (let loop ((lines ())
+	     (curr  (f s)))
+    (if (io.eof? s)
+	(reverse! lines)
+	(loop (cons curr lines) (f s)))))
+
+(define (io.readlines s) (read-all-of io.readline s))
+(define (read-all s) (read-all-of read s))
+
 ; vector functions ------------------------------------------------------------
 
 (define (list->vector l) (apply vector l))

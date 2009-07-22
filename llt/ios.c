@@ -306,6 +306,7 @@ size_t ios_readprep(ios_t *s, size_t n)
     size_t space = s->size - s->bpos;
     if (s->state == bst_wr)
         return space;
+    s->state = bst_rd;
     if (space >= n || s->bm == bm_mem || s->fd == -1)
         return space;
     if (s->maxsize < s->bpos+n) {

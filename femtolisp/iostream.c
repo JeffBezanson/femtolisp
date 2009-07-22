@@ -169,6 +169,16 @@ value_t fl_ioseek(value_t *args, u_int32_t nargs)
     return FL_T;
 }
 
+value_t fl_iopos(value_t *args, u_int32_t nargs)
+{
+    argcount("io.pos", nargs, 1);
+    ios_t *s = toiostream(args[0], "io.pos");
+    off_t res = ios_pos(s);
+    if (res == -1)
+        return FL_F;
+    return size_wrap((size_t)res);
+}
+
 static void do_ioprint(value_t *args, u_int32_t nargs, char *fname)
 {
     if (nargs < 2)
@@ -340,6 +350,7 @@ static builtinspec_t iostreamfunc_info[] = {
     { "io.close", fl_ioclose },
     { "io.eof?" , fl_ioeof },
     { "io.seek" , fl_ioseek },
+    { "io.pos",   fl_iopos },
     { "io.getc" , fl_iogetc },
     { "io.putc" , fl_ioputc },
     { "io.discardbuffer", fl_iopurge },
