@@ -1038,6 +1038,8 @@ static value_t apply_cl(uint32_t nargs)
                 NEXT_OP;
             }
             type_error("apply", "function", func);
+        OP(OP_TCALLL) n = GET_INT32(ip); ip+=4; goto do_tcall;
+        OP(OP_CALLL)  n = GET_INT32(ip); ip+=4; goto do_call;
         OP(OP_JMP) ip += (ptrint_t)GET_INT16(ip); NEXT_OP;
         OP(OP_BRF)
             v = POP();
@@ -1580,7 +1582,7 @@ static value_t apply_cl(uint32_t nargs)
                 pv[0] = fixnum(n+1);
                 pv++;
                 do {
-                  pv[n] = Stack[bp+n];
+                    pv[n] = Stack[bp+n];
                 } while (n--);
                 // environment representation changed; install
                 // the new representation so everybody can see it

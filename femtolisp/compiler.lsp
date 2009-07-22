@@ -24,7 +24,7 @@
 	  
 	  :closure :argc :vargc :trycatch :copyenv :let :for :tapply
 	  :add2 :sub2 :neg :largc :lvargc
-	  :loada0 :loada1 :loadc00 :loadc01
+	  :loada0 :loada1 :loadc00 :loadc01 :call.l :tcall.l
 	  
 	  dummy_t dummy_f dummy_nil]))
     (for 0 (1- (length keys))
@@ -148,7 +148,7 @@
 		      ((number? nxt)
 		       (case vi
 			 ((:loadv.l :loadg.l :setg.l :loada.l :seta.l
-			   :largc :lvargc)
+			   :largc :lvargc :call.l :tcall.l)
 			  (io.write bcode (int32 nxt))
 			  (set! i (+ i 1)))
 			 
@@ -306,22 +306,6 @@
 (define (compile-or g env tail? forms)
   (compile-short-circuit g env tail? forms #f :brt))
 
-(define (list-partition l n)
-  (define (list-part- l n  i subl acc)
-    (cond ((atom? l) (if (> i 0)
-			 (cons (reverse! subl) acc)
-			 acc))
-	  ((>= i n)  (list-part- l n 0 () (cons (reverse! subl) acc)))
-	  (else      (list-part- (cdr l) n (+ 1 i) (cons (car l) subl) acc))))
-  (if (<= n 0)
-      (error "list-partition: invalid count")
-      (reverse! (list-part- l n 0 () ()))))
-
-(define (make-nested-arglist args n)
-  (cons nconc
-	(map (lambda (l) (cons list l))
-	     (list-partition args n))))
-
 (define (compile-arglist g env lst)
   (for-each (lambda (a)
 	      (compile-in g env #f a))
@@ -410,10 +394,10 @@
 	       (top-level-value head)
 	       head)))
       (if (length> (cdr x) 255)
-	  ; argument count is a uint8, so for more than 255 arguments
-	  ; we use apply on a list built from sublists that fit the limit
-	  (compile-in g env tail?
-		      `(#.apply ,head ,(make-nested-arglist (cdr x) 255)))
+	  ; more than 255 arguments, need long versions of instructions
+	  (begin (compile-in g env #f head)
+		 (let ((nargs (compile-arglist g env (cdr x))))
+		   (emit g (if tail? :tcall.l :call.l) nargs)))
 	  (let ((b (and (builtin? head)
 			(builtin->instruction head))))
 	    (if (not b)
@@ -590,7 +574,7 @@
 		  (princ (number->string (aref code i)))
 		  (set! i (+ i 1)))
 		 
-		 ((:loada.l :seta.l :largc :lvargc)
+		 ((:loada.l :seta.l :largc :lvargc :call.l :tcall.l)
 		  (princ (number->string (ref-int32-LE code i)))
 		  (set! i (+ i 4)))
 

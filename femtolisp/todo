@@ -972,8 +972,6 @@ consolidated todo list as of 7/8:
 - #+, #- reader macros
 - printing improvements: *print-big*, keep track of horiz. position
   per-stream so indenting works across print calls
-- improve bootstrapping process so compiled version can recompile
-  itself for a broader set of changes
 - remaining c types
 - remaining cvalues functions
 - finish ios
