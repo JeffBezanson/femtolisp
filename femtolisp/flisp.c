@@ -1062,6 +1062,36 @@ static value_t apply_cl(uint32_t nargs)
             if (v != FL_F) ip += (ptrint_t)GET_INT32(ip);
             else ip += 4;
             NEXT_OP;
+        OP(OP_BRNE)
+            if (Stack[SP-2] != Stack[SP-1]) ip += (ptrint_t)GET_INT16(ip);
+            else ip += 2;
+            POPN(2);
+            NEXT_OP;
+        OP(OP_BRNEL)
+            if (Stack[SP-2] != Stack[SP-1]) ip += (ptrint_t)GET_INT32(ip);
+            else ip += 4;
+            POPN(2);
+            NEXT_OP;
+        OP(OP_BRNN)
+            v = POP();
+            if (v != NIL) ip += (ptrint_t)GET_INT16(ip);
+            else ip += 2;
+            NEXT_OP;
+        OP(OP_BRNNL)
+            v = POP();
+            if (v != NIL) ip += (ptrint_t)GET_INT32(ip);
+            else ip += 4;
+            NEXT_OP;
+        OP(OP_BRN)
+            v = POP();
+            if (v == NIL) ip += (ptrint_t)GET_INT16(ip);
+            else ip += 2;
+            NEXT_OP;
+        OP(OP_BRNL)
+            v = POP();
+            if (v == NIL) ip += (ptrint_t)GET_INT32(ip);
+            else ip += 4;
+            NEXT_OP;
         OP(OP_RET)
             v = POP();
             SP = curr_frame;
@@ -1151,6 +1181,13 @@ static value_t apply_cl(uint32_t nargs)
             v = Stack[SP-1];
             if (!iscons(v)) type_error("cdr", "cons", v);
             Stack[SP-1] = cdr_(v);
+            NEXT_OP;
+        OP(OP_CADR)
+            v = Stack[SP-1];
+            if (!iscons(v)) type_error("cdr", "cons", v);
+            v = cdr_(v);
+            if (!iscons(v)) type_error("car", "cons", v);
+            Stack[SP-1] = car_(v);
             NEXT_OP;
         OP(OP_SETCAR)
             car(Stack[SP-2]) = Stack[SP-1];

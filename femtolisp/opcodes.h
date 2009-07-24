@@ -26,6 +26,7 @@ enum {
     OP_CLOSURE, OP_ARGC, OP_VARGC, OP_TRYCATCH, OP_COPYENV, OP_LET, OP_FOR,
     OP_TAPPLY, OP_ADD2, OP_SUB2, OP_NEG, OP_LARGC, OP_LVARGC,
     OP_LOADA0, OP_LOADA1, OP_LOADC00, OP_LOADC01, OP_CALLL, OP_TCALLL,
+    OP_BRNE, OP_BRNEL, OP_CADR, OP_BRNN, OP_BRNNL, OP_BRN, OP_BRNL,
 
     OP_BOOL_CONST_T, OP_BOOL_CONST_F, OP_THE_EMPTY_LIST,
 
@@ -67,7 +68,8 @@ enum {
     &&L_OP_TAPPLY, &&L_OP_ADD2, &&L_OP_SUB2, &&L_OP_NEG, &&L_OP_LARGC,  \
     &&L_OP_LVARGC,                                                      \
     &&L_OP_LOADA0, &&L_OP_LOADA1, &&L_OP_LOADC00, &&L_OP_LOADC01,       \
-    &&L_OP_CALLL, &&L_OP_TCALLL                                         \
+    &&L_OP_CALLL, &&L_OP_TCALLL, &&L_OP_BRNE, &&L_OP_BRNEL, &&L_OP_CADR,\
+    &&L_OP_BRNN, &&L_OP_BRNNL, &&L_OP_BRN, &&L_OP_BRNL                  \
     }
 
 #define VM_APPLY_LABELS                                                 \

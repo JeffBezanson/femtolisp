@@ -25,6 +25,7 @@
 	  :closure :argc :vargc :trycatch :copyenv :let :for :tapply
 	  :add2 :sub2 :neg :largc :lvargc
 	  :loada0 :loada1 :loadc00 :loadc01 :call.l :tcall.l
+	  :brne :brne.l :cadr :brnn :brnn.l :brn :brn.l
 	  
 	  dummy_t dummy_f dummy_nil]))
     (for 0 (1- (length keys))
@@ -62,7 +63,10 @@
 		      (aset! b 2 (+ nconst 1)))))))
 (define (emit e inst . args)
   (if (null? args)
-      (aset! e 0 (cons inst (aref e 0)))
+      (if (and (eq? inst :car) (pair? (aref e 0))
+	       (eq? (car (aref e 0)) :cdr))
+	  (set-car! (aref e 0) :cadr)
+	  (aset! e 0 (cons inst (aref e 0))))
       (begin
 	(if (memq inst '(:loadv :loadg :setg))
 	    (set! args (list (bcode:indexfor e (car args)))))
@@ -92,7 +96,23 @@
 		  ((equal? args '(0 1))
 		   (set! inst :loadc01)
 		   (set! args ()))))
-	(aset! e 0 (nreconc (cons inst args) (aref e 0)))))
+
+	(let ((lasti (if (pair? (aref e 0))
+			 (car (aref e 0)) ()))
+	      (bc (aref e 0)))
+	  (cond ((and (eq? inst :brf) (eq? lasti :not)
+		      (eq? (cadr bc) :null?))
+		 (aset! e 0 (cons (car args) (cons :brn (cddr bc)))))
+		((and (eq? inst :brf) (eq? lasti :not))
+		 (aset! e 0 (cons (car args) (cons :brt (cdr bc)))))
+		((and (eq? inst :brf) (eq? lasti :eq?))
+		 (aset! e 0 (cons (car args) (cons :brne (cdr bc)))))
+		((and (eq? inst :brf) (eq? lasti :null?))
+		 (aset! e 0 (cons (car args) (cons :brnn (cdr bc)))))
+		((and (eq? inst :brt) (eq? lasti :null?))
+		 (aset! e 0 (cons (car args) (cons :brn (cdr bc)))))
+		(else
+		 (aset! e 0 (nreconc (cons inst args) bc)))))))
   e)
 
 (define (make-label e)   (gensym))
@@ -134,14 +154,17 @@
 			   (get Instructions
 				(if long?
 				    (case vi
-				      (:jmp :jmp.l)
-				      (:brt :brt.l)
-				      (:brf :brf.l)
+				      (:jmp  :jmp.l)
+				      (:brt  :brt.l)
+				      (:brf  :brf.l)
+				      (:brne :brne.l)
+				      (:brnn :brnn.l)
+				      (:brn  :brn.l)
 				      (else vi))
 				    vi))))
 		(set! i (+ i 1))
 		(set! nxt (if (< i n) (aref v i) #f))
-		(cond ((memq vi '(:jmp :brf :brt))
+		(cond ((memq vi '(:jmp :brf :brt :brne :brnn :brn))
 		       (put! fixup-to-label (sizeof bcode) nxt)
 		       (io.write bcode ((if long? int32 int16) 0))
 		       (set! i (+ i 1)))
@@ -400,12 +423,19 @@
 		   (emit g (if tail? :tcall.l :call.l) nargs)))
 	  (let ((b (and (builtin? head)
 			(builtin->instruction head))))
-	    (if (not b)
-		(compile-in g env #f head))
-	    (let ((nargs (compile-arglist g env (cdr x))))
-	      (if b
-		  (compile-builtin-call g env tail? x head b nargs)
-		  (emit g (if tail? :tcall :call) nargs))))))))
+	    (if (and (eq? head 'cadr)
+		     (not (in-env? head env))
+		     (equal? (top-level-value 'cadr) cadr)
+		     (length= x 2))
+		(begin (compile-in g env #f (cadr x))
+		       (emit g :cadr))
+		(begin
+		  (if (not b)
+		      (compile-in g env #f head))
+		  (let ((nargs (compile-arglist g env (cdr x))))
+		    (if b
+			(compile-builtin-call g env tail? x head b nargs)
+			(emit g (if tail? :tcall :call) nargs))))))))))
 
 (define (expand-define form body)
   (if (symbol? form)
@@ -590,11 +620,11 @@
 		  (princ (number->string (ref-int32-LE code i)))
 		  (set! i (+ i 4)))
 		 
-		 ((:jmp :brf :brt)
+		 ((:jmp :brf :brt :brne :brnn :brn)
 		  (princ "@" (hex5 (+ i -4 (ref-int16-LE code i))))
 		  (set! i (+ i 2)))
 		 
-		 ((:jmp.l :brf.l :brt.l)
+		 ((:jmp.l :brf.l :brt.l :brne.l :brnn.l :brn.l)
 		  (princ "@" (hex5 (+ i -4 (ref-int32-LE code i))))
 		  (set! i (+ i 4)))
 		 

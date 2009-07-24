@@ -1053,9 +1053,17 @@ new evaluator todo:
 - opcodes CAAR, CADR, CDAR, CDDR
 - EQTO N, compare directly to stored datum N
 - peephole opt
+  done:
+  not brf => brt
+  eq brf => brne
+  null brf => brnn
+  null brt => brn
+  null not brf => brn
+  cdr car => cadr
+
+  not yet:
+  not brt => brf
   constant+pop => nothing, e.g. 2-arg 'if' in statement position
-  not+brf => brt
-  not+brt => brf
   loadt+brf => nothing
   loadf+brt => nothing
   loadt+brt => jmp
