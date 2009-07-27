@@ -116,6 +116,14 @@
 (assert (equal? (apply f (iota 995))  '(994)))
 (assert (equal? (apply f (iota 1000)) '(994 995 996 997 998 999)))
 
+; optional arguments
+(assert (equal? ((lambda ((b 0)) b)) 0))
+(assert (equal? ((lambda (a (b 2)) (list a b)) 1) '(1 2)))
+(assert (equal? ((lambda (a (b 2)) (list a b)) 1 3) '(1 3)))
+(assert (equal? ((lambda (a (b 2) (c 3)) (list a b c)) 1) '(1 2 3)))
+(assert (equal? ((lambda (a (b 2) (c 3)) (list a b c)) 1 8) '(1 8 3)))
+(assert (equal? ((lambda (a (b 2) (c 3)) (list a b c)) 1 8 9) '(1 8 9)))
+
 ; ok, a couple end-to-end tests as well
 (define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))
 (assert (equal? (fib 20) 6765))

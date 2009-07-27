@@ -26,6 +26,7 @@
 	  :add2 :sub2 :neg :largc :lvargc
 	  :loada0 :loada1 :loadc00 :loadc01 :call.l :tcall.l
 	  :brne :brne.l :cadr :brnn :brnn.l :brn :brn.l
+	  :optargs
 	  
 	  dummy_t dummy_f dummy_nil]))
     (for 0 (1- (length keys))
@@ -171,7 +172,7 @@
 		      ((number? nxt)
 		       (case vi
 			 ((:loadv.l :loadg.l :setg.l :loada.l :seta.l
-			   :largc :lvargc :call.l :tcall.l)
+			   :largc :lvargc :call.l :tcall.l :optargs)
 			  (io.write bcode (int32 nxt))
 			  (set! i (+ i 1)))
 			 
@@ -346,6 +347,7 @@
     (if (and (pair? head)
 	     (eq? (car head) 'lambda)
 	     (list? (cadr head))
+	     (every symbol? (cadr head))
 	     (not (length> (cadr head) 255)))
 	(compile-let  g env tail? x)
 	(compile-call g env tail? x))))
@@ -505,6 +507,28 @@
 		    (else ())))))
     (lambda (expr) (delete-duplicates (get-defined-vars- expr)))))
 
+(define (lambda-vars l)
+  (define (check-formals l o)
+    (or
+     (null? l) (symbol? l)
+     (and
+      (pair? l)
+      (or (symbol? (car l))
+	  (and (pair? (car l))
+	       (or (every pair? (cdr l))
+		   (error (string "compile error: invalid argument list "
+				  o ". optional arguments must come last."))))
+	  (error (string "compile error: invalid formal argument " (car l)
+			 " in list " o)))
+      (check-formals (cdr l) o))
+     (if (eq? l o)
+	 (error (string "compile error: invalid argument list " o))
+	 (error (string "compile error: invalid formal argument " l
+			" in list " o)))))
+  (check-formals l l)
+  (map (lambda (s) (if (pair? s) (car s) s))
+       (to-proper l)))
+
 (define compile-f-
   (let ((*defines-processed-token* (gensym)))
     ; to eval a top-level expression we need to avoid internal define
@@ -529,23 +553,34 @@
       
       (let ((g    (make-code-emitter))
 	    (args (cadr f))
+	    (vars (lambda-vars (cadr f)))
+	    (opta (filter pair? (cadr f)))
 	    (name (if (eq? (lastcdr f) *defines-processed-token*)
 		      'lambda
 		      (lastcdr f))))
-	(cond ((not (null? let?))      (emit g :let))
-	      ((length> args 255)      (emit g (if (null? (lastcdr args))
-						   :largc :lvargc)
-					     (length args)))
-	      ((null? (lastcdr args))  (emit g :argc  (length args)))
-	      (else  (emit g :vargc (if (atom? args) 0 (length args)))))
-	(compile-in g (cons (to-proper args) env) #t
-		    (if (eq? (lastcdr f) *defines-processed-token*)
-			(caddr f)
-			(lambda-body f)))
-	(emit g :ret)
-	(values (function (encode-byte-code (bcode:code g))
-			  (const-to-idx-vec g) name)
-		(aref g 3))))))
+	(let ((nargs (if (atom? args) 0 (length args))))
+
+	  ; emit argument checking prologue
+	  (if (not (null? opta))
+	      (begin (bcode:indexfor g (list->vector (map cadr opta)))
+		     (emit g :optargs (- nargs (length opta)))))
+
+	  (cond ((not (null? let?))      (emit g :let))
+		((> nargs 255)           (emit g (if (null? (lastcdr args))
+						     :largc :lvargc)
+					       nargs))
+		((null? (lastcdr args))  (emit g :argc  nargs))
+		(else  (emit g :vargc nargs)))
+
+	  ; compile body and return
+	  (compile-in g (cons vars env) #t
+		      (if (eq? (lastcdr f) *defines-processed-token*)
+			  (caddr f)
+			  (lambda-body f)))
+	  (emit g :ret)
+	  (values (function (encode-byte-code (bcode:code g))
+			    (const-to-idx-vec g) name)
+		  (aref g 3)))))))
 
 (define (compile f) (compile-f () f))
 
@@ -604,7 +639,7 @@
 		  (princ (number->string (aref code i)))
 		  (set! i (+ i 1)))
 		 
-		 ((:loada.l :seta.l :largc :lvargc :call.l :tcall.l)
+		 ((:loada.l :seta.l :largc :lvargc :call.l :tcall.l :optargs)
 		  (princ (number->string (ref-int32-LE code i)))
 		  (set! i (+ i 4)))
 

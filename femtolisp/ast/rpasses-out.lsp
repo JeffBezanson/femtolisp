@@ -5,25 +5,31 @@
 						       (*named* class (r-call
   c "POSIXt" "POSIXct")))))))
 	       (<- Sys.timezone (lambda ()
-				  (let () (r-block (r-call as.vector (r-call
-  Sys.getenv "TZ"))))))
+				  (let ()
+				       (r-block (r-call as.vector (r-call
+								   Sys.getenv
+								   "TZ"))))))
 	       (<- as.POSIXlt (lambda (x tz)
-				(let ((x ()) (tzone ()) (fromchar ()) (tz ()))
+				(let ((x ())
+				      (tzone ())
+				      (fromchar ())
+				      (tz ()))
 				     (r-block (when (missing tz)
 						    (<- tz ""))
 					      (<- fromchar (lambda (x)
-							     (let ((res ()) (f
-  ())
-  (j ()) (xx ()))
+							     (let ((res ())
+								   (f ())
+								   (j ())
+								   (xx ()))
 								  (r-block (<-
   xx (r-call r-index x 1))
-  (if (r-call is.na xx)
-      (r-block (<- j 1) (while (&& (r-call is.na xx)
-				   (r-call <= (<- j (r-call + j 1))
-					   (r-call length x)))
-			       (<- xx (r-call r-index x j)))
-	       (if (r-call is.na xx)
-		   (<- f "%Y-%m-%d"))))
+  (if (r-call is.na xx) (r-block (<- j 1)
+				 (while (&& (r-call is.na xx)
+					    (r-call <= (<- j (r-call + j 1))
+						    (r-call length x)))
+					(<- xx (r-call r-index x j)))
+				 (if (r-call is.na xx)
+				     (<- f "%Y-%m-%d"))))
   (if (|\|\|| (r-call is.na xx) (r-call ! (r-call is.na (r-call strptime xx
 								(<- f "%Y-%m-%d %H:%M:%OS"))))
 	      (r-call ! (r-call is.na (r-call strptime xx
@@ -37,25 +43,19 @@
 	      (r-call ! (r-call is.na (r-call strptime xx
 					      (<- f "%Y/%m/%d")))))
       (r-block (<- res (r-call strptime x f))
-	       (if (r-call nchar tz)
-		   (r-block (<- res (r-call attr<- res
-					    "tzone" tz))
-			    tz))
+	       (if (r-call nchar tz) (r-block (<- res (r-call attr<- res "tzone"
+							      tz))
+					      tz))
 	       (return res)))
   (r-call stop "character string is not in a standard unambiguous format")))))
-					      (if (r-call inherits x
-							  "POSIXlt")
+					      (if (r-call inherits x "POSIXlt")
 						  (return x))
-					      (if (r-call inherits x
-							  "Date")
+					      (if (r-call inherits x "Date")
 						  (return (r-call .Internal (r-call
   Date2POSIXlt x))))
-					      (<- tzone (r-call attr x
-								"tzone"))
-					      (if (|\|\|| (r-call inherits x
-								  "date")
-							  (r-call inherits x
-								  "dates"))
+					      (<- tzone (r-call attr x "tzone"))
+					      (if (|\|\|| (r-call inherits x "date")
+							  (r-call inherits x "dates"))
 						  (<- x (r-call as.POSIXct x)))
 					      (if (r-call is.character x)
 						  (return (r-call fromchar (r-call
@@ -87,26 +87,25 @@
 						    (<- tz ""))
 					      (r-call UseMethod "as.POSIXct")))))
 	       (<- as.POSIXct.Date (lambda (x ...)
-				     (let () (r-block (r-call structure (r-call
-  * (r-call unclass x) 86400)
-							      (*named* class (r-call
+				     (let ()
+					  (r-block (r-call structure (r-call *
+  (r-call unclass x) 86400)
+							   (*named* class (r-call
   c "POSIXt" "POSIXct")))))))
 	       (<- as.POSIXct.date (lambda (x ...)
 				     (let ((x ()))
-					  (r-block (if (r-call inherits x
-							       "date")
+					  (r-block (if (r-call inherits x "date")
 						       (r-block (<- x (r-call
   * (r-call - x 3653) 86400))
 								(return (r-call
-  structure x (*named* class (r-call c "POSIXt"
-				     "POSIXct")))))
+  structure x (*named* class (r-call c "POSIXt" "POSIXct")))))
 						       (r-call stop (r-call
   gettextf "'%s' is not a \"date\" object"
   (r-call deparse (substitute x)))))))))
 	       (<- as.POSIXct.dates (lambda (x ...)
-				      (let ((x ()) (z ()))
-					   (r-block (if (r-call inherits x
-								"dates")
+				      (let ((x ())
+					    (z ()))
+					   (r-block (if (r-call inherits x "dates")
 							(r-block (<- z (r-call
   attr x "origin"))
 								 (<- x (r-call
@@ -119,13 +118,13 @@
 					   (r-call r-index z 1)
 					   (r-call r-index z 2) 0)))))
 								 (return (r-call
-  structure x (*named* class (r-call c "POSIXt"
-				     "POSIXct")))))
+  structure x (*named* class (r-call c "POSIXt" "POSIXct")))))
 							(r-call stop (r-call
   gettextf "'%s' is not a \"dates\" object"
   (r-call deparse (substitute x)))))))))
 	       (<- as.POSIXct.POSIXlt (lambda (x tz)
-					(let ((tzone ()) (tz ()))
+					(let ((tzone ())
+					      (tz ()))
 					     (r-block (when (missing tz)
 							    (<- tz ""))
 						      (<- tzone (r-call attr x
@@ -145,8 +144,7 @@
 					(let ((tz ()))
 					     (r-block (when (missing tz)
 							    (<- tz ""))
-						      (if (r-call inherits x
-								  "POSIXct")
+						      (if (r-call inherits x "POSIXct")
 							  (return x))
 						      (if (|\|\|| (r-call
 								   is.character
@@ -174,26 +172,27 @@
 								    (r-call
   deparse (substitute x))))))))
 	       (<- as.numeric.POSIXlt (lambda (x)
-					(let () (r-block (r-call as.POSIXct x)))))
+					(let ()
+					     (r-block (r-call as.POSIXct x)))))
 	       (<- format.POSIXlt (lambda (x format usetz ...)
-				    (let ((np ()) (secs ()) (times ()) (format
-  ())
-						  (usetz ()))
-					 (r-block (when (missing usetz)
-							(<- usetz *r-false*))
-						  (when (missing format)
+				    (let ((np ())
+					  (secs ())
+					  (times ())
+					  (usetz ())
+					  (format ()))
+					 (r-block (when (missing format)
 							(<- format ""))
+						  (when (missing usetz)
+							(<- usetz *r-false*))
 						  (if (r-call ! (r-call
 								 inherits x "POSIXlt"))
 						      (r-call stop "wrong class"))
-						  (if (r-call == format
-							      "")
+						  (if (r-call == format "")
 						      (r-block (<- times (r-call
   unlist (r-call r-index (r-call unclass x)
 		 (r-call : 1 3))))
 							       (<- secs (r-call
-  r-aref x (index-in-strlist sec (r-call attr x
-					 #0="names"))))
+  r-aref x (index-in-strlist sec (r-call attr x #0="names"))))
 							       (<- secs (r-call
   r-index secs (r-call ! (r-call is.na secs))))
 							       (<- np (r-call
@@ -215,11 +214,9 @@
   (r-call all (r-call == (r-call r-index times
 				 (r-call ! (r-call is.na times)))
 		      0))
-  "%Y-%m-%d"
-  (if (r-call == np 0)
-      "%Y-%m-%d %H:%M:%S"
-      (r-call paste "%Y-%m-%d %H:%M:%OS" np
-	      (*named* sep "")))))))
+  "%Y-%m-%d" (if (r-call == np 0) "%Y-%m-%d %H:%M:%S"
+		 (r-call paste "%Y-%m-%d %H:%M:%OS" np
+			 (*named* sep "")))))))
 						  (r-call .Internal (r-call
   format.POSIXlt x format usetz))))))
 	       (<- strftime format.POSIXlt)
@@ -230,41 +227,42 @@
 					    (r-call .Internal (r-call strptime
   (r-call as.character x) format tz))))))
 	       (<- format.POSIXct (lambda (x format tz usetz ...)
-				    (let ((tzone ()) (format ()) (tz ()) (usetz
-  ()))
-					 (r-block (when (missing usetz)
-							(<- usetz *r-false*))
+				    (let ((tzone ())
+					  (usetz ())
+					  (tz ())
+					  (format ()))
+					 (r-block (when (missing format)
+							(<- format ""))
 						  (when (missing tz)
 							(<- tz ""))
-						  (when (missing format)
-							(<- format ""))
+						  (when (missing usetz)
+							(<- usetz *r-false*))
 						  (if (r-call ! (r-call
 								 inherits x "POSIXct"))
 						      (r-call stop "wrong class"))
 						  (if (&& (missing tz)
 							  (r-call ! (r-call
-  is.null (<- tzone (r-call attr x
-			    "tzone")))))
+  is.null (<- tzone (r-call attr x "tzone")))))
 						      (<- tz tzone))
 						  (r-call structure (r-call
   format.POSIXlt (r-call as.POSIXlt x tz) format usetz r-dotdotdot)
 							  (*named* names (r-call
   names x)))))))
 	       (<- print.POSIXct (lambda (x ...)
-				   (let () (r-block (r-call print (r-call
-								   format x (*named*
-  usetz *r-true*)
-								   r-dotdotdot)
-							    r-dotdotdot)
-						    (r-call invisible x)))))
+				   (let ()
+					(r-block (r-call print (r-call format
+  x (*named* usetz *r-true*) r-dotdotdot)
+							 r-dotdotdot)
+						 (r-call invisible x)))))
 	       (<- print.POSIXlt (lambda (x ...)
-				   (let () (r-block (r-call print (r-call
-								   format x (*named*
-  usetz *r-true*))
-							    r-dotdotdot)
-						    (r-call invisible x)))))
+				   (let ()
+					(r-block (r-call print (r-call format
+  x (*named* usetz *r-true*))
+							 r-dotdotdot)
+						 (r-call invisible x)))))
 	       (<- summary.POSIXct (lambda (object digits ...)
-				     (let ((x ()) (digits ()))
+				     (let ((x ())
+					   (digits ()))
 					  (r-block (when (missing digits)
 							 (<- digits 15))
 						   (<- x (r-call r-index (r-call
@@ -295,35 +293,32 @@
 								    digits)
 							   r-dotdotdot)))))
 	       (<- "+.POSIXt" (lambda (e1 e2)
-				(let ((e2 ()) (e1 ()) (coerceTimeUnit ()))
+				(let ((e2 ())
+				      (e1 ())
+				      (coerceTimeUnit ()))
 				     (r-block (<- coerceTimeUnit (lambda (x)
-								   (let () (r-block
-  (switch (r-call attr x
-		  "units")
-	  (*named* secs x) (*named* mins (r-call * 60 x))
-	  (*named* hours (r-call * (r-call * 60 60) x))
-	  (*named* days (r-call * (r-call * (r-call * 60 60) 24) x))
-	  (*named* weeks (r-call * (r-call * (r-call * (r-call * 60 60) 24) 7)
-				 x)))))))
+								   (let ()
+  (r-block (switch (r-call attr x "units")
+		   (*named* secs x) (*named* mins (r-call * 60 x))
+		   (*named* hours (r-call * (r-call * 60 60) x))
+		   (*named* days (r-call * (r-call * (r-call * 60 60) 24) x))
+		   (*named* weeks (r-call * (r-call * (r-call * (r-call * 60 60)
+							      24)
+						    7)
+					  x)))))))
 					      (if (r-call == (r-call nargs) 1)
 						  (return e1))
-					      (if (&& (r-call inherits e1
-							      "POSIXt")
-						      (r-call inherits e2
-							      "POSIXt"))
+					      (if (&& (r-call inherits e1 "POSIXt")
+						      (r-call inherits e2 "POSIXt"))
 						  (r-call stop "binary + is not defined for \"POSIXt\" objects"))
-					      (if (r-call inherits e1
-							  "POSIXlt")
+					      (if (r-call inherits e1 "POSIXlt")
 						  (<- e1 (r-call as.POSIXct e1)))
-					      (if (r-call inherits e2
-							  "POSIXlt")
+					      (if (r-call inherits e2 "POSIXlt")
 						  (<- e2 (r-call as.POSIXct e2)))
-					      (if (r-call inherits e1
-							  "difftime")
+					      (if (r-call inherits e1 "difftime")
 						  (<- e1 (r-call coerceTimeUnit
 								 e1)))
-					      (if (r-call inherits e2
-							  "difftime")
+					      (if (r-call inherits e2 "difftime")
 						  (<- e2 (r-call coerceTimeUnit
 								 e2)))
 					      (r-call structure (r-call + (r-call
@@ -334,27 +329,27 @@
 						      (*named* tzone (r-call
   check_tzones e1 e2)))))))
 	       (<- "-.POSIXt" (lambda (e1 e2)
-				(let ((e2 ()) (coerceTimeUnit ()))
+				(let ((e2 ())
+				      (coerceTimeUnit ()))
 				     (r-block (<- coerceTimeUnit (lambda (x)
-								   (let () (r-block
-  (switch (r-call attr x
-		  "units")
-	  (*named* secs x) (*named* mins (r-call * 60 x))
-	  (*named* hours (r-call * (r-call * 60 60) x))
-	  (*named* days (r-call * (r-call * (r-call * 60 60) 24) x))
-	  (*named* weeks (r-call * (r-call * (r-call * (r-call * 60 60) 24) 7)
-				 x)))))))
+								   (let ()
+  (r-block (switch (r-call attr x "units")
+		   (*named* secs x) (*named* mins (r-call * 60 x))
+		   (*named* hours (r-call * (r-call * 60 60) x))
+		   (*named* days (r-call * (r-call * (r-call * 60 60) 24) x))
+		   (*named* weeks (r-call * (r-call * (r-call * (r-call * 60 60)
+							      24)
+						    7)
+					  x)))))))
 					      (if (r-call ! (r-call inherits e1
 								    "POSIXt"))
 						  (r-call stop "Can only subtract from POSIXt objects"))
 					      (if (r-call == (r-call nargs) 1)
 						  (r-call stop "unary - is not defined for \"POSIXt\" objects"))
-					      (if (r-call inherits e2
-							  "POSIXt")
+					      (if (r-call inherits e2 "POSIXt")
 						  (return (r-call difftime e1
 								  e2)))
-					      (if (r-call inherits e2
-							  "difftime")
+					      (if (r-call inherits e2 "difftime")
 						  (<- e2 (r-call unclass (r-call
   coerceTimeUnit e2))))
 					      (if (r-call ! (r-call is.null (r-call
@@ -366,7 +361,9 @@
 						      (*named* class (r-call c
   "POSIXt" "POSIXct")))))))
 	       (<- Ops.POSIXt (lambda (e1 e2)
-				(let ((e2 ()) (e1 ()) (boolean ()))
+				(let ((e2 ())
+				      (e1 ())
+				      (boolean ()))
 				     (r-block (if (r-call == (r-call nargs) 1)
 						  (r-call stop "unary" .Generic
 							  " not defined for \"POSIXt\" objects"))
@@ -406,11 +403,8 @@
 				       (r-block (<- tzs (r-call unique (r-call
   sapply (r-call list r-dotdotdot) (lambda (x)
 				     (let ((y ()))
-					  (r-block (<- y (r-call attr x
-								 "tzone"))
-						   (if (r-call is.null y)
-						       ""
-						       y)))))))
+					  (r-block (<- y (r-call attr x "tzone"))
+						   (if (r-call is.null y) "" y)))))))
 						(<- tzs (r-call r-index tzs
 								(r-call != tzs
   "")))
@@ -422,7 +416,10 @@
 						    (r-call r-index tzs 1)
 						    ())))))
 	       (<- Summary.POSIXct (lambda (... na.rm)
-				     (let ((val ()) (tz ()) (args ()) (ok ()))
+				     (let ((val ())
+					   (tz ())
+					   (args ())
+					   (ok ()))
 					  (r-block (<- ok (switch .Generic (*named*
   max *r-missing*)
 								  (*named* min
@@ -450,7 +447,10 @@
 							    tz)
 						   val))))
 	       (<- Summary.POSIXlt (lambda (... na.rm)
-				     (let ((val ()) (tz ()) (args ()) (ok ()))
+				     (let ((val ())
+					   (tz ())
+					   (args ())
+					   (ok ()))
 					  (r-block (<- ok (switch .Generic (*named*
   max *r-missing*)
 								  (*named* min
@@ -472,11 +472,13 @@
 								   .Generic (r-call
   c args (*named* na.rm na.rm))))
 						   (r-call as.POSIXlt (r-call
-  structure val (*named* class (r-call c "POSIXt"
-				       "POSIXct"))
+  structure val (*named* class (r-call c "POSIXt" "POSIXct"))
   (*named* tzone tz)))))))
 	       (<- "[.POSIXct" (lambda (x ... drop)
-				 (let ((val ()) (x ()) (cl ()) (drop ()))
+				 (let ((val ())
+				       (x ())
+				       (cl ())
+				       (drop ()))
 				      (r-block (when (missing drop)
 						     (<- drop *r-true*))
 					       (<- cl (r-call oldClass x))
@@ -494,7 +496,10 @@
 							%r:4)
 					       val))))
 	       (<- "[[.POSIXct" (lambda (x ... drop)
-				  (let ((val ()) (x ()) (cl ()) (drop ()))
+				  (let ((val ())
+					(x ())
+					(cl ())
+					(drop ()))
 				       (r-block (when (missing drop)
 						      (<- drop *r-true*))
 						(<- cl (r-call oldClass x))
@@ -513,7 +518,10 @@
 							 %r:5)
 						val))))
 	       (<- "[<-.POSIXct" (lambda (x ... value)
-				   (let ((x ()) (tz ()) (cl ()) (value ()))
+				   (let ((x ())
+					 (tz ())
+					 (cl ())
+					 (value ()))
 					(r-block (if (r-call ! (r-call
 								as.logical (r-call
   length value)))
@@ -521,10 +529,11 @@
 						 (<- value (r-call as.POSIXct
 								   value))
 						 (<- cl (r-call oldClass x))
-						 (<- tz (r-call attr x
-								"tzone"))
+						 (<- tz (r-call attr x "tzone"))
 						 (r-block (ref= %r:6 (r-block
-  (<- value (r-call class<- value ())) ()))
+  (<- value (r-call class<- value
+		    ()))
+  ()))
 							  (<- x (r-call class<-
   x %r:6))
 							  %r:6)
@@ -538,13 +547,14 @@
 							  tz)
 						 x))))
 	       (<- as.character.POSIXt (lambda (x ...)
-					 (let () (r-block (r-call format x
-								  r-dotdotdot)))))
+					 (let ()
+					      (r-block (r-call format x
+							       r-dotdotdot)))))
 	       (<- as.data.frame.POSIXct as.data.frame.vector)
 	       (<- is.na.POSIXlt (lambda (x)
-				   (let () (r-block (r-call is.na (r-call
-								   as.POSIXct
-								   x))))))
+				   (let ()
+					(r-block (r-call is.na (r-call
+								as.POSIXct x))))))
 	       (<- c.POSIXct (lambda (... recursive)
 			       (let ((recursive ()))
 				    (r-block (when (missing recursive)
@@ -567,7 +577,8 @@
 							     target current)
 						     (r-call NextMethod "all.equal")))))
 	       (<- ISOdatetime (lambda (year month day hour min sec tz)
-				 (let ((x ()) (tz ()))
+				 (let ((x ())
+				       (tz ()))
 				      (r-block (when (missing tz)
 						     (<- tz ""))
 					       (<- x (r-call paste year month
@@ -580,43 +591,50 @@
   tz))
 						       (*named* tz tz))))))
 	       (<- ISOdate (lambda (year month day hour min sec tz)
-			     (let ((hour ()) (min ()) (sec ()) (tz ()))
-				  (r-block (when (missing tz)
-						 (<- tz "GMT"))
-					   (when (missing sec)
-						 (<- sec 0))
+			     (let ((tz ())
+				   (sec ())
+				   (min ())
+				   (hour ()))
+				  (r-block (when (missing hour)
+						 (<- hour 12))
 					   (when (missing min)
 						 (<- min 0))
-					   (when (missing hour)
-						 (<- hour 12))
+					   (when (missing sec)
+						 (<- sec 0))
+					   (when (missing tz)
+						 (<- tz "GMT"))
 					   (r-call ISOdatetime year month day
 					    hour min sec tz)))))
 	       (<- as.matrix.POSIXlt (lambda (x ...)
-				       (let () (r-block (r-call as.matrix (r-call
+				       (let ()
+					    (r-block (r-call as.matrix (r-call
   as.data.frame (r-call unclass x))
-								r-dotdotdot)))))
+							     r-dotdotdot)))))
 	       (<- mean.POSIXct (lambda (x ...)
-				  (let () (r-block (r-call structure (r-call
-  mean (r-call unclass x) r-dotdotdot)
-							   (*named* class (r-call
+				  (let ()
+				       (r-block (r-call structure (r-call mean
+  (r-call unclass x) r-dotdotdot)
+							(*named* class (r-call
   c "POSIXt" "POSIXct"))
-							   (*named* tzone (r-call
+							(*named* tzone (r-call
   attr x "tzone")))))))
 	       (<- mean.POSIXlt (lambda (x ...)
-				  (let () (r-block (r-call as.POSIXlt (r-call
-  mean (r-call as.POSIXct x) r-dotdotdot))))))
+				  (let ()
+				       (r-block (r-call as.POSIXlt (r-call mean
+  (r-call as.POSIXct x) r-dotdotdot))))))
 	       (<- difftime (lambda (time1 time2 tz units)
-			      (let ((zz ()) (z ()) (time2 ()) (time1 ()) (tz ())
-					    (units ()))
-				   (r-block (when (missing units)
-						  (<- units (r-call c "auto"
-								    "secs"
-								    "mins"
-								    "hours"
-								    "days"
-								    "weeks")))
-					    (when (missing tz)
+			      (let ((zz ())
+				    (z ())
+				    (time2 ())
+				    (time1 ())
+				    (units ())
+				    (tz ()))
+				   (r-block (when (missing tz)
 						  (<- tz ""))
+					    (when (missing units)
+						  (<- units (r-call c "auto" "secs"
+								    "mins" "hours"
+								    "days" "weeks")))
 					    (<- time1 (r-call as.POSIXct time1
 							      (*named* tz tz)))
 					    (<- time2 (r-call as.POSIXct time2
@@ -625,20 +643,18 @@
 								    time1)
 							  (r-call unclass time2)))
 					    (<- units (r-call match.arg units))
-					    (if (r-call == units
-							"auto")
+					    (if (r-call == units "auto")
 						(r-block (if (r-call all (r-call
   is.na z))
 							     (<- units "secs")
 							     (r-block (<- zz (r-call
   min (r-call abs z) (*named* na.rm *r-true*)))
   (if (|\|\|| (r-call is.na zz) (r-call < zz 60))
-      (<- units "secs")
-      (if (r-call < zz 3600)
-	  (<- units "mins")
-	  (if (r-call < zz 86400)
-	      (<- units "hours")
-	      (<- units "days"))))))))
+      (<- units "secs") (if (r-call < zz 3600)
+			    (<- units "mins")
+			    (if (r-call < zz 86400)
+				(<- units "hours")
+				(<- units "days"))))))))
 					    (switch units (*named* secs (r-call
   structure z (*named* units "secs")
   (*named* class "difftime")))
@@ -673,13 +689,13 @@
 								    (*named*
   class "difftime"))))))))
 	       (<- as.difftime (lambda (tim format units)
-				 (let ((format ()) (units ()))
-				      (r-block (when (missing units)
-						     (<- units "auto"))
-					       (when (missing format)
+				 (let ((units ())
+				       (format ()))
+				      (r-block (when (missing format)
 						     (<- format "%X"))
-					       (if (r-call inherits tim
-							   "difftime")
+					       (when (missing units)
+						     (<- units "auto"))
+					       (if (r-call inherits tim "difftime")
 						   (return tim))
 					       (if (r-call is.character tim)
 						   (r-block (r-call difftime (r-call
@@ -695,9 +711,7 @@
   units "auto")
 								(r-call stop "need explicit units for numeric conversion"))
 							    (if (r-call ! (r-call
-  %in% units (r-call c "secs"
-		     "mins" "hours" "days"
-		     "weeks")))
+  %in% units (r-call c "secs" "mins" "hours" "days" "weeks")))
 								(r-call stop "invalid units specified"))
 							    (r-call structure
 								    tim (*named*
@@ -709,17 +723,17 @@
 	       (<- "units<-" (lambda (x value)
 			       (let () (r-block (r-call UseMethod "units<-")))))
 	       (<- units.difftime (lambda (x)
-				    (let () (r-block (r-call attr x
-							     "units")))))
+				    (let ()
+					 (r-block (r-call attr x "units")))))
 	       (<- "units<-.difftime" (lambda (x value)
-					(let ((newx ()) (sc ()) (from ()))
+					(let ((newx ())
+					      (sc ())
+					      (from ()))
 					     (r-block (<- from (r-call units x))
 						      (if (r-call == from value)
 							  (return x))
 						      (if (r-call ! (r-call
-  %in% value (r-call c "secs"
-		     "mins" "hours" "days"
-		     "weeks")))
+  %in% value (r-call c "secs" "mins" "hours" "days" "weeks")))
 							  (r-call stop "invalid units specified"))
 						      (<- sc (r-call cumprod (r-call
   c (*named* secs 1) (*named* mins 60)
@@ -732,11 +746,11 @@
   value)
 							      (*named* class "difftime"))))))
 	       (<- as.double.difftime (lambda (x units ...)
-					(let ((x ()) (units ()))
+					(let ((x ())
+					      (units ()))
 					     (r-block (when (missing units)
 							    (<- units "auto"))
-						      (if (r-call != units
-								  "auto")
+						      (if (r-call != units "auto")
 							  (r-block (<- x (r-call
   units<- x units))
 								   units))
@@ -745,11 +759,13 @@
 	       (<- as.data.frame.difftime
 		   as.data.frame.vector)
 	       (<- format.difftime (lambda (x ...)
-				     (let () (r-block (r-call paste (r-call
-  format (r-call unclass x) r-dotdotdot)
-							      (r-call units x))))))
+				     (let ()
+					  (r-block (r-call paste (r-call format
+  (r-call unclass x) r-dotdotdot)
+							   (r-call units x))))))
 	       (<- print.difftime (lambda (x digits ...)
-				    (let ((y ()) (digits ()))
+				    (let ((y ())
+					  (digits ()))
 					 (r-block (when (missing digits)
 							(<- digits (r-call
 								    getOption
@@ -760,38 +776,38 @@
   length x)
   1))
 						      (r-block (r-call cat "Time differences in "
-  (r-call attr x
-	  "units")
-  "\n" (*named* sep ""))
+  (r-call attr x "units") "\n" (*named* sep ""))
 							       (<- y (r-call
   unclass x))
 							       (r-block (<- y
-  (r-call attr<- y
-	  "units" ()))
+  (r-call attr<- y "units"
+	  ()))
   ())
 							       (r-call print y))
 						      (r-call cat "Time difference of "
 							      (r-call format (r-call
   unclass x)
   (*named* digits digits))
-							      " "
-							      (r-call attr x
-  "units")
-							      "\n"
-							      (*named* sep "")))
+							      " " (r-call attr
+  x "units")
+							      "\n" (*named* sep
+  "")))
 						  (r-call invisible x)))))
 	       (<- round.difftime (lambda (x digits ...)
-				    (let ((units ()) (digits ()))
+				    (let ((units ())
+					  (digits ()))
 					 (r-block (when (missing digits)
 							(<- digits 0))
-						  (<- units (r-call attr x
-								    "units"))
+						  (<- units (r-call attr x "units"))
 						  (r-call structure (r-call
   NextMethod)
 							  (*named* units units)
 							  (*named* class "difftime"))))))
 	       (<- "[.difftime" (lambda (x ... drop)
-				  (let ((val ()) (x ()) (cl ()) (drop ()))
+				  (let ((val ())
+					(x ())
+					(cl ())
+					(drop ()))
 				       (r-block (when (missing drop)
 						      (<- drop *r-true*))
 						(<- cl (r-call oldClass x))
@@ -810,11 +826,13 @@
 							 %r:7)
 						val))))
 	       (<- Ops.difftime (lambda (e1 e2)
-				  (let ((u1 ()) (e2 ()) (boolean ()) (e1 ()) (coerceTimeUnit
-  ()))
+				  (let ((u1 ())
+					(e2 ())
+					(boolean ())
+					(e1 ())
+					(coerceTimeUnit ()))
 				       (r-block (<- coerceTimeUnit (lambda (x)
-  (let () (r-block (switch (r-call attr x
-				   "units")
+  (let () (r-block (switch (r-call attr x "units")
 			   (*named* secs x)
 			   (*named* mins (r-call * 60 x))
 			   (*named* hours (r-call * (r-call * 60 60) x))
@@ -852,43 +870,32 @@
 								    (*named* >=
   *r-true*)
 								    *r-false*))
-						(if boolean
-						    (r-block (if (&& (r-call
+						(if boolean (r-block (if (&& (r-call
   inherits e1 "difftime")
-  (r-call inherits e2
-	  "difftime"))
-								 (r-block (<-
-  e1 (r-call coerceTimeUnit e1))
-  (<- e2 (r-call coerceTimeUnit e2))))
-							     (r-call NextMethod
-  .Generic))
+  (r-call inherits e2 "difftime"))
+  (r-block (<- e1 (r-call coerceTimeUnit e1))
+	   (<- e2 (r-call coerceTimeUnit e2))))
+  (r-call NextMethod .Generic))
 						    (if (|\|\|| (r-call ==
   .Generic "+")
 								(r-call ==
   .Generic "-"))
 							(r-block (if (&& (r-call
   inherits e1 "difftime")
-  (r-call ! (r-call inherits e2
-		    "difftime")))
+  (r-call ! (r-call inherits e2 "difftime")))
   (return (r-call structure (r-call NextMethod .Generic)
-		  (*named* units (r-call attr e1
-					 "units"))
+		  (*named* units (r-call attr e1 "units"))
 		  (*named* class "difftime"))))
 								 (if (&& (r-call
-  ! (r-call inherits e1
-	    "difftime"))
-  (r-call inherits e2
-	  "difftime"))
+  ! (r-call inherits e1 "difftime"))
+  (r-call inherits e2 "difftime"))
   (return (r-call structure (r-call NextMethod .Generic)
-		  (*named* units (r-call attr e2
-					 "units"))
+		  (*named* units (r-call attr e2 "units"))
 		  (*named* class "difftime"))))
 								 (<- u1 (r-call
   attr e1 "units"))
 								 (if (r-call ==
-  (r-call attr e2
-	  "units")
-  u1)
+  (r-call attr e2 "units") u1)
   (r-block (r-call structure (r-call NextMethod .Generic)
 		   (*named* units u1) (*named* class "difftime")))
   (r-block (<- e1 (r-call coerceTimeUnit e1))
@@ -899,14 +906,13 @@
 							(r-block (r-call stop
   .Generic "not defined for \"difftime\" objects"))))))))
 	       (<- "*.difftime" (lambda (e1 e2)
-				  (let ((e2 ()) (e1 ()) (tmp ()))
-				       (r-block (if (&& (r-call inherits e1
-								"difftime")
-							(r-call inherits e2
-								"difftime"))
+				  (let ((e2 ())
+					(e1 ())
+					(tmp ()))
+				       (r-block (if (&& (r-call inherits e1 "difftime")
+							(r-call inherits e2 "difftime"))
 						    (r-call stop "both arguments of * cannot be \"difftime\" objects"))
-						(if (r-call inherits e2
-							    "difftime")
+						(if (r-call inherits e2 "difftime")
 						    (r-block (<- tmp e1)
 							     (<- e1 e2)
 							     (<- e2 tmp)))
@@ -916,25 +922,27 @@
   attr e1 "units"))
 							(*named* class "difftime"))))))
 	       (<- "/.difftime" (lambda (e1 e2)
-				  (let () (r-block (if (r-call inherits e2
-							       "difftime")
-						       (r-call stop "second argument of / cannot be a \"difftime\" object"))
-						   (r-call structure (r-call /
-  (r-call unclass e1) e2)
-							   (*named* units (r-call
+				  (let ()
+				       (r-block (if (r-call inherits e2 "difftime")
+						    (r-call stop "second argument of / cannot be a \"difftime\" object"))
+						(r-call structure (r-call / (r-call
+  unclass e1)
+  e2)
+							(*named* units (r-call
   attr e1 "units"))
-							   (*named* class "difftime"))))))
+							(*named* class "difftime"))))))
 	       (<- Math.difftime (lambda (x ...)
-				   (let () (r-block (r-call stop .Generic
-							    "not defined for \"difftime\" objects")))))
+				   (let ()
+					(r-block (r-call stop .Generic
+							 "not defined for \"difftime\" objects")))))
 	       (<- mean.difftime (lambda (x ... na.rm)
-				   (let ((args ()) (coerceTimeUnit ()) (na.rm
-  ()))
+				   (let ((args ())
+					 (coerceTimeUnit ())
+					 (na.rm ()))
 					(r-block (when (missing na.rm)
 						       (<- na.rm *r-false*))
 						 (<- coerceTimeUnit (lambda (x)
-  (let () (r-block (r-call as.vector (switch (r-call attr x
-						     "units")
+  (let () (r-block (r-call as.vector (switch (r-call attr x "units")
 					     (*named* secs x)
 					     (*named* mins (r-call * 60 x))
 					     (*named* hours (r-call * (r-call
@@ -957,15 +965,14 @@
 						     (r-block (r-call structure
   (r-call mean (r-call as.vector x)
 	  (*named* na.rm na.rm))
-  (*named* units (r-call attr x
-			 "units"))
+  (*named* units (r-call attr x "units"))
   (*named* class "difftime"))))))))
 	       (<- Summary.difftime (lambda (... na.rm)
-				      (let ((args ()) (ok ()) (coerceTimeUnit
-							       ()))
+				      (let ((args ())
+					    (ok ())
+					    (coerceTimeUnit ()))
 					   (r-block (<- coerceTimeUnit (lambda (x)
-  (let () (r-block (r-call as.vector (switch (r-call attr x
-						     "units")
+  (let () (r-block (r-call as.vector (switch (r-call attr x "units")
 					     (*named* secs x)
 					     (*named* mins (r-call * 60 x))
 					     (*named* hours (r-call * (r-call
@@ -996,15 +1003,24 @@
 							    (*named* units "secs")
 							    (*named* class "difftime"))))))
 	       (<- seq.POSIXt (lambda (from to by length.out along.with ...)
-				(let ((mon ()) (yr ()) (r1 ()) (by2 ()) (by ())
-				      (valid ()) (res ()) (to ()) (from ()) (status
-  ())
-				      (tz ()) (cfrom ()) (length.out ()) (along.with
-  ()))
-				     (r-block (when (missing along.with)
-						    (<- along.with ()))
-					      (when (missing length.out)
+				(let ((mon ())
+				      (yr ())
+				      (r1 ())
+				      (by2 ())
+				      (by ())
+				      (valid ())
+				      (res ())
+				      (to ())
+				      (from ())
+				      (status ())
+				      (tz ())
+				      (cfrom ())
+				      (along.with ())
+				      (length.out ()))
+				     (r-block (when (missing length.out)
 						    (<- length.out ()))
+					      (when (missing along.with)
+						    (<- along.with ()))
 					      (if (missing from)
 						  (r-call stop "'from' must be specified"))
 					      (if (r-call ! (r-call inherits
@@ -1015,8 +1031,7 @@
   cfrom)
 							  1)
 						  (r-call stop "'from' must be of length 1"))
-					      (<- tz (r-call attr cfrom
-							     "tzone"))
+					      (<- tz (r-call attr cfrom "tzone"))
 					      (if (r-call ! (missing to))
 						  (r-block (if (r-call ! (r-call
   inherits to "POSIXt"))
@@ -1060,26 +1075,23 @@
 							   (return (r-call
 								    structure
 								    res (*named*
-  class (r-call c "POSIXt"
-		"POSIXct"))
+  class (r-call c "POSIXt" "POSIXct"))
 								    (*named*
   tzone tz)))))
 					      (if (r-call != (r-call length by)
 							  1)
 						  (r-call stop "'by' must be of length 1"))
 					      (<- valid 0)
-					      (if (r-call inherits by
-							  "difftime")
+					      (if (r-call inherits by "difftime")
 						  (r-block (<- by (r-call * (switch
-  (r-call attr by
-	  "units")
-  (*named* secs 1) (*named* mins 60) (*named* hours 3600)
-  (*named* days 86400) (*named* weeks (r-call * 7 86400)))
+  (r-call attr by "units") (*named* secs 1)
+  (*named* mins 60) (*named* hours 3600) (*named* days 86400)
+  (*named* weeks (r-call * 7 86400)))
   (r-call unclass by))))
 						  (if (r-call is.character by)
 						      (r-block (<- by2 (r-call
-  r-aref (r-call strsplit by
-		 " " (*named* fixed *r-true*))
+  r-aref (r-call strsplit by " "
+		 (*named* fixed *r-true*))
   1))
 							       (if (|\|\|| (r-call
   > (r-call length by2) 2)
@@ -1089,10 +1101,7 @@
 							       (<- valid (r-call
   pmatch (r-call r-index by2
 		 (r-call length by2))
-  (r-call c "secs"
-	  "mins" "hours" "days"
-	  "weeks" "months" "years"
-	  "DSTdays")))
+  (r-call c "secs" "mins" "hours" "days" "weeks" "months" "years" "DSTdays")))
 							       (if (r-call
 								    is.na valid)
 								   (r-call stop
@@ -1103,12 +1112,11 @@
   by (r-call r-index (r-call c 1 60 3600 86400
 			     (r-call * 7 86400))
 	     valid))
-  (if (r-call == (r-call length by2) 2)
-      (<- by (r-call * by
-		     (r-call as.integer (r-call r-index by2 1))))))
+  (if (r-call == (r-call length by2) 2) (<- by (r-call * by
+						       (r-call as.integer (r-call
+  r-index by2 1))))))
 								   (<- by (if
-  (r-call == (r-call length by2) 2)
-  (r-call as.integer (r-call r-index by2 1))
+  (r-call == (r-call length by2) 2) (r-call as.integer (r-call r-index by2 1))
   1))))
 						      (if (r-call ! (r-call
   is.numeric by))
@@ -1131,8 +1139,7 @@
 							   (return (r-call
 								    structure
 								    res (*named*
-  class (r-call c "POSIXt"
-		"POSIXct"))
+  class (r-call c "POSIXt" "POSIXct"))
 								    (*named*
   tzone tz))))
 						  (r-block (<- r1 (r-call
@@ -1152,13 +1159,10 @@
 					  (index-in-strlist year (r-call attr
   r1 #0#)))
 			  (r-call r-aref to
-				  (index-in-strlist year (r-call attr to
-								 #0#)))
+				  (index-in-strlist year (r-call attr to #0#)))
 			  by))))
   (r-block (<- r1 (r-call r-aref<- r1
-			  (index-in-strlist year (r-call attr r1
-							 #0#))
-			  yr))
+			  (index-in-strlist year (r-call attr r1 #0#)) yr))
 	   yr)
   (r-block (ref= %r:9 (r-call - 1)) (<- r1 (r-call r-aref<- r1
 						   (index-in-strlist isdst (r-call
@@ -1169,12 +1173,11 @@
 							       (if (r-call ==
   valid 6)
 								   (r-block (if
-  (missing to)
-  (r-block (<- mon (r-call seq.int (r-call r-aref r1
-					   (index-in-strlist mon (r-call attr
-  r1 #0#)))
-			   (*named* by by)
-			   (*named* length length.out))))
+  (missing to) (r-block (<- mon (r-call seq.int (r-call r-aref r1
+							(index-in-strlist mon
+  (r-call attr r1 #0#)))
+					(*named* by by)
+					(*named* length length.out))))
   (r-block (<- to (r-call as.POSIXlt to))
 	   (<- mon (r-call seq.int (r-call r-aref r1
 					   (index-in-strlist mon (r-call attr
@@ -1193,9 +1196,7 @@
   to #0#))))
 			   by))))
   (r-block (<- r1 (r-call r-aref<- r1
-			  (index-in-strlist mon (r-call attr r1
-							#0#))
-			  mon))
+			  (index-in-strlist mon (r-call attr r1 #0#)) mon))
 	   mon)
   (r-block (ref= %r:10 (r-call - 1)) (<- r1 (r-call r-aref<- r1
 						    (index-in-strlist isdst (r-call
@@ -1205,54 +1206,55 @@
   (<- res (r-call as.POSIXct r1)))
 								   (if (r-call
   == valid 8)
-  (r-block (if (r-call ! (missing to))
-	       (r-block (<- length.out (r-call + 2
-					       (r-call floor (r-call / (r-call
-  - (r-call unclass (r-call as.POSIXct to))
-  (r-call unclass (r-call as.POSIXct from)))
-  86400))))))
+  (r-block (if (r-call ! (missing to)) (r-block (<- length.out (r-call + 2
+  (r-call floor (r-call / (r-call - (r-call unclass (r-call as.POSIXct to))
+				  (r-call unclass (r-call as.POSIXct from)))
+			86400))))))
 	   (r-block (ref= %r:11 (r-call seq.int (r-call r-aref r1
 							(index-in-strlist mday
-  (r-call attr r1
-	  #0#)))
+  (r-call attr r1 #0#)))
 					(*named* by by)
 					(*named* length length.out)))
 		    (<- r1 (r-call r-aref<- r1
-				   (index-in-strlist mday (r-call attr r1
-								  #0#))
+				   (index-in-strlist mday (r-call attr r1 #0#))
 				   %r:11))
 		    %r:11)
 	   (r-block (ref= %r:12 (r-call - 1))
 		    (<- r1 (r-call r-aref<- r1
-				   (index-in-strlist isdst (r-call attr r1
-								   #0#))
+				   (index-in-strlist isdst (r-call attr r1 #0#))
 				   %r:12))
 		    %r:12)
 	   (<- res (r-call as.POSIXct r1))
-	   (if (r-call ! (missing to))
-	       (<- res (r-call r-index res
-			       (r-call <= res
-				       (r-call as.POSIXct to)))))))))
+	   (if (r-call ! (missing to)) (<- res (r-call r-index res
+						       (r-call <= res
+							       (r-call
+								as.POSIXct to)))))))))
 							   (return res)))))))
 	       (<- cut.POSIXt (lambda (x breaks labels start.on.monday right
 					 ...)
-				(let ((res ()) (maxx ()) (incr ()) (start ())
-				      (valid ()) (by2 ()) (breaks ()) (x ()) (labels
-  ())
-				      (start.on.monday ()) (right ()))
-				     (r-block (when (missing right)
-						    (<- right *r-false*))
+				(let ((res ())
+				      (maxx ())
+				      (incr ())
+				      (start ())
+				      (valid ())
+				      (by2 ())
+				      (breaks ())
+				      (x ())
+				      (right ())
+				      (start.on.monday ())
+				      (labels ()))
+				     (r-block (when (missing labels)
+						    (<- labels ()))
 					      (when (missing start.on.monday)
 						    (<- start.on.monday
 							*r-true*))
-					      (when (missing labels)
-						    (<- labels ()))
+					      (when (missing right)
+						    (<- right *r-false*))
 					      (if (r-call ! (r-call inherits x
 								    "POSIXt"))
 						  (r-call stop "'x' must be a date-time object"))
 					      (<- x (r-call as.POSIXct x))
-					      (if (r-call inherits breaks
-							  "POSIXt")
+					      (if (r-call inherits breaks "POSIXt")
 						  (r-block (<- breaks (r-call
   as.POSIXct breaks)))
 						  (if (&& (r-call is.numeric
@@ -1268,8 +1270,8 @@
   length breaks)
   1))
 							  (r-block (<- by2 (r-call
-  r-aref (r-call strsplit breaks
-		 " " (*named* fixed *r-true*))
+  r-aref (r-call strsplit breaks " "
+		 (*named* fixed *r-true*))
   1))
 								   (if (|\|\||
   (r-call > (r-call length by2) 2) (r-call < (r-call length by2) 1))
@@ -1277,10 +1279,7 @@
 								   (<- valid (r-call
   pmatch (r-call r-index by2
 		 (r-call length by2))
-  (r-call c "secs"
-	  "mins" "hours" "days"
-	  "weeks" "months" "years"
-	  "DSTdays")))
+  (r-call c "secs" "mins" "hours" "days" "weeks" "months" "years" "DSTdays")))
 								   (if (r-call
   is.na valid)
   (r-call stop "invalid specification of 'breaks'"))
@@ -1325,20 +1324,20 @@
   #0#))
 				      %r:13))
 		    %r:13)
-	   (if start.on.monday
-	       (r-block (ref= %r:14 (r-call + (r-call r-aref start
-						      (index-in-strlist mday (r-call
-  attr start #0#)))
-					    (r-call ifelse (r-call > (r-call
-  r-aref start (index-in-strlist wday (r-call attr start
-					      #0#)))
-								   0)
-						    1 (r-call - 6))))
-			(<- start (r-call r-aref<- start
-					  (index-in-strlist mday (r-call attr
+	   (if start.on.monday (r-block (ref= %r:14 (r-call + (r-call r-aref
+  start (index-in-strlist mday (r-call attr start #0#)))
+							    (r-call ifelse (r-call
+  > (r-call r-aref start
+	    (index-in-strlist wday (r-call attr start #0#)))
+  0)
+								    1 (r-call
+  - 6))))
+					(<- start (r-call r-aref<- start
+							  (index-in-strlist
+							   mday (r-call attr
   start #0#))
-					  %r:14))
-			%r:14))
+							  %r:14))
+					%r:14))
 	   (<- incr (r-call * 7 86400))))
 								   (if (r-call
   == valid 6)
@@ -1400,7 +1399,8 @@
 	       (<- julian (lambda (x ...)
 			    (let () (r-block (r-call UseMethod "julian")))))
 	       (<- julian.POSIXt (lambda (x origin ...)
-				   (let ((res ()) (origin ()))
+				   (let ((res ())
+					 (origin ()))
 					(r-block (when (missing origin)
 						       (<- origin (r-call
 								   as.POSIXct
@@ -1427,8 +1427,7 @@
 						   (r-call format x
 							   (r-call ifelse
 								   abbreviate
-								   "%a"
-								   "%A"))))))
+								   "%a" "%A"))))))
 	       (<- months (lambda (x abbreviate)
 			    (let () (r-block (r-call UseMethod "months")))))
 	       (<- months.POSIXt (lambda (x abbreviate)
@@ -1452,7 +1451,8 @@
 							   (r-call + x 1)
 							   (*named* sep ""))))))
 	       (<- trunc.POSIXt (lambda (x units)
-				  (let ((x ()) (units ()))
+				  (let ((x ())
+					(units ()))
 				       (r-block (when (missing units)
 						      (<- units (r-call c "secs"
   "mins" "hours" "days")))
@@ -1460,50 +1460,36 @@
 								  units))
 						(<- x (r-call as.POSIXlt x))
 						(if (r-call > (r-call length (r-call
-  r-aref x (index-in-strlist sec (r-call attr x
-					 #0#))))
+  r-aref x (index-in-strlist sec (r-call attr x #0#))))
 							    0)
 						    (switch units (*named* secs
   (r-block (r-block (ref= %r:16 (r-call trunc (r-call r-aref x
 						      (index-in-strlist sec (r-call
   attr x #0#)))))
 		    (<- x (r-call r-aref<- x
-				  (index-in-strlist sec (r-call attr x
-								#0#))
+				  (index-in-strlist sec (r-call attr x #0#))
 				  %r:16))
 		    %r:16)))
 							    (*named* mins (r-block
   (r-block (<- x (r-call r-aref<- x
-			 (index-in-strlist sec (r-call attr x
-						       #0#))
-			 0))
+			 (index-in-strlist sec (r-call attr x #0#)) 0))
 	   0)))
 							    (*named* hours (r-block
   (r-block (<- x (r-call r-aref<- x
-			 (index-in-strlist sec (r-call attr x
-						       #0#))
-			 0))
+			 (index-in-strlist sec (r-call attr x #0#)) 0))
 	   0)
   (r-block (<- x (r-call r-aref<- x
-			 (index-in-strlist min (r-call attr x
-						       #0#))
-			 0))
+			 (index-in-strlist min (r-call attr x #0#)) 0))
 	   0)))
 							    (*named* days (r-block
   (r-block (<- x (r-call r-aref<- x
-			 (index-in-strlist sec (r-call attr x
-						       #0#))
-			 0))
+			 (index-in-strlist sec (r-call attr x #0#)) 0))
 	   0)
   (r-block (<- x (r-call r-aref<- x
-			 (index-in-strlist min (r-call attr x
-						       #0#))
-			 0))
+			 (index-in-strlist min (r-call attr x #0#)) 0))
 	   0)
   (r-block (<- x (r-call r-aref<- x
-			 (index-in-strlist hour (r-call attr x
-							#0#))
-			 0))
+			 (index-in-strlist hour (r-call attr x #0#)) 0))
 	   0)
   (r-block (ref= %r:17 (r-call - 1)) (<- x (r-call r-aref<- x
 						   (index-in-strlist isdst (r-call
@@ -1512,7 +1498,8 @@
 	   %r:17)))))
 						x))))
 	       (<- round.POSIXt (lambda (x units)
-				  (let ((x ()) (units ()))
+				  (let ((x ())
+					(units ()))
 				       (r-block (when (missing units)
 						      (<- units (r-call c "secs"
   "mins" "hours" "days")))
@@ -1530,13 +1517,13 @@
 						(r-call trunc.POSIXt x
 							(*named* units units))))))
 	       (<- "[.POSIXlt" (lambda (x ... drop)
-				 (let ((val ()) (drop ()))
+				 (let ((val ())
+				       (drop ()))
 				      (r-block (when (missing drop)
 						     (<- drop *r-true*))
-					       (<- val (r-call lapply x
-							       "[" r-dotdotdot
-							       (*named* drop
-  drop)))
+					       (<- val (r-call lapply x "["
+							       r-dotdotdot (*named*
+  drop drop)))
 					       (r-block (ref= %r:18 (r-call
   attributes x))
 							(<- val (r-call
@@ -1545,7 +1532,9 @@
 							%r:18)
 					       val))))
 	       (<- "[<-.POSIXlt" (lambda (x i value)
-				   (let ((x ()) (cl ()) (value ()))
+				   (let ((x ())
+					 (cl ())
+					 (value ()))
 					(r-block (if (r-call ! (r-call
 								as.logical (r-call
   length value)))
@@ -1554,7 +1543,9 @@
 								   value))
 						 (<- cl (r-call oldClass x))
 						 (r-block (ref= %r:19 (r-block
-  (<- value (r-call class<- value ())) ()))
+  (<- value (r-call class<- value
+		    ()))
+  ()))
 							  (<- x (r-call class<-
   x %r:19))
 							  %r:19)
@@ -1570,15 +1561,16 @@
 							  cl)
 						 x))))
 	       (<- as.data.frame.POSIXlt (lambda (x row.names optional ...)
-					   (let ((value ()) (row.names ()) (optional
-  ()))
+					   (let ((value ())
+						 (optional ())
+						 (row.names ()))
 						(r-block (when (missing
+								row.names)
+							       (<- row.names ()))
+							 (when (missing
 								optional)
 							       (<- optional
 								   *r-false*))
-							 (when (missing
-								row.names)
-							       (<- row.names ()))
 							 (<- value (r-call
 								    as.data.frame.POSIXct
 								    (r-call
@@ -1611,22 +1603,24 @@
 							%r:23)
 					       y))))
 	       (<- diff.POSIXt (lambda (x lag differences ...)
-				 (let ((i1 ()) (xlen ()) (r ()) (ismat ()) (lag
-  ())
-					       (differences ()))
-				      (r-block (when (missing differences)
-						     (<- differences 1))
-					       (when (missing lag)
+				 (let ((i1 ())
+				       (xlen ())
+				       (r ())
+				       (ismat ())
+				       (differences ())
+				       (lag ()))
+				      (r-block (when (missing lag)
 						     (<- lag 1))
+					       (when (missing differences)
+						     (<- differences 1))
 					       (<- ismat (r-call is.matrix x))
-					       (<- r (if (r-call inherits x
-								 "POSIXlt")
+					       (<- r (if (r-call inherits x "POSIXlt")
 							 (r-call as.POSIXct x)
 							 x))
-					       (<- xlen (if ismat
-							    (r-call r-index (r-call
+					       (<- xlen (if ismat (r-call
+								   r-index (r-call
   dim x)
-								    1)
+								   1)
 							    (r-call length r)))
 					       (if (|\|\|| (r-call > (r-call
   length lag)
@@ -1650,20 +1644,15 @@
 								    units "secs"))))
 					       (<- i1 (r-call : (r-call - 1)
 							      (r-call - lag)))
-					       (if ismat
-						   (for i (r-call : 1
-								  differences)
-						     (<- r (r-call - (r-call
+					       (if ismat (for i (r-call : 1
+  differences)
+							   (<- r (r-call - (r-call
   r-index r i1 *r-missing*
   (*named* drop *r-false*))
-								   (r-call
-								    r-index r
-								    (r-call :
-  (r-call - (r-call nrow r)) (r-call - (r-call + (r-call - (r-call nrow r) lag)
-					       1)))
-								    *r-missing*
-								    (*named*
-  drop *r-false*)))))
+  (r-call r-index r
+	  (r-call : (r-call - (r-call nrow r))
+		  (r-call - (r-call + (r-call - (r-call nrow r) lag) 1)))
+	  *r-missing* (*named* drop *r-false*)))))
 						   (for i (r-call : 1
 								  differences)
 						     (<- r (r-call - (r-call
@@ -1676,7 +1665,8 @@
 						 1))))))))
 					       r))))
 	       (<- duplicated.POSIXlt (lambda (x incomparables ...)
-					(let ((x ()) (incomparables ()))
+					(let ((x ())
+					      (incomparables ()))
 					     (r-block (when (missing
 							     incomparables)
 							    (<- incomparables
@@ -1694,11 +1684,12 @@
 							  (r-call ! (r-call
   duplicated x incomparables r-dotdotdot)))))))
 	       (<- sort.POSIXlt (lambda (x decreasing na.last ...)
-				  (let ((decreasing ()) (na.last ()))
-				       (r-block (when (missing na.last)
-						      (<- na.last NA))
-						(when (missing decreasing)
+				  (let ((na.last ())
+					(decreasing ()))
+				       (r-block (when (missing decreasing)
 						      (<- decreasing *r-false*))
+						(when (missing na.last)
+						      (<- na.last NA))
 						(r-call r-index x
 							(r-call order (r-call
   as.POSIXct x)

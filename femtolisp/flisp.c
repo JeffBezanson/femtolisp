@@ -931,6 +931,30 @@ static value_t apply_cl(uint32_t nargs)
             Stack[SP-1] = 0;
             curr_frame = SP;
             NEXT_OP;
+        OP(OP_OPTARGS)
+            n = GET_INT32(ip); ip+=4;
+            v = fn_vals(Stack[bp-1]);
+            v = vector_elt(v, 0);
+            if (nargs >= n) {  // if we have all required args
+                s = vector_size(v);
+                n += s;
+                if (nargs < n) {  // but not all optional args
+                    i = n - nargs;
+                    SP += i;
+                    Stack[SP-1] = Stack[SP-i-1];
+                    Stack[SP-2] = Stack[SP-i-2];
+                    Stack[SP-3] = Stack[SP-i-3];
+                    Stack[SP-4] = Stack[SP-i-4];
+                    Stack[SP-5] = Stack[SP-i-5];
+                    curr_frame = SP;
+                    s = s - i;
+                    for(n=0; n < i; n++) {
+                        Stack[bp+nargs+n] = vector_elt(v, s+n);
+                    }
+                    nargs += i;
+                }
+            }
+            NEXT_OP;
         OP(OP_NOP) NEXT_OP;
         OP(OP_DUP) SP++; Stack[SP-1] = Stack[SP-2]; NEXT_OP;
         OP(OP_POP) POPN(1); NEXT_OP;
@@ -1662,7 +1686,7 @@ static value_t apply_cl(uint32_t nargs)
 #endif
 }
 
-static uint32_t compute_maxstack(uint8_t *code, size_t len)
+static uint32_t compute_maxstack(uint8_t *code, size_t len, value_t vals)
 {
     uint8_t *ip = code+4, *end = code+len;
     uint8_t op;
@@ -1688,6 +1712,12 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len)
             sp += (n+2);
             break;
         case OP_LET: break;
+        case OP_OPTARGS:
+            ip += 4;
+            assert(isvector(vals));
+            if (vector_size(vals) > 0)
+                sp += vector_size(vector_elt(vals, 0));
+            break;
 
         case OP_TCALL: case OP_CALL:
             n = *ip++;  // nargs
@@ -1824,7 +1854,7 @@ static value_t fl_function(value_t *args, uint32_t nargs)
         for(i=0; i < sz; i++)
             data[i] -= 48;
     }
-    uint32_t ms = compute_maxstack((uint8_t*)data, cv_len(arr));
+    uint32_t ms = compute_maxstack((uint8_t*)data, cv_len(arr), args[1]);
     PUT_INT32(data, ms);
     function_t *fn = (function_t*)alloc_words(4);
     value_t fv = tagptr(fn, TAG_FUNCTION);

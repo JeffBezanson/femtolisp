@@ -224,15 +224,16 @@
 		(set-car! lst (f (car lst)))
 		(set! lst (cdr lst)))))
 
-(define filter
-  (letrec ((filter-
-	    (lambda (pred lst accum)
-	      (cond ((null? lst) accum)
-		    ((pred (car lst))
-		     (filter- pred (cdr lst) (cons (car lst) accum)))
-		    (#t
-		     (filter- pred (cdr lst) accum))))))
-    (lambda (pred lst) (filter- pred lst ()))))
+(define (filter pred lst)
+  (define (filter- f lst acc)
+    (cdr
+     (prog1 acc
+      (while (pair? lst)
+	     (begin (if (pred (car lst))
+			(set! acc
+			      (cdr (set-cdr! acc (cons (car lst) ())))))
+		    (set! lst (cdr lst)))))))
+  (filter- pred lst (list ())))
 
 (define separate
   (letrec ((separate-

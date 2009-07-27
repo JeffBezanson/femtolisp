@@ -159,7 +159,7 @@ bugs:
   . write a function to evaluate directly from list to list, use it for
     Nth arg and for user function rest args
   . modify vararg builtins accordingly
-- filter should be stable. right now it reverses.
+* filter should be stable. right now it reverses.
 
 
 femtoLisp3...with symbolic C interface
@@ -975,7 +975,8 @@ consolidated todo list as of 7/8:
 - remaining c types
 - remaining cvalues functions
 - finish ios
-- optional and keyword arguments
+* optional arguments
+- keyword arguments
 - some kind of record, struct, or object system
 
 - special efficient reader for #array
@@ -1042,6 +1043,8 @@ new evaluator todo:
 * try removing MAX_ARGS trickery
 - apply optimization, avoid redundant list copying calling vararg fns
 - let eversion
+- variable analysis - avoid holding references to values in frames
+  captured by closures but not used inside them
 * lambda lifting
 * let optimization
 * fix equal? on functions
