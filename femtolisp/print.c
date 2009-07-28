@@ -424,7 +424,7 @@ void fl_print_child(ios_t *f, value_t v)
         break;
     case TAG_CVALUE:
     case TAG_CPRIM:
-      if (v == UNBOUND) { outs("#<undefined>", f); break; }
+        if (v == UNBOUND) { outs("#<undefined>", f); break; }
     case TAG_VECTOR:
     case TAG_CONS:
         if (print_circle_prefix(f, v)) return;

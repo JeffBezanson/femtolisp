@@ -15,7 +15,7 @@ typedef struct {
 } cons_t;
 
 typedef struct _symbol_t {
-    value_t isconst;
+    uptrint_t flags;
     value_t binding;   // global value binding
     struct _fltype_t *type;
     uint32_t hash;
@@ -87,9 +87,10 @@ typedef struct _symbol_t {
 #define fn_name(f) (((value_t*)ptr(f))[3])
 
 #define set(s, v)  (((symbol_t*)ptr(s))->binding = (v))
-#define setc(s, v) do { ((symbol_t*)ptr(s))->isconst = 1; \
+#define setc(s, v) do { ((symbol_t*)ptr(s))->flags |= 1; \
                         ((symbol_t*)ptr(s))->binding = (v); } while (0)
-#define isconstant(s) (((symbol_t*)ptr(s))->isconst)
+#define isconstant(s) ((s)->flags&0x1)
+#define iskeyword(s) ((s)->flags&0x2)
 #define symbol_value(s) (((symbol_t*)ptr(s))->binding)
 #define ismanaged(v) ((((unsigned char*)ptr(v)) >= fromspace) && \
                       (((unsigned char*)ptr(v)) < fromspace+heapsize))

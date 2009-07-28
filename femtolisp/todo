@@ -1128,3 +1128,25 @@ typedef struct {
     uint32_t SP;
     uint32_t curr_frame;
 } stackseg_t;
+
+-----------------------------------------------------------------------------
+
+optional and keyword args:
+
+check nargs >= #required
+grow frame by ntotal-nargs   ; ntotal = #req+#opt+#kw
+(sort keyword args into their places)
+branch if arg bound around initializer for each opt arg
+
+example: (lambda (a (b 0) (c b)))
+
+minargs 1
+framesize 3
+brbound 1 L1
+load0
+seta 0
+L1:
+brbound 2 L2
+loada 1
+seta 2
+L2:

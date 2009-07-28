@@ -237,13 +237,14 @@ static symbol_t *mk_symbol(char *str)
     sym = (symbol_t*)malloc(sizeof(symbol_t)-sizeof(void*) + len + 1);
     assert(((uptrint_t)sym & 0x7) == 0); // make sure malloc aligns 8
     sym->left = sym->right = NULL;
+    sym->flags = 0;
     if (fl_is_keyword_name(str, len)) {
         value_t s = tagptr(sym, TAG_SYM);
         setc(s, s);
+        sym->flags |= 0x2;
     }
     else {
         sym->binding = UNBOUND;
-        sym->isconst = 0;
     }
     sym->type = sym->dlcache = NULL;
     sym->hash = memhash32(str, len)^0xAAAAAAAA;
@@ -932,28 +933,41 @@ static value_t apply_cl(uint32_t nargs)
             curr_frame = SP;
             NEXT_OP;
         OP(OP_OPTARGS)
+            i = GET_INT32(ip); ip+=4;
             n = GET_INT32(ip); ip+=4;
-            v = fn_vals(Stack[bp-1]);
-            v = vector_elt(v, 0);
-            if (nargs >= n) {  // if we have all required args
-                s = vector_size(v);
-                n += s;
-                if (nargs < n) {  // but not all optional args
-                    i = n - nargs;
-                    SP += i;
-                    Stack[SP-1] = Stack[SP-i-1];
-                    Stack[SP-2] = Stack[SP-i-2];
-                    Stack[SP-3] = Stack[SP-i-3];
-                    Stack[SP-4] = Stack[SP-i-4];
-                    Stack[SP-5] = Stack[SP-i-5];
-                    curr_frame = SP;
-                    s = s - i;
-                    for(n=0; n < i; n++) {
-                        Stack[bp+nargs+n] = vector_elt(v, s+n);
-                    }
-                    nargs += i;
-                }
+            if ((int32_t)i < 0) {
+                if (nargs < -i)
+                    lerror(ArgError, "apply: too few arguments");
             }
+            else if (nargs < i) {
+                lerror(ArgError, "apply: too few arguments");
+            }
+            else if (nargs > n) {
+                lerror(ArgError, "apply: too many arguments");
+            }
+            if (n > nargs) {
+                n -= nargs;
+                SP += n;
+                Stack[SP-1] = Stack[SP-n-1];
+                Stack[SP-2] = Stack[SP-n-2];
+                Stack[SP-3] = nargs+n;
+                Stack[SP-4] = Stack[SP-n-4];
+                Stack[SP-5] = Stack[SP-n-5];
+                curr_frame = SP;
+                for(i=0; i < n; i++) {
+                    Stack[bp+nargs+i] = UNBOUND;
+                }
+                nargs += n;
+            }
+            NEXT_OP;
+        OP(OP_BRBOUND)
+            i = GET_INT32(ip); ip+=4;
+            if (captured)
+                v = vector_elt(Stack[bp], i);
+            else
+                v = Stack[bp+i];
+            if (v != UNBOUND) ip += (ptrint_t)GET_INT32(ip);
+            else ip += 4;
             NEXT_OP;
         OP(OP_NOP) NEXT_OP;
         OP(OP_DUP) SP++; Stack[SP-1] = Stack[SP-2]; NEXT_OP;
@@ -1525,7 +1539,7 @@ static value_t apply_cl(uint32_t nargs)
             assert(issymbol(v));
             sym = (symbol_t*)ptr(v);
             v = Stack[SP-1];
-            if (!sym->isconst)
+            if (!isconstant(sym))
                 sym->binding = v;
             NEXT_OP;
 
@@ -1686,11 +1700,11 @@ static value_t apply_cl(uint32_t nargs)
 #endif
 }
 
-static uint32_t compute_maxstack(uint8_t *code, size_t len, value_t vals)
+static uint32_t compute_maxstack(uint8_t *code, size_t len)
 {
     uint8_t *ip = code+4, *end = code+len;
     uint8_t op;
-    uint32_t n, sp = 0, maxsp = 0;
+    uint32_t i, n, sp = 0, maxsp = 0;
 
     while (1) {
         if ((int32_t)sp > (int32_t)maxsp) maxsp = sp;
@@ -1713,10 +1727,12 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len, value_t vals)
             break;
         case OP_LET: break;
         case OP_OPTARGS:
-            ip += 4;
-            assert(isvector(vals));
-            if (vector_size(vals) > 0)
-                sp += vector_size(vector_elt(vals, 0));
+            i = abs(GET_INT32(ip)); ip+=4;
+            n = GET_INT32(ip); ip+=4;
+            sp += (n-i);
+            break;
+        case OP_BRBOUND:
+            ip+=8;
             break;
 
         case OP_TCALL: case OP_CALL:
@@ -1848,13 +1864,13 @@ static value_t fl_function(value_t *args, uint32_t nargs)
     cvalue_t *arr = (cvalue_t*)ptr(args[0]);
     cv_pin(arr);
     char *data = cv_data(arr);
-    if (data[4] >= N_OPCODES) {
+    if ((uint8_t)data[4] >= N_OPCODES) {
         // read syntax, shifted 48 for compact text representation
         size_t i, sz = cv_len(arr);
         for(i=0; i < sz; i++)
             data[i] -= 48;
     }
-    uint32_t ms = compute_maxstack((uint8_t*)data, cv_len(arr), args[1]);
+    uint32_t ms = compute_maxstack((uint8_t*)data, cv_len(arr));
     PUT_INT32(data, ms);
     function_t *fn = (function_t*)alloc_words(4);
     value_t fv = tagptr(fn, TAG_FUNCTION);

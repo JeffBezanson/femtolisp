@@ -135,8 +135,7 @@ static value_t fl_keywordp(value_t *args, u_int32_t nargs)
 {
     argcount("keyword?", nargs, 1);
     symbol_t *sym = tosymbol(args[0], "keyword?");
-    char *str = sym->name;
-    return fl_is_keyword_name(str, strlen(str)) ? FL_T : FL_F;
+    return iskeyword(sym) ? FL_T : FL_F;
 }
 
 static value_t fl_top_level_value(value_t *args, u_int32_t nargs)
@@ -152,7 +151,7 @@ static value_t fl_set_top_level_value(value_t *args, u_int32_t nargs)
 {
     argcount("set-top-level-value!", nargs, 2);
     symbol_t *sym = tosymbol(args[0], "set-top-level-value!");
-    if (!sym->isconst)
+    if (!isconstant(sym))
         sym->binding = args[1];
     return args[1];
 }
@@ -187,7 +186,7 @@ static value_t fl_constantp(value_t *args, u_int32_t nargs)
 {
     argcount("constant?", nargs, 1);
     if (issymbol(args[0]))
-        return (isconstant(args[0]) ? FL_T : FL_F);
+        return (isconstant((symbol_t*)ptr(args[0])) ? FL_T : FL_F);
     if (iscons(args[0])) {
         if (car_(args[0]) == QUOTE)
             return FL_T;

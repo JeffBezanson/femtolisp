@@ -280,3 +280,17 @@
 	    lastcdr to-proper reverse reverse! list->vector
 	    table.foreach list-head list-tail assq memq assoc member
 	    assv memv nreconc bq-process))
+
+(define (filt1 pred lst)
+  (define (filt1- pred lst accum)
+    (if (null? lst) accum
+	(if (pred (car lst))
+	    (filt1- pred (cdr lst) (cons (car lst) accum))
+	    (filt1- pred (cdr lst) accum))))
+  (filt1- pred lst ()))
+
+(define (filto pred lst (accum ()))
+  (if (atom? lst) accum
+      (if (pred (car lst))
+	  (filto pred (cdr lst) (cons (car lst) accum))
+	  (filto pred (cdr lst) accum))))
