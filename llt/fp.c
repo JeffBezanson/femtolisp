@@ -52,12 +52,14 @@ extern int64_t llabs(int64_t j);
 
 int dbl_equals(double a, double b)
 {
+    union { double d; int64_t i; } ua;
+    union { double d; int64_t i; } ub;
     int64_t aint, bint;
 
     if (a == b)
         return 1;
-    aint = *(int64_t*)&a;
-    bint = *(int64_t*)&b;
+    ua.d = a; aint = ua.i;
+    ub.d = b; bint = ub.i;
     if (aint < 0)
         aint = BIT63 - aint;
     if (bint < 0)
@@ -72,12 +74,14 @@ int dbl_equals(double a, double b)
 
 int flt_equals(float a, float b)
 {
+    union { float f; int32_t i; } ua;
+    union { float f; int32_t i; } ub;
     int32_t aint, bint;
 
     if (a == b)
         return 1;
-    aint = *(int32_t*)&a;
-    bint = *(int32_t*)&b;
+    ua.f = a; aint = ua.i;
+    ub.f = b; bint = ub.i;
     if (aint < 0)
         aint = BIT31 - aint;
     if (bint < 0)

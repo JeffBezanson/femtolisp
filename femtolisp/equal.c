@@ -281,7 +281,10 @@ value_t equal(value_t a, value_t b)
 static uptrint_t bounded_hash(value_t a, int bound, int *oob)
 {
     *oob = 0;
-    double d;
+    union {
+        double d;
+        int64_t i64;
+    } u;
     numerictype_t nt;
     size_t i, len;
     cvalue_t *cv;
@@ -292,8 +295,8 @@ static uptrint_t bounded_hash(value_t a, int bound, int *oob)
     switch(tg) {
     case TAG_NUM :
     case TAG_NUM1:
-        d = numval(a);
-        return doublehash(*(int64_t*)&d);
+        u.d = (double)numval(a);
+        return doublehash(u.i64);
     case TAG_FUNCTION:
         if (uintval(a) > N_BUILTINS)
             return bounded_hash(((function_t*)ptr(a))->bcode, bound, oob);
@@ -304,8 +307,8 @@ static uptrint_t bounded_hash(value_t a, int bound, int *oob)
         cp = (cprim_t*)ptr(a);
         data = cp_data(cp);
         nt = cp_numtype(cp);
-        d = conv_to_double(data, nt);
-        return doublehash(*(int64_t*)&d);
+        u.d = conv_to_double(data, nt);
+        return doublehash(u.i64);
     case TAG_CVALUE:
         cv = (cvalue_t*)ptr(a);
         data = cv_data(cv);
