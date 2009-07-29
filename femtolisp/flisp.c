@@ -790,6 +790,78 @@ static value_t do_trycatch()
     return v;
 }
 
+/*
+  argument layout on stack is
+  |--required args--|--opt args--|--kw args--|--rest args...
+ */
+static uint32_t process_keys(value_t kwtable,
+                             uint32_t nreq, uint32_t nkw, uint32_t nopt,
+                             uint32_t bp, uint32_t nargs, int va)
+{
+    uint32_t extr = nopt+nkw;
+    uint32_t ntot = nreq+extr;
+    value_t args[extr], v;
+    uint32_t i, a = 0, nrestargs;
+    value_t s1 = Stack[SP-1];
+    value_t s2 = Stack[SP-2];
+    value_t s4 = Stack[SP-4];
+    value_t s5 = Stack[SP-5];
+    if (nargs < nreq)
+        lerror(ArgError, "apply: too few arguments");
+    for (i=0; i < extr; i++) args[i] = UNBOUND;
+    for (i=nreq; i < nargs; i++) {
+        v = Stack[bp+i];
+        if (issymbol(v) && iskeyword((symbol_t*)ptr(v)))
+            break;
+        if (a >= nopt)
+            goto no_kw;
+        args[a++] = v;
+    }
+    if (i >= nargs) goto no_kw;
+    // now process keywords
+    uint32_t n = vector_size(kwtable)/2;
+    do {
+        i++;
+        if (i >= nargs)
+            lerrorf(ArgError, "keyword %s requires an argument",
+                    symbol_name(v));
+        value_t hv = fixnum(((symbol_t*)ptr(v))->hash);
+        uint32_t x = 2*(numval(hv) % n);
+        if (vector_elt(kwtable, x) == v) {
+            uint32_t idx = numval(vector_elt(kwtable, x+1));
+            assert(idx < nkw);
+            idx += (nreq+nopt);
+            if (args[idx] == UNBOUND) {
+                // if duplicate key, keep first value
+                args[idx] = Stack[bp+i];
+            }
+        }
+        else {
+            lerrorf(ArgError, "unsupported keyword %s", symbol_name(v));
+        }
+        i++;
+        if (i >= nargs) break;
+        v = Stack[bp+i];
+    } while (issymbol(v) && iskeyword((symbol_t*)ptr(v)));
+ no_kw:
+    nrestargs = nargs - i;
+    if (!va && nrestargs > 0)
+        lerror(ArgError, "apply: too many arguments");
+    nargs = ntot + nrestargs;
+    if (nrestargs)
+        memmove(&Stack[bp+ntot], &Stack[bp+i], nrestargs*sizeof(value_t));
+    memcpy(&Stack[bp+nreq], args, extr*sizeof(value_t));
+    SP = bp + nargs;
+    assert(SP < N_STACK-5);
+    PUSH(s5);
+    PUSH(s4);
+    PUSH(nargs);
+    PUSH(s2);
+    PUSH(s1);
+    curr_frame = SP;
+    return nargs;
+}
+
 #if _BYTE_ORDER == __BIG_ENDIAN
 #define GET_INT32(a)                            \
     ((((int32_t)a[0])<<0)  |                    \
@@ -935,16 +1007,13 @@ static value_t apply_cl(uint32_t nargs)
         OP(OP_OPTARGS)
             i = GET_INT32(ip); ip+=4;
             n = GET_INT32(ip); ip+=4;
-            if ((int32_t)i < 0) {
-                if (nargs < -i)
-                    lerror(ArgError, "apply: too few arguments");
-            }
-            else if (nargs < i) {
+            if (nargs < i)
                 lerror(ArgError, "apply: too few arguments");
+            if ((int32_t)n > 0) {
+                if (nargs > n)
+                    lerror(ArgError, "apply: too many arguments");
             }
-            else if (nargs > n) {
-                lerror(ArgError, "apply: too many arguments");
-            }
+            else n = -n;
             if (n > nargs) {
                 n -= nargs;
                 SP += n;

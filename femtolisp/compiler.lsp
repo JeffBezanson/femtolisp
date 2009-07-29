@@ -574,7 +574,7 @@
 
 	  ; emit argument checking prologue
 	  (if (not (null? opta))
-	      (begin (emit g 'optargs (if (null? atail) nreq (- nreq)) nargs)
+	      (begin (emit g 'optargs nreq (if (null? atail) nargs (- nargs)))
 		     (emit-optional-arg-inits g env opta vars nreq)))
 
 	  (cond ((not (null? let?))      (emit g 'let))

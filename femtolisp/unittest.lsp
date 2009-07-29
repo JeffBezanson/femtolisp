@@ -123,6 +123,8 @@
 (assert (equal? ((lambda (a (b 2) (c 3)) (list a b c)) 1) '(1 2 3)))
 (assert (equal? ((lambda (a (b 2) (c 3)) (list a b c)) 1 8) '(1 8 3)))
 (assert (equal? ((lambda (a (b 2) (c 3)) (list a b c)) 1 8 9) '(1 8 9)))
+(assert (equal? ((lambda ((x 0) . r) (list x r))) '(0 ())))
+(assert (equal? ((lambda ((x 0) . r) (list x r)) 1 2 3) '(1 (2 3))))
 
 ; ok, a couple end-to-end tests as well
 (define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))
