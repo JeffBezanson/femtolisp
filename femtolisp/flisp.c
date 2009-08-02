@@ -727,11 +727,9 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
     fixnum_t s, lo, hi;
     int64_t accum;
 
-    /*
-    ios_printf(ios_stdout, "eval "); print(ios_stdout, e, 0);
-    ios_printf(ios_stdout, " in ");  print(ios_stdout, Stack[penv], 0);
-    ios_printf(ios_stdout, "\n");
-    */
+    //ios_printf(ios_stderr, "eval "); print(ios_stderr, e, 0);
+    //ios_printf(ios_stderr, " in ");  print(ios_stderr, Stack[penv], 0);
+    //ios_printf(ios_stderr, "\n");
     saveSP = SP;
  eval_top:
     if (issymbol(e)) {
@@ -1463,7 +1461,7 @@ static void relocate_function(value_t oldv, value_t newv)
 
 static value_t fl_function(value_t *args, uint32_t nargs)
 {
-    if (nargs != 3)
+    if (nargs < 2 || nargs > 4)
         argcount("function", nargs, 2);
     if (!isstring(args[0]))
         type_error("function", "string", args[0]);
@@ -1473,10 +1471,23 @@ static value_t fl_function(value_t *args, uint32_t nargs)
     function_t *fn = value2c(function_t*,fv);
     fn->bcode = args[0];
     fn->vals = args[1];
-    if (nargs == 3)
-        fn->env = args[2];
-    else
-        fn->env = NIL;
+    fn->env = NIL;
+    fn->name = LAMBDA;
+    if (nargs > 2) {
+        if (issymbol(args[2])) {
+            fn->name = args[2];
+            if (nargs > 3)
+                fn->env = args[3];
+        }
+        else {
+            fn->env = args[2];
+            if (nargs > 3) {
+                if (!issymbol(args[3]))
+                    type_error("function", "symbol", args[3]);
+                fn->name = args[3];
+            }
+        }
+    }
     return fv;
 }
 

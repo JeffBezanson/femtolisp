@@ -120,6 +120,12 @@
 (define (mod x y) (- x (* (/ x y) y)))
 (define remainder mod)
 (define (abs x)   (if (< x 0) (- x) x))
+(define (max x0 . xs)
+  (if (null? xs) x0
+      (foldl (lambda (a b) (if (< a b) b a)) x0 xs)))
+(define (min x0 . xs)
+  (if (null? xs) x0
+      (foldl (lambda (a b) (if (< a b) a b)) x0 xs)))
 (define (identity x) x)
 (define (char? x) (eq? (typeof x) 'wchar))
 (define (function? x)
@@ -236,7 +242,7 @@
 
 (define (filter pred lst) (filter- pred lst ()))
 (define (filter- pred lst accum)
-  (cond ((null? lst) accum)
+  (cond ((atom? lst) accum)
         ((pred (car lst))
          (filter- pred (cdr lst) (cons (car lst) accum)))
         (#t
@@ -244,7 +250,7 @@
 
 (define (separate pred lst) (separate- pred lst () ()))
 (define (separate- pred lst yes no)
-  (cond ((null? lst) (cons yes no))
+  (cond ((atom? lst) (cons yes no))
         ((pred (car lst))
          (separate- pred (cdr lst) (cons (car lst) yes) no))
         (#t
@@ -672,9 +678,13 @@
 		  (macroexpand-in (apply f (cdr e)) env)
 		  (cond ((eq (car e) 'quote) e)
 			((eq (car e) 'lambda)
-			 (nlist* 'lambda (cadr e)
-				 (macroexpand-in (caddr e) env)
-				 (cdddr e)))
+			 (list* 'lambda (cadr e)
+				(macroexpand-in
+				 (if (length> (cddr e) 1)
+				     (f-body (cddr e))
+				     (caddr e))
+				 env)
+				(lastcdr e)))
 			((eq (car e) 'let-syntax)
 			 (let ((binds (cadr e))
 			       (body  (f-body (cddr e))))
