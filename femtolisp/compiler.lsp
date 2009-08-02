@@ -22,11 +22,11 @@
 	  setg setg.l
 	  seta seta.l setc setc.l
 	  
-	  closure argc vargc trycatch copyenv let for tapply
+	  closure argc vargc trycatch for tapply
 	  add2 sub2 neg largc lvargc
 	  loada0 loada1 loadc00 loadc01 call.l tcall.l
 	  brne brne.l cadr brnn brnn.l brn brn.l
-	  optargs brbound
+	  optargs brbound keyargs
 	  
 	  dummy_t dummy_f dummy_nil]))
     (for 0 (1- (length keys))
@@ -101,15 +101,18 @@
 	(let ((lasti (if (pair? (aref e 0))
 			 (car (aref e 0)) ()))
 	      (bc (aref e 0)))
-	  (cond ((and (eq? inst 'brf) (eq? lasti 'not)
-		      (eq? (cadr bc) 'null?))
-		 (aset! e 0 (cons (car args) (cons 'brn (cddr bc)))))
-		((and (eq? inst 'brf) (eq? lasti 'not))
-		 (aset! e 0 (cons (car args) (cons 'brt (cdr bc)))))
-		((and (eq? inst 'brf) (eq? lasti 'eq?))
-		 (aset! e 0 (cons (car args) (cons 'brne (cdr bc)))))
-		((and (eq? inst 'brf) (eq? lasti 'null?))
-		 (aset! e 0 (cons (car args) (cons 'brnn (cdr bc)))))
+	  (cond ((and
+		  (eq? inst 'brf)
+		  (cond ((and (eq? lasti 'not)
+			      (eq? (cadr bc) 'null?))
+			 (aset! e 0 (cons (car args) (cons 'brn (cddr bc)))))
+			((eq? lasti 'not)
+			 (aset! e 0 (cons (car args) (cons 'brt (cdr bc)))))
+			((eq? lasti 'eq?)
+			 (aset! e 0 (cons (car args) (cons 'brne (cdr bc)))))
+			((eq? lasti 'null?)
+			 (aset! e 0 (cons (car args) (cons 'brnn (cdr bc)))))
+			(else #f))))
 		((and (eq? inst 'brt) (eq? lasti 'null?))
 		 (aset! e 0 (cons (car args) (cons 'brn (cdr bc)))))
 		(else
@@ -182,11 +185,14 @@
 			  (io.write bcode (uint8 (aref v i)))
 			  (set! i (+ i 1)))
 			 
-			 ((loadc.l setc.l optargs)  ; 2 int32 args
+			 ((loadc.l setc.l optargs keyargs)  ; 2 int32 args
 			  (io.write bcode (int32 nxt))
 			  (set! i (+ i 1))
 			  (io.write bcode (int32 (aref v i)))
-			  (set! i (+ i 1)))
+			  (set! i (+ i 1))
+			  (if (eq? vi 'keyargs)
+			      (begin (io.write bcode (int32 (aref v i)))
+				     (set! i (+ i 1)))))
 			 
 			 (else
 			  ; other number arguments are always uint8
@@ -343,26 +349,7 @@
 	     " arguments.")))
 
 (define (compile-app g env tail? x)
-  (let ((head (car x)))
-    (if (and (pair? head)
-	     (eq? (car head) 'lambda)
-	     (list? (cadr head))
-	     (every symbol? (cadr head))
-	     (not (length> (cadr head) 255)))
-	(compile-let  g env tail? x)
-	(compile-call g env tail? x))))
-
-(define (compile-let g env tail? x)
-  (let ((head (car x))
-	(args (cdr x)))
-    (unless (length= args (length (cadr head)))
-	    (error "apply: incorrect number of arguments to " head))
-    (receive (the-f dept) (compile-f- env head #t)
-      (emit g 'loadv the-f)
-      (bcode:cdepth g dept))
-    (let ((nargs (compile-arglist g env args)))
-      (emit g 'copyenv)
-      (emit g (if tail? 'tcall 'call) (+ 1 nargs)))))
+  (compile-call g env tail? x))
 
 (define builtin->instruction
   (let ((b2i (table number? 'number?  cons 'cons
@@ -485,9 +472,9 @@
 		     (emit g 'trycatch))
 	   (else   (compile-app g env tail? x))))))
 
-(define (compile-f env f . let?)
+(define (compile-f env f)
   (receive (ff ignore)
-	   (apply compile-f- env f let?)
+	   (compile-f- env f)
 	   ff))
 
 (define get-defined-vars
@@ -507,6 +494,13 @@
 		    (else ())))))
     (lambda (expr) (delete-duplicates (get-defined-vars- expr)))))
 
+(define (keyword-arg? x) (and (pair? x) (keyword? (car x))))
+(define (keyword->symbol k)
+  (if (keyword? k)
+      (symbol (let ((s (string k)))
+		(string.sub s 0 (string.dec s (length s)))))
+      k))
+
 (define (lambda-vars l)
   (define (check-formals l o)
     (or
@@ -517,7 +511,12 @@
 	  (and (pair? (car l))
 	       (or (every pair? (cdr l))
 		   (error "compile error: invalid argument list "
-			  o ". optional arguments must come last.")))
+			  o ". optional arguments must come after required."))
+	       (if (keyword? (caar l))
+		   (or (every keyword-arg? (cdr l))
+		       (error "compile error: invalid argument list "
+			      o ". keyword arguments must come last."))
+		   #t))
 	  (error "compile error: invalid formal argument " (car l)
 		 " in list " o))
       (check-formals (cdr l) o))
@@ -525,8 +524,8 @@
 	 (error "compile error: invalid argument list " o)
 	 (error "compile error: invalid formal argument " l " in list " o))))
   (check-formals l l)
-  (map (lambda (s) (if (pair? s) (car s) s))
-       (to-proper l)))
+  (map! (lambda (s) (if (pair? s) (keyword->symbol (car s)) s))
+	(to-proper l)))
 
 (define (emit-optional-arg-inits g env opta vars i)
   ; i is the lexical var index of the opt arg to process next
@@ -547,7 +546,7 @@
      (lambda (expr)
        (compile `(lambda () ,expr . ,*defines-processed-token*))))
 
-    (lambda (env f . let?)
+    (lambda (env f)
       ; convert lambda to one body expression and process internal defines
       (define (lambda-body e)
 	(let ((B (if (pair? (cddr e))
@@ -570,15 +569,25 @@
 		      'lambda
 		      (lastcdr f))))
 	(let* ((nargs (if (atom? args) 0 (length args)))
-	       (nreq  (- nargs (length opta))))
+	       (nreq  (- nargs (length opta)))
+	       (kwa   (filter keyword-arg? opta)))
 
 	  ; emit argument checking prologue
 	  (if (not (null? opta))
-	      (begin (emit g 'optargs nreq (if (null? atail) nargs (- nargs)))
-		     (emit-optional-arg-inits g env opta vars nreq)))
+	      (begin
+		(if (null? kwa)
+		    (emit g 'optargs nreq
+			  (if (null? atail) nargs (- nargs)))
+		    (begin
+		      (bcode:indexfor g (make-perfect-hash-table
+					 (map cons
+					      (map car kwa)
+					      (iota (length kwa)))))
+		      (emit g 'keyargs nreq (length kwa)
+			    (if (null? atail) nargs (- nargs)))))
+		(emit-optional-arg-inits g env opta vars nreq)))
 
-	  (cond ((not (null? let?))      (emit g 'let))
-		((> nargs 255)           (emit g (if (null? atail)
+	  (cond ((> nargs 255)           (emit g (if (null? atail)
 						     'largc 'lvargc)
 					       nargs))
 		((not (null? atail))     (emit g 'vargc nargs))
@@ -661,11 +670,16 @@
 		  (princ (number->string (aref code i)))
 		  (set! i (+ i 1)))
 		 
-		 ((loadc.l setc.l optargs)
+		 ((loadc.l setc.l optargs keyargs)
 		  (princ (number->string (ref-int32-LE code i)) " ")
 		  (set! i (+ i 4))
 		  (princ (number->string (ref-int32-LE code i)))
-		  (set! i (+ i 4)))
+		  (set! i (+ i 4))
+		  (if (eq? inst 'keyargs)
+		      (begin 
+			(princ " ")
+			(princ (number->string (ref-int32-LE code i)) " ")
+			(set! i (+ i 4)))))
 		 
 		 ((brbound)
 		  (princ (number->string (ref-int32-LE code i)) " ")
@@ -682,5 +696,32 @@
 		  (set! i (+ i 4)))
 		 
 		 (else #f)))))))
+
+; From SRFI 89 by Marc Feeley (http://srfi.schemers.org/srfi-89/srfi-89.html)
+; Copyright (C) Marc Feeley 2006. All Rights Reserved.
+;
+; "alist" is a list of pairs of the form "(keyword . value)"
+; The result is a perfect hash-table represented as a vector of
+; length 2*N, where N is the hash modulus.  If the keyword K is in
+; the hash-table it is at index
+;
+;   X = (* 2 ($hash-keyword K N))
+;
+; and the associated value is at index X+1.
+(define (make-perfect-hash-table alist)
+  (define ($hash-keyword key n) (mod0 (abs (hash key)) n))
+  (let loop1 ((n (length alist)))
+    (let ((v (vector.alloc (* 2 n) #f)))
+      (let loop2 ((lst alist))
+        (if (pair? lst)
+            (let ((key (caar lst)))
+              (let ((x (* 2 ($hash-keyword key n))))
+                (if (aref v x)
+                    (loop1 (+ n 1))
+                    (begin
+                      (aset! v x key)
+                      (aset! v (+ x 1) (cdar lst))
+                      (loop2 (cdr lst))))))
+            v)))))
 
 #t

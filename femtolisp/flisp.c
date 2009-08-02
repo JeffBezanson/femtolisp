@@ -391,7 +391,7 @@ void fl_gc_handle(value_t *pv)
     GCHandleStack[N_GCHND++] = pv;
 }
 
-void fl_free_gc_handles(int n)
+void fl_free_gc_handles(uint32_t n)
 {
     assert(N_GCHND >= n);
     N_GCHND -= n;
@@ -826,11 +826,11 @@ static uint32_t process_keys(value_t kwtable,
             lerrorf(ArgError, "keyword %s requires an argument",
                     symbol_name(v));
         value_t hv = fixnum(((symbol_t*)ptr(v))->hash);
-        uint32_t x = 2*(numval(hv) % n);
+        uint32_t x = 2*(abs(numval(hv)) % n);
         if (vector_elt(kwtable, x) == v) {
             uint32_t idx = numval(vector_elt(kwtable, x+1));
             assert(idx < nkw);
-            idx += (nreq+nopt);
+            idx += nopt;
             if (args[idx] == UNBOUND) {
                 // if duplicate key, keep first value
                 args[idx] = Stack[bp+i];
@@ -995,40 +995,6 @@ static value_t apply_cl(uint32_t nargs)
         OP(OP_LVARGC)
             i = GET_INT32(ip); ip+=4;
             goto do_vargc;
-        OP(OP_LET)
-            // last arg is closure environment to use
-            nargs--;
-            Stack[SP-5] = Stack[SP-4];
-            Stack[SP-4] = nargs;
-            POPN(1);
-            Stack[SP-1] = 0;
-            curr_frame = SP;
-            NEXT_OP;
-        OP(OP_OPTARGS)
-            i = GET_INT32(ip); ip+=4;
-            n = GET_INT32(ip); ip+=4;
-            if (nargs < i)
-                lerror(ArgError, "apply: too few arguments");
-            if ((int32_t)n > 0) {
-                if (nargs > n)
-                    lerror(ArgError, "apply: too many arguments");
-            }
-            else n = -n;
-            if (n > nargs) {
-                n -= nargs;
-                SP += n;
-                Stack[SP-1] = Stack[SP-n-1];
-                Stack[SP-2] = Stack[SP-n-2];
-                Stack[SP-3] = nargs+n;
-                Stack[SP-4] = Stack[SP-n-4];
-                Stack[SP-5] = Stack[SP-n-5];
-                curr_frame = SP;
-                for(i=0; i < n; i++) {
-                    Stack[bp+nargs+i] = UNBOUND;
-                }
-                nargs += n;
-            }
-            NEXT_OP;
         OP(OP_BRBOUND)
             i = GET_INT32(ip); ip+=4;
             if (captured)
@@ -1038,7 +1004,6 @@ static value_t apply_cl(uint32_t nargs)
             if (v != UNBOUND) ip += (ptrint_t)GET_INT32(ip);
             else ip += 4;
             NEXT_OP;
-        OP(OP_NOP) NEXT_OP;
         OP(OP_DUP) SP++; Stack[SP-1] = Stack[SP-2]; NEXT_OP;
         OP(OP_POP) POPN(1); NEXT_OP;
         OP(OP_TCALL)
@@ -1716,7 +1681,6 @@ static value_t apply_cl(uint32_t nargs)
             NEXT_OP;
 
         OP(OP_CLOSURE)
-        OP(OP_COPYENV)
             // build a closure (lambda args body . env)
             if (nargs > 0 && !captured) {
                 // save temporary environment to the heap
@@ -1737,23 +1701,55 @@ static value_t apply_cl(uint32_t nargs)
             else {
                 PUSH(Stack[bp]); // env has already been captured; share
             }
-            if (ip[-1] == OP_CLOSURE) {
-                pv = alloc_words(4);
-                e = Stack[SP-2];  // closure to copy
-                assert(isfunction(e));
-                pv[0] = ((value_t*)ptr(e))[0];
-                pv[1] = ((value_t*)ptr(e))[1];
-                pv[2] = Stack[SP-1];  // env
-                pv[3] = ((value_t*)ptr(e))[3];
-                POPN(1);
-                Stack[SP-1] = tagptr(pv, TAG_FUNCTION);
-            }
+            pv = alloc_words(4);
+            e = Stack[SP-2];  // closure to copy
+            assert(isfunction(e));
+            pv[0] = ((value_t*)ptr(e))[0];
+            pv[1] = ((value_t*)ptr(e))[1];
+            pv[2] = Stack[SP-1];  // env
+            pv[3] = ((value_t*)ptr(e))[3];
+            POPN(1);
+            Stack[SP-1] = tagptr(pv, TAG_FUNCTION);
             NEXT_OP;
 
         OP(OP_TRYCATCH)
             v = do_trycatch();
             POPN(1);
             Stack[SP-1] = v;
+            NEXT_OP;
+
+        OP(OP_OPTARGS)
+            i = GET_INT32(ip); ip+=4;
+            n = GET_INT32(ip); ip+=4;
+            if (nargs < i)
+                lerror(ArgError, "apply: too few arguments");
+            if ((int32_t)n > 0) {
+                if (nargs > n)
+                    lerror(ArgError, "apply: too many arguments");
+            }
+            else n = -n;
+            if (n > nargs) {
+                n -= nargs;
+                SP += n;
+                Stack[SP-1] = Stack[SP-n-1];
+                Stack[SP-2] = Stack[SP-n-2];
+                Stack[SP-3] = nargs+n;
+                Stack[SP-4] = Stack[SP-n-4];
+                Stack[SP-5] = Stack[SP-n-5];
+                curr_frame = SP;
+                for(i=0; i < n; i++) {
+                    Stack[bp+nargs+i] = UNBOUND;
+                }
+                nargs += n;
+            }
+            NEXT_OP;
+        OP(OP_KEYARGS)
+            v = fn_vals(Stack[bp-1]);
+            v = vector_elt(v, 0);
+            i = GET_INT32(ip); ip+=4;
+            n = GET_INT32(ip); ip+=4;
+            s = GET_INT32(ip); ip+=4;
+            nargs = process_keys(v, i, n, abs(s)-(i+n), bp, nargs, s<0);
             NEXT_OP;
 
 #ifndef USE_COMPUTED_GOTO
@@ -1794,10 +1790,15 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len)
             n = GET_INT32(ip); ip+=4;
             sp += (n+2);
             break;
-        case OP_LET: break;
         case OP_OPTARGS:
-            i = abs(GET_INT32(ip)); ip+=4;
+            i = GET_INT32(ip); ip+=4;
+            n = abs(GET_INT32(ip)); ip+=4;
+            sp += (n-i);
+            break;
+        case OP_KEYARGS:
+            i = GET_INT32(ip); ip+=4;
             n = GET_INT32(ip); ip+=4;
+            n = abs(GET_INT32(ip)); ip+=4;
             sp += (n-i);
             break;
         case OP_BRBOUND:
@@ -1854,7 +1855,7 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len)
 
         case OP_LOADT: case OP_LOADF: case OP_LOADNIL: case OP_LOAD0:
         case OP_LOAD1: case OP_LOADA0: case OP_LOADA1: case OP_LOADC00:
-        case OP_LOADC01: case OP_COPYENV: case OP_DUP:
+        case OP_LOADC01: case OP_DUP:
             sp++;
             break;
 

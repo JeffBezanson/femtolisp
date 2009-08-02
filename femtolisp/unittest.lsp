@@ -126,6 +126,17 @@
 (assert (equal? ((lambda ((x 0) . r) (list x r))) '(0 ())))
 (assert (equal? ((lambda ((x 0) . r) (list x r)) 1 2 3) '(1 (2 3))))
 
+; keyword arguments
+(assert (equal? ((lambda (x (a 2) (b: a) . r) (list x a b r)) 1 0 8 4 5)
+		'(1 0 0 (8 4 5))))
+(assert (equal? ((lambda (x (a 2) (b: a) . r) (list x a b r)) 0 b: 3 1)
+		'(0 2 3 (1))))
+(define (keys4 (a: 8) (b: 3) (c: 7) (d: 6)) (list a b c d))
+(assert (equal? (keys4 a: 10) '(10 3 7 6)))
+(assert (equal? (keys4 b: 10) '(8 10 7 6)))
+(assert (equal? (keys4 c: 10) '(8 3 10 6)))
+(assert (equal? (keys4 d: 10) '(8 3 7 10)))
+
 ; ok, a couple end-to-end tests as well
 (define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))
 (assert (equal? (fib 20) 6765))

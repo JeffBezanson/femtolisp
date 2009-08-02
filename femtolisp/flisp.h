@@ -101,7 +101,7 @@ typedef struct _symbol_t {
 #define iscbuiltin(x) (iscvalue(x) && (cv_class((cvalue_t*)ptr(x))==builtintype))
 
 void fl_gc_handle(value_t *pv);
-void fl_free_gc_handles(int n);
+void fl_free_gc_handles(uint32_t n);
 
 #include "opcodes.h"
 
