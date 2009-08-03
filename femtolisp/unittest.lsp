@@ -1,4 +1,9 @@
 ; -*- scheme -*-
+(define-macro (assert-fail expr . what)
+  `(assert (trycatch (begin ,expr #f)
+		     (lambda (e) ,(if (null? what) #t
+				      `(eq? (car e) ',(car what)))))))
+
 (define (every-int n)
   (list (fixnum n) (int8 n) (uint8 n) (int16 n) (uint16 n) (int32 n) (uint32 n)
         (int64 n) (uint64 n)))
@@ -95,8 +100,20 @@
 ; this crashed once
 (for 1 10 (lambda (i) 0))
 
+; failing applications
+(assert-fail ((lambda (x) x) 1 2))
+(assert-fail ((lambda (x) x)))
+(assert-fail ((lambda (x y . z) z) 1))
+(assert-fail (car 'x) type-error)
+(assert-fail gjegherqpfdf___trejif unbound-error)
+
 ; long argument lists
 (assert (= (apply + (iota 100000)) 4999950000))
+(define ones (map (lambda (x) 1) (iota 80000)))
+(assert (= (eval `(if (< 2 1)
+		      (+ ,@ones)
+		      (+ ,@(cdr ones))))
+	   79999))
 
 (define MAX_ARGS 255)
 
@@ -105,6 +122,14 @@
 (assert (equal? (apply f (iota (+ MAX_ARGS 0))) `()))
 (assert (equal? (apply f (iota (+ MAX_ARGS 1))) `(,MAX_ARGS)))
 (assert (equal? (apply f (iota (+ MAX_ARGS 2))) `(,MAX_ARGS ,(+ MAX_ARGS 1))))
+
+(define as (apply list* (map-int (lambda (x) (gensym)) (+ MAX_ARGS 100))))
+(define ff (compile `(lambda ,as (set! ,(car (last-pair as)) 42)
+			     ,(car (last-pair as)))))
+(assert (equal? (apply ff (iota (+ MAX_ARGS 100))) 42))
+(define ff (compile `(lambda ,as (set! ,(car (last-pair as)) 42)
+			     (lambda () ,(car (last-pair as))))))
+(assert (equal? ((apply ff (iota (+ MAX_ARGS 100)))) 42))
 
 (define as (map-int (lambda (x) (gensym)) 1000))
 (define f (compile `(lambda ,as ,(car (last-pair as)))))
@@ -136,6 +161,15 @@
 (assert (equal? (keys4 b: 10) '(8 10 7 6)))
 (assert (equal? (keys4 c: 10) '(8 3 10 6)))
 (assert (equal? (keys4 d: 10) '(8 3 7 10)))
+(assert-fail (keys4 e: 10))   ; unsupported keyword
+(assert-fail (keys4 a: 1 b:)) ; keyword with no argument
+
+; cvalues and arrays
+(assert (equal? (typeof "") '(array byte)))
+(assert-fail (aref #(1) 3) bounds-error)
+(define iarr (array 'int64 32 16 8 7 1))
+(assert (equal? (aref iarr 0) 32))
+(assert (equal? (aref iarr #int8(3)) 7))
 
 ; ok, a couple end-to-end tests as well
 (define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))

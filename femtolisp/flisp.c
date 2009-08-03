@@ -202,7 +202,7 @@ void type_error(char *fname, char *expected, value_t got)
 
 void bounds_error(char *fname, value_t arr, value_t ind)
 {
-    lerrorf(listn(3, BoundsError, arr, ind), "%s: index out of bounds", fname);
+    raise(listn(4, BoundsError, symbol(fname), arr, ind));
 }
 
 // safe cast operators --------------------------------------------------------

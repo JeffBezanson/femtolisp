@@ -755,14 +755,19 @@
   (cond ((and (pair? e)
 	      (eq? (car e) 'type-error)
 	      (length= e 4))
-	 (eprinc "type-error: " (cadr e) ": expected " (caddr e) ", got ")
+	 (eprinc "type error: " (cadr e) ": expected " (caddr e) ", got ")
 	 (eprint (cadddr e)))
+
+	((and (pair? e)
+	      (eq? (car e) 'bounds-error)
+	      (length= e 4))
+	 (eprinc (cadr e) ": index " (cadddr e) " out of bounds for ")
+	 (eprint (caddr e)))
 
 	((and (pair? e)
 	      (eq? (car e) 'unbound-error)
 	      (pair? (cdr e)))
-	 (eprinc "unbound-error: eval: variable " (cadr e)
-		 " has no value"))
+	 (eprinc "eval: variable " (cadr e) " has no value"))
 
 	((and (pair? e)
 	      (eq? (car e) 'error))

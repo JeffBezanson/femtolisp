@@ -1150,3 +1150,22 @@ brbound 2 L2
 loada 1
 seta 2
 L2:
+
+-----------------------------------------------------------------------------
+
+what needs more test coverage:
+
+- more error cases, lerrorf() cases
+- printing gensyms
+- gensyms with bindings
+- listn(), isnumber(), list*, boolean?, function?, add2+ovf, >2arg add,div
+- large functions, requiring long versions of branch opcodes
+- setal, loadvl, (long arglist and lots of vals cases)
+- aref/aset on c array
+- printing everything
+- reading floats, escaped symbols, multiline comment, octal chars in strs
+- equal? on functions
+- all cvalue ctors, string_from_cstrn()
+- typeof, copy, podp, builtin()
+- bitwise and logical ops
+- making a closure in a default value expression for an optional arg

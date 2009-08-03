@@ -348,9 +348,6 @@
 	     " argument."
 	     " arguments.")))
 
-(define (compile-app g env tail? x)
-  (compile-call g env tail? x))
-
 (define builtin->instruction
   (let ((b2i (table number? 'number?  cons 'cons
 		    fixnum? 'fixnum?  equal? 'equal?
@@ -395,7 +392,7 @@
 		    (emit g (if tail? 'tapply 'apply) nargs)))
       (else      (emit g b)))))
 
-(define (compile-call g env tail? x)
+(define (compile-app g env tail? x)
   (let ((head  (car x)))
     (let ((head
 	   (if (and (symbol? head)
@@ -502,28 +499,33 @@
       k))
 
 (define (lambda-vars l)
-  (define (check-formals l o)
-    (or
-     (null? l) (symbol? l)
-     (and
-      (pair? l)
-      (or (symbol? (car l))
-	  (and (pair? (car l))
-	       (or (every pair? (cdr l))
+  (define (check-formals l o opt kw)
+    (cond ((or (null? l) (symbol? l)) #t)
+	  ((and (pair? l) (symbol? (car l)))
+	   (if (or opt kw)
+	       (error "compile error: invalid argument list "
+		      o ". optional arguments must come after required.")
+	       (check-formals (cdr l) o opt kw)))
+	  ((and (pair? l) (pair? (car l)))
+	   (unless (and (length= (car l) 2)
+			(symbol? (caar l)))
+		   (error "compile error: invalid optional argument " (car l)
+			  " in list " o))
+	   (if (keyword? (caar l))
+	       (check-formals (cdr l) o opt #t)
+	       (if kw
 		   (error "compile error: invalid argument list "
-			  o ". optional arguments must come after required."))
-	       (if (keyword? (caar l))
-		   (or (every keyword-arg? (cdr l))
-		       (error "compile error: invalid argument list "
-			      o ". keyword arguments must come last."))
-		   #t))
-	  (error "compile error: invalid formal argument " (car l)
-		 " in list " o))
-      (check-formals (cdr l) o))
-     (if (eq? l o)
-	 (error "compile error: invalid argument list " o)
-	 (error "compile error: invalid formal argument " l " in list " o))))
-  (check-formals l l)
+			  o ". keyword arguments must come last.")
+		   (check-formals (cdr l) o #t kw))))
+	  ((pair? l)
+	   (error "compile error: invalid formal argument " (car l)
+		  " in list " o))
+	  (else
+	   (if (eq? l o)
+	       (error "compile error: invalid argument list " o)
+	       (error "compile error: invalid formal argument " l
+		      " in list " o)))))
+  (check-formals l l #f #f)
   (map! (lambda (s) (if (pair? s) (keyword->symbol (car s)) s))
 	(to-proper l)))
 
