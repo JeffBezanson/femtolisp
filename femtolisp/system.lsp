@@ -544,6 +544,11 @@
 (define (io.readlines s) (read-all-of io.readline s))
 (define (read-all s) (read-all-of read s))
 
+(define (io.readall s)
+  (let ((b (buffer)))
+    (io.copy b s)
+    (io.tostring! b)))
+
 (define-macro (with-output-to stream . body)
   `(with-bindings ((*output-stream* ,stream))
 		  ,@body))

@@ -2,6 +2,7 @@
 ; femtolisp procedures
 
 (define top-level-bound? bound?)
+(define (eval-core x) (eval x))
 
 (define vector-ref aref)
 (define vector-set! aset!)
@@ -65,5 +66,18 @@
 
 (define (input-port? x) (iostream? x))
 (define (output-port? x) (iostream? x))
-
-(define (eval-core x) (eval x))
+(define close-input-port io.close)
+(define close-output-port io.close)
+(define (read-char (s *input-stream*)) (io.getc s))
+(define (write-char c (s *output-stream*)) (io.putc s c))
+(define (open-input-string str)
+  (let ((b (buffer)))
+    (io.write b str)
+    (io.seek b 0)
+    b))
+(define (open-output-string) (buffer))
+(define (get-output-string b)
+  (let ((p (io.pos b)))
+    (io.seek b 0)
+    (prog1 (io.readall b)
+	   (io.seek b p))))

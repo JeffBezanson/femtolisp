@@ -299,6 +299,19 @@ value_t fl_iocopyuntil(value_t *args, u_int32_t nargs)
     return size_wrap(ios_copyuntil(dest, src, delim));
 }
 
+value_t fl_iocopy(value_t *args, u_int32_t nargs)
+{
+    if (nargs < 2 || nargs > 3)
+        argcount("io.copy", nargs, 2);
+    ios_t *dest = toiostream(args[0], "io.copy");
+    ios_t *src = toiostream(args[1], "io.copy");
+    if (nargs == 3) {
+        size_t n = toulong(args[2], "io.copy");
+        return size_wrap(ios_copy(dest, src, n));
+    }
+    return size_wrap(ios_copyall(dest, src));
+}
+
 value_t stream_to_string(value_t *ps)
 {
     value_t str;
@@ -344,6 +357,7 @@ static builtinspec_t iostreamfunc_info[] = {
     { "io.discardbuffer", fl_iopurge },
     { "io.read", fl_ioread },
     { "io.write", fl_iowrite },
+    { "io.copy", fl_iocopy },
     { "io.readuntil", fl_ioreaduntil },
     { "io.copyuntil", fl_iocopyuntil },
     { "io.tostring!", fl_iotostring },

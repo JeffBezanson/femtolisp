@@ -501,8 +501,6 @@ static numerictype_t sym_to_numtype(value_t type);
 static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
                              int weak)
 {
-    int64_t tmp=0;
-
     if (type == bytesym) {
         unsigned char ch = *(unsigned char*)data;
         if (print_princ)
@@ -539,40 +537,6 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             else HPOS+=ios_printf(f, "x%04x", (int)wc);
         }
     }
-    else if (type == int64sym
-#ifdef BITS64
-             || type == longsym
-#endif
-             ) {
-        int64_t i64 = *(int64_t*)data;
-        if (fits_fixnum(i64) || print_princ) {
-            if (weak || print_princ)
-                HPOS+=ios_printf(f, "%lld", i64);
-            else
-                HPOS+=ios_printf(f, "#%s(%lld)", symbol_name(type), i64);
-        }
-        else
-            HPOS+=ios_printf(f, "#%s(0x%08x%08x)", symbol_name(type),
-                             (uint32_t)(i64>>32),
-                             (uint32_t)(i64));
-    }
-    else if (type == uint64sym
-#ifdef BITS64
-             || type == ulongsym
-#endif
-             ) {
-        uint64_t ui64 = *(uint64_t*)data;
-        if (fits_fixnum(ui64) || print_princ) {
-            if (weak || print_princ)
-                HPOS+=ios_printf(f, "%llu", ui64);
-            else
-                HPOS+=ios_printf(f, "#%s(%llu)", symbol_name(type), ui64);
-        }
-        else
-            HPOS+=ios_printf(f, "#%s(0x%08x%08x)", symbol_name(type),
-                             (uint32_t)(ui64>>32),
-                             (uint32_t)(ui64));
-    }
     else if (type == floatsym || type == doublesym) {
         char buf[64];
         double d;
@@ -607,19 +571,25 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
                 outc('f', f);
         }
     }
-    else if (issymbol(type)) {
-        // handle other integer prims. we know it's smaller than 64 bits
-        // at this point, so int64 is big enough to capture everything.
-        tmp = conv_to_int64(data, sym_to_numtype(type));
-        if (fits_fixnum(tmp) || print_princ) {
-            if (weak || print_princ)
-                HPOS+=ios_printf(f, "%lld", tmp);
-            else
-                HPOS+=ios_printf(f, "#%s(%lld)", symbol_name(type), tmp);
-        }
+    else if (type == uint64sym
+#ifdef BITS64
+             || type == ulongsym
+#endif
+             ) {
+        uint64_t ui64 = *(uint64_t*)data;
+        if (weak || print_princ)
+            HPOS += ios_printf(f, "%llu", ui64);
         else
-            HPOS+=ios_printf(f, "#%s(0x%08x)", symbol_name(type),
-                             (uint32_t)(tmp&0xffffffff));
+            HPOS += ios_printf(f, "#%s(%llu)", symbol_name(type), ui64);
+    }
+    else if (issymbol(type)) {
+        // handle other integer prims. we know it's smaller than uint64
+        // at this point, so int64 is big enough to capture everything.
+        int64_t i64 = conv_to_int64(data, sym_to_numtype(type));
+        if (weak || print_princ)
+            HPOS += ios_printf(f, "%lld", i64);
+        else
+            HPOS += ios_printf(f, "#%s(%lld)", symbol_name(type), i64);
     }
     else if (iscons(type)) {
         if (car_(type) == arraysym) {

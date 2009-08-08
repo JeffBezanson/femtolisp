@@ -303,15 +303,17 @@ size_t ios_readall(ios_t *s, char *dest, size_t n)
 
 size_t ios_readprep(ios_t *s, size_t n)
 {
+    if (s->state == bst_wr && s->bm != bm_mem) {
+        ios_flush(s);
+        s->bpos = s->size = 0;
+    }
     size_t space = s->size - s->bpos;
-    if (s->state == bst_wr)
-        return space;
     s->state = bst_rd;
     if (space >= n || s->bm == bm_mem || s->fd == -1)
         return space;
     if (s->maxsize < s->bpos+n) {
         // it won't fit. grow buffer or move data back.
-        if (n <= s->maxsize && space <= ((s->maxsize)>>5)) {
+        if (n <= s->maxsize && space <= ((s->maxsize)>>2)) {
             if (space)
                 memmove(s->buf, s->buf+s->bpos, space);
             s->size -= s->bpos;
@@ -615,16 +617,40 @@ void ios_bswap(ios_t *s, int bswap)
     s->byteswap = !!bswap;
 }
 
-static int ios_copy_(ios_t *to, ios_t *from, size_t nbytes, bool_t all)
+static size_t ios_copy_(ios_t *to, ios_t *from, size_t nbytes, bool_t all)
 {
+    size_t total = 0, avail;
+    if (!ios_eof(from)) {
+        do {
+            avail = ios_readprep(from, IOS_BUFSIZE/2);
+            if (avail == 0) {
+                from->_eof = 1;
+                break;
+            }
+            size_t written, ntowrite;
+            ntowrite = (avail <= nbytes || all) ? avail : nbytes;
+            written = ios_write(to, from->buf+from->bpos, ntowrite);
+            // TODO: should this be +=written instead?
+            from->bpos += ntowrite;
+            total += written;
+            if (!all) {
+                nbytes -= written;
+                if (nbytes == 0)
+                    break;
+            }
+            if (written < ntowrite)
+                break;
+        } while (!ios_eof(from));
+    }
+    return total;
 }
 
-int ios_copy(ios_t *to, ios_t *from, size_t nbytes)
+size_t ios_copy(ios_t *to, ios_t *from, size_t nbytes)
 {
     return ios_copy_(to, from, nbytes, 0);
 }
 
-int ios_copyall(ios_t *to, ios_t *from)
+size_t ios_copyall(ios_t *to, ios_t *from)
 {
     return ios_copy_(to, from, 0, 1);
 }

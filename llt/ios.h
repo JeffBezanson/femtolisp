@@ -78,8 +78,8 @@ int ios_setbuf(ios_t *s, char *buf, size_t size, int own);
 int ios_bufmode(ios_t *s, bufmode_t mode);
 void ios_set_readonly(ios_t *s);
 void ios_bswap(ios_t *s, int bswap);
-int ios_copy(ios_t *to, ios_t *from, size_t nbytes);
-int ios_copyall(ios_t *to, ios_t *from);
+size_t ios_copy(ios_t *to, ios_t *from, size_t nbytes);
+size_t ios_copyall(ios_t *to, ios_t *from);
 size_t ios_copyuntil(ios_t *to, ios_t *from, char delim);
 // ensure at least n bytes are buffered if possible. returns # available.
 size_t ios_readprep(ios_t *from, size_t n);
