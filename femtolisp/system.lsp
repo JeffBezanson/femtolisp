@@ -436,6 +436,16 @@
 	     (for-each f (cdr l)))
       #t))
 
+(define-macro (with-bindings binds . body)
+  (let ((vars (map car binds))
+	(vals (map cadr binds))
+	(olds (map (lambda (x) (gensym)) binds)))
+    `(let ,(map list olds vars)
+       ,@(map (lambda (v val) `(set! ,v ,val)) vars vals)
+       (unwind-protect
+	(begin ,@body)
+	(begin ,@(map (lambda (v old) `(set! ,v ,old)) vars olds))))))
+
 ; exceptions ------------------------------------------------------------------
 
 (define (error . args) (raise (cons 'error args)))
@@ -495,8 +505,10 @@
 
 ; text I/O --------------------------------------------------------------------
 
-(define (print . args) (apply io.print *output-stream* args))
-(define (princ . args) (apply io.princ *output-stream* args))
+(define (print . args) (for-each write args))
+(define (princ . args)
+  (with-bindings ((*print-readably* #f))
+		 (for-each write args)))
 
 (define (newline) (princ *linefeed*) #t)
 (define (display x) (princ x) #t)
@@ -514,6 +526,17 @@
 
 (define (io.readlines s) (read-all-of io.readline s))
 (define (read-all s) (read-all-of read s))
+
+(define-macro (with-output-to stream . body)
+  `(with-bindings ((*output-stream* ,stream))
+		  ,@body))
+
+(define (with-output-to-file name thunk)
+  (let ((f (file name :write :create :truncate)))
+    (unwind-protect
+     (with-bindings ((*output-stream* f))
+		    (thunk))
+     (io.close f))))
 
 ; vector functions ------------------------------------------------------------
 
@@ -606,7 +629,7 @@
 
 (define (print-to-string v)
   (let ((b (buffer)))
-    (io.print b v)
+    (write v b)
     (io.tostring! b)))
 
 (define (string.join strlist sep)
@@ -708,13 +731,17 @@
   (define (reploop)
     (when (trycatch (and (prompt) (newline))
 		    (lambda (e)
-		      (print-exception e)
-		      (print-stack-trace (stacktrace))
+		      (top-level-exception-handler e)
 		      #t))
 	  (begin (newline)
 		 (reploop))))
   (reploop)
   (newline))
+
+(define (top-level-exception-handler e)
+  (with-output-to *stderr*
+		  (print-exception e)
+		  (print-stack-trace (stacktrace))))
 
 (define (print-stack-trace st)
   (define (find-in-f f tgt path)
@@ -750,48 +777,46 @@
      st)))
 
 (define (print-exception e)
-  (define (eprinc . args) (apply io.princ *error-stream* args))
-  (define (eprint . args) (apply io.print *error-stream* args))
   (cond ((and (pair? e)
 	      (eq? (car e) 'type-error)
 	      (length= e 4))
-	 (eprinc "type error: " (cadr e) ": expected " (caddr e) ", got ")
-	 (eprint (cadddr e)))
+	 (princ "type error: " (cadr e) ": expected " (caddr e) ", got ")
+	 (print (cadddr e)))
 
 	((and (pair? e)
 	      (eq? (car e) 'bounds-error)
 	      (length= e 4))
-	 (eprinc (cadr e) ": index " (cadddr e) " out of bounds for ")
-	 (eprint (caddr e)))
+	 (princ (cadr e) ": index " (cadddr e) " out of bounds for ")
+	 (print (caddr e)))
 
 	((and (pair? e)
 	      (eq? (car e) 'unbound-error)
 	      (pair? (cdr e)))
-	 (eprinc "eval: variable " (cadr e) " has no value"))
+	 (princ "eval: variable " (cadr e) " has no value"))
 
 	((and (pair? e)
 	      (eq? (car e) 'error))
-	 (eprinc "error: ")
-	 (apply eprinc (cdr e)))
+	 (princ "error: ")
+	 (apply princ (cdr e)))
 
 	((and (pair? e)
 	      (eq? (car e) 'load-error))
 	 (print-exception (caddr e))
-	 (eprinc "in file " (cadr e)))
+	 (princ "in file " (cadr e)))
 
 	((and (list? e)
 	      (length= e 2))
-	 (eprint (car e))
-	 (eprinc ": ")
+	 (print (car e))
+	 (princ ": ")
 	 (let ((msg (cadr e)))
 	   ((if (or (string? msg) (symbol? msg))
-		eprinc eprint)
+		princ print)
 	    msg)))
 
-	(else (eprinc "*** Unhandled exception: ")
-	      (eprint e)))
+	(else (princ "*** Unhandled exception: ")
+	      (print e)))
 
-  (eprinc *linefeed*))
+  (princ *linefeed*))
 
 (define (simple-sort l)
   (if (or (null? l) (null? (cdr l))) l
@@ -804,24 +829,22 @@
 (define (make-system-image fname)
   (let ((f (file fname :write :create :truncate))
 	(excludes '(*linefeed* *directory-separator* *argv* that
-		    *print-pretty* *print-width* *print-readably*))
-	(pp *print-pretty*))
-    (set! *print-pretty* #f)
-    (unwind-protect
-     (let ((syms (filter (lambda (s)
-			   (and (bound? s)
-				(not (constant? s))
-				(or (not (builtin? (top-level-value s)))
-				    (not (equal? (string s) ; alias of builtin
-						 (string (top-level-value s)))))
-				(not (memq s excludes))
-				(not (iostream? (top-level-value s)))))
-			 (simple-sort (environment)))))
-       (io.print f (apply nconc (map list syms (map top-level-value syms))))
-       (io.write f *linefeed*))
-     (begin
-       (io.close f)
-       (set! *print-pretty* pp)))))
+			       *print-pretty* *print-width* *print-readably*)))
+    (with-bindings ((*print-pretty* #f)
+		    (*print-readably* #t))
+      (let ((syms
+	     (filter (lambda (s)
+		       (and (bound? s)
+			    (not (constant? s))
+			    (or (not (builtin? (top-level-value s)))
+				(not (equal? (string s) ; alias of builtin
+					     (string (top-level-value s)))))
+			    (not (memq s excludes))
+			    (not (iostream? (top-level-value s)))))
+		     (simple-sort (environment)))))
+	(write (apply nconc (map list syms (map top-level-value syms))) f)
+	(io.write f *linefeed*))
+      (io.close f))))
 
 ; initialize globals that need to be set at load time
 (define (__init_globals)
@@ -838,7 +861,7 @@
 
 (define (__script fname)
   (trycatch (load fname)
-	    (lambda (e) (begin (print-exception e)
+	    (lambda (e) (begin (top-level-exception-handler e)
 			       (exit 1)))))
 
 (define (__start argv)

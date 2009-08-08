@@ -1962,6 +1962,8 @@ static value_t fl_function(value_t *args, uint32_t nargs)
                 fn->name = args[3];
             }
         }
+        if (isgensym(fn->name))
+            lerror(ArgError, "function: name should not be a gensym");
     }
     return fv;
 }

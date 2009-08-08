@@ -179,28 +179,17 @@ value_t fl_iopos(value_t *args, u_int32_t nargs)
     return size_wrap((size_t)res);
 }
 
-static void do_ioprint(value_t *args, u_int32_t nargs, char *fname)
+value_t fl_write(value_t *args, u_int32_t nargs)
 {
-    if (nargs < 2)
-        argcount(fname, nargs, 2);
-    ios_t *s = toiostream(args[0], fname);
-    unsigned i;
-    for (i=1; i < nargs; i++) {
-        print(s, args[i]);
-    }
-}
-value_t fl_ioprint(value_t *args, u_int32_t nargs)
-{
-    do_ioprint(args, nargs, "io.print");
-    return args[nargs-1];
-}
-value_t fl_ioprinc(value_t *args, u_int32_t nargs)
-{
-    value_t oldpr = symbol_value(printreadablysym);
-    set(printreadablysym, FL_F);
-    do_ioprint(args, nargs, "io.princ");
-    set(printreadablysym, oldpr);
-    return args[nargs-1];
+    if (nargs < 1 || nargs > 2)
+        argcount("write", nargs, 1);
+    ios_t *s;
+    if (nargs == 2)
+        s = toiostream(args[1], "write");
+    else
+        s = toiostream(symbol_value(outstrsym), "write");
+    print(s, args[0]);
+    return args[0];
 }
 
 value_t fl_ioread(value_t *args, u_int32_t nargs)
@@ -344,8 +333,7 @@ static builtinspec_t iostreamfunc_info[] = {
     { "file", fl_file },
     { "buffer", fl_buffer },
     { "read", fl_read },
-    { "io.print", fl_ioprint },
-    { "io.princ", fl_ioprinc },
+    { "write", fl_write },
     { "io.flush", fl_ioflush },
     { "io.close", fl_ioclose },
     { "io.eof?" , fl_ioeof },
