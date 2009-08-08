@@ -216,6 +216,25 @@ static u_int32_t peek()
                     cval = numval(tokval);
                 }
             }
+            else if (cval >= 'a' && cval <= 'z') {
+                read_token((char)cval, 0);
+                tokval = symbol(buf);
+                if (buf[1] == '\0')       /* one character */;
+                else if (tokval == nulsym)        cval = 0x00;
+                else if (tokval == alarmsym)      cval = 0x07;
+                else if (tokval == backspacesym)  cval = 0x08;
+                else if (tokval == tabsym)        cval = 0x09;
+                else if (tokval == linefeedsym)   cval = 0x0A;
+                else if (tokval == newlinesym)    cval = 0x0A;
+                else if (tokval == vtabsym)       cval = 0x0B;
+                else if (tokval == pagesym)       cval = 0x0C;
+                else if (tokval == returnsym)     cval = 0x0D;
+                else if (tokval == escsym)        cval = 0x1B;
+                else if (tokval == spacesym)      cval = 0x20;
+                else if (tokval == deletesym)     cval = 0x7F;
+                else
+                    lerrorf(ParseError, "read: unknown character #\\%s", buf);
+            }
             toktype = TOK_NUM;
             tokval = mk_wchar(cval);
         }
@@ -579,6 +598,9 @@ static value_t do_read_sexpr(value_t label)
         if (sym == vu8sym) {
             sym = arraysym;
             Stack[SP-1] = fl_cons(uint8sym, Stack[SP-1]);
+        }
+        else if (sym == fnsym) {
+            sym = FUNCTION;
         }
         v = symbol_value(sym);
         if (v == UNBOUND)

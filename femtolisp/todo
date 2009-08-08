@@ -643,6 +643,7 @@ low-level functions:
 - (eltype type field [field ...])
 - (memcpy dest-cv src-cv)
 - (memcpy dest doffs src soffs nbytes)
+- (bswap cvalue)
 - (c2lisp cvalue)  ; convert to sexpr form
 * (typeof cvalue)
 * (sizeof cvalue|type)
@@ -968,7 +969,7 @@ consolidated todo list as of 7/8:
 
 - evaluator improvements, perf & debugging (below)
 * fix make-system-image to save aliases of builtins
-- reading named characters, e.g. #\newline etc.
+* reading named characters, e.g. #\newline etc.
 - #+, #- reader macros
 - printing improvements: *print-big*, keep track of horiz. position
   per-stream so indenting works across print calls
@@ -978,6 +979,7 @@ consolidated todo list as of 7/8:
 * optional arguments
 * keyword arguments
 - some kind of record, struct, or object system
+- improve test coverage
 
 - special efficient reader for #array
 - reimplement vectors as (array lispvalue)

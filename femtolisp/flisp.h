@@ -253,12 +253,13 @@ typedef float float_t;
 
 typedef value_t (*builtin_t)(value_t*, uint32_t);
 
+extern value_t QUOTE;
 extern value_t int8sym, uint8sym, int16sym, uint16sym, int32sym, uint32sym;
 extern value_t int64sym, uint64sym;
 extern value_t longsym, ulongsym, bytesym, wcharsym;
 extern value_t structsym, arraysym, enumsym, cfunctionsym, voidsym, pointersym;
 extern value_t stringtypesym, wcstringtypesym, emptystringsym;
-extern value_t unionsym, floatsym, doublesym, builtinsym;
+extern value_t unionsym, floatsym, doublesym;
 extern fltype_t *bytetype, *wchartype;
 extern fltype_t *stringtype, *wcstringtype;
 extern fltype_t *builtintype;

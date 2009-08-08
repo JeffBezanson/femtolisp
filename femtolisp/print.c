@@ -399,7 +399,7 @@ void fl_print_child(ios_t *f, value_t v)
             if (!print_princ) {
                 if (print_circle_prefix(f, v)) return;
                 function_t *fn = (function_t*)ptr(v);
-                outs("#function(", f);
+                outs("#fn(", f);
                 char *data = cvalue_data(fn->bcode);
                 size_t i, sz = cvalue_len(fn->bcode);
                 for(i=0; i < sz; i++) data[i] += 48;
@@ -515,15 +515,28 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
     else if (type == wcharsym) {
         uint32_t wc = *(uint32_t*)data;
         char seq[8];
-        if (print_princ || iswprint(wc)) {
-            size_t nb = u8_toutf8(seq, sizeof(seq), &wc, 1);
-            seq[nb] = '\0';
+        size_t nb = u8_toutf8(seq, sizeof(seq), &wc, 1);
+        seq[nb] = '\0';
+        if (print_princ) {
             // TODO: better multibyte handling
-            if (!print_princ) outsn("#\\", f, 2);
             outs(seq, f);
         }
         else {
-            HPOS+=ios_printf(f, "#\\x%04x", (int)wc);
+            outsn("#\\", f, 2);
+            if      (wc == 0x00) outsn("nul", f, 3);
+            else if (wc == 0x07) outsn("alarm", f, 5);
+            else if (wc == 0x08) outsn("backspace", f, 9);
+            else if (wc == 0x09) outsn("tab", f, 3);
+            else if (wc == 0x0A) outsn("linefeed", f, 8);
+            //else if (wc == 0x0A) outsn("newline", f, 7);
+            else if (wc == 0x0B) outsn("vtab", f, 4);
+            else if (wc == 0x0C) outsn("page", f, 4);
+            else if (wc == 0x0D) outsn("return", f, 6);
+            else if (wc == 0x1B) outsn("esc", f, 3);
+            else if (wc == 0x20) outsn("space", f, 5);
+            else if (wc == 0x7F) outsn("delete", f, 6);
+            else if (iswprint(wc)) outs(seq, f);
+            else HPOS+=ios_printf(f, "x%04x", (int)wc);
         }
     }
     else if (type == int64sym
@@ -569,9 +582,9 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
         if (!DFINITE(d)) {
             char *rep;
             if (isnan(d))
-                rep = sign_bit(d) ? "-NaN" : "+NaN";
+                rep = sign_bit(d) ? "-nan.0" : "+nan.0";
             else
-                rep = sign_bit(d) ? "-Inf" : "+Inf";
+                rep = sign_bit(d) ? "-inf.0" : "+inf.0";
             if (type == floatsym && !print_princ && !weak)
                 HPOS+=ios_printf(f, "#%s(%s)", symbol_name(type), rep);
             else
