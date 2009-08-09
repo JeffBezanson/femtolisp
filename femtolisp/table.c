@@ -99,7 +99,7 @@ value_t fl_table(value_t *args, uint32_t nargs)
     htable_t *h = (htable_t*)cv_data((cvalue_t*)ptr(nt));
     htable_new(h, cnt/2);
     uint32_t i;
-    value_t k=NIL, arg=NIL;
+    value_t k=FL_NIL, arg=FL_NIL;
     FOR_ARGS(i,0,arg,args) {
         if (i&1)
             equalhash_put(h, (void*)k, (void*)arg);

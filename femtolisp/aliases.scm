@@ -39,6 +39,7 @@
 (define (exact? x) (integer? x))
 (define (inexact? x) (not (exact? x)))
 (define quotient div0)
+(define remainder mod0)
 (define (inexact x) x)
 (define (exact x)
   (if (exact? x) x
@@ -90,6 +91,7 @@
 (define close-output-port io.close)
 (define (read-char (s *input-stream*)) (io.getc s))
 (define (write-char c (s *output-stream*)) (io.putc s c))
+(define (port-eof? p) (io.eof? p))
 (define (open-input-string str)
   (let ((b (buffer)))
     (io.write b str)

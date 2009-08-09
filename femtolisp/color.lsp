@@ -84,6 +84,6 @@
   (let ((result ()))
     (dotimes (x 25)
       (dotimes (y 25)
-        (if (and (/= x y) (can-attack x y))
+        (if (and (not (= x y)) (can-attack x y))
             (set! result (cons (cons x y) result)) ())))
     result))

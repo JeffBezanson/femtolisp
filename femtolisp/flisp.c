@@ -89,13 +89,12 @@ static uint32_t curr_frame = 0;
 static value_t *GCHandleStack[N_GC_HANDLES];
 static uint32_t N_GCHND = 0;
 
-value_t NIL, FL_T, FL_F;
+value_t FL_NIL, FL_T, FL_F, FL_EOF, QUOTE;
 value_t IOError, ParseError, TypeError, ArgError, UnboundError, MemoryError;
 value_t DivideError, BoundsError, Error, KeyError, EnumerationError;
 value_t printwidthsym, printreadablysym, printprettysym;
 
-value_t QUOTE;
-static value_t LAMBDA, IF, TRYCATCH;
+static value_t NIL, LAMBDA, IF, TRYCATCH;
 static value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT, FUNCTION;
 
 static value_t pairsym, symbolsym, fixnumsym, vectorsym, builtinsym, vu8sym;
@@ -378,7 +377,7 @@ value_t alloc_vector(size_t n, int init)
     if (init) {
         unsigned int i;
         for(i=0; i < n; i++)
-            vector_elt(v, i) = NIL;
+            vector_elt(v, i) = FL_F;
     }
     return v;
 }
@@ -1242,7 +1241,8 @@ static value_t apply_cl(uint32_t nargs)
             NEXT_OP;
         OP(OP_FUNCTIONP)
             v = Stack[SP-1];
-            Stack[SP-1] = ((tag(v)==TAG_FUNCTION &&v!=FL_F&&v!=FL_T&&v!=NIL) ||
+            Stack[SP-1] = ((tag(v)==TAG_FUNCTION &&
+                            (uintval(v)<=OP_ASET || v>(N_BUILTINS<<3))) ||
                            iscbuiltin(v)) ? FL_T : FL_F;
             NEXT_OP;
         OP(OP_VECTORP)
@@ -2100,9 +2100,10 @@ static void lisp_init(void)
     N_STACK = 262144;
     Stack = malloc(N_STACK*sizeof(value_t));
 
-    NIL = builtin(OP_THE_EMPTY_LIST);
+    FL_NIL = NIL = builtin(OP_THE_EMPTY_LIST);
     FL_T = builtin(OP_BOOL_CONST_T);
     FL_F = builtin(OP_BOOL_CONST_F);
+    FL_EOF = builtin(OP_EOF_OBJECT);
     LAMBDA = symbol("lambda");        FUNCTION = symbol("function");
     QUOTE = symbol("quote");          TRYCATCH = symbol("trycatch");
     BACKQUOTE = symbol("backquote");  COMMA = symbol("*comma*");

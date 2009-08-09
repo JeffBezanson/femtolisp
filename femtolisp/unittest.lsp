@@ -152,6 +152,9 @@
 (assert (equal? ((lambda ((x 0) . r) (list x r)) 1 2 3) '(1 (2 3))))
 
 ; keyword arguments
+(assert (keyword? kw:))
+(assert (not (keyword? 'kw)))
+(assert (not (keyword? ':)))
 (assert (equal? ((lambda (x (a 2) (b: a) . r) (list x a b r)) 1 0 8 4 5)
 		'(1 0 0 (8 4 5))))
 (assert (equal? ((lambda (x (a 2) (b: a) . r) (list x a b r)) 0 b: 3 1)
@@ -177,6 +180,16 @@
 (assert (not (eq? (gensym) (gensym))))
 (assert (not (equal? (string (gensym)) (string (gensym)))))
 (let ((gs (gensym))) (assert (eq? gs gs)))
+
+; eof object
+(assert (eof-object? (eof-object)))
+(assert (not (eof-object? 1)))
+(assert (not (eof-object? 'a)))
+(assert (not (eof-object? '())))
+(assert (not (eof-object? #f)))
+(assert (not (null? (eof-object))))
+(assert (not (builtin? (eof-object))))
+(assert (not (function? (eof-object))))
 
 ; ok, a couple end-to-end tests as well
 (define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))

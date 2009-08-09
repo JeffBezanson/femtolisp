@@ -49,6 +49,19 @@ value_t fl_iostreamp(value_t *args, uint32_t nargs)
     return isiostream(args[0]) ? FL_T : FL_F;
 }
 
+value_t fl_eof_object(value_t *args, uint32_t nargs)
+{
+    (void)args;
+    argcount("eof-object", nargs, 0);
+    return FL_EOF;
+}
+
+value_t fl_eof_objectp(value_t *args, uint32_t nargs)
+{
+    argcount("eof-object?", nargs, 1);
+    return (FL_EOF == args[0]) ? FL_T : FL_F;
+}
+
 static ios_t *toiostream(value_t v, char *fname)
 {
     if (!isiostream(v))
@@ -101,8 +114,11 @@ value_t fl_read(value_t *args, u_int32_t nargs)
     else {
         arg = args[0];
     }
-    (void)toiostream(arg, "read");
-    return read_sexpr(arg);
+    ios_t *s = toiostream(arg, "read");
+    value_t v = read_sexpr(arg);
+    if (ios_eof(s))
+        return FL_EOF;
+    return v;
 }
 
 value_t fl_iogetc(value_t *args, u_int32_t nargs)
@@ -111,7 +127,8 @@ value_t fl_iogetc(value_t *args, u_int32_t nargs)
     ios_t *s = toiostream(args[0], "io.getc");
     uint32_t wc;
     if (ios_getutf8(s, &wc) == IOS_EOF)
-        lerror(IOError, "io.getc: end of file reached");
+        //lerror(IOError, "io.getc: end of file reached");
+        return FL_EOF;
     return mk_wchar(wc);
 }
 
@@ -215,7 +232,8 @@ value_t fl_ioread(value_t *args, u_int32_t nargs)
     else data = cp_data((cprim_t*)ptr(cv));
     size_t got = ios_read(value2c(ios_t*,args[0]), data, n);
     if (got < n)
-        lerror(IOError, "io.read: end of input reached");
+        //lerror(IOError, "io.read: end of input reached");
+        return FL_EOF;
     return cv;
 }
 
@@ -306,7 +324,7 @@ value_t fl_ioreaduntil(value_t *args, u_int32_t nargs)
     }
     ((char*)cv->data)[n] = '\0';
     if (n == 0 && ios_eof(src))
-        return FL_F;
+        return FL_EOF;
     return str;
 }
 
@@ -345,7 +363,7 @@ value_t stream_to_string(value_t *ps)
     else {
         char *b = ios_takebuf(st, &n); n--;
         b[n] = '\0';
-        str = cvalue_from_ref(stringtype, b, n, NIL);
+        str = cvalue_from_ref(stringtype, b, n, FL_NIL);
         cv_autorelease((cvalue_t*)ptr(str));
     }
     return str;
@@ -362,6 +380,8 @@ value_t fl_iotostring(value_t *args, u_int32_t nargs)
 
 static builtinspec_t iostreamfunc_info[] = {
     { "iostream?", fl_iostreamp },
+    { "eof-object", fl_eof_object },
+    { "eof-object?", fl_eof_objectp },
     { "dump", fl_dump },
     { "file", fl_file },
     { "buffer", fl_buffer },
@@ -399,9 +419,9 @@ void iostream_init()
     assign_global_builtins(iostreamfunc_info);
 
     setc(symbol("*stdout*"), cvalue_from_ref(iostreamtype, ios_stdout,
-                                             sizeof(ios_t), NIL));
+                                             sizeof(ios_t), FL_NIL));
     setc(symbol("*stderr*"), cvalue_from_ref(iostreamtype, ios_stderr,
-                                             sizeof(ios_t), NIL));
+                                             sizeof(ios_t), FL_NIL));
     setc(symbol("*stdin*" ), cvalue_from_ref(iostreamtype, ios_stdin,
-                                             sizeof(ios_t), NIL));
+                                             sizeof(ios_t), FL_NIL));
 }

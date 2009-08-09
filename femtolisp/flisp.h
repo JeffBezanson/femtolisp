@@ -56,7 +56,7 @@ typedef struct _symbol_t {
 #define issymbol(x)  (tag(x) == TAG_SYM)
 #define isfixnum(x)  (((x)&3) == TAG_NUM)
 #define bothfixnums(x,y) ((((x)|(y))&3) == TAG_NUM)
-#define isbuiltin(x) ((tag(x) == TAG_FUNCTION) && (x) < (OP_BOOL_CONST_T<<3))
+#define isbuiltin(x) ((tag(x) == TAG_FUNCTION) && uintval(x) <= OP_ASET)
 #define isvector(x) (tag(x) == TAG_VECTOR)
 #define iscvalue(x) (tag(x) == TAG_CVALUE)
 #define iscprim(x)  (tag(x) == TAG_CPRIM)
@@ -113,7 +113,7 @@ void fl_free_gc_handles(uint32_t n);
 
 #define N_BUILTINS ((int)N_OPCODES)
 
-extern value_t NIL, FL_T, FL_F;
+extern value_t FL_NIL, FL_T, FL_F, FL_EOF;
 
 /* read, eval, print main entry points */
 value_t read_sexpr(value_t f);

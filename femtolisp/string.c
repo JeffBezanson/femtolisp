@@ -151,7 +151,7 @@ value_t fl_string_split(value_t *args, u_int32_t nargs)
     size_t len = cv_len((cvalue_t*)ptr(args[0]));
     size_t dlen = cv_len((cvalue_t*)ptr(args[1]));
     size_t ssz, tokend=0, tokstart=0, i=0;
-    value_t first=NIL, c=NIL, last;
+    value_t first=FL_NIL, c=FL_NIL, last;
     size_t junk;
     fl_gc_handle(&first);
     fl_gc_handle(&last);
@@ -164,7 +164,7 @@ value_t fl_string_split(value_t *args, u_int32_t nargs)
             tokend = i;
         ssz = tokend - tokstart;
         last = c;  // save previous cons cell
-        c = fl_cons(cvalue_string(ssz), NIL);
+        c = fl_cons(cvalue_string(ssz), FL_NIL);
 
         // we've done allocation; reload movable pointers
         s = cv_data((cvalue_t*)ptr(args[0]));
@@ -173,7 +173,7 @@ value_t fl_string_split(value_t *args, u_int32_t nargs)
         if (ssz) memcpy(cv_data((cvalue_t*)ptr(car_(c))), &s[tokstart], ssz);
 
         // link new cell
-        if (last == NIL)
+        if (last == FL_NIL)
             first = c;   // first time, save first cons
         else
             ((cons_t*)ptr(last))->cdr = c;

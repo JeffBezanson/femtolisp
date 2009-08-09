@@ -386,8 +386,11 @@ void fl_print_child(ios_t *f, value_t v)
         else if (v == FL_F) {
             outsn("#f", f, 2);
         }
-        else if (v == NIL) {
+        else if (v == FL_NIL) {
             outsn("()", f, 2);
+        }
+        else if (v == FL_EOF) {
+            outsn("#<eof>", f, 6);
         }
         else if (isbuiltin(v)) {
             if (!print_princ)

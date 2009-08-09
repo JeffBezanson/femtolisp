@@ -638,6 +638,8 @@ value_t cvalue_typeof(value_t *args, u_int32_t nargs)
             return booleansym;
         if (args[0] == NIL)
             return nullsym;
+        if (args[0] == FL_EOF)
+            return symbol("eof-object");
         if (isbuiltin(args[0]))
             return builtinsym;
         return FUNCTION;

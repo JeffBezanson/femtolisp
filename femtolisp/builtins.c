@@ -29,8 +29,8 @@ size_t llength(value_t v)
 static value_t fl_nconc(value_t *args, u_int32_t nargs)
 {
     if (nargs == 0)
-        return NIL;
-    value_t lst, first=NIL;
+        return FL_NIL;
+    value_t lst, first=FL_NIL;
     value_t *pcdr = &first;
     cons_t *c;
     uint32_t i=0;
@@ -44,7 +44,7 @@ static value_t fl_nconc(value_t *args, u_int32_t nargs)
                 c = (cons_t*)ptr(c->cdr);
             pcdr = &c->cdr;
         }
-        else if (lst != NIL) {
+        else if (lst != FL_NIL) {
             type_error("nconc", "cons", lst);
         }
     }
@@ -100,7 +100,7 @@ static value_t fl_length(value_t *args, u_int32_t nargs)
         if (cv_class(cv)->eltype != NULL)
             return size_wrap(cvalue_arraylen(a));
     }
-    else if (a == NIL) {
+    else if (a == FL_NIL) {
         return fixnum(0);
     }
     else if (iscons(a)) {
@@ -120,7 +120,7 @@ static value_t fl_exit(value_t *args, u_int32_t nargs)
     if (nargs > 0)
         exit(tofixnum(args[0], "exit"));
     exit(0);
-    return NIL;
+    return FL_NIL;
 }
 
 static value_t fl_symbol(value_t *args, u_int32_t nargs)
@@ -173,7 +173,7 @@ value_t fl_global_env(value_t *args, u_int32_t nargs)
 {
     (void)args;
     argcount("environment", nargs, 0);
-    value_t lst = NIL;
+    value_t lst = FL_NIL;
     fl_gc_handle(&lst);
     global_env_list(symtab, &lst);
     fl_free_gc_handles(1);
@@ -286,9 +286,9 @@ static value_t fl_vector_alloc(value_t *args, u_int32_t nargs)
     if (nargs == 2)
         f = args[1];
     else
-        f = NIL;
-    v = alloc_vector((unsigned)i, f==NIL);
-    if (f != NIL) {
+        f = FL_F;
+    v = alloc_vector((unsigned)i, f==FL_F);
+    if (f != FL_F) {
         int k;
         for(k=0; k < i; k++)
             vector_elt(v,k) = f;
