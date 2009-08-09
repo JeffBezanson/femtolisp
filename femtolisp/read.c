@@ -13,8 +13,8 @@ enum {
 // an ordinary symbol character unless it's the first character.
 static int symchar(char c)
 {
-    static char *special = "()[]'\";`,\\|";
-    return (!isspace(c) && !strchr(special, c));
+    static char *special = "()[]'\";`,\\| \f\n\r\t\v";
+    return !strchr(special, c);
 }
 
 int isnumtok_base(char *tok, value_t *pval, int base)
@@ -91,22 +91,28 @@ static char nextchar()
 {
     int ch;
     char c;
+    ios_t *f = F;
 
     do {
-        ch = ios_getc(F);
-        if (ch == IOS_EOF)
-            return 0;
+        if (f->bpos < f->size) {
+            ch = f->buf[f->bpos++];
+        }
+        else {
+            ch = ios_getc(f);
+            if (ch == IOS_EOF)
+                return 0;
+        }
         c = (char)ch;
         if (c == ';') {
             // single-line comment
             do {
-                ch = ios_getc(F);
+                ch = ios_getc(f);
                 if (ch == IOS_EOF)
                     return 0;
             } while ((char)ch != '\n');
             c = (char)ch;
         }
-    } while (isspace(c));
+    } while (c==' ' || isspace(c));
     return c;
 }
 
@@ -658,6 +664,7 @@ value_t read_sexpr(value_t f)
     htable_new(&state.gensyms, 8);
     state.source = f;
     readstate = &state;
+    assert(toktype == TOK_NONE);
 
     v = do_read_sexpr(UNBOUND);
 

@@ -489,8 +489,9 @@
 						     (newline)
 						     (apply #.apply args)))))
     (lambda (f)
-      (equal? (function:code f)
-	      (function:code sample-traced-lambda)))))
+      (and (closure? f)
+	   (equal? (function:code f)
+		   (function:code sample-traced-lambda))))))
 
 (define (trace sym)
   (let* ((func (top-level-value sym))

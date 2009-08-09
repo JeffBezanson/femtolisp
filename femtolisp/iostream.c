@@ -114,9 +114,11 @@ value_t fl_read(value_t *args, u_int32_t nargs)
     else {
         arg = args[0];
     }
-    ios_t *s = toiostream(arg, "read");
+    (void)toiostream(arg, "read");
+    fl_gc_handle(&arg);
     value_t v = read_sexpr(arg);
-    if (ios_eof(s))
+    fl_free_gc_handles(1);
+    if (ios_eof(value2c(ios_t*,arg)))
         return FL_EOF;
     return v;
 }

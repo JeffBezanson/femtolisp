@@ -422,7 +422,8 @@ static value_t relocate(value_t v)
                 *pcdr = cdr_(v);
                 return first;
             }
-            *pcdr = nc = mk_cons();
+            *pcdr = nc = tagptr((cons_t*)curheap, TAG_CONS);
+            curheap += sizeof(cons_t);
             d = cdr_(v);
             car_(v) = TAG_FWD; cdr_(v) = nc;
             car_(nc) = relocate(a);
