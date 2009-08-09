@@ -135,7 +135,7 @@
 (define (with-input-from-file name thunk)
   (let ((f (file name :read)))
     (unwind-protect
-     (with-output-to f (thunk))
+     (with-input-from f (thunk))
      (io.close f))))
 
 (define (call-with-input-file name proc)

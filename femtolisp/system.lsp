@@ -552,6 +552,9 @@
 (define-macro (with-output-to stream . body)
   `(with-bindings ((*output-stream* ,stream))
 		  ,@body))
+(define-macro (with-input-from stream . body)
+  `(with-bindings ((*input-stream* ,stream))
+		  ,@body))
 
 ; vector functions ------------------------------------------------------------
 
