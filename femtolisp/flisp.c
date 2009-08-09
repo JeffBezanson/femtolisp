@@ -309,6 +309,12 @@ value_t fl_gensym(value_t *args, uint32_t nargs)
     return tagptr(gs, TAG_SYM);
 }
 
+static value_t fl_gensymp(value_t *args, u_int32_t nargs)
+{
+    argcount("gensym?", nargs, 1);
+    return isgensym(args[0]) ? FL_T : FL_F;
+}
+
 char *symbol_name(value_t v)
 {
     if (ismanaged(v)) {
@@ -2063,6 +2069,7 @@ static builtinspec_t core_builtin_info[] = {
     { "function:name", fl_function_name },
     { "stacktrace", fl_stacktrace },
     { "gensym", fl_gensym },
+    { "gensym?", fl_gensymp },
     { "hash", fl_hash },
     { "copy-list", fl_copylist },
     { "append", fl_append },

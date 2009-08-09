@@ -171,6 +171,13 @@
 (assert (equal? (aref iarr 0) 32))
 (assert (equal? (aref iarr #int8(3)) 7))
 
+; gensyms
+(assert (gensym? (gensym)))
+(assert (not (gensym? 'a)))
+(assert (not (eq? (gensym) (gensym))))
+(assert (not (equal? (string (gensym)) (string (gensym)))))
+(let ((gs (gensym))) (assert (eq? gs gs)))
+
 ; ok, a couple end-to-end tests as well
 (define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))
 (assert (equal? (fib 20) 6765))

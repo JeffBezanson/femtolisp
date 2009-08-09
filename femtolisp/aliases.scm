@@ -1,8 +1,18 @@
 ; definitions of standard scheme procedures in terms of
 ; femtolisp procedures
+; sufficient to run the R5RS version of psyntax
 
 (define top-level-bound? bound?)
 (define (eval-core x) (eval x))
+(define (symbol-value s) (top-level-value s))
+(define (set-symbol-value! s v) (set-top-level-value! s v))
+(define (void) (if #f #f))
+(define (eval x)
+  ((compile-thunk (expand
+		   (if (and (pair? x)
+			    (equal? (car x) "noexpand"))
+		       (cadr x)
+		       x)))))
 
 (define vector-ref aref)
 (define vector-set! aset!)
@@ -86,6 +96,7 @@
     (io.seek b 0)
     b))
 (define (open-output-string) (buffer))
+(define open-string-output-port open-output-string)
 (define (get-output-string b)
   (let ((p (io.pos b)))
     (io.seek b 0)
@@ -165,11 +176,13 @@
   (or (null? l)
       (and (apply proc (car l) (map car ls))
            (apply for-all proc (cdr l) (map cdr ls)))))
+(define andmap for-all)
 
 (define (exists proc l . ls)
   (and (not (null? l))
        (or (apply proc (car l) (map car ls))
 	   (apply exists proc (cdr l) (map cdr ls)))))
+(define ormap exists)
 
 (define cons* list*)
 
@@ -182,3 +195,28 @@
 (define (partition pred lst)
   (let ((s (separate pred lst)))
     (values (car s) (cdr s))))
+
+(define (dynamic-wind before thunk after)
+  (before)
+  (unwind-protect (thunk)
+		  (after)))
+
+(let ((*properties* (table)))
+  (set! putprop
+	(lambda (sym key val)
+	  (let ((sp (get *properties* sym #f)))
+	    (if (not sp)
+		(let ((t (table)))
+		  (put! *properties* sym t)
+		  (set! sp t)))
+	    (put! sp key val))))
+
+  (set! getprop
+	(lambda (sym key)
+	  (let ((sp (get *properties* sym #f)))
+	    (and sp (get sp key #f)))))
+
+  (set! remprop
+	(lambda (sym key)
+	  (let ((sp (get *properties* sym #f)))
+	    (and sp (has? sp key) (del! sp key))))))

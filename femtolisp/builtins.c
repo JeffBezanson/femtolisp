@@ -134,8 +134,8 @@ static value_t fl_symbol(value_t *args, u_int32_t nargs)
 static value_t fl_keywordp(value_t *args, u_int32_t nargs)
 {
     argcount("keyword?", nargs, 1);
-    symbol_t *sym = tosymbol(args[0], "keyword?");
-    return iskeyword(sym) ? FL_T : FL_F;
+    return (issymbol(args[0]) &&
+            iskeyword((symbol_t*)ptr(args[0]))) ? FL_T : FL_F;
 }
 
 static value_t fl_top_level_value(value_t *args, u_int32_t nargs)
