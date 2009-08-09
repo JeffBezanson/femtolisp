@@ -64,6 +64,16 @@
 (define (string-ref s i)
   (string.char s (string.inc s 0 i)))
 
+(define (list->string l) (apply string l))
+(define (string->list s)
+  (do ((i (sizeof s) i)
+       (l '() (cons (string.char s i) l)))
+      ((= i 0) l)
+    (set! i (string.dec s i))))
+
+(define (substring s start end)
+  (string.sub s (string.inc s 0 start) (string.inc s 0 end)))
+
 (define (input-port? x) (iostream? x))
 (define (output-port? x) (iostream? x))
 (define close-input-port io.close)
@@ -81,3 +91,94 @@
     (io.seek b 0)
     (prog1 (io.readall b)
 	   (io.seek b p))))
+
+(define (open-input-file name) (file name :read))
+(define (open-output-file name) (file name :write :create))
+
+(define (current-input-port (p *input-stream*))
+  (set! *input-stream* p))
+(define (current-output-port (p *output-stream*))
+  (set! *output-stream* p))
+
+(define get-datum read)
+(define (put-datum port x)
+  (with-bindings ((*print-readably* #t))
+		 (write x port)))
+
+(define (put-u8 port o) (io.write port (uint8 o)))
+(define (put-string port s (start 0) (count #f))
+  (let* ((start (string.inc s 0 start))
+	 (end (if count
+		  (string.inc s start count)
+		  (sizeof s))))
+    (io.write port s start (- end start))))
+
+(define (with-output-to-file name thunk)
+  (let ((f (file name :write :create :truncate)))
+    (unwind-protect
+     (with-output-to f (thunk))
+     (io.close f))))
+
+(define (with-input-from-file name thunk)
+  (let ((f (file name :read)))
+    (unwind-protect
+     (with-output-to f (thunk))
+     (io.close f))))
+
+(define (call-with-input-file name proc)
+  (let ((f (open-input-file name)))
+    (prog1 (proc f)
+	   (io.close f))))
+
+(define (call-with-output-file name proc)
+  (let ((f (open-output-file name)))
+    (prog1 (proc f)
+	   (io.close f))))
+
+(define (display x (port *output-stream*))
+  (with-output-to port (princ x))
+  #t)
+
+(define assertion-violation 
+  (lambda args 
+    (display 'assertion-violation)
+    (newline)
+    (display args)
+    (newline)
+    (car #f)))
+
+(define pretty-print write)
+
+(define (memp proc ls)
+  (cond ((null? ls) #f)
+        ((pair? ls) (if (proc (car ls))
+                        ls
+                        (memp proc (cdr ls))))
+        (else (assertion-violation 'memp "Invalid argument" ls))))
+
+(define (assp pred lst)
+  (cond ((atom? lst) #f)
+	((pred       (caar lst)) (car lst))
+	(else        (assp pred  (cdr lst)))))
+
+(define (for-all proc l . ls)
+  (or (null? l)
+      (and (apply proc (car l) (map car ls))
+           (apply for-all proc (cdr l) (map cdr ls)))))
+
+(define (exists proc l . ls)
+  (and (not (null? l))
+       (or (apply proc (car l) (map car ls))
+	   (apply exists proc (cdr l) (map cdr ls)))))
+
+(define cons* list*)
+
+(define (fold-left f zero lst)
+  (if (null? lst) zero
+      (fold-left f (f zero (car lst)) (cdr lst))))
+
+(define fold-right foldr)
+
+(define (partition pred lst)
+  (let ((s (separate pred lst)))
+    (values (car s) (cdr s))))

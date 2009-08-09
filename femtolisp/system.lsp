@@ -275,11 +275,11 @@
 
 (define (foldr f zero lst)
   (if (null? lst) zero
-    (f (car lst) (foldr f zero (cdr lst)))))
+      (f (car lst) (foldr f zero (cdr lst)))))
 
 (define (foldl f zero lst)
   (if (null? lst) zero
-    (foldl f (f (car lst) zero) (cdr lst))))
+      (foldl f (f (car lst) zero) (cdr lst))))
 
 (define (reverse lst) (foldl cons () lst))
 
@@ -488,7 +488,8 @@
 (define-macro (assert expr) `(if ,expr #t (raise '(assert-failed ,expr))))
 
 (define traced?
-  (letrec ((sample-traced-lambda (lambda args (begin (println (cons 'x args))
+  (letrec ((sample-traced-lambda (lambda args (begin (write (cons 'x args))
+						     (newline)
 						     (apply #.apply args)))))
     (lambda (f)
       (equal? (function:code f)
@@ -501,7 +502,8 @@
 	(set-top-level-value! sym
 			      (eval
 			       `(lambda ,args
-				  (begin (println (cons ',sym ,args))
+				  (begin (write (cons ',sym ,args))
+					 (newline)
 					 (apply ',func ,args)))))))
   'ok)
 
@@ -525,11 +527,9 @@
   (with-bindings ((*print-readably* #f))
 		 (for-each write args)))
 
-(define (newline) (princ *linefeed*) #t)
-(define (display x (port *output-stream*))
-  (with-output-to port (princ x))
+(define (newline (port *output-stream*))
+  (io.write port *linefeed*)
   #t)
-(define (println . args) (prog1 (apply print args) (newline)))
 
 (define (io.readline s) (io.readuntil s #\linefeed))
 
@@ -552,13 +552,6 @@
 (define-macro (with-output-to stream . body)
   `(with-bindings ((*output-stream* ,stream))
 		  ,@body))
-
-(define (with-output-to-file name thunk)
-  (let ((f (file name :write :create :truncate)))
-    (unwind-protect
-     (with-bindings ((*output-stream* f))
-		    (thunk))
-     (io.close f))))
 
 ; vector functions ------------------------------------------------------------
 

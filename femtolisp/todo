@@ -866,7 +866,7 @@ IOStream API
 *io.flush
 *io.close
 *io.discardbuffer
-*io.write     - (io.write s cvalue)
+*io.write     - (io.write s cvalue [start [count]])
 *io.read      - (io.read s ctype [len])
 *io.getc      - get utf8 character
 *io.putc

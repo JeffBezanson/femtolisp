@@ -119,10 +119,9 @@ value_t fl_ioputc(value_t *args, u_int32_t nargs)
 {
     argcount("io.putc", nargs, 2);
     ios_t *s = toiostream(args[0], "io.putc");
-    uint32_t wc;
     if (!iscprim(args[1]) || ((cprim_t*)ptr(args[1]))->type != wchartype)
         type_error("io.putc", "wchar", args[1]);
-    wc = *(uint32_t*)cp_data((cprim_t*)ptr(args[1]));
+    uint32_t wc = *(uint32_t*)cp_data((cprim_t*)ptr(args[1]));
     return fixnum(ios_pututf8(s, wc));
 }
 
@@ -220,15 +219,42 @@ value_t fl_ioread(value_t *args, u_int32_t nargs)
     return cv;
 }
 
+// args must contain data[, offset[, count]]
+static void get_start_count_args(value_t *args, uint32_t nargs, size_t sz,
+                                 size_t *offs, size_t *nb, char *fname)
+{
+    if (nargs > 1) {
+        *offs = toulong(args[1], fname);
+        if (nargs > 2)
+            *nb = toulong(args[2], fname);
+        else
+            *nb = sz - *offs;
+        if (*offs >= sz || *offs + *nb > sz)
+            bounds_error(fname, args[0], args[1]);
+    }
+}
+
 value_t fl_iowrite(value_t *args, u_int32_t nargs)
 {
-    argcount("io.write", nargs, 2);
+    if (nargs < 2 || nargs > 4)
+        argcount("io.write", nargs, 2);
     ios_t *s = toiostream(args[0], "io.write");
+    if (iscprim(args[1]) && ((cprim_t*)ptr(args[1]))->type == wchartype) {
+        if (nargs > 2)
+            lerror(ArgError,
+                   "io.write: offset argument not supported for characters");
+        uint32_t wc = *(uint32_t*)cp_data((cprim_t*)ptr(args[1]));
+        return fixnum(ios_pututf8(s, wc));
+    }
     char *data;
-    size_t sz;
+    size_t sz, offs=0;
     to_sized_ptr(args[1], "io.write", &data, &sz);
-    size_t n = ios_write(s, data, sz);
-    return size_wrap(n);
+    size_t nb = sz;
+    if (nargs > 2) {
+        get_start_count_args(&args[1], nargs-1, sz, &offs, &nb, "io.write");
+        data += offs;
+    }
+    return size_wrap(ios_write(s, data, nb));
 }
 
 value_t fl_dump(value_t *args, u_int32_t nargs)
@@ -237,17 +263,11 @@ value_t fl_dump(value_t *args, u_int32_t nargs)
         argcount("dump", nargs, 1);
     ios_t *s = toiostream(symbol_value(outstrsym), "dump");
     char *data;
-    size_t sz, offs=0, nb;
+    size_t sz, offs=0;
     to_sized_ptr(args[0], "dump", &data, &sz);
-    nb = sz;
+    size_t nb = sz;
     if (nargs > 1) {
-        offs = toulong(args[1], "dump");
-        if (nargs > 2)
-            nb = toulong(args[2], "dump");
-        else
-            nb = sz - offs;
-        if (offs >= sz || offs+nb > sz)
-            bounds_error("dump", args[0], args[1]);
+        get_start_count_args(args, nargs, sz, &offs, &nb, "dump");
         data += offs;
     }
     hexdump(s, data, nb, offs);

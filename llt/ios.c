@@ -859,6 +859,8 @@ int ios_getutf8(ios_t *s, uint32_t *pwc)
 int ios_pututf8(ios_t *s, uint32_t wc)
 {
     char buf[8];
+    if (wc < 0x80)
+        return ios_putc((int)wc, s);
     size_t n = u8_toutf8(buf, 8, &wc, 1);
     return ios_write(s, buf, n);
 }

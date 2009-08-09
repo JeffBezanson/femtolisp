@@ -1,6 +1,6 @@
 (define ones (map (lambda (x) 1) (iota 1000000)))
 
-(display (apply + ones))
+(write (apply + ones))
 (newline)
 
 (define (big n)
@@ -10,15 +10,15 @@
 
 (define nst (big 100000))
 
-(display (eval nst))
+(write (eval nst))
 (newline)
 
 (define longg (cons '+ ones))
-(display (eval longg))
+(write (eval longg))
 (newline)
 
 (define (f x)
-  (begin (display x)
+  (begin (write x)
 	 (newline)
 	 (f (+ x 1))
 	 0))
