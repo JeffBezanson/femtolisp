@@ -2,6 +2,7 @@
 
 (if (not (bound? 'top-level-value)) (set! top-level-value %eval))
 (if (not (bound? 'set-top-level-value!)) (set! set-top-level-value! set))
+(if (not (bound? 'eof-object?)) (set! eof-object? (lambda (x) #f)))
 
 ;(load "compiler.lsp")
 

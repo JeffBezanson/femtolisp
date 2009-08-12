@@ -945,11 +945,7 @@ static void cvalues_init()
     ALIGN8   = sizeof(struct { char a; int64_t i; }) - 8;
     ALIGNPTR = sizeof(struct { char a; void   *i; }) - sizeof(void*);
 
-    cv_intern(pointer);
-    cfunctionsym = symbol("c-function");
-
-    builtintype = define_opaque_type(builtinsym, sizeof(builtin_t), NULL,
-                                     NULL);
+    builtintype = define_opaque_type(builtinsym, sizeof(builtin_t), NULL, NULL);
 
     ctor_cv_intern(int8);
     ctor_cv_intern(uint8);
@@ -968,9 +964,11 @@ static void cvalues_init()
 
     ctor_cv_intern(array);
     ctor_cv_intern(enum);
+    cv_intern(pointer);
     cv_intern(struct);
     cv_intern(union);
     cv_intern(void);
+    cfunctionsym = symbol("c-function");
 
     assign_global_builtins(cvalues_builtin_info);
 

@@ -66,8 +66,8 @@
 (define (cps form)
   (η-reduce
    (β-reduce
-    (macroexpand
-     (cps- (macroexpand form) *top-k*)))))
+    (expand
+     (cps- (expand form) *top-k*)))))
 (define (cps- form k)
   (let ((g (gensym)))
     (cond ((or (atom? form) (constant? form))
@@ -119,7 +119,7 @@
            (let ((test (cadr form))
                  (body (caddr form))
                  (lastval (gensym)))
-             (cps- (macroexpand
+             (cps- (expand
                     `(let ((,lastval #f))
                        ((label ,g (lambda ()
                                     (if ,test

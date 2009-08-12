@@ -983,6 +983,19 @@ consolidated todo list as of 7/8:
 - some kind of record, struct, or object system
 - improve test coverage
 
+expansion process bugs:
+* expand default expressions for opt/keyword args (as if lexically in body)
+* make bound identifiers (lambda and toplevel) shadow macro keywords
+* to expand a body:
+  1. splice begins
+  2. add defined vars to env
+  3. expand nondefinitions in the new env
+     . if one expands to a definition, add the var to the env
+  4. expand RHSes of definitions
+- add different spellings for builtin versions of core forms, like
+  $begin, $define, and $set!. they can be replaced when found during expansion,
+  and used when the compiler needs to generate them with known meanings.
+
 - special efficient reader for #array
 - reimplement vectors as (array lispvalue)
 - implement fast subvectors and subarrays

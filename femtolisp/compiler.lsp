@@ -220,7 +220,10 @@
 	((eq? item (car lst)) start)
 	(else (index-of item (cdr lst) (+ start 1)))))
 
-(define (in-env? s env) (any (lambda (e) (memq s e)) env))
+(define (in-env? s env)
+  (and (pair? env)
+       (or (memq s (car env))
+	   (in-env? s (cdr env)))))
 
 (define (lookup-sym s env lev arg?)
   (if (null? env)
@@ -229,8 +232,8 @@
 	     (i    (index-of s curr 0)))
 	(if i
 	    (if arg?
-		`(arg ,i)
-		`(closed ,lev ,i))
+		i
+		(cons lev i))
 	    (lookup-sym s
 			(cdr env)
 			(if (or arg? (null? curr)) lev (+ lev 1))
@@ -239,20 +242,20 @@
 ; number of non-nulls
 (define (nnn e) (count (lambda (x) (not (null? x))) e))
 
-(define (printable? x) (not (iostream? x)))
+(define (printable? x) (not (or (iostream? x)
+				(eof-object? x))))
 
 (define (compile-sym g env s Is)
   (let ((loc (lookup-sym s env 0 #t)))
-    (case (car loc)
-      (arg     (emit g (aref Is 0) (cadr loc)))
-      (closed  (emit g (aref Is 1) (cadr loc) (caddr loc))
-	       ; update index of most distant captured frame
-	       (bcode:cdepth g (- (nnn (cdr env)) 1 (cadr loc))))
-      (else
-       (if (and (constant? s)
-		(printable? (top-level-value s)))
-	   (emit g 'loadv (top-level-value s))
-	   (emit g (aref Is 2) s))))))
+    (cond ((number? loc)       (emit g (aref Is 0) loc))
+	  ((number? (car loc)) (emit g (aref Is 1) (car loc) (cdr loc))
+			       ; update index of most distant captured frame
+	                       (bcode:cdepth g (- (nnn (cdr env)) 1 (car loc))))
+	  (else
+	   (if (and (constant? s)
+		    (printable? (top-level-value s)))
+	       (emit g 'loadv (top-level-value s))
+	       (emit g (aref Is 2) s))))))
 
 (define (compile-if g env tail? x)
   (let ((elsel (make-label g))
@@ -440,10 +443,16 @@
 	       ((eq? x #f)  (emit g 'loadf))
 	       ((eq? x ())  (emit g 'loadnil))
 	       ((fits-i8 x) (emit g 'loadi8 x))
+	       ((eof-object? x)
+		(compile-in g env tail? (list (top-level-value 'eof-object))))
 	       (else        (emit g 'loadv x))))
+	((or (not (symbol? (car x))) (bound? (car x)) (in-env? (car x) env))
+	 (compile-app g env tail? x))
 	(else
 	 (case (car x)
-	   (quote    (emit g 'loadv (cadr x)))
+	   (quote    (if (self-evaluating? (cadr x))
+			 (compile-in g env tail? (cadr x))
+			 (emit g 'loadv (cadr x))))
 	   (if       (compile-if g env tail? x))
 	   (begin    (compile-begin g env tail? (cdr x)))
 	   (prog1    (compile-prog1 g env x))
@@ -487,7 +496,7 @@
 			      (list (caadr expr)))
 			 ()))
 		    ((eq? (car expr) 'begin)
-		     (apply append (map get-defined-vars- (cdr expr))))
+		     (apply nconc (map get-defined-vars- (cdr expr))))
 		    (else ())))))
     (lambda (expr) (delete-duplicates (get-defined-vars- expr)))))
 

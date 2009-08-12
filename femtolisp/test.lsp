@@ -272,10 +272,9 @@
 	  '(emit encode-byte-code const-to-idx-vec
 	    index-of lookup-sym in-env? any every
 	    compile-sym compile-if compile-begin
-	    list-partition just-compile-args
-	    compile-arglist macroexpand builtin->instruction
-	    compile-app compile-let compile-call
-	    compile-in compile compile-f
+	    compile-arglist expand builtin->instruction
+	    compile-app separate nconc get-defined-vars
+	    compile-in compile compile-f delete-duplicates
 	    map length> length= count filter append
 	    lastcdr to-proper reverse reverse! list->vector
 	    table.foreach list-head list-tail assq memq assoc member
@@ -294,3 +293,10 @@
       (if (pred (car lst))
 	  (filto pred (cdr lst) (cons (car lst) accum))
 	  (filto pred (cdr lst) accum))))
+
+; (pairwise? p a b c d) == (and (p a b) (p b c) (p c d))
+(define (pairwise? pred . args)
+  (or (null? args)
+      (let f ((a (car args)) (d (cdr args)))
+	(or (null? d)
+	    (and (pred a (car d)) (f (car d) (cdr d)))))))

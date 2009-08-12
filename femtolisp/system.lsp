@@ -16,14 +16,15 @@
 (define-macro (label name fn)
   `((lambda (,name) (set! ,name ,fn)) #f))
 
+(define (map1 f lst (acc (list ())))
+  (cdr
+   (prog1 acc
+    (while (pair? lst)
+	   (begin (set! acc
+			(cdr (set-cdr! acc (cons (f (car lst)) ()))))
+		  (set! lst (cdr lst)))))))
+
 (define (map f lst . lsts)
-  (define (map1 f lst acc)
-    (cdr
-     (prog1 acc
-      (while (pair? lst)
-	     (begin (set! acc
-			  (cdr (set-cdr! acc (cons (f (car lst)) ()))))
-		    (set! lst (cdr lst)))))))
   (define (mapn f lsts)
     (if (null? (car lsts))
 	()
@@ -332,8 +333,8 @@
              (let ((body (bq-process (vector->list x))))
                (if (eq (car body) 'list)
                    (cons vector (cdr body))
-                 (list apply vector body)))
-           x))
+		   (list apply vector body)))
+	     x))
         ((atom? x)                    (list 'quote x))
         ((eq (car x) 'backquote)      (bq-process (bq-process (cadr x))))
         ((eq (car x) '*comma*)        (cadr x))
@@ -342,7 +343,9 @@
                (forms (map bq-bracket1 x)))
            (if (null? lc)
                (cons 'list forms)
-             (nconc (cons 'list* forms) (list (bq-process lc))))))
+	       (if (null? (cdr forms))
+		   (list cons (car forms) (bq-process lc))
+		   (nconc (cons 'list* forms) (list (bq-process lc)))))))
         (#t (let ((p x) (q ()))
 	      (while (and (pair? p)
 			  (not (eq (car p) '*comma*)))
@@ -354,7 +357,11 @@
 			   (#t        (nreconc q (list (bq-process p)))))))
 		(if (null? (cdr forms))
 		    (car forms)
-		    (cons 'nconc forms)))))))
+		    (if (and (length= forms 2)
+			     (length= (car forms) 2)
+			     (eq? list (caar forms)))
+			(list cons (cadar forms) (cadr forms))
+			(cons 'nconc forms))))))))
 
 (define (bq-bracket x)
   (cond ((atom? x)                  (list list (bq-process x)))
@@ -671,42 +678,135 @@
 	(if f (apply f (cdr e))
 	    e))))
 
-(define (macroexpand e)
-  (define (macroexpand-in e env)
-    (if (atom? e) e
-	(let ((f (assq (car e) env)))
-	  (if f
-	      (macroexpand-in (apply (cadr f) (cdr e)) (caddr f))
-	      (let ((f (macrocall? e)))
-		(if f
-		    (macroexpand-in (apply f (cdr e)) env)
-		    (cond ((eq (car e) 'quote)  e)
-			  ((eq (car e) 'lambda)
-			   `(lambda ,(cadr e)
-			      ,.(map (lambda (x) (macroexpand-in x env))
-				     (cddr e))
-			      . ,(lastcdr e)))
-			  ((eq (car e) 'define)
-			   `(define ,(cadr e)
-			      ,.(map (lambda (x) (macroexpand-in x env))
-				     (cddr e))))
-			  ((eq (car e) 'let-syntax)
-			   (let ((binds (cadr e))
-				 (body  `((lambda () ,@(cddr e)))))
-			     (macroexpand-in
-			      body
-			      (nconc
-			       (map (lambda (bind)
-				      (list (car bind)
-					    (macroexpand-in (cadr bind) env)
+(define (expand e)
+  ; symbol resolves to toplevel; i.e. has no shadowing definition
+  (define (top? s env) (not (or (bound? s) (assq s env))))
+  
+  (define (splice-begin body)
+    (cond ((atom? body) body)
+	  ((equal? body '((begin)))
+	   body)
+	  ((and (pair? (car body))
+		(eq? (caar body) 'begin))
+	   (append (splice-begin (cdar body)) (splice-begin (cdr body))))
+	  (else
+	   (cons (car body) (splice-begin (cdr body))))))
+  
+  (define *expanded* (list '*expanded*))
+  
+  (define (expand-body body env)
+    (if (atom? body) body
+	(let* ((body  (if (top? 'begin env)
+			  (splice-begin body)
+			  body))
+	       (def?  (top? 'define env))
+	       (dvars (if def? (get-defined-vars body) ()))
+	       (env   (nconc (map1 list dvars) env)))
+	  (if (not def?)
+	      (map (lambda (x) (expand-in x env)) body)
+	      (let* ((ex-nondefs    ; expand non-definitions
+		      (let loop ((body body))
+			(cond ((atom? body) body)
+			      ((and (pair? (car body))
+				    (eq? 'define (caar body)))
+			       (cons (car body) (loop (cdr body))))
+			      (else
+			       (let ((form (expand-in (car body) env)))
+				 (set! env (nconc
+					    (map1 list (get-defined-vars form))
 					    env))
-				    binds)
-			       env))))
-			  (else
-			   (map (lambda (x) (macroexpand-in x env)) e)))))))))
-  (macroexpand-in e ()))
-
-(define (expand x) (macroexpand x))
+				 (cons
+				  (cons *expanded* form)
+				  (loop (cdr body))))))))
+		     (body ex-nondefs))
+		(while (pair? body) ; now expand deferred definitions
+		       (if (not (eq? *expanded* (caar body)))
+			   (set-car! body (expand-in (car body) env))
+			   (set-car! body (cdar body)))
+		       (set! body (cdr body)))
+		ex-nondefs)))))
+  
+  (define (expand-lambda-list l env)
+    (nconc
+     (map (lambda (x) (if (and (pair? x) (pair? (cdr x)))
+			  (list (car x) (expand-in (cadr x) env))
+			  x))
+	  l)
+     (lastcdr l)))
+  
+  (define (l-vars l)
+    (cond ((atom? l) l)
+	  ((pair? (car l)) (cons (caar l) (l-vars (cdr l))))
+	  (else (cons (car l) (l-vars (cdr l))))))
+  
+  (define (expand-lambda e env)
+    (let ((formals (cadr e))
+	  (name    (lastcdr e))
+	  (body    (cddr e))
+	  (vars    (l-vars (cadr e))))
+      (let ((env   (nconc (map1 list vars) env)))
+	`(lambda ,(expand-lambda-list formals env)
+	   ,.(expand-body body env)
+	   . ,name))))
+  
+  (define (expand-define e env)
+    (if (or (null? (cdr e)) (atom? (cadr e)))
+	(if (null? (cddr e))
+	    e
+	    `(define ,(cadr e) ,(expand-in (caddr e) env)))
+	(let ((formals (cdadr e))
+	      (name    (caadr e))
+	      (body    (cddr e))
+	      (vars    (l-vars (cdadr e))))
+	  (let ((env   (nconc (map1 list vars) env)))
+	    `(define ,(cons name (expand-lambda-list formals env))
+	       ,.(expand-body body env))))))
+  
+  (define (expand-let-syntax e env)
+    (let ((binds (cadr e)))
+      (cons 'begin
+	    (expand-body (cddr e)
+			 (nconc
+			  (map (lambda (bind)
+				 (list (car bind)
+				       ((compile-thunk
+					 (expand-in (cadr bind) env)))
+				       env))
+			       binds)
+			  env)))))
+  
+  ; given let-syntax definition environment (menv) and environment
+  ; at the point of the macro use (lenv), return the environment to
+  ; expand the macro use in. TODO
+  (define (local-expansion-env menv lenv) menv)
+  
+  (define (expand-in e env)
+    (if (atom? e) e
+	(let* ((head (car e))
+	       (bnd  (assq head env))
+	       (default (lambda ()
+			  (let loop ((e e))
+			    (if (atom? e) e
+				(cons (expand-in (car e) env)
+				      (loop (cdr e))))))))
+	  (cond ((and bnd (pair? (cdr bnd)))  ; local macro
+		 (expand-in (apply (cadr bnd) (cdr e))
+			    (local-expansion-env (caddr bnd) env)))
+		((or bnd                      ; bound lexical or toplevel var
+		     (not (symbol? head))
+		     (bound? head))
+		 (default))
+		(else
+		 (let ((f (macrocall? e)))
+		   (if f
+		       (expand-in (apply f (cdr e)) env)
+		       (cond ((eq head 'quote)      e)
+			     ((eq head 'lambda)     (expand-lambda e env))
+			     ((eq head 'define)     (expand-define e env))
+			     ((eq head 'let-syntax) (expand-let-syntax e env))
+			     (else
+			      (default))))))))))
+  (expand-in e ()))
 
 (define (eval x) ((compile-thunk (expand x))))
 

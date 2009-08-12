@@ -1,4 +1,4 @@
-macroexpand
+expand
 append
 bq-process
 

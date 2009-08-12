@@ -12,8 +12,8 @@
 (set! r (map-int (lambda (x) (mod (+ (* x 9421) 12345) 1024)) 1000))
 (time (sort r))
 
-(princ "mexpand: ")
-(time (dotimes (n 5000) (macroexpand '(dotimes (i 100) body1 body2))))
+(princ "expand: ")
+(time (dotimes (n 5000) (expand '(dotimes (i 100) body1 body2))))
 
 (define (my-append . lsts)
   (cond ((null? lsts) ())
