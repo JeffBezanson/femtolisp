@@ -735,7 +735,7 @@
      (lastcdr l)))
   
   (define (l-vars l)
-    (cond ((atom? l) l)
+    (cond ((atom? l) (list l))
 	  ((pair? (car l)) (cons (caar l) (l-vars (cdr l))))
 	  (else (cons (car l) (l-vars (cdr l))))))
   
@@ -787,7 +787,9 @@
 	       (default (lambda ()
 			  (let loop ((e e))
 			    (if (atom? e) e
-				(cons (expand-in (car e) env)
+				(cons (if (atom? (car e))
+					  (car e)
+					  (expand-in (car e) env))
 				      (loop (cdr e))))))))
 	  (cond ((and bnd (pair? (cdr bnd)))  ; local macro
 		 (expand-in (apply (cadr bnd) (cdr e))

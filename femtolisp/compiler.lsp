@@ -426,11 +426,18 @@
 			(compile-builtin-call g env tail? x head b nargs)
 			(emit g (if tail? 'tcall 'call) nargs))))))))))
 
-(define (expand-define form body)
-  (if (symbol? form)
-      `(set! ,form ,(car body))
-      `(set! ,(car form)
-	     (lambda ,(cdr form) ,@body . ,(car form)))))
+(define (expand-define x)
+  (let ((form (cadr x))
+	(body (if (pair? (cddr x))
+		  (cddr x)
+		  (if (symbol? (cadr x))
+		      '(#f)
+		      (error "compile error: invalid syntax "
+			     (print-to-string x))))))
+    (if (symbol? form)
+	`(set! ,form ,(car body))
+	`(set! ,(car form)
+	       (lambda ,(cdr form) ,@body . ,(car form))))))
 
 (define (fits-i8 x) (and (fixnum? x) (>= x -128) (<= x 127)))
 
@@ -470,7 +477,7 @@
 	   (set!     (compile-in g env #f (caddr x))
 		     (compile-sym g env (cadr x) [seta setc setg]))
 	   (define   (compile-in g env tail?
-				 (expand-define (cadr x) (cddr x))))
+				 (expand-define x)))
 	   (trycatch (compile-in g env #f `(lambda () ,(cadr x)))
 		     (unless (1arg-lambda? (caddr x))
 			     (error "trycatch: second form must be a 1-argument lambda"))
