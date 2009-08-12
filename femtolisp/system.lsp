@@ -180,6 +180,11 @@
       (nthcdr (cdr lst) (- n 1))))
 (define list-tail nthcdr)
 
+(define (list-head lst n)
+  (if (<= n 0) ()
+      (cons (car lst)
+	    (list-head (cdr lst) (- n 1)))))
+
 (define (list-ref lst n)
   (car (nthcdr lst n)))
 

@@ -129,6 +129,14 @@ static value_t fl_symbol(value_t *args, u_int32_t nargs)
     return symbol(cvalue_data(args[0]));
 }
 
+static value_t fl_keywordp(value_t *args, u_int32_t nargs)
+{
+    argcount("keyword?", nargs, 1);
+    return (issymbol(args[0]) &&
+            fl_is_keyword_name(symbol_name(args[0]),
+                               strlen(symbol_name(args[0])))) ? FL_T : FL_F;
+}
+
 extern value_t LAMBDA;
 
 static value_t fl_setsyntax(value_t *args, u_int32_t nargs)
@@ -410,6 +418,7 @@ static builtinspec_t builtin_info[] = {
 
     { "exit", fl_exit },
     { "symbol", fl_symbol },
+    { "keyword?", fl_keywordp },
     { "fixnum", fl_fixnum },
     { "truncate", fl_truncate },
     { "integer?", fl_integerp },

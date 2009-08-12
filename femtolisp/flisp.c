@@ -54,7 +54,7 @@
 static char *builtin_names[] =
     { // special forms
       "quote", "if", "and", "or", "while", "lambda",
-      "trycatch", "%apply", "set!", "prog1", "begin",
+      "trycatch", "%apply", "set!", "prog1", "begin", "for",
 
       // predicates
       "eq?", "eqv?", "equal?", "atom?", "not", "null?", "boolean?", "symbol?",
@@ -70,7 +70,7 @@ static char *builtin_names[] =
       "+", "-", "*", "/", "div0", "<", "lognot", "compare",
 
       // sequences
-      "vector", "aref", "aset!", "for",
+      "vector", "aref", "aset!",
       "", "", "" };
 
 #define N_STACK 131072
@@ -206,6 +206,11 @@ SAFECAST_OP(string,char*,    cvalue_data)
 
 symbol_t *symtab = NULL;
 
+int fl_is_keyword_name(char *str, size_t len)
+{
+    return ((str[0] == ':' || str[len-1] == ':') && str[1] != '\0');
+}
+
 static symbol_t *mk_symbol(char *str)
 {
     symbol_t *sym;
@@ -214,7 +219,7 @@ static symbol_t *mk_symbol(char *str)
     sym = (symbol_t*)malloc(sizeof(symbol_t)-sizeof(void*) + len + 1);
     assert(((uptrint_t)sym & 0x7) == 0); // make sure malloc aligns 8
     sym->left = sym->right = NULL;
-    if (str[0] == ':') {
+    if (fl_is_keyword_name(str, len)) {
         value_t s = tagptr(sym, TAG_SYM);
         setc(s, s);
     }
@@ -942,6 +947,30 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
         case F_TRYCATCH:
             v = do_trycatch(car(Stack[bp]), penv);
             break;
+        case F_FOR:
+            pv = &Stack[bp];
+            lo = tofixnum(eval(car(*pv)), "for");
+            *pv = cdr_(*pv);
+            hi = tofixnum(eval(car(*pv)), "for");
+            *pv = cdr_(*pv);
+            f = eval(car(*pv));
+            v = car(cdr(f));
+            if (!iscons(v) || !iscons(cdr_(cdr_(f))) || cdr_(v) != NIL)
+                lerror(ArgError, "for: expected 1 argument lambda");
+            f = cdr_(f);
+            PUSH(f);  // save function cdr
+            SP += 4;  // make space
+            Stack[SP-4] = fixnum(3);       // env size
+            Stack[SP-1] = cdr_(cdr_(f));   // cloenv
+            v = FL_F;
+            for(s=lo; s <= hi; s++) {
+                f = Stack[SP-5];
+                Stack[SP-3] = car_(f);     // lambda list
+                Stack[SP-2] = fixnum(s);   // argument value
+                v = car_(cdr_(f));
+                if (!selfevaluating(v)) v = eval_sexpr(v, SP-3, 0);
+            }
+            break;
 
         // ordinary functions
         case F_BOUNDP:
@@ -1246,28 +1275,6 @@ static value_t eval_sexpr(value_t e, uint32_t penv, int tail)
             if (selfevaluating(e)) { SP=saveSP; return e; }
             SP = penv+2;
             goto eval_top;
-        case F_FOR:
-            argcount("for", nargs, 3);
-            lo = tofixnum(Stack[SP-3], "for");
-            hi = tofixnum(Stack[SP-2], "for");
-            f = Stack[SP-1];
-            v = car(cdr(f));
-            if (!iscons(v) || !iscons(cdr_(cdr_(f))) || cdr_(v) != NIL)
-                lerror(ArgError, "for: expected 1 argument lambda");
-            f = cdr_(f);
-            PUSH(f);  // save function cdr
-            SP += 4;  // make space
-            Stack[SP-4] = fixnum(3);       // env size
-            Stack[SP-1] = cdr_(cdr_(f));   // cloenv
-            v = FL_F;
-            for(s=lo; s <= hi; s++) {
-                f = Stack[SP-5];
-                Stack[SP-3] = car_(f);     // lambda list
-                Stack[SP-2] = fixnum(s);   // argument value
-                v = car_(cdr_(f));
-                if (!selfevaluating(v)) v = eval_sexpr(v, SP-3, 0);
-            }
-            break;
         case F_SPECIAL_APPLY:
             v = Stack[bp-4];
             f = Stack[bp-5];
