@@ -727,17 +727,16 @@
 		ex-nondefs)))))
   
   (define (expand-lambda-list l env)
-    (nconc
-     (map (lambda (x) (if (and (pair? x) (pair? (cdr x)))
-			  (list (car x) (expand-in (cadr x) env))
-			  x))
-	  l)
-     (lastcdr l)))
+    (if (atom? l) l
+	(cons (if (and (pair? (car l)) (pair? (cdr (car l))))
+		  (list (caar l) (expand-in (cadar l) env))
+		  (car l))
+	      (expand-lambda-list (cdr l) env))))
   
   (define (l-vars l)
-    (cond ((atom? l) (list l))
+    (cond ((atom? l)       (list l))
 	  ((pair? (car l)) (cons (caar l) (l-vars (cdr l))))
-	  (else (cons (car l) (l-vars (cdr l))))))
+	  (else            (cons (car l)  (l-vars (cdr l))))))
   
   (define (expand-lambda e env)
     (let ((formals (cadr e))
@@ -951,7 +950,7 @@
   (let ((f (file fname :write :create :truncate))
 	(excludes '(*linefeed* *directory-separator* *argv* that
 			       *print-pretty* *print-width* *print-readably*)))
-    (with-bindings ((*print-pretty* #f)
+    (with-bindings ((*print-pretty* #t)
 		    (*print-readably* #t))
       (let ((syms
 	     (filter (lambda (s)

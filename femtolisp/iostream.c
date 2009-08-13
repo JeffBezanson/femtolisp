@@ -361,6 +361,7 @@ value_t stream_to_string(value_t *ps)
         n = st->size;
         str = cvalue_string(n);
         memcpy(cvalue_data(str), value2c(ios_t*,*ps)->buf, n);
+        ios_trunc(st, 0);
     }
     else {
         char *b = ios_takebuf(st, &n); n--;

@@ -4,6 +4,9 @@ static htable_t printconses;
 static u_int32_t printlabel;
 static int print_pretty;
 static int print_princ;
+static fixnum_t print_length;
+static fixnum_t print_level;
+static fixnum_t P_LEVEL;
 static int SCR_WIDTH = 80;
 
 static int HPOS=0, VPOS;
@@ -281,10 +284,14 @@ static void print_pair(ios_t *f, value_t v)
     int after2 = indentafter2(head, v);
     int n_unindented = 1;
     while (1) {
+        cd = cdr_(v);
+        if (print_length >= 0 && n >= print_length && cd!=NIL) {
+            outsn("...)", f, 4);
+            break;
+        }
         lastv = VPOS;
         unmark_cons(v);
         fl_print_child(f, car_(v));
-        cd = cdr_(v);
         if (!iscons(cd) || ptrhash_has(&printconses, (void*)cd)) {
             if (cd != NIL) {
                 outsn(" . ", f, 3);
@@ -364,6 +371,12 @@ static int print_circle_prefix(ios_t *f, value_t v)
 void fl_print_child(ios_t *f, value_t v)
 {
     char *name;
+    if (print_level >= 0 && P_LEVEL >= print_level &&
+        (iscons(v) || isvector(v) || isclosure(v))) {
+        outc('#', f);
+        return;
+    }
+    P_LEVEL++;
 
     switch (tag(v)) {
     case TAG_NUM :
@@ -400,7 +413,7 @@ void fl_print_child(ios_t *f, value_t v)
         else {
             assert(isclosure(v));
             if (!print_princ) {
-                if (print_circle_prefix(f, v)) return;
+                if (print_circle_prefix(f, v)) break;
                 function_t *fn = (function_t*)ptr(v);
                 outs("#fn(", f);
                 char *data = cvalue_data(fn->bcode);
@@ -430,12 +443,16 @@ void fl_print_child(ios_t *f, value_t v)
         if (v == UNBOUND) { outs("#<undefined>", f); break; }
     case TAG_VECTOR:
     case TAG_CONS:
-        if (print_circle_prefix(f, v)) return;
+        if (print_circle_prefix(f, v)) break;
         if (isvector(v)) {
             outc('[', f);
             int newindent = HPOS, est;
             int i, sz = vector_size(v);
             for(i=0; i < sz; i++) {
+                if (print_length >= 0 && i >= print_length && i < sz-1) {
+                    outsn("...", f, 3);
+                    break;
+                }
                 fl_print_child(f, vector_elt(v,i));
                 if (i < sz-1) {
                     if (!print_pretty) {
@@ -463,6 +480,7 @@ void fl_print_child(ios_t *f, value_t v)
             print_pair(f, v);
         break;
     }
+    P_LEVEL--;
 }
 
 static void print_string(ios_t *f, char *str, size_t sz)
@@ -720,11 +738,24 @@ void print(ios_t *f, value_t v)
     if (print_pretty)
         set_print_width();
     print_princ = (symbol_value(printreadablysym) == FL_F);
+
+    value_t pl = symbol_value(printlengthsym);
+    if (isfixnum(pl)) print_length = numval(pl);
+    else print_length = -1;
+    pl = symbol_value(printlevelsym);
+    if (isfixnum(pl)) print_level = numval(pl);
+    else print_level = -1;
+    P_LEVEL = 0;
+
     printlabel = 0;
     print_traverse(v);
     HPOS = VPOS = 0;
 
     fl_print_child(f, v);
+
+    if (print_level >= 0 || print_length >= 0) {
+        bitvector_fill(consflags, 0, 0, heapsize/sizeof(cons_t));
+    }
 
     htable_reset(&printconses, 32);
 }

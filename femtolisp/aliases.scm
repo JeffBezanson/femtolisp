@@ -98,7 +98,10 @@
     (io.seek b 0)
     b))
 (define (open-output-string) (buffer))
-(define open-string-output-port open-output-string)
+(define (open-string-output-port)
+  (let ((b (buffer)))
+    (values b (lambda () (io.tostring! b)))))
+
 (define (get-output-string b)
   (let ((p (io.pos b)))
     (io.seek b 0)

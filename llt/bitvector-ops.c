@@ -122,40 +122,6 @@ void bitvector_shl_to(u_int32_t *dest, u_int32_t *b, size_t n, u_int32_t s,
         dest[i] = sc;
 }
 
-// set nbits to c, starting at given bit offset
-// assumes offs < 32
-void bitvector_fill(u_int32_t *b, u_int32_t offs, u_int32_t c, u_int32_t nbits)
-{
-    index_t i;
-    u_int32_t nw, tail;
-    u_int32_t mask;
-
-    if (nbits == 0) return;
-    nw = (offs+nbits+31)>>5;
-
-    if (nw == 1) {
-        mask = (lomask(nbits)<<offs);
-        if (c) b[0]|=mask; else b[0]&=(~mask);
-        return;
-    }
-
-    mask = lomask(offs);
-    if (c) b[0]|=(~mask); else b[0]&=mask;
-
-    if (c) mask=ONES32; else mask = 0;
-    for(i=1; i < nw-1; i++)
-        b[i] = mask;
-
-    tail = (offs+nbits)&31;
-    if (tail==0) {
-        b[i] = mask;
-    }
-    else {
-        mask = lomask(tail);
-        if (c) b[i]|=mask; else b[i]&=(~mask);
-    }
-}
-
 void bitvector_not(u_int32_t *b, u_int32_t offs, u_int32_t nbits)
 {
     index_t i;

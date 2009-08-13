@@ -92,7 +92,8 @@ static uint32_t N_GCHND = 0;
 value_t FL_NIL, FL_T, FL_F, FL_EOF, QUOTE;
 value_t IOError, ParseError, TypeError, ArgError, UnboundError, MemoryError;
 value_t DivideError, BoundsError, Error, KeyError, EnumerationError;
-value_t printwidthsym, printreadablysym, printprettysym;
+value_t printwidthsym, printreadablysym, printprettysym, printlengthsym;
+value_t printlevelsym;
 
 static value_t NIL, LAMBDA, IF, TRYCATCH;
 static value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT, FUNCTION;
@@ -2135,6 +2136,8 @@ static void lisp_init(void)
     set(printprettysym=symbol("*print-pretty*"), FL_T);
     set(printreadablysym=symbol("*print-readably*"), FL_T);
     set(printwidthsym=symbol("*print-width*"), fixnum(SCR_WIDTH));
+    set(printlengthsym=symbol("*print-length*"), FL_F);
+    set(printlevelsym=symbol("*print-level*"), FL_F);
     lasterror = NIL;
     i = 0;
     for (i=OP_EQ; i <= OP_ASET; i++) {
