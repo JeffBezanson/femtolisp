@@ -14,6 +14,10 @@
 		       (cadr x)
 		       x)))))
 
+(define gensym
+  (let (($gensym gensym))
+    (lambda ((x #f)) ($gensym))))
+
 (define vector-ref aref)
 (define vector-set! aset!)
 (define vector-length length)
@@ -150,6 +154,8 @@
   (let ((f (open-output-file name)))
     (prog1 (proc f)
 	   (io.close f))))
+
+(define (file-exists? f) (path.exists? f))
 
 (define (display x (port *output-stream*))
   (with-output-to port (princ x))

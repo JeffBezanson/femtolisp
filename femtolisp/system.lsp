@@ -72,10 +72,24 @@
 		  (list 'or
 			(car clause)
 			(cond-clauses->if (cdr lst)))
-		  (list 'if
-			(car clause)
-			(cons 'begin (cdr clause))
-			(cond-clauses->if (cdr lst))))))))
+		  ; test => expression
+		  (if (eq? (cadr clause) '=>)
+		      (if (1arg-lambda? (caddr clause))
+			  ; test => (lambda (x) ...)
+			  (let ((var (caadr (caddr clause))))
+			    `(let ((,var ,(car clause)))
+			       (if ,var ,(cons 'begin (cddr (caddr clause)))
+				   ,(cond-clauses->if (cdr lst)))))
+			  ; test => proc
+			  (let ((b (gensym)))
+			    `(let ((,b ,(car clause)))
+			       (if ,b
+				   (,(caddr clause) ,b)
+				   ,(cond-clauses->if (cdr lst))))))
+		      (list 'if
+			    (car clause)
+			    (cons 'begin (cdr clause))
+			    (cond-clauses->if (cdr lst)))))))))
   (cond-clauses->if clauses))
 
 ; standard procedures ---------------------------------------------------------
@@ -797,16 +811,13 @@
 		     (not (symbol? head))
 		     (bound? head))
 		 (default))
-		(else
-		 (let ((f (macrocall? e)))
-		   (if f
-		       (expand-in (apply f (cdr e)) env)
-		       (cond ((eq head 'quote)      e)
-			     ((eq head 'lambda)     (expand-lambda e env))
-			     ((eq head 'define)     (expand-define e env))
-			     ((eq head 'let-syntax) (expand-let-syntax e env))
-			     (else
-			      (default))))))))))
+		((macrocall? e) =>      (lambda (f)
+				          (expand-in (apply f (cdr e)) env)))
+		((eq? head 'quote)      e)
+		((eq? head 'lambda)     (expand-lambda e env))
+		((eq? head 'define)     (expand-define e env))
+		((eq? head 'let-syntax) (expand-let-syntax e env))
+		(else                   (default))))))
   (expand-in e ()))
 
 (define (eval x) ((compile-thunk (expand x))))
@@ -949,7 +960,8 @@
 (define (make-system-image fname)
   (let ((f (file fname :write :create :truncate))
 	(excludes '(*linefeed* *directory-separator* *argv* that
-			       *print-pretty* *print-width* *print-readably*)))
+			       *print-pretty* *print-width* *print-readably*
+			       *print-level* *print-length*)))
     (with-bindings ((*print-pretty* #t)
 		    (*print-readably* #t))
       (let ((syms

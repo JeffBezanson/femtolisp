@@ -33,6 +33,7 @@ u_int32_t bitreverse(u_int32_t x);
 
 u_int32_t *bitvector_new(u_int64_t n, int initzero);
 u_int32_t *bitvector_resize(u_int32_t *b, u_int64_t n, int initzero);
+size_t bitvector_nwords(u_int64_t nbits);
 void bitvector_set(u_int32_t *b, u_int64_t n, u_int32_t c);
 u_int32_t bitvector_get(u_int32_t *b, u_int64_t n);
 

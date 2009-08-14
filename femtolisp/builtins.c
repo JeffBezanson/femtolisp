@@ -11,6 +11,7 @@
 #include <ctype.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include "llt.h"
 #include "flisp.h"
@@ -350,6 +351,19 @@ static value_t fl_path_cwd(value_t *args, uint32_t nargs)
     return FL_T;
 }
 
+#ifdef WIN32
+#define stat _stat
+#endif
+static value_t fl_path_exists(value_t *args, uint32_t nargs)
+{
+    argcount("path.exists?", nargs, 1);
+    char *str = tostring(args[0], "path.exists?");
+    struct stat sbuf;
+    if (stat(str, &sbuf) == -1)
+        return FL_F;
+    return FL_T;
+}
+
 static value_t fl_os_getenv(value_t *args, uint32_t nargs)
 {
     argcount("os.getenv", nargs, 1);
@@ -453,6 +467,7 @@ static builtinspec_t builtin_info[] = {
     { "rand.float", fl_randf },
 
     { "path.cwd", fl_path_cwd },
+    { "path.exists?", fl_path_exists },
 
     { "os.getenv", fl_os_getenv },
     { "os.setenv", fl_os_setenv },

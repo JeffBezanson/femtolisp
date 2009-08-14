@@ -887,7 +887,7 @@ IOStream API
 *princ-to-string
 
 
- path.exists?
+*path.exists?
  path.dir?
  path.combine
  path.parts

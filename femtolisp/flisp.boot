@@ -12,8 +12,10 @@
   lambda prog1 trycatch begin raise]) gensym])  define-macro #fn("?000s1c0c1|ML2e2c3L1|NL1e4}3133L3;" [set-syntax!
   quote nconc lambda copy-list])  receive #fn("@000s2c0c1_}L3e2c1L1|L1e3g23133L3;" [call-with-values
   lambda nconc copy-list])  unless #fn("=000s1c0|^c1}KL4;" [if begin])  let #fn(":000s1c0q^41;" [#fn("<000r1~C6D0~m02\x7fMo002\x7fNo01530^2c0qe1c2L1e3c4~32L1e5\x7f3133e3c6~3242;" [#fn("8000r2~6;0c0~|L3530|}K;" [label])
-  nconc lambda map #fn("6000r1|F650|M;|;" []) copy-list #fn("6000r1|F650|\x84;^;" [])])])  cond #fn("9000s0c0q^41;" [#fn("7000r1c0qm02|~41;" [#fn("7000r1|?640^;c0q|M41;" [#fn(";000r1|Mc0<17702|M]<6@0|N\x8550|M;c1|NK;|N\x85@0c2|Mi10~N31L3;c3|Mc1|NKi10~N31L4;" [else
-  begin or if])] cond-clauses->if)])])  throw #fn(":000r2c0c1c2c3L2|}L4L2;" [raise
+  nconc lambda map #fn("6000r1|F650|M;|;" []) copy-list #fn("6000r1|F650|\x84;^;" [])])])  cond #fn("9000s0c0q^41;" [#fn("7000r1c0qm02|~41;" [#fn("7000r1|?640^;c0q|M41;" [#fn("<000r1|Mc0<17702|M]<6@0|N\x8550|M;c1|NK;|N\x85@0c2|Mi10~N31L3;|\x84c3\x82W0e4e5|31316A0c6qe7e5|313141;c8qe93041;c:|Mc1|NKi10~N31L4;" [else
+  begin or => 1arg-lambda? caddr #fn("=000r1c0|~ML2L1c1|c2e3e4~3131Ki20i10N31L4L3;" [let
+  if begin cddr caddr]) caadr #fn("<000r1c0|~ML2L1c1|e2~31|L2i20i10N31L4L3;" [let
+  if caddr]) gensym if])] cond-clauses->if)])])  throw #fn(":000r2c0c1c2c3L2|}L4L2;" [raise
   list quote thrown-value])  time #fn("7000r1c0qe13041;" [#fn(">000r1c0|c1L1L2L1c2~c3c4c5c1L1|L3c6L4L3L3;" [let
   time.now prog1 princ "Elapsed time: " - " seconds\n"]) gensym])  let* #fn("A000s1|?6E0e0c1L1_L1e2}3133L1;e0c1L1e3|31L1L1e2|NF6H0e0c4L1|NL1e2}3133L1530}3133e5|31L2;" [nconc
   lambda copy-list caar let* cadar])  case #fn(":000s1c0q^41;" [#fn("7000r1c0m02c1qe23041;" [#fn(";000r2}c0\x8250c0;}\x8540^;}C6=0c1|e2}31L3;}?6=0c3|e2}31L3;}N\x85>0c3|e2}M31L3;e4c5}326=0c6|c7}L2L3;c8|c7}L2L3;" [else
@@ -111,7 +113,7 @@
   keyargs emit-optional-arg-inits > 255 largc lvargc vargc argc compile-in
   lastcdr caddr ret values function encode-byte-code bcode:code
   const-to-idx-vec]) filter keyword-arg?]) length]) length]) make-code-emitter
-  lastcdr lambda-vars filter #.pair? lambda])] #0=[#:g697 ()])
+  lastcdr lambda-vars filter #.pair? lambda])] #0=[#:g701 ()])
 	  compile-for #fn(":000r5e0g4316X0e1|}^g2342e1|}^g3342e1|}^g4342e2|c342;e4c541;" [1arg-lambda?
   compile-in emit for error "for: third form must be a 1-argument lambda"] compile-for)
 	  compile-if #fn("<000r4c0qe1|31e1|31g3\x84e2g331e3g331F6;0e4g331530^45;" [#fn("=000r5g2]\x82>0e0~\x7fi02g344;g2^\x82>0e0~\x7fi02g444;e0~\x7f^g2342e1~c2|332e0~\x7fi02g3342i026<0e1~c3325:0e1~c4}332e5~|322e0~\x7fi02g4342e5~}42;" [compile-in
@@ -266,7 +268,9 @@
 						    *directory-separator*
 						    *argv* that *print-pretty*
 						    *print-width*
-						    *print-readably*)] make-system-image)
+						    *print-readably*
+						    *print-level*
+						    *print-length*)] make-system-image)
 	  map #fn(";000s2c0q^41;" [#fn("9000r1c0qm02i02\x85<0e1~\x7f_L143;|~\x7fi02K42;" [#fn("=000r2}M\x8540_;|e0c1}_L133Q2~|e0c2}_L13332K;" [map1
   #.car #.cdr] mapn) map1])] map)
 	  map! #fn("9000r2}^}F6B02}|}M31O2}Nm15\x1d/2;" [] map!) map-int

@@ -754,7 +754,7 @@ void print(ios_t *f, value_t v)
     fl_print_child(f, v);
 
     if (print_level >= 0 || print_length >= 0) {
-        bitvector_fill(consflags, 0, 0, heapsize/sizeof(cons_t));
+        memset(consflags, 0, 4*bitvector_nwords(heapsize/sizeof(cons_t)));
     }
 
     htable_reset(&printconses, 32);
