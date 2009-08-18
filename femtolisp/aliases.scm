@@ -156,6 +156,7 @@
 	   (io.close f))))
 
 (define (file-exists? f) (path.exists? f))
+(define (delete-file name) (void)) ; TODO
 
 (define (display x (port *output-stream*))
   (with-output-to port (princ x))

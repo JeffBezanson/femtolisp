@@ -2108,8 +2108,8 @@ static void lisp_init(void)
     FL_EOF = builtin(OP_EOF_OBJECT);
     LAMBDA = symbol("lambda");        FUNCTION = symbol("function");
     QUOTE = symbol("quote");          TRYCATCH = symbol("trycatch");
-    BACKQUOTE = symbol("backquote");  COMMA = symbol("*comma*");
-    COMMAAT = symbol("*comma-at*");   COMMADOT = symbol("*comma-dot*");
+    BACKQUOTE = symbol("quasiquote");       COMMA = symbol("unquote");
+    COMMAAT = symbol("unquote-splicing");   COMMADOT = symbol("unquote-nsplicing");
     IOError = symbol("io-error");     ParseError = symbol("parse-error");
     TypeError = symbol("type-error"); ArgError = symbol("arg-error");
     UnboundError = symbol("unbound-error");

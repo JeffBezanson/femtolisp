@@ -3,11 +3,14 @@
 	  #table(with-bindings #fn(">000s1c0qe1c2|32e1e3|32e1c4|3243;" [#fn("A000r3e0c1L1e2c3g2|33L1e4e2c5|}3331c6c7e4\x7f31Kc7e4e2c8|g23331KL3L144;" [nconc
   let map #.list copy-list #fn("8000r2c0|}L3;" [set!]) unwind-protect begin #fn("8000r2c0|}L3;" [set!])])
   map #.car cadr #fn("6000r1e040;" [gensym])])  letrec #fn(">000s1e0c1L1e2c3|32L1e2c4|32e5}3134e2c6|32K;" [nconc
-  lambda map #.car #fn("8000r1c0e1|31K;" [set! copy-list]) copy-list #fn("6000r1^;" [])])  backquote #fn("7000r1e0|41;" [bq-process])  assert #fn("<000r1c0|]c1c2c3|L2L2L2L4;" [if
+  lambda map #.car #fn("8000r1c0e1|31K;" [set! copy-list]) copy-list #fn("6000r1^;" [])])  assert #fn("<000r1c0|]c1c2c3|L2L2L2L4;" [if
   raise quote assert-failed])  label #fn(":000r2c0|L1c1|}L3L3^L2;" [lambda set!])  do #fn("A000s2c0qe130}Me2c3|32e2e4|32e2c5|3245;" [#fn("A000r5c0|c1g2c2}c3e4\x7fN31Ke5c3L1e4i0231|g4KL133L4L3L2L1|g3KL3;" [letrec
   lambda if begin copy-list nconc]) gensym map #.car cadr #fn("7000r1e0|31F680e1|41;|M;" [cddr
-  caddr])])  when #fn("<000s1c0|c1}K^L4;" [if begin])  with-input-from #fn("=000s1e0c1L1c2|L2L1L1e3}3143;" [nconc
-  with-bindings *input-stream* copy-list])  dotimes #fn(";000s1c0q|M|\x8442;" [#fn("=000r2c0`c1}aL3e2c3L1|L1L1e4\x7f3133L4;" [for
+  caddr])])  quasiquote #fn("7000r1e0|41;" [bq-process])  when #fn("<000s1c0|c1}K^L4;" [if
+  begin])  with-input-from #fn("=000s1e0c1L1c2|L2L1L1e3}3143;" [nconc
+								with-bindings
+								*input-stream*
+								copy-list])  dotimes #fn(";000s1c0q|M|\x8442;" [#fn("=000r2c0`c1}aL3e2c3L1|L1L1e4\x7f3133L4;" [for
   - nconc lambda copy-list])])  unwind-protect #fn("8000r2c0qe130e13042;" [#fn("@000r2c0}c1_\x7fL3L2L1c2c3~c1|L1c4}L1c5|L2L3L3L3}L1L3L3;" [let
   lambda prog1 trycatch begin raise]) gensym])  define-macro #fn("?000s1c0c1|ML2e2c3L1|NL1e4}3133L3;" [set-syntax!
   quote nconc lambda copy-list])  receive #fn("@000s2c0c1_}L3e2c1L1|L1e3g23133L3;" [call-with-values
@@ -56,12 +59,13 @@
   get put!]) bcode:ctable bcode:nconst] bcode:indexfor)
 	  bcode:nconst #fn("7000r1|b2[;" [] bcode:nconst) bq-bracket
 	  #fn("8000r1|?6<0c0e1|31L2;|Mc2\x8290c0|\x84L2;|Mc3\x8290c4|\x84L2;|Mc5\x8250|\x84;c0e1|31L2;" [#.list
-  bq-process *comma* *comma-at* copy-list *comma-dot*] bq-bracket)
-	  bq-process #fn("8000r1c0q^^42;" [#fn("<000r2c0m02c1m12e2~316G0~H6@0c3e4e5~313141;~;~?680c6~L2;~Mc7\x82=0e4e4~\x843141;~Mc8\x8250~\x84;e9|~327B0c:e;~31e<}~3242;c=~_42;" [#fn("7000r1|F16B02|Mc0<17802|Mc1<17702|c2<;" [*comma-at*
-  *comma-dot* *comma*] splice-form?) #fn("7000r1|F16802|Mc0<650|\x84;e1|41;" [*comma*
-  bq-process] bq-bracket1) self-evaluating? #fn("8000r1|Mc0\x8280c1|NK;c2c1|L3;" [list
-  #.vector #.apply]) bq-process vector->list quote backquote *comma* any #fn("8000r2|\x8570c0}K;}N\x85>0c1}Me2|31L3;e3c4}Ke2|31L142;" [list
-  #.cons bq-process nconc list*]) lastcdr map #fn(":000r2^|F16902|Mc0<@6E02e1|M31}Km12|Nm05\x0f/2c2|F6>0e3}|\x84L1325J0|\x85:0e4}315>0e3}e5|31L13241;" [*comma*
+  bq-process unquote unquote-splicing copy-list unquote-nsplicing] bq-bracket)
+	  bq-process #fn("8000r1c0q^^42;" [#fn("<000r2c0m02c1m12e2~316G0~H6@0c3e4e5~313141;~;~?680c6~L2;~Mc7\x82=0e4e4~\x843141;~Mc8\x8250~\x84;e9|~327B0c:e;~31e<}~3242;c=~_42;" [#fn("7000r1|F16B02|Mc0<17802|Mc1<17702|c2<;" [unquote-splicing
+  unquote-nsplicing unquote] splice-form?)
+  #fn("7000r1|F16802|Mc0<650|\x84;e1|41;" [unquote bq-process] bq-bracket1)
+  self-evaluating? #fn("8000r1|Mc0\x8280c1|NK;c2c1|L3;" [list #.vector #.apply])
+  bq-process vector->list quote quasiquote unquote any #fn("8000r2|\x8570c0}K;}N\x85>0c1}Me2|31L3;e3c4}Ke2|31L142;" [list
+  #.cons bq-process nconc list*]) lastcdr map #fn(":000r2^|F16902|Mc0<@6E02e1|M31}Km12|Nm05\x0f/2c2|F6>0e3}|\x84L1325J0|\x85:0e4}315>0e3}e5|31L13241;" [unquote
   bq-bracket #fn("8000r1|N\x8550|M;e0|b23216H02e0|Mb23216;02c1e2|31<6>0c3e4|31|\x84L3;c5|K;" [length=
   #.list caar #.cons cadar nconc]) nreconc reverse! bq-process])])] bq-process)
 	  builtin->instruction #fn("9000r1e0~|^43;" [get] [#table(#.number? number?  #.cons cons  #.fixnum? fixnum?  #.equal? equal?  #.eq? eq?  #.symbol? symbol?  #.div0 div0  #.builtin? builtin?  #.aset! aset!  #.- -  #.boolean? boolean?  #.not not  #.apply apply  #.atom? atom?  #.set-cdr! set-cdr!  #./ /  #.function? function?  #.vector vector  #.list list  #.bound? bound?  #.< <  #.* *  #.cdr cdr  #.null? null?  #.+ +  #.eqv? eqv?  #.compare compare  #.aref aref  #.set-car! set-car!  #.car car  #.pair? pair?  #.= =  #.vector? vector?)
@@ -113,7 +117,7 @@
   keyargs emit-optional-arg-inits > 255 largc lvargc vargc argc compile-in
   lastcdr caddr ret values function encode-byte-code bcode:code
   const-to-idx-vec]) filter keyword-arg?]) length]) length]) make-code-emitter
-  lastcdr lambda-vars filter #.pair? lambda])] #0=[#:g701 ()])
+  lastcdr lambda-vars filter #.pair? lambda])] #0=[#:g705 ()])
 	  compile-for #fn(":000r5e0g4316X0e1|}^g2342e1|}^g3342e1|}^g4342e2|c342;e4c541;" [1arg-lambda?
   compile-in emit for error "for: third form must be a 1-argument lambda"] compile-for)
 	  compile-if #fn("<000r4c0qe1|31e1|31g3\x84e2g331e3g331F6;0e4g331530^45;" [#fn("=000r5g2]\x82>0e0~\x7fi02g344;g2^\x82>0e0~\x7fi02g444;e0~\x7f^g2342e1~c2|332e0~\x7fi02g3342i026<0e1~c3325:0e1~c4}332e5~|322e0~\x7fi02g4342e5~}42;" [compile-in
@@ -212,7 +216,8 @@
 	  filter #fn("7000r2c0q^41;" [#fn("9000r1c0qm02|~\x7f_L143;" [#fn("9000r3g2^}F6S02i10}M316?0g2}M_KPNm2530^2}Nm15\f/2N;" [] filter-)])] filter)
 	  fits-i8 #fn("8000r1|I16F02e0|b\xb03216:02e1|b\xaf42;" [>= <=] fits-i8)
 	  foldl #fn(";000r3g2\x8540};e0||g2M}32g2N43;" [foldl] foldl) foldr
-	  #fn("<000r3g2\x8540};|g2Me0|}g2N3342;" [foldr] foldr) for-each #fn("8000r2}F6@0|}M312e0|}N42;];" [for-each] for-each)
+	  #fn("<000r3g2\x8540};|g2Me0|}g2N3342;" [foldr] foldr) for-each #fn(";000s2c0q^41;" [#fn(";000r1c0qm02i02\x85J0^\x7fF6A02~\x7fM312\x7fNo015\x1e/5;0|~\x7fi02K322];" [#fn(":000r2}MF6I0|e0c1}32Q22~|e0c2}3242;^;" [map
+  #.car #.cdr] for-each-n)])] for-each)
 	  get-defined-vars #fn("8000r1e0~|3141;" [delete-duplicates] #1=[#fn(":000r1|?640_;|Mc0<16602|NF6d0|\x84C16702|\x84L117S02|\x84F16E02e1|31C16:02e1|31L117402_;|Mc2\x82>0e3e4~|N32v2;_;" [define
   caadr begin nconc map] #1#) ()])
 	  hex5 #fn("9000r1e0e1|b@32b5c243;" [string.lpad number->string #\0] hex5)
