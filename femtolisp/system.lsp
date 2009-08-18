@@ -29,9 +29,23 @@
 
 (define (set s v) (%eval (list 'set! s (list 'quote v))))
 
-(define (map f lst)
-  (if (atom? lst) lst
-      (cons (f (car lst)) (map f (cdr lst)))))
+(define (map1 f lst acc)
+  (cdr
+   (prog1 acc
+    (while (pair? lst)
+	   (begin (set! acc
+			(cdr (set-cdr! acc (cons (f (car lst)) ()))))
+		  (set! lst (cdr lst)))))))
+
+(define (map f lst . lsts)
+  (define (mapn f lsts)
+    (if (null? (car lsts))
+	()
+	(cons (apply f (map1 car lsts (list ())))
+	      (mapn  f (map1 cdr lsts (list ()))))))
+  (if (null? lsts)
+      (map1 f lst (list ()))
+      (mapn f (cons lst lsts))))
 
 (define-macro (label name fn)
   (list (list 'lambda (list name) (list 'set! name fn)) #f))
@@ -68,10 +82,19 @@
 		 (list 'or
 		       (car clause)
 		       (cond-clauses->if (cdr lst)))
-		 (list 'if
-		       (car clause)
-		       (cons 'begin (cdr clause))
-		       (cond-clauses->if (cdr lst))))))
+		 ; test => expression
+		 (if (eq? (cadr clause) '=>)
+		     ; test => proc
+		     ((lambda (b)
+			(list 'let (list (list b (car clause)))
+			      (list 'if b
+				    (list (caddr clause) b)
+				    (cond-clauses->if (cdr lst)))))
+		      (gensym))
+		     (list 'if
+			   (car clause)
+			   (cons 'begin (cdr clause))
+			   (cond-clauses->if (cdr lst)))))))
        (car lst))))
 (define-macro (cond . clauses)
   (cond-clauses->if clauses))
@@ -487,6 +510,16 @@
 	     (for-each f (cdr l)))
       #t))
 
+(define-macro (with-bindings binds . body)
+  (let ((vars (map car binds))
+	(vals (map cadr binds))
+	(olds (map (lambda (x) (gensym)) binds)))
+    `(let ,(map list olds vars)
+       ,@(map (lambda (v val) `(set! ,v ,val)) vars vals)
+       (unwind-protect
+	(begin ,@body)
+	(begin ,@(map (lambda (v old) `(set! ,v ,old)) vars olds))))))
+
 ; exceptions ------------------------------------------------------------------
 
 (define (error . args) (raise (cons 'error args)))
@@ -562,6 +595,10 @@
 (define (println . args) (prog1 (apply print args) (newline)))
 
 (define (io.readline s) (io.readuntil s #\x0a))
+
+(define-macro (with-output-to stream . body)
+  `(with-bindings ((*output-stream* ,stream))
+		  ,@body))
 
 ; vector functions ------------------------------------------------------------
 
