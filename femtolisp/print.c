@@ -166,7 +166,7 @@ static inline int tinyp(value_t v)
 {
     if (issymbol(v))
         return (u8_strwidth(symbol_name(v)) < SMALL_STR_LEN);
-    if (isstring(v))
+    if (fl_isstring(v))
         return (cv_len((cvalue_t*)ptr(v)) < SMALL_STR_LEN);
     return (isfixnum(v) || isbuiltin(v));
 }
@@ -174,7 +174,7 @@ static inline int tinyp(value_t v)
 static int smallp(value_t v)
 {
     if (tinyp(v)) return 1;
-    if (isnumber(v)) return 1;
+    if (fl_isnumber(v)) return 1;
     if (iscons(v)) {
         if (tinyp(car_(v)) && (tinyp(cdr_(v)) ||
                                (iscons(cdr_(v)) && tinyp(car_(cdr_(v))) &&

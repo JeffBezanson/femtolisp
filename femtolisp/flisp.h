@@ -280,9 +280,9 @@ value_t cvalue_string(size_t sz);
 value_t cvalue_static_cstring(const char *str);
 value_t string_from_cstr(char *str);
 value_t string_from_cstrn(char *str, size_t n);
-int isstring(value_t v);
-int isnumber(value_t v);
-int isiostream(value_t v);
+int fl_isstring(value_t v);
+int fl_isnumber(value_t v);
+int fl_isiostream(value_t v);
 value_t cvalue_compare(value_t a, value_t b);
 int numeric_compare(value_t a, value_t b, int eq, int eqnans, char *fname);
 

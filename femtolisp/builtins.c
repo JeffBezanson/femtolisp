@@ -127,7 +127,7 @@ static value_t fl_exit(value_t *args, u_int32_t nargs)
 static value_t fl_symbol(value_t *args, u_int32_t nargs)
 {
     argcount("symbol", nargs, 1);
-    if (!isstring(args[0]))
+    if (!fl_isstring(args[0]))
         type_error("symbol", "string", args[0]);
     return symbol(cvalue_data(args[0]));
 }

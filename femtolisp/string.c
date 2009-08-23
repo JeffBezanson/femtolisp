@@ -19,7 +19,7 @@
 value_t fl_stringp(value_t *args, u_int32_t nargs)
 {
     argcount("string?", nargs, 1);
-    return isstring(args[0]) ? FL_T : FL_F;
+    return fl_isstring(args[0]) ? FL_T : FL_F;
 }
 
 value_t fl_string_count(value_t *args, u_int32_t nargs)
@@ -27,7 +27,7 @@ value_t fl_string_count(value_t *args, u_int32_t nargs)
     size_t start = 0;
     if (nargs < 1 || nargs > 3)
         argcount("string.count", nargs, 1);
-    if (!isstring(args[0]))
+    if (!fl_isstring(args[0]))
         type_error("string.count", "string", args[0]);
     size_t len = cv_len((cvalue_t*)ptr(args[0]));
     size_t stop = len;
@@ -66,7 +66,7 @@ value_t fl_string_width(value_t *args, u_int32_t nargs)
 value_t fl_string_reverse(value_t *args, u_int32_t nargs)
 {
     argcount("string.reverse", nargs, 1);
-    if (!isstring(args[0]))
+    if (!fl_isstring(args[0]))
         type_error("string.reverse", "string", args[0]);
     size_t len = cv_len((cvalue_t*)ptr(args[0]));
     value_t ns = cvalue_string(len);
@@ -102,7 +102,7 @@ value_t fl_string_decode(value_t *args, u_int32_t nargs)
     else {
         argcount("string.decode", nargs, 1);
     }
-    if (!isstring(args[0]))
+    if (!fl_isstring(args[0]))
         type_error("string.decode", "string", args[0]);
     cvalue_t *cv = (cvalue_t*)ptr(args[0]);
     char *ptr = (char*)cv_data(cv);
@@ -123,7 +123,7 @@ extern value_t stream_to_string(value_t *ps);
 
 value_t fl_string(value_t *args, u_int32_t nargs)
 {
-    if (nargs == 1 && isstring(args[0]))
+    if (nargs == 1 && fl_isstring(args[0]))
         return args[0];
     value_t arg, buf = fl_buffer(NULL, 0);
     ios_t *s = value2c(ios_t*,buf);
@@ -276,7 +276,7 @@ value_t fl_string_find(value_t *args, u_int32_t nargs)
     else if (iscprim(v) && cp_class(cp) == bytetype) {
         return mem_find_byte(s, *(char*)cp_data(cp), start, len);
     }
-    else if (isstring(v)) {
+    else if (fl_isstring(v)) {
         cvalue_t *cv = (cvalue_t*)ptr(v);
         needlesz = cv_len(cv);
         needle = (char*)cv_data(cv);

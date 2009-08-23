@@ -38,7 +38,7 @@ void relocate_iostream(value_t oldv, value_t newv)
 cvtable_t iostream_vtable = { print_iostream, relocate_iostream,
                               free_iostream, NULL };
 
-int isiostream(value_t v)
+int fl_isiostream(value_t v)
 {
     return iscvalue(v) && cv_class((cvalue_t*)ptr(v)) == iostreamtype;
 }
@@ -46,7 +46,7 @@ int isiostream(value_t v)
 value_t fl_iostreamp(value_t *args, uint32_t nargs)
 {
     argcount("iostream?", nargs, 1);
-    return isiostream(args[0]) ? FL_T : FL_F;
+    return fl_isiostream(args[0]) ? FL_T : FL_F;
 }
 
 value_t fl_eof_object(value_t *args, uint32_t nargs)
@@ -64,7 +64,7 @@ value_t fl_eof_objectp(value_t *args, uint32_t nargs)
 
 static ios_t *toiostream(value_t v, char *fname)
 {
-    if (!isiostream(v))
+    if (!fl_isiostream(v))
         type_error(fname, "iostream", v);
     return value2c(ios_t*, v);
 }

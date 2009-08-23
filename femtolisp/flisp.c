@@ -214,6 +214,7 @@ void bounds_error(char *fname, value_t arr, value_t ind)
 
 // safe cast operators --------------------------------------------------------
 
+#define isstring fl_isstring
 #define SAFECAST_OP(type,ctype,cnvt)                                          \
 ctype to##type(value_t v, char *fname)                                        \
 {                                                                             \
@@ -226,6 +227,7 @@ SAFECAST_OP(symbol,symbol_t*,ptr)
 SAFECAST_OP(fixnum,fixnum_t, numval)
 SAFECAST_OP(cvalue,cvalue_t*,ptr)
 SAFECAST_OP(string,char*,    cvalue_data)
+#undef isstring
 
 // symbol table ---------------------------------------------------------------
 
@@ -711,7 +713,7 @@ value_t fl_cons(value_t a, value_t b)
     return c;
 }
 
-int isnumber(value_t v)
+int fl_isnumber(value_t v)
 {
     if (isfixnum(v)) return 1;
     if (iscprim(v)) {
@@ -1235,7 +1237,7 @@ static value_t apply_cl(uint32_t nargs)
             Stack[SP-1] = (issymbol(Stack[SP-1]) ? FL_T : FL_F); NEXT_OP;
         OP(OP_NUMBERP)
             v = Stack[SP-1];
-            Stack[SP-1] = (isnumber(v) ? FL_T:FL_F); NEXT_OP;
+            Stack[SP-1] = (fl_isnumber(v) ? FL_T:FL_F); NEXT_OP;
         OP(OP_FIXNUMP)
             Stack[SP-1] = (isfixnum(Stack[SP-1]) ? FL_T : FL_F); NEXT_OP;
         OP(OP_BOUNDP)
@@ -1947,7 +1949,7 @@ static value_t fl_function(value_t *args, uint32_t nargs)
 {
     if (nargs < 2 || nargs > 4)
         argcount("function", nargs, 2);
-    if (!isstring(args[0]))
+    if (!fl_isstring(args[0]))
         type_error("function", "string", args[0]);
     if (!isvector(args[1]))
         type_error("function", "vector", args[1]);

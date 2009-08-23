@@ -220,7 +220,7 @@ value_t string_from_cstr(char *str)
     return string_from_cstrn(str, strlen(str));
 }
 
-int isstring(value_t v)
+int fl_isstring(value_t v)
 {
     return (iscvalue(v) && cv_isstr((cvalue_t*)ptr(v)));
 }
