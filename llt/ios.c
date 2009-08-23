@@ -247,6 +247,8 @@ static size_t _ios_read(ios_t *s, char *dest, size_t n, int all)
         if (s->bm == bm_mem || s->fd == -1) {
             // can't get any more data
             s->bpos += avail;
+            if (avail == 0 && n > 0)
+                s->_eof = 1;
             return avail;
         }
         
@@ -450,7 +452,7 @@ size_t ios_trunc(ios_t *s, size_t size)
 int ios_eof(ios_t *s)
 {
     if (s->bm == bm_mem)
-        return (s->bpos >= s->size);
+        return (s->_eof ? 1 : 0);
     if (s->fd == -1)
         return 1;
     if (s->_eof)
@@ -817,6 +819,7 @@ int ios_ungetc(int c, ios_t *s)
     if (s->bpos > 0) {
         s->bpos--;
         s->buf[s->bpos] = (char)c;
+        s->_eof = 0;
         return c;
     }
     if (s->size == s->maxsize) {
@@ -826,6 +829,7 @@ int ios_ungetc(int c, ios_t *s)
     memmove(s->buf + 1, s->buf, s->size);
     s->buf[0] = (char)c;
     s->size++;
+    s->_eof = 0;
     return c;
 }
 
@@ -853,6 +857,29 @@ int ios_getutf8(ios_t *s, uint32_t *pwc)
     size_t i = s->bpos;
     *pwc = u8_nextchar(s->buf, &i);
     ios_read(s, buf, sz+1);
+    return 1;
+}
+
+int ios_peekutf8(ios_t *s, uint32_t *pwc)
+{
+    int c;
+    size_t sz;
+    char c0;
+    char buf[8];
+
+    c = ios_peekc(s);
+    if (c == IOS_EOF)
+        return IOS_EOF;
+    c0 = (char)c;
+    sz = u8_seqlen(&c0)-1;
+    if (sz == 0) {
+        *pwc = (uint32_t)c0;
+        return 1;
+    }
+    if (ios_readprep(s, sz) < sz)
+        return IOS_EOF;
+    size_t i = s->bpos;
+    *pwc = u8_nextchar(s->buf, &i);
     return 1;
 }
 

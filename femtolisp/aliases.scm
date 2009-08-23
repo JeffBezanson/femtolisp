@@ -13,6 +13,7 @@
 			    (equal? (car x) "noexpand"))
 		       (cadr x)
 		       x)))))
+(define (command-line) *argv*)
 
 (define gensym
   (let (($gensym gensym))
@@ -61,6 +62,8 @@
 (define char>? >)
 (define char<=? <=)
 (define char>=? >=)
+(define (char-whitespace? c) (not (not (string.find *whitespace* c))))
+(define (char-numeric? c) (not (not (string.find "0123456789" c))))
 
 (define string=? eqv?)
 (define string<? <)
@@ -94,6 +97,7 @@
 (define close-input-port io.close)
 (define close-output-port io.close)
 (define (read-char (s *input-stream*)) (io.getc s))
+(define (peek-char (s *input-stream*)) (io.peekc s))
 (define (write-char c (s *output-stream*)) (io.putc s c))
 (define (port-eof? p) (io.eof? p))
 (define (open-input-string str)
@@ -109,8 +113,9 @@
 (define (get-output-string b)
   (let ((p (io.pos b)))
     (io.seek b 0)
-    (prog1 (io.readall b)
-	   (io.seek b p))))
+    (let ((s (io.readall b)))
+      (io.seek b p)
+      (if (eof-object? s) "" s))))
 
 (define (open-input-file name) (file name :read))
 (define (open-output-file name) (file name :write :create))

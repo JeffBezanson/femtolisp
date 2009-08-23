@@ -134,6 +134,16 @@ value_t fl_iogetc(value_t *args, u_int32_t nargs)
     return mk_wchar(wc);
 }
 
+value_t fl_iopeekc(value_t *args, u_int32_t nargs)
+{
+    argcount("io.peekc", nargs, 1);
+    ios_t *s = toiostream(args[0], "io.peekc");
+    uint32_t wc;
+    if (ios_peekutf8(s, &wc) == IOS_EOF)
+        return FL_EOF;
+    return mk_wchar(wc);
+}
+
 value_t fl_ioputc(value_t *args, u_int32_t nargs)
 {
     argcount("io.putc", nargs, 2);
@@ -397,6 +407,7 @@ static builtinspec_t iostreamfunc_info[] = {
     { "io.pos",   fl_iopos },
     { "io.getc" , fl_iogetc },
     { "io.putc" , fl_ioputc },
+    { "io.peekc" , fl_iopeekc },
     { "io.discardbuffer", fl_iopurge },
     { "io.read", fl_ioread },
     { "io.write", fl_iowrite },

@@ -713,7 +713,12 @@ value_t fl_cons(value_t a, value_t b)
 
 int isnumber(value_t v)
 {
-    return (isfixnum(v) || iscprim(v));
+    if (isfixnum(v)) return 1;
+    if (iscprim(v)) {
+        cprim_t *c = (cprim_t*)ptr(v);
+        return c->type != wchartype;
+    }
+    return 0;
 }
 
 // read -----------------------------------------------------------------------
@@ -1230,7 +1235,7 @@ static value_t apply_cl(uint32_t nargs)
             Stack[SP-1] = (issymbol(Stack[SP-1]) ? FL_T : FL_F); NEXT_OP;
         OP(OP_NUMBERP)
             v = Stack[SP-1];
-            Stack[SP-1] = (isfixnum(v) || iscprim(v) ? FL_T:FL_F); NEXT_OP;
+            Stack[SP-1] = (isnumber(v) ? FL_T:FL_F); NEXT_OP;
         OP(OP_FIXNUMP)
             Stack[SP-1] = (isfixnum(Stack[SP-1]) ? FL_T : FL_F); NEXT_OP;
         OP(OP_BOUNDP)
@@ -2145,6 +2150,7 @@ static void lisp_init(void)
     }
     setc(symbol("eq"), builtin(OP_EQ));
     setc(symbol("procedure?"), builtin(OP_FUNCTIONP));
+    setc(symbol("top-level-bound?"), builtin(OP_BOUNDP));
 
 #ifdef LINUX
     setc(symbol("*os-name*"), symbol("linux"));

@@ -54,7 +54,7 @@
   * (nconc x) => x  for any x
   . (copy-list (list|append|nconc ...)) => (list|append|nconc ...)
   * (apply vector (list ...)) => (vector ...)
-  . (nconc (cons x nil) y) => (cons x y)
+  * (nconc (cons x nil) y) => (cons x y)
 * let form without initializers (let (a b) ...), defaults to nil
 * print (quote a) as 'a, same for ` etc.
 
@@ -975,7 +975,7 @@ consolidated todo list as of 7/8:
 * fix make-system-image to save aliases of builtins
 * reading named characters, e.g. #\newline etc.
 - #+, #- reader macros
-- printing improvements: *print-big*, keep track of horiz. position
+- printing improvements: *print-length*, keep track of horiz. position
   per-stream so indenting works across print calls
 - remaining c types
 - remaining cvalues functions
