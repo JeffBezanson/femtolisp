@@ -31,6 +31,20 @@
 
 /* OS-level primitive wrappers */
 
+#if defined(MACOSX) || defined(MACINTEL)
+void *memrchr(const void *s, int c, size_t n)
+{
+    const unsigned char *src = s + n;
+    unsigned char uc = c;
+    while (--src >= (unsigned char *) s)
+        if (*src == uc)
+            return (void *) src;
+    return NULL;
+}
+#else
+extern void *memrchr(const void *s, int c, size_t n);
+#endif
+
 static int _fd_available(long fd)
 {
 #ifndef WIN32
