@@ -18,6 +18,9 @@
 #include <stdarg.h>
 #include <wchar.h>
 #include <wctype.h>
+
+#include "dtypes.h"
+
 #ifdef WIN32
 #include <malloc.h>
 #define snprintf _snprintf

@@ -6,6 +6,13 @@
 #include <errno.h>
 
 #include "dtypes.h"
+
+#if defined(MACOSX) || defined(MACINTEL)
+#include <sys/time.h>
+#include <sys/select.h>
+#include <sys/types.h>
+#endif
+
 #include "socket.h"
 
 

@@ -16,15 +16,14 @@
 (define-macro (label name fn)
   `((lambda (,name) (set! ,name ,fn)) #f))
 
-(define (map1 f lst (acc (list ())))
-  (cdr
-   (prog1 acc
-    (while (pair? lst)
-	   (begin (set! acc
-			(cdr (set-cdr! acc (cons (f (car lst)) ()))))
-		  (set! lst (cdr lst)))))))
-
 (define (map f lst . lsts)
+  (define (map1 f lst acc)
+    (cdr
+     (prog1 acc
+      (while (pair? lst)
+	     (begin (set! acc
+					  (cdr (set-cdr! acc (cons (f (car lst)) ()))))
+				(set! lst (cdr lst)))))))
   (define (mapn f lsts)
     (if (null? (car lsts))
 	()
@@ -721,7 +720,7 @@
 			  body))
 	       (def?  (top? 'define env))
 	       (dvars (if def? (get-defined-vars body) ()))
-	       (env   (nconc (map1 list dvars) env)))
+	       (env   (nconc (map list dvars) env)))
 	  (if (not def?)
 	      (map (lambda (x) (expand-in x env)) body)
 	      (let* ((ex-nondefs    ; expand non-definitions
@@ -733,7 +732,7 @@
 			      (else
 			       (let ((form (expand-in (car body) env)))
 				 (set! env (nconc
-					    (map1 list (get-defined-vars form))
+					    (map list (get-defined-vars form))
 					    env))
 				 (cons
 				  (cons *expanded* form)
@@ -763,7 +762,7 @@
 	  (name    (lastcdr e))
 	  (body    (cddr e))
 	  (vars    (l-vars (cadr e))))
-      (let ((env   (nconc (map1 list vars) env)))
+      (let ((env   (nconc (map list vars) env)))
 	`(lambda ,(expand-lambda-list formals env)
 	   ,.(expand-body body env)
 	   . ,name))))
@@ -777,7 +776,7 @@
 	      (name    (caadr e))
 	      (body    (cddr e))
 	      (vars    (l-vars (cdadr e))))
-	  (let ((env   (nconc (map1 list vars) env)))
+	  (let ((env   (nconc (map list vars) env)))
 	    `(define ,(cons name (expand-lambda-list formals env))
 	       ,.(expand-body body env))))))
   

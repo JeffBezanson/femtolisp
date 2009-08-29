@@ -79,7 +79,8 @@ static int read_numtok(char *tok, value_t *pval, int base)
     int result;
     errno = 0;
     result = isnumtok_base(tok, pval, base);
-    if (errno) lerror(ParseError, "read: overflow in numeric constant");
+    if (errno == ERANGE)
+        lerrorf(ParseError, "read: overflow in numeric constant %s", tok);
     return result;
 }
 
@@ -610,7 +611,7 @@ static value_t do_read_sexpr(value_t label)
         }
         v = symbol_value(sym);
         if (v == UNBOUND)
-            raise(list2(UnboundError, sym));
+            fl_raise(list2(UnboundError, sym));
         return apply(v, POP());
     case TOK_OPENB:
         return read_vector(label, TOK_CLOSEB);
@@ -626,7 +627,7 @@ static value_t do_read_sexpr(value_t label)
         if (issymbol(sym)) {
             v = symbol_value(sym);
             if (v == UNBOUND)
-                raise(list2(UnboundError, sym));
+                fl_raise(list2(UnboundError, sym));
             return v;
         }
         return toplevel_eval(sym);

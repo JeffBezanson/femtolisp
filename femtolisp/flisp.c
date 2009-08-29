@@ -158,7 +158,7 @@ static uint32_t throwing_frame=0;  // active frame when exception was thrown
       for (l__ca=1; l__ca; l__ca=0, \
            lasterror=NIL, throwing_frame=0, SP=_ctx.sp, curr_frame=_ctx.frame)
 
-void raise(value_t e)
+void fl_raise(value_t e)
 {
     lasterror = e;
     // unwind read state
@@ -191,7 +191,7 @@ void lerrorf(value_t e, char *format, ...)
     va_end(args);
 
     e = POP();
-    raise(list2(e, msg));
+    fl_raise(list2(e, msg));
 }
 
 void lerror(value_t e, const char *msg)
@@ -199,17 +199,17 @@ void lerror(value_t e, const char *msg)
     PUSH(e);
     value_t m = cvalue_static_cstring(msg);
     e = POP();
-    raise(list2(e, m));
+    fl_raise(list2(e, m));
 }
 
 void type_error(char *fname, char *expected, value_t got)
 {
-    raise(listn(4, TypeError, symbol(fname), symbol(expected), got));
+    fl_raise(listn(4, TypeError, symbol(fname), symbol(expected), got));
 }
 
 void bounds_error(char *fname, value_t arr, value_t ind)
 {
-    raise(listn(4, BoundsError, symbol(fname), arr, ind));
+    fl_raise(listn(4, BoundsError, symbol(fname), arr, ind));
 }
 
 // safe cast operators --------------------------------------------------------
@@ -349,7 +349,7 @@ static value_t *alloc_words(int n)
     value_t *first;
 
     assert(n > 0);
-    n = ALIGN(n, 2);   // only allocate multiples of 2 words
+    n = LLT_ALIGN(n, 2);   // only allocate multiples of 2 words
     if (__unlikely((value_t*)curheap > ((value_t*)lim)+2-n)) {
         gc(0);
         while ((value_t*)curheap > ((value_t*)lim)+2-n) {
@@ -578,7 +578,7 @@ void gc(int mustgrow)
     if (grew || ((lim-curheap) < (int)(heapsize/5)) || mustgrow) {
         temp = realloc(tospace, grew ? heapsize : heapsize*2);
         if (temp == NULL)
-            raise(memory_exception_value);
+            fl_raise(memory_exception_value);
         tospace = temp;
         if (!grew) {
             heapsize*=2;
@@ -586,7 +586,7 @@ void gc(int mustgrow)
         else {
             temp = bitvector_resize(consflags, heapsize/sizeof(cons_t), 1);
             if (temp == NULL)
-                raise(memory_exception_value);
+                fl_raise(memory_exception_value);
             consflags = (uint32_t*)temp;
         }
         grew = !grew;
@@ -885,19 +885,23 @@ static uint32_t process_keys(value_t kwtable,
 
 #if _BYTE_ORDER == __BIG_ENDIAN
 #define GET_INT32(a)                            \
+    ((int32_t)                                  \
     ((((int32_t)a[0])<<0)  |                    \
      (((int32_t)a[1])<<8)  |                    \
      (((int32_t)a[2])<<16) |                    \
-     (((int32_t)a[3])<<24))
+     (((int32_t)a[3])<<24)))
 #define GET_INT16(a)                            \
+    ((int16_t)                                  \
     ((((int16_t)a[0])<<0)  |                    \
-     (((int16_t)a[1])<<8))
+     (((int16_t)a[1])<<8)))
 #define PUT_INT32(a,i) (*(int32_t*)(a) = bswap_32((int32_t)(i)))
 #else
 #define GET_INT32(a) (*(int32_t*)a)
 #define GET_INT16(a) (*(int16_t*)a)
 #define PUT_INT32(a,i) (*(int32_t*)(a) = (int32_t)(i))
 #endif
+#define SWAP_INT32(a) (*(int32_t*)(a) = bswap_32(*(int32_t*)(a)))
+#define SWAP_INT16(a) (*(int16_t*)(a) = bswap_16(*(int16_t*)(a)))
 
 #ifdef USE_COMPUTED_GOTO
 #define OP(x) L_##x:
@@ -1022,8 +1026,8 @@ static value_t apply_cl(uint32_t nargs)
                 v = vector_elt(Stack[bp], i);
             else
                 v = Stack[bp+i];
-            if (v != UNBOUND) ip += (ptrint_t)GET_INT32(ip);
-            else ip += 4;
+            if (v != UNBOUND) PUSH(FL_T);
+            else PUSH(FL_F);
             NEXT_OP;
         OP(OP_DUP) SP++; Stack[SP-1] = Stack[SP-2]; NEXT_OP;
         OP(OP_POP) POPN(1); NEXT_OP;
@@ -1075,7 +1079,7 @@ static value_t apply_cl(uint32_t nargs)
             }
             else if (iscbuiltin(func)) {
                 s = SP;
-                v = (((builtin_t*)ptr(func))[3])(&Stack[SP-n], n);
+                v = ((builtin_t)(((void**)ptr(func))[3]))(&Stack[SP-n], n);
                 SP = s-n;
                 Stack[SP-1] = v;
                 NEXT_OP;
@@ -1125,7 +1129,7 @@ static value_t apply_cl(uint32_t nargs)
             }
             else if (iscbuiltin(func)) {
                 s = SP;
-                v = (((builtin_t*)ptr(func))[3])(&Stack[SP-n], n);
+                v = ((builtin_t)(((void**)ptr(func))[3]))(&Stack[SP-n], n);
                 SP = s-n;
                 Stack[SP-1] = v;
                 NEXT_OP;
@@ -1579,7 +1583,7 @@ static value_t apply_cl(uint32_t nargs)
             assert(issymbol(v));
             sym = (symbol_t*)ptr(v);
             if (sym->binding == UNBOUND)
-                raise(list2(UnboundError, v));
+                fl_raise(list2(UnboundError, v));
             PUSH(sym->binding);
             NEXT_OP;
 
@@ -1787,7 +1791,7 @@ static value_t apply_cl(uint32_t nargs)
 #endif
 }
 
-static uint32_t compute_maxstack(uint8_t *code, size_t len)
+static uint32_t compute_maxstack(uint8_t *code, size_t len, int bswap)
 {
     uint8_t *ip = code+4, *end = code+len;
     uint8_t op;
@@ -1806,38 +1810,78 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len)
             sp += (n+2);
             break;
         case OP_LARGC:
+            if (bswap) SWAP_INT32(ip);
             n = GET_INT32(ip); ip+=4;
             break;
         case OP_LVARGC:
+            if (bswap) SWAP_INT32(ip);
             n = GET_INT32(ip); ip+=4;
             sp += (n+2);
             break;
         case OP_OPTARGS:
+            if (bswap) SWAP_INT32(ip);
             i = GET_INT32(ip); ip+=4;
+            if (bswap) SWAP_INT32(ip);
             n = abs(GET_INT32(ip)); ip+=4;
             sp += (n-i);
             break;
         case OP_KEYARGS:
+            if (bswap) SWAP_INT32(ip);
             i = GET_INT32(ip); ip+=4;
+            if (bswap) SWAP_INT32(ip);
             n = GET_INT32(ip); ip+=4;
+            if (bswap) SWAP_INT32(ip);
             n = abs(GET_INT32(ip)); ip+=4;
             sp += (n-i);
             break;
         case OP_BRBOUND:
-            ip+=8;
+            if (bswap) SWAP_INT32(ip);
+            ip+=4;
+            sp++;
             break;
 
         case OP_TCALL: case OP_CALL:
             n = *ip++;  // nargs
             sp -= n;
             break;
-        case OP_JMP:  ip += 2; break;
-        case OP_JMPL: ip += 4; break;
+        case OP_TCALLL: case OP_CALLL:
+            if (bswap) SWAP_INT32(ip);
+            n = GET_INT32(ip); ip+=4;
+            sp -= n;
+            break;
+        case OP_JMP:
+            if (bswap) SWAP_INT16(ip);
+            ip += 2; break;
+        case OP_JMPL:
+            if (bswap) SWAP_INT32(ip);
+            ip += 4; break;
         case OP_BRF: case OP_BRT:
+            if (bswap) SWAP_INT16(ip);
             ip+=2;
             sp--;
             break;
         case OP_BRFL: case OP_BRTL:
+            if (bswap) SWAP_INT32(ip);
+            ip += 4;
+            sp--;
+            break;
+        case OP_BRNE:
+            if (bswap) SWAP_INT16(ip);
+            ip += 2;
+            sp -= 2;
+            break;
+        case OP_BRNEL:
+            if (bswap) SWAP_INT32(ip);
+            ip += 4;
+            sp -= 2;
+            break;
+        case OP_BRNN: case OP_BRN:
+            if (bswap) SWAP_INT16(ip);
+            ip += 2;
+            sp--;
+            break;
+        case OP_BRNNL: case OP_BRNL:
+            if (bswap) SWAP_INT32(ip);
             ip += 4;
             sp--;
             break;
@@ -1886,6 +1930,7 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len)
             sp++;
             break;
         case OP_LOADVL: case OP_LOADGL: case OP_LOADAL:
+            if (bswap) SWAP_INT32(ip);
             ip+=4;
             sp++;
             break;
@@ -1894,6 +1939,7 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len)
             ip++;
             break;
         case OP_SETGL: case OP_SETAL:
+            if (bswap) SWAP_INT32(ip);
             ip+=4;
             break;
 
@@ -1901,9 +1947,17 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len)
         case OP_SETC:
             ip+=2;
             break;
-        case OP_LOADCL: ip+=8; sp++; break;
+        case OP_LOADCL:
+            if (bswap) SWAP_INT32(ip);
+            ip+=4;
+            if (bswap) SWAP_INT32(ip);
+            ip+=4;
+            sp++; break;
         case OP_SETCL:
-            ip+=8;
+            if (bswap) SWAP_INT32(ip);
+            ip+=4;
+            if (bswap) SWAP_INT32(ip);
+            ip+=4;
             break;
         }
     }
@@ -1956,13 +2010,19 @@ static value_t fl_function(value_t *args, uint32_t nargs)
     cvalue_t *arr = (cvalue_t*)ptr(args[0]);
     cv_pin(arr);
     char *data = cv_data(arr);
+    int swap = 0;
     if ((uint8_t)data[4] >= N_OPCODES) {
         // read syntax, shifted 48 for compact text representation
         size_t i, sz = cv_len(arr);
         for(i=0; i < sz; i++)
             data[i] -= 48;
     }
-    uint32_t ms = compute_maxstack((uint8_t*)data, cv_len(arr));
+    else {
+#if _BYTE_ORDER == __BIG_ENDIAN
+        swap = 1;
+#endif
+    }
+    uint32_t ms = compute_maxstack((uint8_t*)data, cv_len(arr), swap);
     PUT_INT32(data, ms);
     function_t *fn = (function_t*)alloc_words(4);
     value_t fv = tagptr(fn, TAG_FUNCTION);

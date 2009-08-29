@@ -8,6 +8,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "dtypes.h"
+
 #ifdef WIN32
 #include <malloc.h>
 #include <sys/timeb.h>
@@ -18,7 +20,6 @@
 #include <unistd.h>
 #endif
 
-#include "dtypes.h"
 #include "timefuncs.h"
 
 #ifdef WIN32

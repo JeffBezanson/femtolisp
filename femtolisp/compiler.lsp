@@ -168,9 +168,6 @@
 		       (set! i (+ i 1)))
 		      ((eq? vi 'brbound)
 		       (io.write bcode (int32 nxt))
-		       (set! i (+ i 1))
-		       (put! fixup-to-label (sizeof bcode) (aref v i))
-		       (io.write bcode (int32 0))
 		       (set! i (+ i 1)))
 		      ((number? nxt)
 		       (case vi
@@ -549,7 +546,8 @@
   ; i is the lexical var index of the opt arg to process next
   (if (pair? opta)
       (let ((nxt (make-label g)))
-	(emit g 'brbound i nxt)
+	(emit g 'brbound i)
+	(emit g 'brt nxt)
 	(compile-in g (cons (list-head vars i) env) #f (cadar opta))
 	(emit g 'seta i)
 	(emit g 'pop)
@@ -701,8 +699,6 @@
 		 
 		 ((brbound)
 		  (princ (number->string (ref-int32-LE code i)) " ")
-		  (set! i (+ i 4))
-		  (princ "@" (hex5 (+ i -4 (ref-int32-LE code i))))
 		  (set! i (+ i 4)))
 		 
 		 ((jmp brf brt brne brnn brn)

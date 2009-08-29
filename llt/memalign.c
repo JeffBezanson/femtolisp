@@ -12,7 +12,7 @@ static void *aligned_ptr(char *ptr, size_t align_size)
     char *ptr2, *aligned_ptr;
 
     ptr2 = ptr + sizeof(long);
-    aligned_ptr = (char*)ALIGN(((uptrint_t)ptr2), align_size);
+    aligned_ptr = (char*)LLT_ALIGN(((uptrint_t)ptr2), align_size);
 
     ((long*)aligned_ptr)[-1] = (long)(aligned_ptr - ptr);
 

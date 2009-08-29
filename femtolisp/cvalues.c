@@ -495,7 +495,7 @@ static size_t cvalue_struct_offs(value_t type, value_t field, int computeTotal,
     while (iscons(fld)) {
         fsz = ctype_sizeof(car(cdr(car_(fld))), &al);
 
-        ssz = ALIGN(ssz, al);
+        ssz = LLT_ALIGN(ssz, al);
         if (al > *palign)
             *palign = al;
 
@@ -507,7 +507,7 @@ static size_t cvalue_struct_offs(value_t type, value_t field, int computeTotal,
         ssz += fsz;
         fld = cdr_(fld);
     }
-    return ALIGN(ssz, *palign);
+    return LLT_ALIGN(ssz, *palign);
 }
 
 static size_t cvalue_union_size(value_t type, int *palign)
@@ -523,7 +523,7 @@ static size_t cvalue_union_size(value_t type, int *palign)
         if (fsz > usz) usz = fsz;
         fld = cdr_(fld);
     }
-    return ALIGN(usz, *palign);
+    return LLT_ALIGN(usz, *palign);
 }
 
 // *palign is an output argument giving the alignment required by type

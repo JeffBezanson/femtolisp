@@ -7,6 +7,8 @@
 #include <wchar.h>
 #include <stdio.h> // for printf
 
+#include "dtypes.h"
+
 #ifdef WIN32
 #include <malloc.h>
 #include <io.h>
@@ -20,7 +22,6 @@
 #include <fcntl.h>
 #endif
 
-#include "dtypes.h"
 #include "utils.h"
 #include "utf8.h"
 #include "ios.h"

@@ -110,10 +110,10 @@ static value_t fl_length(value_t *args, u_int32_t nargs)
     type_error("length", "sequence", a);
 }
 
-static value_t fl_raise(value_t *args, u_int32_t nargs)
+static value_t fl_f_raise(value_t *args, u_int32_t nargs)
 {
     argcount("raise", nargs, 1);
-    raise(args[0]);
+    fl_raise(args[0]);
 }
 
 static value_t fl_exit(value_t *args, u_int32_t nargs)
@@ -144,7 +144,7 @@ static value_t fl_top_level_value(value_t *args, u_int32_t nargs)
     argcount("top-level-value", nargs, 1);
     symbol_t *sym = tosymbol(args[0], "top-level-value");
     if (sym->binding == UNBOUND)
-        raise(list2(UnboundError, args[0]));
+        fl_raise(list2(UnboundError, args[0]));
     return sym->binding;
 }
 
@@ -381,7 +381,12 @@ static value_t fl_os_setenv(value_t *args, uint32_t nargs)
     char *name = tostring(args[0], "os.setenv");
     int result;
     if (args[1] == FL_F) {
+#ifdef LINUX
         result = unsetenv(name);
+#else
+        (void)unsetenv(name);
+        result = 0;
+#endif
     }
     else {
         char *val = tostring(args[1], "os.setenv");
@@ -439,7 +444,7 @@ static builtinspec_t builtin_info[] = {
     { "constant?", fl_constantp },
     { "top-level-value", fl_top_level_value },
     { "set-top-level-value!", fl_set_top_level_value },
-    { "raise", fl_raise },
+    { "raise", fl_f_raise },
     { "exit", fl_exit },
     { "symbol", fl_symbol },
     { "keyword?", fl_keywordp },

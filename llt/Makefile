@@ -10,7 +10,7 @@ TARGET = libllt.a
 TESTSRC = unittest.c
 TESTER = llttest
 
-FLAGS = -Wall -Wextra -Wno-strict-aliasing $(CFLAGS)
+FLAGS = -Wall -Wno-strict-aliasing $(CFLAGS)
 LIBS =
 
 DEBUGFLAGS = -g -DDEBUG $(FLAGS)

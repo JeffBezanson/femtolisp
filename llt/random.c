@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-#include "ieee754.h"
 #include "dtypes.h"
+#include "ieee754.h"
 #include "utils.h"
 #include "random.h"
 #include "timefuncs.h"

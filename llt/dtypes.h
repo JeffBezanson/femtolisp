@@ -85,7 +85,7 @@ typedef u_int32_t uint32_t;
 typedef u_int64_t uint64_t;
 typedef u_ptrint_t uptrint_t;
 
-#define ALIGN(x, sz) (((x) + (sz-1)) & (-sz))
+#define LLT_ALIGN(x, sz) (((x) + (sz-1)) & (-sz))
 
 // branch prediction annotations
 #ifdef __GNUC__
