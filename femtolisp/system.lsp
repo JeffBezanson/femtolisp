@@ -22,8 +22,8 @@
      (prog1 acc
       (while (pair? lst)
 	     (begin (set! acc
-					  (cdr (set-cdr! acc (cons (f (car lst)) ()))))
-				(set! lst (cdr lst)))))))
+			  (cdr (set-cdr! acc (cons (f (car lst)) ()))))
+		    (set! lst (cdr lst)))))))
   (define (mapn f lsts)
     (if (null? (car lsts))
 	()

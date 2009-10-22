@@ -19,6 +19,12 @@
   (let (($gensym gensym))
     (lambda ((x #f)) ($gensym))))
 
+(define-macro (begin0 first . rest)
+  (let ((g (gensym)))
+    `(let ((,g ,first))
+       ,@rest
+       ,g)))
+
 (define vector-ref aref)
 (define vector-set! aset!)
 (define vector-length length)
@@ -94,11 +100,13 @@
 
 (define (input-port? x) (iostream? x))
 (define (output-port? x) (iostream? x))
+(define (port? x) (iostream? x))
 (define close-input-port io.close)
 (define close-output-port io.close)
 (define (read-char (s *input-stream*)) (io.getc s))
 (define (peek-char (s *input-stream*)) (io.peekc s))
 (define (write-char c (s *output-stream*)) (io.putc s c))
+; TODO: unread-char
 (define (port-eof? p) (io.eof? p))
 (define (open-input-string str)
   (let ((b (buffer)))
@@ -237,3 +245,15 @@
 	(lambda (sym key)
 	  (let ((sp (get *properties* sym #f)))
 	    (and sp (has? sp key) (del! sp key))))))
+
+; --- gambit
+#|
+(define (with-exception-catcher hand thk)
+  (trycatch (thk)
+	    (lambda (e) (hand e))))
+
+(define make-table table)
+(define table-ref get)
+(define table-set! put!)
+(define read-line io.readline)
+|#

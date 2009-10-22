@@ -814,7 +814,7 @@ static value_t do_trycatch()
 /*
   argument layout on stack is
   |--required args--|--opt args--|--kw args--|--rest args...
- */
+*/
 static uint32_t process_keys(value_t kwtable,
                              uint32_t nreq, uint32_t nkw, uint32_t nopt,
                              uint32_t bp, uint32_t nargs, int va)
@@ -2215,13 +2215,13 @@ static void lisp_init(void)
     setc(symbol("top-level-bound?"), builtin(OP_BOUNDP));
 
 #ifdef LINUX
-    setc(symbol("*os-name*"), symbol("linux"));
+    set(symbol("*os-name*"), symbol("linux"));
 #elif defined(WIN32) || defined(WIN64)
-    setc(symbol("*os-name*"), symbol("win32"));
+    set(symbol("*os-name*"), symbol("win32"));
 #elif defined(MACOSX)
-    setc(symbol("*os-name*"), symbol("macos"));
+    set(symbol("*os-name*"), symbol("macos"));
 #else
-    setc(symbol("*os-name*"), symbol("unknown"));
+    set(symbol("*os-name*"), symbol("unknown"));
 #endif
 
     the_empty_vector = tagptr(alloc_words(1), TAG_VECTOR);
