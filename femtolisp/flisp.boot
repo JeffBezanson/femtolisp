@@ -36,7 +36,7 @@
 	  <= #fn("7000r2|}X17602|}W;" [] <=) >
 	  #fn("7000r2}|X;" [] >) >= #fn("7000r2}|X17602|}W;" [] >=)
 	  Instructions #table(not 16  vargc 67  load1 49  = 39  setc.l 64  sub2 72  brne.l 83  largc 74  brnn 85  loadc.l 58  loadi8 50  < 40  nop 0  set-cdr! 32  loada 55  bound? 21  / 37  neg 73  brn.l 88  lvargc 75  brt 7  trycatch 68  null? 17  load0 48  jmp.l 8  loadv 51  seta 61  keyargs 91  * 36  function? 26  builtin? 23  aref 43  optargs 89  vector? 24  loadt 45  brf 6  symbol? 19  cdr 30  for 69  loadc00 78  pop 2  pair? 22  cadr 84  closure 65  loadf 46  compare 41  loadv.l 52  setg.l 60  brn 87  eqv? 13  aset! 44  eq? 12  atom? 15  boolean? 18  brt.l 10  tapply 70  dummy_nil 94  loada0 76  brbound 90  list 28  dup 1  apply 33  loadc 57  loadc01 79  dummy_t 92  setg 59  loada1 77  tcall.l 81  jmp 5  fixnum? 25  cons 27  loadg.l 54  tcall 4  call 3  - 35  brf.l 9  + 34  dummy_f 93  add2 71  seta.l 62  loadnil 47  brnn.l 86  setc 63  set-car! 31  vector 42  loadg 53  loada.l 56  argc 66  div0 38  ret 11  number? 20  equal? 14  car 29  call.l 80  brne 82)
-	  __init_globals #fn("7000r0c0c1<17B02c0c2<17802c0c3<6>0c4k52c6k75;0c8k52c9k72e:k;2e<k=2e>k?;" [linux
+	  __init_globals #fn("7000r0e0c1<17B02e0c2<17802e0c3<6>0c4k52c6k75;0c8k52c9k72e:k;2e<k=2e>k?;" [*os-name*
   win32 win64 windows "\\" *directory-separator* "\r\n" *linefeed* "/" "\n"
   *stdout* *output-stream* *stdin* *input-stream* *stderr* *error-stream*] __init_globals)
 	  __script #fn("7000r1c0qc1t;" [#fn("7000r0e0~41;" [load])
@@ -275,7 +275,7 @@
 						    *print-width*
 						    *print-readably*
 						    *print-level*
-						    *print-length*)] make-system-image)
+						    *print-length* *os-name*)] make-system-image)
 	  map #fn("<000s2c0q^^42;" [#fn("9000r2c0m02c1qm12i02\x85;0|~\x7f_L143;}~\x7fi02K42;" [#fn("9000r3g2^}F6H02g2|}M31_KPNm22}Nm15\x17/2N;" [] map1)
   #fn("<000r2}M\x8540_;|~c0}_L133Q2\x7f|~c1}_L13332K;" [#.car #.cdr] mapn)])] map)
 	  map! #fn("9000r2}^}F6B02}|}M31O2}Nm15\x1d/2;" [] map!) map-int

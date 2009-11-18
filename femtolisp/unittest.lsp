@@ -57,6 +57,9 @@
 
 (assert (= (- 4999950000 4999941999) 8001))
 
+(assert (not (eqv? 10 #\newline)))
+(assert (not (eqv? #\newline 10)))
+
 ; tricky cases involving INT_MIN
 (assert (< (- #uint32(0x80000000)) 0))
 (assert (> (- #int32(0x80000000)) 0))

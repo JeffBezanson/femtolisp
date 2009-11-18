@@ -64,6 +64,8 @@ static value_t bounded_compare(value_t a, value_t b, int bound, int eq)
             return (numval(a) < numval(b)) ? fixnum(-1) : fixnum(1);
         }
         if (iscprim(b)) {
+            if (cp_class((cprim_t*)ptr(b)) == wchartype)
+                return fixnum(1);
             return fixnum(numeric_compare(a, b, eq, 1, NULL));
         }
         return fixnum(-1);
@@ -77,6 +79,10 @@ static value_t bounded_compare(value_t a, value_t b, int bound, int eq)
             return bounded_vector_compare(a, b, bound, eq);
         break;
     case TAG_CPRIM:
+        if (cp_class((cprim_t*)ptr(a)) == wchartype &&
+            (!iscprim(b) ||
+             cp_class((cprim_t*)ptr(b)) != wchartype))
+            return fixnum(-1);
         c = numeric_compare(a, b, eq, 1, NULL);
         if (c != 2)
             return fixnum(c);
@@ -306,6 +312,8 @@ static uptrint_t bounded_hash(value_t a, int bound, int *oob)
     case TAG_CPRIM:
         cp = (cprim_t*)ptr(a);
         data = cp_data(cp);
+        if (cp_class(cp) == wchartype)
+            return inthash(*(int32_t*)data);
         nt = cp_numtype(cp);
         u.d = conv_to_double(data, nt);
         return doublehash(u.i64);

@@ -281,7 +281,7 @@ static value_t fl_vector_alloc(value_t *args, u_int32_t nargs)
     value_t f, v;
     if (nargs == 0)
         lerror(ArgError, "vector.alloc: too few arguments");
-    i = tofixnum(args[0], "vector.alloc");
+    i = (fixnum_t)toulong(args[0], "vector.alloc");
     if (i < 0)
         lerror(ArgError, "vector.alloc: invalid size");
     if (nargs == 2)

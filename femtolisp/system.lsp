@@ -966,7 +966,7 @@
   (let ((f (file fname :write :create :truncate))
 	(excludes '(*linefeed* *directory-separator* *argv* that
 			       *print-pretty* *print-width* *print-readably*
-			       *print-level* *print-length*)))
+			       *print-level* *print-length* *os-name*)))
     (with-bindings ((*print-pretty* #t)
 		    (*print-readably* #t))
       (let ((syms

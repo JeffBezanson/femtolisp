@@ -49,12 +49,20 @@
 (define (rational? x) (integer? x))
 (define (exact? x) (integer? x))
 (define (inexact? x) (not (exact? x)))
+(define (flonum? x) (not (exact? x)))
 (define quotient div0)
 (define remainder mod0)
 (define (inexact x) x)
 (define (exact x)
   (if (exact? x) x
       (error "exact real numbers not supported")))
+(define (exact->inexact x) (double x))
+(define (inexact->exact x)
+  (if (integer-valued? x)
+      (truncate x)
+      (error "exact real numbers not supported")))
+(define (floor x)   (if (< x 0) (truncate (- x 0.5)) (truncate x)))
+(define (ceiling x) (if (< x 0) (truncate x) (truncate (+ x 0.5))))
 (define (finite? x) (and (< x +inf.0) (> x -inf.0)))
 (define (infinite? x) (or (equal? x +inf.0) (equal? x -inf.0)))
 (define (nan? x) (or (equal? x +nan.0) (equal? x -nan.0)))
@@ -145,6 +153,12 @@
 		  (string.inc s start count)
 		  (sizeof s))))
     (io.write port s start (- end start))))
+
+(define (io.skipws s)
+  (let ((c (io.peekc s)))
+    (if (and (not (eof-object? c)) (char-whitespace? c))
+	(begin (io.getc s)
+	       (io.skipws s)))))
 
 (define (with-output-to-file name thunk)
   (let ((f (file name :write :create :truncate)))
@@ -247,7 +261,14 @@
 	    (and sp (has? sp key) (del! sp key))))))
 
 ; --- gambit
-#|
+
+(define arithmetic-shift ash)
+(define bitwise-and logand)
+(define bitwise-or logior)
+(define bitwise-not lognot)
+(define bitwise-xor logxor)
+
+(define (include f) (load f))
 (define (with-exception-catcher hand thk)
   (trycatch (thk)
 	    (lambda (e) (hand e))))
@@ -255,5 +276,7 @@
 (define make-table table)
 (define table-ref get)
 (define table-set! put!)
-(define read-line io.readline)
-|#
+(define (read-line (s *input-stream*)) (io.readline s))
+(define (shell-command s) 1)
+(define (error-exception-message e) e)
+(define (error-exception-parameters e) e)
