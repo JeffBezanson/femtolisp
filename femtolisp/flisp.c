@@ -754,40 +754,31 @@ static value_t _list(value_t *args, uint32_t nargs, int star)
     return v;
 }
 
-#define FL_COPYLIST(l) apply_liststar((l),0)
-
-// perform (apply list* L)
-// like the function list() above, but takes arguments from a list
-// rather than from an array (the stack)
-// if !star, then it performs copy-list
-static value_t apply_liststar(value_t L, int star)
+static value_t copy_list(value_t L)
 {
-    PUSH(NIL);
+    if (!iscons(L))
+        return NIL;
     PUSH(NIL);
     PUSH(L);
-    value_t *pfirst = &Stack[SP-3];
     value_t *plcons = &Stack[SP-2];
     value_t *pL = &Stack[SP-1];
     value_t c;
+    c = mk_cons(); PUSH(c);  // save first cons
+    car_(c) = car_(*pL);
+    cdr_(c) = NIL;
+    *plcons = c;
+    *pL = cdr_(*pL);
     while (iscons(*pL)) {
-        if (!star || iscons(cdr_(*pL))) {
-            c = mk_cons();
-            car_(c) = car_(*pL);
-            cdr_(c) = NIL;
-        }
-        else {
-            // last element; becomes final CDR
-            c = car_(*pL);
-        }
-        if (*pfirst == NIL)
-            *pfirst = c;
-        else
-            cdr_(*plcons) = c;
+        c = mk_cons();
+        car_(c) = car_(*pL);
+        cdr_(c) = NIL;
+        cdr_(*plcons) = c;
         *plcons = c;
         *pL = cdr_(*pL);
     }
+    c = POP();  // first cons
     POPN(2);
-    return POP();
+    return c;
 }
 
 static value_t do_trycatch()
@@ -2082,7 +2073,7 @@ static value_t fl_function_name(value_t *args, uint32_t nargs)
 value_t fl_copylist(value_t *args, u_int32_t nargs)
 {
     argcount("copy-list", nargs, 1);
-    return FL_COPYLIST(args[0]);
+    return copy_list(args[0]);
 }
 
 value_t fl_append(value_t *args, u_int32_t nargs)
@@ -2097,7 +2088,7 @@ value_t fl_append(value_t *args, u_int32_t nargs)
         lst = args[i++];
         if (i >= nargs) break;
         if (iscons(lst)) {
-            lst = FL_COPYLIST(lst);
+            lst = copy_list(lst);
             if (first == NIL)
                 first = lst;
             else
