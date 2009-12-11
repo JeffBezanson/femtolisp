@@ -242,14 +242,22 @@ typedef struct {
     (iscprim(v) ? cp_data((cprim_t*)ptr(v)) : cv_data((cvalue_t*)ptr(v)))
 
 /* C type names corresponding to cvalues type names */
-typedef unsigned long ulong;
-typedef unsigned int  uint;
-typedef unsigned char uchar;
-typedef char char_t;
-typedef long long_t;
+typedef int8_t   fl_int8_t;
+typedef uint8_t  fl_uint8_t;
+typedef int16_t  fl_int16_t;
+typedef uint16_t fl_uint16_t;
+typedef int32_t  fl_int32_t;
+typedef uint32_t fl_uint32_t;
+typedef int64_t  fl_int64_t;
+typedef uint64_t fl_uint64_t;
+typedef char     fl_char_t;
+typedef char     char_t;
+typedef long     fl_long_t;
+typedef long     long_t;
+typedef unsigned long fl_ulong_t;
 typedef unsigned long ulong_t;
-typedef double double_t;
-typedef float float_t;
+typedef double   fl_double_t;
+typedef float    fl_float_t;
 
 typedef value_t (*builtin_t)(value_t*, uint32_t);
 
@@ -293,8 +301,8 @@ fltype_t *get_array_type(value_t eltype);
 fltype_t *define_opaque_type(value_t sym, size_t sz, cvtable_t *vtab,
                              cvinitfunc_t init);
 
-value_t mk_double(double_t n);
-value_t mk_float(float_t n);
+value_t mk_double(fl_double_t n);
+value_t mk_float(fl_float_t n);
 value_t mk_uint32(uint32_t n);
 value_t mk_uint64(uint64_t n);
 value_t mk_wchar(int32_t n);

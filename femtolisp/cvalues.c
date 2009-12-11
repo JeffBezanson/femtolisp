@@ -242,7 +242,7 @@ void cv_pin(cvalue_t *cv)
 static int cvalue_##ctype##_init(fltype_t *type, value_t arg,   \
                                  void *dest)                    \
 {                                                               \
-    ctype##_t n=0;                                              \
+    fl_##ctype##_t n=0;                                         \
     (void)type;                                                 \
     if (isfixnum(arg)) {                                        \
         n = numval(arg);                                        \
@@ -250,12 +250,12 @@ static int cvalue_##ctype##_init(fltype_t *type, value_t arg,   \
     else if (iscprim(arg)) {                                    \
         cprim_t *cp = (cprim_t*)ptr(arg);                       \
         void *p = cp_data(cp);                                  \
-        n = (ctype##_t)conv_to_##cnvt(p, cp_numtype(cp));       \
+        n = (fl_##ctype##_t)conv_to_##cnvt(p, cp_numtype(cp));  \
     }                                                           \
     else {                                                      \
         return 1;                                               \
     }                                                           \
-    *((ctype##_t*)dest) = n;                                    \
+    *((fl_##ctype##_t*)dest) = n;                               \
     return 0;                                                   \
 }
 num_init(int8, int32, T_INT8)
@@ -273,7 +273,7 @@ num_init(double, double, T_DOUBLE)
 value_t cvalue_##typenam(value_t *args, u_int32_t nargs)                \
 {                                                                       \
     if (nargs==0) { PUSH(fixnum(0)); args = &Stack[SP-1]; }             \
-    value_t cp = cprim(typenam##type, sizeof(ctype##_t));               \
+    value_t cp = cprim(typenam##type, sizeof(fl_##ctype##_t));          \
     if (cvalue_##ctype##_init(typenam##type,                            \
                               args[0], cp_data((cprim_t*)ptr(cp))))     \
         type_error(#typenam, "number", args[0]);                        \
@@ -281,10 +281,10 @@ value_t cvalue_##typenam(value_t *args, u_int32_t nargs)                \
 }
 
 #define num_ctor_ctor(typenam, ctype, tag)                              \
-value_t mk_##typenam(ctype##_t n)                                       \
+value_t mk_##typenam(fl_##ctype##_t n)                                  \
 {                                                                       \
-    value_t cp = cprim(typenam##type, sizeof(ctype##_t));               \
-    *(ctype##_t*)cp_data((cprim_t*)ptr(cp)) = n;                        \
+    value_t cp = cprim(typenam##type, sizeof(fl_##ctype##_t));          \
+    *(fl_##ctype##_t*)cp_data((cprim_t*)ptr(cp)) = n;                   \
     return cp;                                                          \
 }
 
@@ -1005,7 +1005,7 @@ static void cvalues_init()
     setc(emptystringsym, cvalue_static_cstring(""));
 }
 
-#define RETURN_NUM_AS(var, type) return(mk_##type((type##_t)var))
+#define RETURN_NUM_AS(var, type) return(mk_##type((fl_##type##_t)var))
 
 value_t return_from_uint64(uint64_t Uaccum)
 {
