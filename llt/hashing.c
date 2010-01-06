@@ -76,28 +76,3 @@ u_int32_t memhash32(char* buf, size_t n)
     hashlittle2(buf, n, &c, &b);
     return c;
 }
-
-double D_PNAN;
-double D_NNAN;
-double D_PINF;
-double D_NINF;
-float  F_PNAN;
-float  F_NNAN;
-float  F_PINF;
-float  F_NINF;
-
-void llt_init()
-{
-    randomize();
-
-    ios_init_stdstreams();
-
-    D_PNAN = strtod("+NaN",NULL);
-    D_NNAN = -strtod("+NaN",NULL);
-    D_PINF = strtod("+Inf",NULL);
-    D_NINF = strtod("-Inf",NULL);
-    F_PNAN = strtof("+NaN",NULL);
-    F_NNAN = -strtof("+NaN",NULL);
-    F_PINF = strtof("+Inf",NULL);
-    F_NINF = strtof("-Inf",NULL);
-}

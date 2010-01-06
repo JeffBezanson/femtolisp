@@ -2255,8 +2255,6 @@ static value_t argv_list(int argc, char *argv[])
     return POP();
 }
 
-int locale_is_utf8;
-
 extern value_t fl_file(value_t *args, uint32_t nargs);
 
 int main(int argc, char *argv[])
@@ -2265,8 +2263,6 @@ int main(int argc, char *argv[])
     int saveSP;
     symbol_t *sym;
     char fname_buf[1024];
-
-    locale_is_utf8 = u8_is_locale_utf8(setlocale(LC_ALL, ""));
 
     lisp_init();
 
@@ -2277,8 +2273,7 @@ int main(int argc, char *argv[])
     }
     strcat(fname_buf, "flisp.boot");
 
-    FL_TRY {
-        // install toplevel exception handler
+    FL_TRY {    // toplevel exception handler
         PUSH(cvalue_static_cstring(fname_buf));
         PUSH(symbol(":read"));
         value_t f = fl_file(&Stack[SP-2], 2);
