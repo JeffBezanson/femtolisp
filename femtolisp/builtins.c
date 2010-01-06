@@ -287,9 +287,9 @@ static value_t fl_vector_alloc(value_t *args, u_int32_t nargs)
     if (nargs == 2)
         f = args[1];
     else
-        f = FL_F;
-    v = alloc_vector((unsigned)i, f==FL_F);
-    if (f != FL_F) {
+        f = FL_UNSPECIFIED;
+    v = alloc_vector((unsigned)i, f==FL_UNSPECIFIED);
+    if (f != FL_UNSPECIFIED) {
         int k;
         for(k=0; k < i; k++)
             vector_elt(v,k) = f;

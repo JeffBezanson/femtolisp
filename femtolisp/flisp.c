@@ -380,7 +380,7 @@ value_t alloc_vector(size_t n, int init)
     if (init) {
         unsigned int i;
         for(i=0; i < n; i++)
-            vector_elt(v, i) = FL_F;
+            vector_elt(v, i) = FL_UNSPECIFIED;
     }
     return v;
 }
@@ -1532,7 +1532,7 @@ static value_t apply_cl(uint32_t nargs)
             s  = tofixnum(Stack[SP-3], "for");
             hi = tofixnum(Stack[SP-2], "for");
             //f = Stack[SP-1];
-            v = FL_F;
+            v = FL_UNSPECIFIED;
             SP += 2;
             n = SP;
             for(; s <= hi; s++) {

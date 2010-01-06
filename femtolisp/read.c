@@ -653,7 +653,7 @@ static value_t do_read_sexpr(value_t label)
     case TOK_DOUBLEQUOTE:
         return read_string();
     }
-    return FL_F;
+    return FL_UNSPECIFIED;
 }
 
 value_t read_sexpr(value_t f)

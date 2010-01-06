@@ -6,7 +6,6 @@
 (define (eval-core x) (eval x))
 (define (symbol-value s) (top-level-value s))
 (define (set-symbol-value! s v) (set-top-level-value! s v))
-(define (void) (if #f #f))
 (define (eval x)
   ((compile-thunk (expand
 		   (if (and (pair? x)

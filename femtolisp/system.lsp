@@ -3,6 +3,8 @@
 ; by Jeff Bezanson (C) 2009
 ; Distributed under the BSD License
 
+(define (void) #t)  ; the unspecified value
+
 (if (not (bound? '*syntax-environment*))
     (define *syntax-environment* (table)))
 
@@ -34,7 +36,7 @@
       (mapn f (cons lst lsts))))
 
 (define-macro (let binds . body)
-  (let (lname)
+  (let ((lname #f))
     (if (symbol? binds)
 	(begin (set! lname binds)
 	       (set! binds (car body))
@@ -44,7 +46,7 @@
 			  binds)
 	      ,@body))
 	  (theargs
-	   (map (lambda (c) (if (pair? c) (cadr c) #f)) binds)))
+	   (map (lambda (c) (if (pair? c) (cadr c) (void))) binds)))
       (cons (if lname
 		`(label ,lname ,thelambda)
 		thelambda)
@@ -54,7 +56,7 @@
   `((lambda ,(map car binds)
       ,.(map (lambda (b) `(set! ,@b)) binds)
       ,@body)
-    ,.(map (lambda (x) #f) binds)))
+    ,.(map (lambda (x) (void)) binds)))
 
 (define-macro (cond . clauses)
   (define (cond-clauses->if lst)
@@ -689,7 +691,7 @@
 ; toplevel --------------------------------------------------------------------
 
 (define (macrocall? e) (and (symbol? (car e))
-			    (get *syntax-environment* (car e) #f)))
+			    (symbol-syntax (car e))))
 
 (define (macroexpand-1 e)
   (if (atom? e) e

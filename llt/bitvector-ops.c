@@ -445,7 +445,7 @@ static void adjust_offset_to(u_int32_t *dest, u_int32_t *src, u_int32_t nw,
                              u_int32_t soffs, u_int32_t newoffs)
 {
     if (newoffs > soffs)
-        bitvector_shl_to(dest, src, nw, newoffs-soffs, true);
+        bitvector_shl_to(dest, src, nw, newoffs-soffs, 1);
     else
         bitvector_shr_to(dest, src, nw, soffs-newoffs);
 }

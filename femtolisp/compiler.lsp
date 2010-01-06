@@ -261,7 +261,7 @@
 	(then  (caddr x))
 	(else  (if (pair? (cdddr x))
 		   (cadddr x)
-		   #f)))
+		   (void))))
     (cond ((eq? test #t)
 	   (compile-in g env tail? then))
 	  ((eq? test #f)
@@ -278,7 +278,7 @@
 	   (mark-label g endl)))))
 
 (define (compile-begin g env tail? forms)
-  (cond ((atom? forms) (compile-in g env tail? #f))
+  (cond ((atom? forms) (compile-in g env tail? (void)))
 	((atom? (cdr forms))
 	 (compile-in g env tail? (car forms)))
 	(else
@@ -295,7 +295,7 @@
 (define (compile-while g env cond body)
   (let ((top  (make-label g))
 	(end  (make-label g)))
-    (compile-in g env #f #f)
+    (compile-in g env #f (void))
     (mark-label g top)
     (compile-in g env #f cond)
     (emit g 'brf end)
@@ -428,7 +428,7 @@
 	(body (if (pair? (cddr x))
 		  (cddr x)
 		  (if (symbol? (cadr x))
-		      '(#f)
+		      `(,(void))
 		      (error "compile error: invalid syntax "
 			     (print-to-string x))))))
     (if (symbol? form)
@@ -569,12 +569,12 @@
 		     (if (pair? (cdddr e))
 			 (cons 'begin (cddr e))
 			 (caddr e))
-		     #f)))
+		     (void))))
 	  (let ((V (get-defined-vars B)))
 	    (if (null? V)
 		B
 		(cons (list* 'lambda V B *defines-processed-token*)
-		      (map (lambda (x) #f) V))))))
+		      (map (lambda (x) (void)) V))))))
       
       (let ((g    (make-code-emitter))
 	    (args (cadr f))

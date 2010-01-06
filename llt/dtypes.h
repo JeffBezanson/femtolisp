@@ -19,10 +19,6 @@
 #include "config.h"
 
 typedef int bool_t;
-/* unfortunately we can't make this an enum, since false is an invalid
-   enum label in C++ (since it's a keyword) */
-#define false (0)
-#define true (1)
 
 #if defined(__INTEL_COMPILER) && defined(WIN32)
 # define STATIC_INLINE static

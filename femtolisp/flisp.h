@@ -115,6 +115,8 @@ void fl_free_gc_handles(uint32_t n);
 
 extern value_t FL_NIL, FL_T, FL_F, FL_EOF;
 
+#define FL_UNSPECIFIED FL_T
+
 /* read, eval, print main entry points */
 value_t read_sexpr(value_t f);
 void print(ios_t *f, value_t v);
