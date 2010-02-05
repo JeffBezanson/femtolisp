@@ -659,6 +659,7 @@ value_t applyn(uint32_t n, value_t f, ...)
     }
     value_t v = _applyn(n);
     POPN(n+1);
+    va_end(ap);
     return v;
 }
 

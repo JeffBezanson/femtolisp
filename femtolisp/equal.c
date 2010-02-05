@@ -329,7 +329,7 @@ static uptrint_t bounded_hash(value_t a, int bound, int *oob)
         }
         len = vector_size(a);
         for(i=0; i < len; i++) {
-            h = MIX(h, bounded_hash(vector_elt(a,i), bound/2, &oob2)+1);
+            h = MIX(h, bounded_hash(vector_elt(a,i), bound/2, &oob2)^1);
             if (oob2)
                 bound/=2;
             *oob = *oob || oob2;
@@ -354,7 +354,7 @@ static uptrint_t bounded_hash(value_t a, int bound, int *oob)
             *oob = *oob || oob2;
             a = cdr_(a);
         } while (iscons(a));
-        h = MIX(h, bounded_hash(a, bound-1, &oob2)+2);
+        h = MIX(h, bounded_hash(a, bound-1, &oob2)^2);
         *oob = *oob || oob2;
         return h;
     }

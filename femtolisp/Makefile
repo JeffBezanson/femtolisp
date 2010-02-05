@@ -25,8 +25,8 @@ test:
 %.do: %.c
 	$(CC) $(DEBUGFLAGS) -c $< -o $@
 
-flisp.o: flisp.c cvalues.c types.c flisp.h print.c read.c
-flisp.do: flisp.c cvalues.c types.c flisp.h print.c read.c
+flisp.o:  flisp.c cvalues.c types.c flisp.h print.c read.c equal.c
+flisp.do: flisp.c cvalues.c types.c flisp.h print.c read.c equal.c
 
 $(LLT):
 	cd $(LLTDIR) && make
