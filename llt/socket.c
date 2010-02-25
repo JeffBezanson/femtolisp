@@ -7,7 +7,7 @@
 
 #include "dtypes.h"
 
-#if defined(MACOSX) || defined(MACINTEL)
+#if defined(MACOSX)
 #include <sys/time.h>
 #include <sys/select.h>
 #include <sys/types.h>

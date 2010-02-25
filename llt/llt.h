@@ -12,6 +12,7 @@
 #include "ptrhash.h"
 #include "bitvector.h"
 #include "dirpath.h"
+#include "random.h"
 
 void llt_init();
 

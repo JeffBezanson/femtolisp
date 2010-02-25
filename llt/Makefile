@@ -10,7 +10,10 @@ TARGET = libllt.a
 TESTSRC = unittest.c
 TESTER = llttest
 
-FLAGS = -Wall -Wno-strict-aliasing $(CFLAGS)
+# OS flags: LINUX, WIN32, MACOSX
+# architecture flags: __CPU__=xxx, BITS64, ARCH_X86, ARCH_X86_64
+CONFIG = -DLINUX -DARCH_X86 -D__CPU__=586
+FLAGS = -Wall -Wno-strict-aliasing $(CFLAGS) $(CONFIG)
 LIBS =
 
 DEBUGFLAGS = -g -DDEBUG $(FLAGS)

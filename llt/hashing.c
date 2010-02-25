@@ -3,6 +3,7 @@
 */
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <math.h>
 #include "ieee754.h"
 #include "dtypes.h"

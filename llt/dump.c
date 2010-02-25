@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdarg.h>
 #include "dtypes.h"
 #include "ios.h"
 #include "utils.h"

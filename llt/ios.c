@@ -25,14 +25,13 @@
 #include "utils.h"
 #include "utf8.h"
 #include "ios.h"
-#include "socket.h"
 #include "timefuncs.h"
 
 #define MOST_OF(x) ((x) - ((x)>>4))
 
 /* OS-level primitive wrappers */
 
-#if defined(MACOSX) || defined(MACINTEL)
+#if defined(MACOSX)
 void *memrchr(const void *s, int c, size_t n)
 {
     const unsigned char *src = s + n;
@@ -184,12 +183,12 @@ static char *_buf_realloc(ios_t *s, size_t sz)
         // if we own the buffer we're free to resize it
         // always allocate 1 bigger in case user wants to add a NUL
         // terminator after taking over the buffer
-        temp = realloc(s->buf, sz+1);
+        temp = LLT_REALLOC(s->buf, sz+1);
         if (temp == NULL)
             return NULL;
     }
     else {
-        temp = malloc(sz+1);
+        temp = LLT_ALLOC(sz+1);
         if (temp == NULL)
             return NULL;
         s->ownbuf = 1;
@@ -545,7 +544,7 @@ void ios_close(ios_t *s)
         close(s->fd);
     s->fd = -1;
     if (s->buf!=NULL && s->ownbuf && s->buf!=&s->local[0])
-        free(s->buf);
+        LLT_FREE(s->buf);
     s->buf = NULL;
     s->size = s->maxsize = s->bpos = 0;
 }
@@ -571,7 +570,7 @@ char *ios_takebuf(ios_t *s, size_t *psize)
     ios_flush(s);
 
     if (s->buf == &s->local[0]) {
-        buf = malloc(s->size+1);
+        buf = LLT_ALLOC(s->size+1);
         if (buf == NULL)
             return NULL;
         if (s->size)
@@ -605,7 +604,7 @@ int ios_setbuf(ios_t *s, char *buf, size_t size, int own)
     s->size = nvalid;
 
     if (s->buf!=NULL && s->ownbuf && s->buf!=&s->local[0])
-        free(s->buf);
+        LLT_FREE(s->buf);
     s->buf = buf;
     s->maxsize = size;
     s->ownbuf = own;
@@ -778,14 +777,14 @@ ios_t *ios_stderr = NULL;
 
 void ios_init_stdstreams()
 {
-    ios_stdin = malloc(sizeof(ios_t));
+    ios_stdin = LLT_ALLOC(sizeof(ios_t));
     ios_fd(ios_stdin, STDIN_FILENO, 0);
 
-    ios_stdout = malloc(sizeof(ios_t));
+    ios_stdout = LLT_ALLOC(sizeof(ios_t));
     ios_fd(ios_stdout, STDOUT_FILENO, 0);
     ios_stdout->bm = bm_line;
 
-    ios_stderr = malloc(sizeof(ios_t));
+    ios_stderr = LLT_ALLOC(sizeof(ios_t));
     ios_fd(ios_stderr, STDERR_FILENO, 0);
     ios_stderr->bm = bm_none;
 }
@@ -914,24 +913,19 @@ void ios_purge(ios_t *s)
     }
 }
 
-int ios_printf(ios_t *s, char *format, ...)
+int ios_vprintf(ios_t *s, char *format, va_list args)
 {
     char *str=NULL;
-    va_list args;
     int c;
-
-    va_start(args, format);
 
     if (s->state == bst_wr && s->bpos < s->maxsize && s->bm != bm_none) {
         size_t avail = s->maxsize - s->bpos;
         char *start = s->buf + s->bpos;
         c = vsnprintf(start, avail, format, args);
         if (c < 0) {
-            va_end(args);
             return c;
         }
         if (c < avail) {
-            va_end(args);
             s->bpos += (size_t)c;
             _write_update_pos(s);
             // TODO: only works right if newline is at end
@@ -942,12 +936,21 @@ int ios_printf(ios_t *s, char *format, ...)
     }
     c = vasprintf(&str, format, args);
 
+    if (c >= 0) {
+        ios_write(s, str, c);
+
+        LLT_FREE(str);
+    }
+    return c;
+}
+
+int ios_printf(ios_t *s, char *format, ...)
+{
+    va_list args;
+    int c;
+
+    va_start(args, format);
+    c = ios_vprintf(s, format, args);
     va_end(args);
-
-    if (c < 0) return c;
-
-    ios_write(s, str, c);
-
-    free(str);
     return c;
 }
