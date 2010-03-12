@@ -140,6 +140,10 @@
 (define (current-output-port (p *output-stream*))
   (set! *output-stream* p))
 
+(define (input-port-line p)
+  ; TODO
+  1)
+
 (define get-datum read)
 (define (put-datum port x)
   (with-bindings ((*print-readably* #t))
@@ -271,6 +275,10 @@
 (define (with-exception-catcher hand thk)
   (trycatch (thk)
 	    (lambda (e) (hand e))))
+
+(define (current-exception-handler)
+  ; close enough
+  (lambda (e) (raise e)))
 
 (define make-table table)
 (define table-ref get)
