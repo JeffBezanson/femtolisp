@@ -50,11 +50,11 @@ static void **HTNAME##_lookup_bp(htable_t *h, void *key)                \
     if (sz >= (1<<19) || (sz <= (1<<8)))                                \
         newsz = sz<<1;                                                  \
     else if (sz <= HT_N_INLINE)                                         \
-        newsz = 32;                                                     \
+        newsz = HT_N_INLINE;                                            \
     else                                                                \
         newsz = sz<<2;                                                  \
     /*printf("trying to allocate %d words.\n", newsz); fflush(stdout);*/ \
-    tab = (void**)malloc(newsz*sizeof(void*));                          \
+    tab = (void**)LLT_ALLOC(newsz*sizeof(void*));                       \
     if (tab == NULL)                                                    \
         return NULL;                                                    \
     for(i=0; i < newsz; i++)                                            \
@@ -67,7 +67,7 @@ static void **HTNAME##_lookup_bp(htable_t *h, void *key)                \
         }                                                               \
     }                                                                   \
     if (ol != &h->_space[0])                                            \
-        free(ol);                                                       \
+        LLT_FREE(ol);                                                   \
                                                                         \
     sz = hash_size(h);                                                  \
     maxprobe = max_probe(sz);                                           \
