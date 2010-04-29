@@ -322,4 +322,6 @@ value_t fl_hash(value_t *args, u_int32_t nargs);
 value_t cvalue_byte(value_t *args, uint32_t nargs);
 value_t cvalue_wchar(value_t *args, uint32_t nargs);
 
+int fl_startup();
+
 #endif

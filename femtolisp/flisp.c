@@ -2258,7 +2258,7 @@ static value_t argv_list(int argc, char *argv[])
 
 extern value_t fl_file(value_t *args, uint32_t nargs);
 
-int main(int argc, char *argv[])
+int fl_startup()
 {
     value_t e;
     int saveSP;
@@ -2303,10 +2303,6 @@ int main(int argc, char *argv[])
         }
         ios_close(value2c(ios_t*,Stack[SP-1]));
         POPN(1);
-
-        PUSH(symbol_value(symbol("__start")));
-        PUSH(argv_list(argc, argv));
-        (void)_applyn(1);
     }
     FL_CATCH {
         ios_puts("fatal error during bootstrap:\n", ios_stderr);
@@ -2314,6 +2310,24 @@ int main(int argc, char *argv[])
         ios_putc('\n', ios_stderr);
         return 1;
     }
+    return 0;
+}
 
+int main(int argc, char *argv[])
+{
+    if (fl_startup())
+        return 1;
+
+    FL_TRY {
+        PUSH(symbol_value(symbol("__start")));
+        PUSH(argv_list(argc, argv));
+        (void)_applyn(1);
+    }
+    FL_CATCH {
+        ios_puts("fatal error:\n", ios_stderr);
+        fl_print(ios_stderr, lasterror);
+        ios_putc('\n', ios_stderr);
+        return 1;
+    }
     return 0;
 }
