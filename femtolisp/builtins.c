@@ -144,7 +144,7 @@ static value_t fl_top_level_value(value_t *args, u_int32_t nargs)
     argcount("top-level-value", nargs, 1);
     symbol_t *sym = tosymbol(args[0], "top-level-value");
     if (sym->binding == UNBOUND)
-        fl_raise(list2(UnboundError, args[0]));
+        fl_raise(fl_list2(UnboundError, args[0]));
     return sym->binding;
 }
 

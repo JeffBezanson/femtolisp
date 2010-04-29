@@ -116,7 +116,7 @@ value_t fl_read(value_t *args, u_int32_t nargs)
     }
     (void)toiostream(arg, "read");
     fl_gc_handle(&arg);
-    value_t v = read_sexpr(arg);
+    value_t v = fl_read_sexpr(arg);
     fl_free_gc_handles(1);
     if (ios_eof(value2c(ios_t*,arg)))
         return FL_EOF;
@@ -216,7 +216,7 @@ value_t fl_write(value_t *args, u_int32_t nargs)
         s = toiostream(args[1], "write");
     else
         s = toiostream(symbol_value(outstrsym), "write");
-    print(s, args[0]);
+    fl_print(s, args[0]);
     return args[0];
 }
 

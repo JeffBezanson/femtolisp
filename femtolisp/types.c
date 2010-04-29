@@ -64,7 +64,7 @@ fltype_t *get_array_type(value_t eltype)
     fltype_t *et = get_type(eltype);
     if (et->artype != NULL)
         return et->artype;
-    return get_type(list2(arraysym, eltype));
+    return get_type(fl_list2(arraysym, eltype));
 }
 
 fltype_t *define_opaque_type(value_t sym, size_t sz, cvtable_t *vtab,

@@ -191,7 +191,7 @@ void lerrorf(value_t e, char *format, ...)
     va_end(args);
 
     e = POP();
-    fl_raise(list2(e, msg));
+    fl_raise(fl_list2(e, msg));
 }
 
 void lerror(value_t e, const char *msg)
@@ -199,17 +199,17 @@ void lerror(value_t e, const char *msg)
     PUSH(e);
     value_t m = cvalue_static_cstring(msg);
     e = POP();
-    fl_raise(list2(e, m));
+    fl_raise(fl_list2(e, m));
 }
 
 void type_error(char *fname, char *expected, value_t got)
 {
-    fl_raise(listn(4, TypeError, symbol(fname), symbol(expected), got));
+    fl_raise(fl_listn(4, TypeError, symbol(fname), symbol(expected), got));
 }
 
 void bounds_error(char *fname, value_t arr, value_t ind)
 {
-    fl_raise(listn(4, BoundsError, symbol(fname), arr, ind));
+    fl_raise(fl_listn(4, BoundsError, symbol(fname), arr, ind));
 }
 
 // safe cast operators --------------------------------------------------------
@@ -626,7 +626,7 @@ static value_t _applyn(uint32_t n)
     return v;
 }
 
-value_t apply(value_t f, value_t l)
+value_t fl_apply(value_t f, value_t l)
 {
     value_t v = l;
     uint32_t n = SP;
@@ -644,7 +644,7 @@ value_t apply(value_t f, value_t l)
     return v;
 }
 
-value_t applyn(uint32_t n, value_t f, ...)
+value_t fl_applyn(uint32_t n, value_t f, ...)
 {
     va_list ap;
     va_start(ap, f);
@@ -663,7 +663,7 @@ value_t applyn(uint32_t n, value_t f, ...)
     return v;
 }
 
-value_t listn(size_t n, ...)
+value_t fl_listn(size_t n, ...)
 {
     va_list ap;
     va_start(ap, n);
@@ -690,7 +690,7 @@ value_t listn(size_t n, ...)
     return tagptr(l, TAG_CONS);
 }
 
-value_t list2(value_t a, value_t b)
+value_t fl_list2(value_t a, value_t b)
 {
     PUSH(a);
     PUSH(b);
@@ -1469,7 +1469,7 @@ static value_t apply_cl(uint32_t nargs)
                 v = (numval(Stack[SP-2]) < numval(Stack[SP-1])) ? FL_T : FL_F;
             }
             else {
-                v = (numval(compare(Stack[SP-2], Stack[SP-1])) < 0) ?
+                v = (numval(fl_compare(Stack[SP-2], Stack[SP-1])) < 0) ?
                     FL_T : FL_F;
             }
             POPN(1);
@@ -1575,7 +1575,7 @@ static value_t apply_cl(uint32_t nargs)
             assert(issymbol(v));
             sym = (symbol_t*)ptr(v);
             if (sym->binding == UNBOUND)
-                fl_raise(list2(UnboundError, v));
+                fl_raise(fl_list2(UnboundError, v));
             PUSH(sym->binding);
             NEXT_OP;
 
@@ -2229,8 +2229,8 @@ static void lisp_init(void)
         setc(symbol("*install-dir*"), cvalue_static_cstring(EXEDIR));
     }
 
-    memory_exception_value = list2(MemoryError,
-                                   cvalue_static_cstring("out of memory"));
+    memory_exception_value = fl_list2(MemoryError,
+                                      cvalue_static_cstring("out of memory"));
 
     assign_global_builtins(core_builtin_info);
 
@@ -2239,9 +2239,9 @@ static void lisp_init(void)
 
 // repl -----------------------------------------------------------------------
 
-value_t toplevel_eval(value_t expr)
+value_t fl_toplevel_eval(value_t expr)
 {
-    return applyn(1, symbol_value(evalsym), expr);
+    return fl_applyn(1, symbol_value(evalsym), expr);
 }
 
 static value_t argv_list(int argc, char *argv[])
@@ -2281,7 +2281,7 @@ int main(int argc, char *argv[])
         POPN(2);
         PUSH(f); saveSP = SP;
         while (1) {
-            e = read_sexpr(Stack[SP-1]);
+            e = fl_read_sexpr(Stack[SP-1]);
             if (ios_eof(value2c(ios_t*,Stack[SP-1]))) break;
             if (isfunction(e)) {
                 // stage 0 format: series of thunks
@@ -2310,7 +2310,7 @@ int main(int argc, char *argv[])
     }
     FL_CATCH {
         ios_puts("fatal error during bootstrap:\n", ios_stderr);
-        print(ios_stderr, lasterror);
+        fl_print(ios_stderr, lasterror);
         ios_putc('\n', ios_stderr);
         return 1;
     }

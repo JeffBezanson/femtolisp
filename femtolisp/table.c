@@ -127,7 +127,7 @@ value_t fl_table_put(value_t *args, uint32_t nargs)
 
 static void key_error(char *fname, value_t key)
 {
-    lerrorf(list2(KeyError, key), "%s: key not found", fname);
+    lerrorf(fl_list2(KeyError, key), "%s: key not found", fname);
 }
 
 // (get table key [default])
@@ -175,10 +175,10 @@ value_t fl_table_foldl(value_t *args, uint32_t nargs)
     fl_gc_handle(&t);
     for(i=0; i < n; i+=2) {
         if (table[i+1] != HT_NOTFOUND) {
-            zero = applyn(3, f,
-                          (value_t)table[i],
-                          (value_t)table[i+1],
-                          zero);
+            zero = fl_applyn(3, f,
+                             (value_t)table[i],
+                             (value_t)table[i+1],
+                             zero);
             // reload pointer
             h = (htable_t*)cv_data((cvalue_t*)ptr(t));
             if (h->size != n)

@@ -118,26 +118,25 @@ extern value_t FL_NIL, FL_T, FL_F, FL_EOF;
 #define FL_UNSPECIFIED FL_T
 
 /* read, eval, print main entry points */
-value_t read_sexpr(value_t f);
-void print(ios_t *f, value_t v);
-value_t toplevel_eval(value_t expr);
-value_t apply(value_t f, value_t l);
-value_t applyn(uint32_t n, value_t f, ...);
-value_t load_file(char *fname);
+value_t fl_read_sexpr(value_t f);
+void fl_print(ios_t *f, value_t v);
+value_t fl_toplevel_eval(value_t expr);
+value_t fl_apply(value_t f, value_t l);
+value_t fl_applyn(uint32_t n, value_t f, ...);
 
 extern value_t printprettysym, printreadablysym, printwidthsym;
 
 /* object model manipulation */
 value_t fl_cons(value_t a, value_t b);
-value_t list2(value_t a, value_t b);
-value_t listn(size_t n, ...);
+value_t fl_list2(value_t a, value_t b);
+value_t fl_listn(size_t n, ...);
 value_t symbol(char *str);
 char *symbol_name(value_t v);
 int fl_is_keyword_name(char *str, size_t len);
 value_t alloc_vector(size_t n, int init);
 size_t llength(value_t v);
-value_t compare(value_t a, value_t b);  // -1, 0, or 1
-value_t equal(value_t a, value_t b);    // T or nil
+value_t fl_compare(value_t a, value_t b);  // -1, 0, or 1
+value_t fl_equal(value_t a, value_t b);    // T or nil
 int equal_lispvalue(value_t a, value_t b);
 uptrint_t hash_lispvalue(value_t a);
 int isnumtok_base(char *tok, value_t *pval, int base);

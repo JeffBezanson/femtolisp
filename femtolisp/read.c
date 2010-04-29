@@ -611,8 +611,8 @@ static value_t do_read_sexpr(value_t label)
         }
         v = symbol_value(sym);
         if (v == UNBOUND)
-            fl_raise(list2(UnboundError, sym));
-        return apply(v, POP());
+            fl_raise(fl_list2(UnboundError, sym));
+        return fl_apply(v, POP());
     case TOK_OPENB:
         return read_vector(label, TOK_CLOSEB);
     case TOK_SHARPOPEN:
@@ -627,10 +627,10 @@ static value_t do_read_sexpr(value_t label)
         if (issymbol(sym)) {
             v = symbol_value(sym);
             if (v == UNBOUND)
-                fl_raise(list2(UnboundError, sym));
+                fl_raise(fl_list2(UnboundError, sym));
             return v;
         }
-        return toplevel_eval(sym);
+        return fl_toplevel_eval(sym);
     case TOK_LABEL:
         // create backreference label
         if (ptrhash_has(&readstate->backrefs, (void*)tokval))
@@ -656,7 +656,7 @@ static value_t do_read_sexpr(value_t label)
     return FL_UNSPECIFIED;
 }
 
-value_t read_sexpr(value_t f)
+value_t fl_read_sexpr(value_t f)
 {
     value_t v;
     readstate_t state;

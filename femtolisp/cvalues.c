@@ -369,7 +369,7 @@ static int cvalue_enum_init(fltype_t *ft, value_t arg, void *dest)
 value_t cvalue_enum(value_t *args, u_int32_t nargs)
 {
     argcount("enum", nargs, 2);
-    value_t type = list2(enumsym, args[0]);
+    value_t type = fl_list2(enumsym, args[0]);
     fltype_t *ft = get_type(type);
     value_t cv = cvalue(ft, sizeof(int32_t));
     cvalue_enum_init(ft, args[1], cp_data((cprim_t*)ptr(cv)));
@@ -973,10 +973,10 @@ static void cvalues_init()
     assign_global_builtins(cvalues_builtin_info);
 
     stringtypesym = symbol("*string-type*");
-    setc(stringtypesym, list2(arraysym, bytesym));
+    setc(stringtypesym, fl_list2(arraysym, bytesym));
 
     wcstringtypesym = symbol("*wcstring-type*");
-    setc(wcstringtypesym, list2(arraysym, wcharsym));
+    setc(wcstringtypesym, fl_list2(arraysym, wcharsym));
 
     mk_primtype(int8);
     mk_primtype(uint8);

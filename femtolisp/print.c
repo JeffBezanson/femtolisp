@@ -732,7 +732,7 @@ static void set_print_width()
     SCR_WIDTH = numval(pw);
 }
 
-void print(ios_t *f, value_t v)
+void fl_print(ios_t *f, value_t v)
 {
     print_pretty = (symbol_value(printprettysym) != FL_F);
     if (print_pretty)

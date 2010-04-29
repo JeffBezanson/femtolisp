@@ -133,7 +133,7 @@ value_t fl_string(value_t *args, u_int32_t nargs)
     set(printreadablysym, FL_F);
     set(printprettysym, FL_F);
     FOR_ARGS(i,0,arg,args) {
-        print(s, args[i]);
+        fl_print(s, args[i]);
     }
     set(printreadablysym, oldpr);
     set(printprettysym, oldpp);
@@ -358,7 +358,7 @@ value_t fl_numbertostring(value_t *args, u_int32_t nargs)
     else if (!iscprim(n)) type_error("number->string", "integer", n);
     else num = conv_to_uint64(cp_data((cprim_t*)ptr(n)),
                               cp_numtype((cprim_t*)ptr(n)));
-    if (numval(compare(args[0],fixnum(0))) < 0) {
+    if (numval(fl_compare(args[0],fixnum(0))) < 0) {
         num = -num;
         neg = 1;
     }

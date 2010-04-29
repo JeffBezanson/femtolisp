@@ -255,12 +255,12 @@ static value_t compare_(value_t a, value_t b, int eq)
     return guess;
 }
 
-value_t compare(value_t a, value_t b)
+value_t fl_compare(value_t a, value_t b)
 {
     return compare_(a, b, 0);
 }
 
-value_t equal(value_t a, value_t b)
+value_t fl_equal(value_t a, value_t b)
 {
     if (eq_comparable(a, b))
         return (a == b) ? FL_T : FL_F;
