@@ -245,7 +245,7 @@ static symbol_t *mk_symbol(char *str)
     symbol_t *sym;
     size_t len = strlen(str);
 
-    sym = (symbol_t*)LLT_ALLOC(sizeof(symbol_t)-sizeof(void*) + len + 1);
+    sym = (symbol_t*)malloc(sizeof(symbol_t)-sizeof(void*) + len + 1);
     assert(((uptrint_t)sym & 0x7) == 0); // make sure malloc aligns 8
     sym->left = sym->right = NULL;
     sym->flags = 0;
@@ -602,7 +602,7 @@ void gc(int mustgrow)
 static void grow_stack()
 {
     size_t newsz = N_STACK + (N_STACK>>1);
-    value_t *ns = LLT_REALLOC(Stack, newsz*sizeof(value_t));
+    value_t *ns = realloc(Stack, newsz*sizeof(value_t));
     if (ns == NULL)
         lerror(MemoryError, "stack overflow");
     Stack = ns;
@@ -2163,7 +2163,7 @@ static void lisp_init(size_t initial_heapsize)
     htable_new(&printconses, 32);
     comparehash_init();
     N_STACK = 262144;
-    Stack = LLT_ALLOC(N_STACK*sizeof(value_t));
+    Stack = malloc(N_STACK*sizeof(value_t));
 
     FL_NIL = NIL = builtin(OP_THE_EMPTY_LIST);
     FL_T = builtin(OP_BOOL_CONST_T);

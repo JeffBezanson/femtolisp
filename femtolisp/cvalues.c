@@ -671,9 +671,6 @@ value_t cvalue_relocate(value_t v)
     if (t->vtable != NULL && t->vtable->relocate != NULL)
         t->vtable->relocate(v, ncv);
     forward(v, ncv);
-#ifdef BOEHM_GC
-    cv->data = NULL;
-#endif
     return ncv;
 }
 
