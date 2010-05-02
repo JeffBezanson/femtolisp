@@ -3,7 +3,6 @@
 */
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdarg.h>
 #include <math.h>
 #include "ieee754.h"
 #include "dtypes.h"
@@ -62,7 +61,7 @@ u_int32_t int64to32hash(u_int64_t key)
 
 #include "lookup3.c"
 
-u_int64_t memhash(char* buf, size_t n)
+u_int64_t memhash(const char* buf, size_t n)
 {
     u_int32_t c=0xcafe8881, b=0x4d6a087c;
 
@@ -70,7 +69,7 @@ u_int64_t memhash(char* buf, size_t n)
     return (u_int64_t)c | (((u_int64_t)b)<<32);
 }
 
-u_int32_t memhash32(char* buf, size_t n)
+u_int32_t memhash32(const char* buf, size_t n)
 {
     u_int32_t c=0xcafe8881, b=0x4d6a087c;
 

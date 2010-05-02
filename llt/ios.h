@@ -1,6 +1,8 @@
 #ifndef __IOS_H_
 #define __IOS_H_
 
+#include <stdarg.h>
+
 // this flag controls when data actually moves out to the underlying I/O
 // channel. memory streams are a special case of this where the data
 // never moves out.
@@ -103,10 +105,10 @@ int ios_putnum(ios_t *s, char *data, uint32_t type);
 int ios_putint(ios_t *s, int n);
 int ios_pututf8(ios_t *s, uint32_t wc);
 int ios_putstringz(ios_t *s, char *str, bool_t do_write_nulterm);
-int ios_printf(ios_t *s, char *format, ...);
-int ios_vprintf(ios_t *s, char *format, va_list args);
+int ios_printf(ios_t *s, const char *format, ...);
+int ios_vprintf(ios_t *s, const char *format, va_list args);
 
-void hexdump(ios_t *dest, char *buffer, size_t len, size_t startoffs);
+void hexdump(ios_t *dest, const char *buffer, size_t len, size_t startoffs);
 
 /* high-level stream functions - input */
 int ios_getnum(ios_t *s, char *data, uint32_t type);
