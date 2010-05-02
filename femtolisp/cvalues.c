@@ -762,7 +762,7 @@ static numerictype_t sym_to_numtype(value_t type)
         return T_FLOAT;
     else if (type == doublesym)
         return T_DOUBLE;
-    assert(false);
+    assert(0);
     return N_NUMTYPES;
 }
 

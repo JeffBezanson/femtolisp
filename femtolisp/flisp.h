@@ -148,8 +148,40 @@ fixnum_t tofixnum(value_t v, char *fname);
 char *tostring(value_t v, char *fname);
 
 /* error handling */
+typedef struct _fl_readstate_t {
+    htable_t backrefs;
+    htable_t gensyms;
+    value_t source;
+    struct _fl_readstate_t *prev;
+} fl_readstate_t;
+
+typedef struct _ectx_t {
+    jmp_buf buf;
+    uint32_t sp;
+    uint32_t frame;
+    uint32_t ngchnd;
+    fl_readstate_t *rdst;
+    struct _ectx_t *prev;
+} fl_exception_context_t;
+
+extern fl_exception_context_t *fl_ctx;
+extern uint32_t fl_throwing_frame;
+extern value_t fl_lasterror;
+
+#define FL_TRY_EXTERN                                                   \
+  fl_exception_context_t _ctx; int l__tr, l__ca;                        \
+  fl_savestate(&_ctx); fl_ctx = &_ctx;                                  \
+  if (!setjmp(_ctx.buf))                                                \
+    for (l__tr=1; l__tr; l__tr=0, (void)(fl_ctx->prev&&(fl_ctx=fl_ctx->prev)))
+
+#define FL_CATCH_EXTERN \
+  else \
+    for(l__ca=1; l__ca; l__ca=0, fl_restorestate(&_ctx))
+
 void lerrorf(value_t e, char *format, ...) __attribute__ ((__noreturn__));
 void lerror(value_t e, const char *msg) __attribute__ ((__noreturn__));
+void fl_savestate(fl_exception_context_t *_ctx);
+void fl_restorestate(fl_exception_context_t *_ctx);
 void fl_raise(value_t e) __attribute__ ((__noreturn__));
 void type_error(char *fname, char *expected, value_t got) __attribute__ ((__noreturn__));
 void bounds_error(char *fname, value_t arr, value_t ind) __attribute__ ((__noreturn__));
@@ -322,6 +354,7 @@ value_t fl_hash(value_t *args, u_int32_t nargs);
 value_t cvalue_byte(value_t *args, uint32_t nargs);
 value_t cvalue_wchar(value_t *args, uint32_t nargs);
 
-int fl_startup();
+void fl_init();
+int fl_load_system_image(value_t ios);
 
 #endif

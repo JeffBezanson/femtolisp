@@ -109,15 +109,9 @@ static value_t apply_cl(uint32_t nargs);
 static value_t *alloc_words(int n);
 static value_t relocate(value_t v);
 
-typedef struct _readstate_t {
-    htable_t backrefs;
-    htable_t gensyms;
-    value_t source;
-    struct _readstate_t *prev;
-} readstate_t;
-static readstate_t *readstate = NULL;
+static fl_readstate_t *readstate = NULL;
 
-static void free_readstate(readstate_t *rs)
+static void free_readstate(fl_readstate_t *rs)
 {
     htable_free(&rs->backrefs);
     htable_free(&rs->gensyms);
@@ -133,45 +127,53 @@ static uint32_t *consflags;
 // error utilities ------------------------------------------------------------
 
 // saved execution state for an unwind target
-typedef struct _ectx_t {
-    jmp_buf buf;
-    uint32_t sp;
-    uint32_t frame;
-    uint32_t ngchnd;
-    readstate_t *rdst;
-    struct _ectx_t *prev;
-} exception_context_t;
-
-static exception_context_t *ctx = NULL;
-static value_t lasterror;
-static uint32_t throwing_frame=0;  // active frame when exception was thrown
+fl_exception_context_t *fl_ctx = NULL;
+uint32_t fl_throwing_frame=0;  // active frame when exception was thrown
+value_t fl_lasterror;
 
 #define FL_TRY \
-  exception_context_t _ctx; int l__tr, l__ca; \
-  _ctx.sp=SP; _ctx.frame=curr_frame; _ctx.rdst=readstate; _ctx.prev=ctx; \
-  _ctx.ngchnd = N_GCHND; ctx = &_ctx;                                    \
+  fl_exception_context_t _ctx; int l__tr, l__ca; \
+  _ctx.sp=SP; _ctx.frame=curr_frame; _ctx.rdst=readstate; _ctx.prev=fl_ctx; \
+  _ctx.ngchnd = N_GCHND; fl_ctx = &_ctx;                                    \
   if (!setjmp(_ctx.buf)) \
-      for (l__tr=1; l__tr; l__tr=0, (void)(ctx->prev && (ctx=ctx->prev)))
+    for (l__tr=1; l__tr; l__tr=0, (void)(fl_ctx->prev&&(fl_ctx=fl_ctx->prev)))
 
 #define FL_CATCH \
   else \
-      for (l__ca=1; l__ca; l__ca=0, \
-           lasterror=NIL, throwing_frame=0, SP=_ctx.sp, curr_frame=_ctx.frame)
+    for(l__ca=1; l__ca; l__ca=0, \
+      fl_lasterror=FL_NIL,fl_throwing_frame=0,SP=_ctx.sp,curr_frame=_ctx.frame)
+
+void fl_savestate(fl_exception_context_t *_ctx)
+{
+    _ctx->sp = SP;
+    _ctx->frame = curr_frame;
+    _ctx->rdst = readstate;
+    _ctx->prev = fl_ctx;
+    _ctx->ngchnd = N_GCHND;
+}
+
+void fl_restorestate(fl_exception_context_t *_ctx)
+{
+    fl_lasterror = FL_NIL;
+    fl_throwing_frame = 0;
+    SP = _ctx->sp;
+    curr_frame = _ctx->frame;
+}
 
 void fl_raise(value_t e)
 {
-    lasterror = e;
+    fl_lasterror = e;
     // unwind read state
-    while (readstate != ctx->rdst) {
+    while (readstate != fl_ctx->rdst) {
         free_readstate(readstate);
         readstate = readstate->prev;
     }
-    if (throwing_frame == 0)
-        throwing_frame = curr_frame;
-    N_GCHND = ctx->ngchnd;
-    exception_context_t *thisctx = ctx;
-    if (ctx->prev)   // don't throw past toplevel
-        ctx = ctx->prev;
+    if (fl_throwing_frame == 0)
+        fl_throwing_frame = curr_frame;
+    N_GCHND = fl_ctx->ngchnd;
+    fl_exception_context_t *thisctx = fl_ctx;
+    if (fl_ctx->prev)   // don't throw past toplevel
+        fl_ctx = fl_ctx->prev;
     longjmp(thisctx->buf, 1);
 }
 
@@ -525,14 +527,14 @@ void gc(int mustgrow)
     static int grew = 0;
     void *temp;
     uint32_t i, f, top;
-    readstate_t *rs;
+    fl_readstate_t *rs;
 
     curheap = tospace;
     lim = curheap+heapsize-sizeof(cons_t);
 
-    if (throwing_frame > curr_frame) {
-        top = throwing_frame - 4;
-        f = Stack[throwing_frame-4];
+    if (fl_throwing_frame > curr_frame) {
+        top = fl_throwing_frame - 4;
+        f = Stack[fl_throwing_frame-4];
     }
     else {
         top = SP;
@@ -558,7 +560,7 @@ void gc(int mustgrow)
         rs->source = relocate(rs->source);
         rs = rs->prev;
     }
-    lasterror = relocate(lasterror);
+    fl_lasterror = relocate(fl_lasterror);
     memory_exception_value = relocate(memory_exception_value);
     the_empty_vector = relocate(the_empty_vector);
 
@@ -796,7 +798,7 @@ static value_t do_trycatch()
     FL_CATCH {
         v = Stack[saveSP-2];
         PUSH(v);
-        PUSH(lasterror);
+        PUSH(fl_lasterror);
         v = apply_cl(1);
     }
     SP = saveSP;
@@ -2119,7 +2121,7 @@ value_t fl_stacktrace(value_t *args, u_int32_t nargs)
 {
     (void)args;
     argcount("stacktrace", nargs, 0);
-    return _stacktrace(throwing_frame ? throwing_frame : curr_frame);
+    return _stacktrace(fl_throwing_frame ? fl_throwing_frame : curr_frame);
 }
 
 static builtinspec_t core_builtin_info[] = {
@@ -2142,8 +2144,6 @@ static builtinspec_t core_builtin_info[] = {
 
 extern void builtins_init();
 extern void comparehash_init();
-
-static char *EXEDIR = NULL;
 
 static void lisp_init(void)
 {
@@ -2197,7 +2197,7 @@ static void lisp_init(void)
     set(printwidthsym=symbol("*print-width*"), fixnum(SCR_WIDTH));
     set(printlengthsym=symbol("*print-length*"), FL_F);
     set(printlevelsym=symbol("*print-level*"), FL_F);
-    lasterror = NIL;
+    fl_lasterror = NIL;
     i = 0;
     for (i=OP_EQ; i <= OP_ASET; i++) {
         setc(symbol(builtin_names[i]), builtin(i));
@@ -2225,8 +2225,7 @@ static void lisp_init(void)
     char *exename = get_exename(buf, sizeof(buf));
     if (exename != NULL) {
         path_to_dirname(exename);
-        EXEDIR = strdup(exename);
-        setc(symbol("*install-dir*"), cvalue_static_cstring(EXEDIR));
+        setc(symbol("*install-dir*"), cvalue_static_cstring(strdup(exename)));
     }
 
     memory_exception_value = fl_list2(MemoryError,
@@ -2237,49 +2236,27 @@ static void lisp_init(void)
     builtins_init();
 }
 
-// repl -----------------------------------------------------------------------
+// top level ------------------------------------------------------------------
 
 value_t fl_toplevel_eval(value_t expr)
 {
     return fl_applyn(1, symbol_value(evalsym), expr);
 }
 
-static value_t argv_list(int argc, char *argv[])
+void fl_init()
 {
-    int i;
-    PUSH(NIL);
-    for(i=argc-1; i >= 0; i--) {
-        PUSH(cvalue_static_cstring(argv[i]));
-        Stack[SP-2] = fl_cons(Stack[SP-1], Stack[SP-2]);
-        POPN(1);
-    }
-    return POP();
+    lisp_init();
 }
 
-extern value_t fl_file(value_t *args, uint32_t nargs);
-
-int fl_startup()
+int fl_load_system_image(value_t sys_image_iostream)
 {
     value_t e;
     int saveSP;
     symbol_t *sym;
-    char fname_buf[1024];
 
-    lisp_init();
-
-    fname_buf[0] = '\0';
-    if (EXEDIR != NULL) {
-        strcat(fname_buf, EXEDIR);
-        strcat(fname_buf, PATHSEPSTRING);
-    }
-    strcat(fname_buf, "flisp.boot");
-
-    FL_TRY {    // toplevel exception handler
-        PUSH(cvalue_static_cstring(fname_buf));
-        PUSH(symbol(":read"));
-        value_t f = fl_file(&Stack[SP-2], 2);
-        POPN(2);
-        PUSH(f); saveSP = SP;
+    PUSH(sys_image_iostream);
+    saveSP = SP;
+    FL_TRY {
         while (1) {
             e = fl_read_sexpr(Stack[SP-1]);
             if (ios_eof(value2c(ios_t*,Stack[SP-1]))) break;
@@ -2301,33 +2278,14 @@ int fl_startup()
                 break;
             }
         }
-        ios_close(value2c(ios_t*,Stack[SP-1]));
-        POPN(1);
     }
     FL_CATCH {
         ios_puts("fatal error during bootstrap:\n", ios_stderr);
-        fl_print(ios_stderr, lasterror);
+        fl_print(ios_stderr, fl_lasterror);
         ios_putc('\n', ios_stderr);
         return 1;
     }
-    return 0;
-}
-
-int main(int argc, char *argv[])
-{
-    if (fl_startup())
-        return 1;
-
-    FL_TRY {
-        PUSH(symbol_value(symbol("__start")));
-        PUSH(argv_list(argc, argv));
-        (void)_applyn(1);
-    }
-    FL_CATCH {
-        ios_puts("fatal error:\n", ios_stderr);
-        fl_print(ios_stderr, lasterror);
-        ios_putc('\n', ios_stderr);
-        return 1;
-    }
+    ios_close(value2c(ios_t*,Stack[SP-1]));
+    POPN(1);
     return 0;
 }

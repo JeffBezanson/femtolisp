@@ -3,6 +3,7 @@
 #include <string.h>
 #include <assert.h>
 #include <limits.h>
+#include <setjmp.h>
 
 #include "llt.h"
 #include "flisp.h"
