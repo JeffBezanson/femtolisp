@@ -295,3 +295,6 @@
   (let ((b (buffer)))
     (with-output-to b (thunk))
     (io.tostring! b)))
+
+(define (read-u8) (io.read *input-stream* 'uint8))
+(define modulo mod)

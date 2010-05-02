@@ -43,6 +43,7 @@ static size_t nfinalizers=0;
 static size_t maxfinalizers=0;
 static size_t malloc_pressure = 0;
 
+#ifndef BOEHM_GC
 void add_finalizer(cvalue_t *cv)
 {
     if (nfinalizers == maxfinalizers) {
@@ -81,7 +82,7 @@ static void sweep_finalizers()
 #ifndef NDEBUG
                 memset(cv_data(tmp), 0xbb, cv_len(tmp));
 #endif
-                free(cv_data(tmp));
+                LLT_FREE(cv_data(tmp));
             }
             ndel++;
         }
@@ -95,6 +96,12 @@ static void sweep_finalizers()
 
     malloc_pressure = 0;
 }
+#else // BOEHM_GC
+void add_finalizer(cvalue_t *cv)
+{
+    (void)cv;
+}
+#endif // BOEHM_GC
 
 // compute the size of the metadata object for a cvalue
 static size_t cv_nwords(cvalue_t *cv)
@@ -153,7 +160,7 @@ value_t cvalue(fltype_t *type, size_t sz)
             gc(0);
         pcv = (cvalue_t*)alloc_words(CVALUE_NWORDS);
         pcv->type = type;
-        pcv->data = malloc(sz);
+        pcv->data = LLT_ALLOC(sz);
         autorelease(pcv);
         malloc_pressure += sz;
     }
@@ -232,7 +239,7 @@ void cv_pin(cvalue_t *cv)
         return;
     size_t sz = cv_len(cv);
     if (cv_isstr(cv)) sz++;
-    void *data = malloc(sz);
+    void *data = LLT_ALLOC(sz);
     memcpy(data, cv_data(cv), sz);
     cv->data = data;
     autorelease(cv);
@@ -664,6 +671,9 @@ value_t cvalue_relocate(value_t v)
     if (t->vtable != NULL && t->vtable->relocate != NULL)
         t->vtable->relocate(v, ncv);
     forward(v, ncv);
+#ifdef BOEHM_GC
+    cv->data = NULL;
+#endif
     return ncv;
 }
 
@@ -679,7 +689,7 @@ value_t cvalue_copy(value_t v)
     if (!isinlined(cv)) {
         size_t len = cv_len(cv);
         if (cv_isstr(cv)) len++;
-        ncv->data = malloc(len);
+        ncv->data = LLT_ALLOC(len);
         memcpy(ncv->data, cv_data(cv), len);
         autorelease(ncv);
         if (hasparent(cv)) {
@@ -888,7 +898,7 @@ value_t fl_builtin(value_t *args, u_int32_t nargs)
 
 value_t cbuiltin(char *name, builtin_t f)
 {
-    cvalue_t *cv = (cvalue_t*)malloc(CVALUE_NWORDS * sizeof(value_t));
+    cvalue_t *cv = (cvalue_t*)LLT_ALLOC(CVALUE_NWORDS * sizeof(value_t));
     cv->type = builtintype;
     cv->data = &cv->_space[0];
     cv->len = sizeof(value_t);

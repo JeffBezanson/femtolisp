@@ -22,7 +22,7 @@ fltype_t *get_type(value_t t)
         sz = ctype_sizeof(t, &align);
     }
 
-    ft = (fltype_t*)malloc(sizeof(fltype_t));
+    ft = (fltype_t*)LLT_ALLOC(sizeof(fltype_t));
     ft->type = t;
     if (issymbol(t)) {
         ft->numtype = sym_to_numtype(t);
@@ -42,7 +42,7 @@ fltype_t *get_type(value_t t)
         if (isarray) {
             fltype_t *eltype = get_type(car_(cdr_(t)));
             if (eltype->size == 0) {
-                free(ft);
+                LLT_FREE(ft);
                 lerror(ArgError, "invalid array element type");
             }
             ft->elsz = eltype->size;
@@ -70,7 +70,7 @@ fltype_t *get_array_type(value_t eltype)
 fltype_t *define_opaque_type(value_t sym, size_t sz, cvtable_t *vtab,
                              cvinitfunc_t init)
 {
-    fltype_t *ft = (fltype_t*)malloc(sizeof(fltype_t));
+    fltype_t *ft = (fltype_t*)LLT_ALLOC(sizeof(fltype_t));
     ft->type = sym;
     ft->size = sz;
     ft->numtype = N_NUMTYPES;

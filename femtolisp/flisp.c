@@ -121,7 +121,7 @@ static unsigned char *fromspace;
 static unsigned char *tospace;
 static unsigned char *curheap;
 static unsigned char *lim;
-static uint32_t heapsize = 512*1024;//bytes
+static uint32_t heapsize;//bytes
 static uint32_t *consflags;
 
 // error utilities ------------------------------------------------------------
@@ -245,7 +245,7 @@ static symbol_t *mk_symbol(char *str)
     symbol_t *sym;
     size_t len = strlen(str);
 
-    sym = (symbol_t*)malloc(sizeof(symbol_t)-sizeof(void*) + len + 1);
+    sym = (symbol_t*)LLT_ALLOC(sizeof(symbol_t)-sizeof(void*) + len + 1);
     assert(((uptrint_t)sym & 0x7) == 0); // make sure malloc aligns 8
     sym->left = sym->right = NULL;
     sym->flags = 0;
@@ -564,7 +564,9 @@ void gc(int mustgrow)
     memory_exception_value = relocate(memory_exception_value);
     the_empty_vector = relocate(the_empty_vector);
 
+#ifndef BOEHM_GC
     sweep_finalizers();
+#endif
 
 #ifdef VERBOSEGC
     printf("GC: found %d/%d live conses\n",
@@ -578,7 +580,7 @@ void gc(int mustgrow)
     // more space to fill next time. if we grew tospace last time,
     // grow the other half of the heap this time to catch up.
     if (grew || ((lim-curheap) < (int)(heapsize/5)) || mustgrow) {
-        temp = realloc(tospace, grew ? heapsize : heapsize*2);
+        temp = LLT_REALLOC(tospace, grew ? heapsize : heapsize*2);
         if (temp == NULL)
             fl_raise(memory_exception_value);
         tospace = temp;
@@ -600,7 +602,7 @@ void gc(int mustgrow)
 static void grow_stack()
 {
     size_t newsz = N_STACK + (N_STACK>>1);
-    value_t *ns = realloc(Stack, newsz*sizeof(value_t));
+    value_t *ns = LLT_REALLOC(Stack, newsz*sizeof(value_t));
     if (ns == NULL)
         lerror(MemoryError, "stack overflow");
     Stack = ns;
@@ -2145,21 +2147,23 @@ static builtinspec_t core_builtin_info[] = {
 extern void builtins_init();
 extern void comparehash_init();
 
-static void lisp_init(void)
+static void lisp_init(size_t initial_heapsize)
 {
     int i;
 
     llt_init();
 
-    fromspace = malloc(heapsize);
-    tospace   = malloc(heapsize);
+    heapsize = initial_heapsize;
+
+    fromspace = LLT_ALLOC(heapsize);
+    tospace   = LLT_ALLOC(heapsize);
     curheap = fromspace;
     lim = curheap+heapsize-sizeof(cons_t);
     consflags = bitvector_new(heapsize/sizeof(cons_t), 1);
     htable_new(&printconses, 32);
     comparehash_init();
     N_STACK = 262144;
-    Stack = malloc(N_STACK*sizeof(value_t));
+    Stack = LLT_ALLOC(N_STACK*sizeof(value_t));
 
     FL_NIL = NIL = builtin(OP_THE_EMPTY_LIST);
     FL_T = builtin(OP_BOOL_CONST_T);
@@ -2243,9 +2247,9 @@ value_t fl_toplevel_eval(value_t expr)
     return fl_applyn(1, symbol_value(evalsym), expr);
 }
 
-void fl_init()
+void fl_init(size_t initial_heapsize)
 {
-    lisp_init();
+    lisp_init(initial_heapsize);
 }
 
 int fl_load_system_image(value_t sys_image_iostream)

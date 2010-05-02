@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
 {
     char fname_buf[1024];
 
-    fl_init();
+    fl_init(512*1024);
 
     fname_buf[0] = '\0';
     value_t str = symbol_value(symbol("*install-dir*"));
