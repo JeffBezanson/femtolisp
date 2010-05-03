@@ -564,9 +564,7 @@ void gc(int mustgrow)
     memory_exception_value = relocate(memory_exception_value);
     the_empty_vector = relocate(the_empty_vector);
 
-#ifndef BOEHM_GC
     sweep_finalizers();
-#endif
 
 #ifdef VERBOSEGC
     printf("GC: found %d/%d live conses\n",

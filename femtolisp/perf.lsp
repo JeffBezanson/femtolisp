@@ -10,7 +10,7 @@
 
 (princ "sort: ")
 (set! r (map-int (lambda (x) (mod (+ (* x 9421) 12345) 1024)) 1000))
-(time (sort r))
+(time (simple-sort r))
 
 (princ "expand: ")
 (time (dotimes (n 5000) (expand '(dotimes (i 100) body1 body2))))

@@ -43,12 +43,11 @@ static size_t nfinalizers=0;
 static size_t maxfinalizers=0;
 static size_t malloc_pressure = 0;
 
-#ifndef BOEHM_GC
 void add_finalizer(cvalue_t *cv)
 {
     if (nfinalizers == maxfinalizers) {
         size_t nn = (maxfinalizers==0 ? 256 : maxfinalizers*2);
-        cvalue_t **temp = (cvalue_t**)realloc(Finalizers, nn*sizeof(value_t));
+        cvalue_t **temp = (cvalue_t**)LLT_REALLOC(Finalizers, nn*sizeof(value_t));
         if (temp == NULL)
             lerror(MemoryError, "out of memory");
         Finalizers = temp;
@@ -82,7 +81,7 @@ static void sweep_finalizers()
 #ifndef NDEBUG
                 memset(cv_data(tmp), 0xbb, cv_len(tmp));
 #endif
-                LLT_FREE(cv_data(tmp));
+                free(cv_data(tmp));
             }
             ndel++;
         }
@@ -96,12 +95,6 @@ static void sweep_finalizers()
 
     malloc_pressure = 0;
 }
-#else // BOEHM_GC
-void add_finalizer(cvalue_t *cv)
-{
-    (void)cv;
-}
-#endif // BOEHM_GC
 
 // compute the size of the metadata object for a cvalue
 static size_t cv_nwords(cvalue_t *cv)
@@ -160,7 +153,7 @@ value_t cvalue(fltype_t *type, size_t sz)
             gc(0);
         pcv = (cvalue_t*)alloc_words(CVALUE_NWORDS);
         pcv->type = type;
-        pcv->data = LLT_ALLOC(sz);
+        pcv->data = malloc(sz);
         autorelease(pcv);
         malloc_pressure += sz;
     }
@@ -239,7 +232,7 @@ void cv_pin(cvalue_t *cv)
         return;
     size_t sz = cv_len(cv);
     if (cv_isstr(cv)) sz++;
-    void *data = LLT_ALLOC(sz);
+    void *data = malloc(sz);
     memcpy(data, cv_data(cv), sz);
     cv->data = data;
     autorelease(cv);
@@ -686,7 +679,7 @@ value_t cvalue_copy(value_t v)
     if (!isinlined(cv)) {
         size_t len = cv_len(cv);
         if (cv_isstr(cv)) len++;
-        ncv->data = LLT_ALLOC(len);
+        ncv->data = malloc(len);
         memcpy(ncv->data, cv_data(cv), len);
         autorelease(ncv);
         if (hasparent(cv)) {
@@ -895,7 +888,7 @@ value_t fl_builtin(value_t *args, u_int32_t nargs)
 
 value_t cbuiltin(char *name, builtin_t f)
 {
-    cvalue_t *cv = (cvalue_t*)LLT_ALLOC(CVALUE_NWORDS * sizeof(value_t));
+    cvalue_t *cv = (cvalue_t*)malloc(CVALUE_NWORDS * sizeof(value_t));
     cv->type = builtintype;
     cv->data = &cv->_space[0];
     cv->len = sizeof(value_t);

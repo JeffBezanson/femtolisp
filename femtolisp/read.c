@@ -426,20 +426,20 @@ static value_t read_string()
     value_t s;
     u_int32_t wc;
 
-    buf = LLT_ALLOC(sz);
+    buf = malloc(sz);
     while (1) {
         if (i >= sz-4) {  // -4: leaves room for longest utf8 sequence
             sz *= 2;
-            temp = LLT_REALLOC(buf, sz);
+            temp = realloc(buf, sz);
             if (temp == NULL) {
-                LLT_FREE(buf);
+                free(buf);
                 lerror(ParseError, "read: out of memory reading string");
             }
             buf = temp;
         }
         c = ios_getc(F);
         if (c == IOS_EOF) {
-            LLT_FREE(buf);
+            free(buf);
             lerror(ParseError, "read: unexpected end of input in string");
         }
         if (c == '"')
@@ -447,7 +447,7 @@ static value_t read_string()
         else if (c == '\\') {
             c = ios_getc(F);
             if (c == IOS_EOF) {
-                LLT_FREE(buf);
+                free(buf);
                 lerror(ParseError, "read: end of input in escape sequence");
             }
             j=0;
@@ -474,7 +474,7 @@ static value_t read_string()
                 eseq[j] = '\0';
                 if (j) wc = strtol(eseq, NULL, 16);
                 else {
-                    LLT_FREE(buf);
+                    free(buf);
                     lerror(ParseError, "read: invalid escape sequence");
                 }
                 if (ndig == 2)
@@ -492,7 +492,7 @@ static value_t read_string()
     }
     s = cvalue_string(i);
     memcpy(cvalue_data(s), buf, i);
-    LLT_FREE(buf);
+    free(buf);
     return s;
 }
 

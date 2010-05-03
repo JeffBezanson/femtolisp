@@ -263,15 +263,14 @@
 		    (set! lst (cdr lst)))))))
   (filter- pred lst (list ())))
 
-(define separate
-  (letrec ((separate-
-	    (lambda (pred lst yes no)
-	      (cond ((null? lst) (cons yes no))
-		    ((pred (car lst))
-		     (separate- pred (cdr lst) (cons (car lst) yes) no))
-		    (#t
-		     (separate- pred (cdr lst) yes (cons (car lst) no)))))))
-    (lambda (pred lst) (separate- pred lst () ()))))
+(define (separate pred lst)
+  (define (separate- pred lst yes no)
+    (cond ((null? lst) (values yes no))
+	  ((pred (car lst))
+	   (separate- pred (cdr lst) (cons (car lst) yes) no))
+	  (else
+	   (separate- pred (cdr lst) yes (cons (car lst) no)))))
+  (separate- pred lst () ()))
 
 (define (count f l)
   (define (count- f l n)
@@ -958,11 +957,12 @@
 
 (define (simple-sort l)
   (if (or (null? l) (null? (cdr l))) l
-      (let* ((piv (car l))
-	     (halves (separate (lambda (x) (< x piv)) (cdr l))))
-	(nconc (simple-sort (car halves))
-	       (list piv)
-	       (simple-sort (cdr halves))))))
+      (let ((piv (car l)))
+	(receive (less grtr)
+		 (separate (lambda (x) (< x piv)) (cdr l))
+		 (nconc (simple-sort less)
+			(list piv)
+			(simple-sort grtr))))))
 
 (define (make-system-image fname)
   (let ((f (file fname :write :create :truncate))

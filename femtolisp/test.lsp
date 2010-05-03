@@ -35,14 +35,6 @@
 ;(set! a (map-int identity 10000))
 ;(dotimes (i 200) (rfoldl cons () a))
 
-(define (sort l)
-  (if (or (null? l) (null? (cdr l))) l
-    (let* ((piv (car l))
-           (halves (separate (lambda (x) (< x piv)) (cdr l))))
-      (nconc (sort (car halves))
-             (list piv)
-             (sort (cdr halves))))))
-
 #|
 (define-macro (dotimes var . body)
   (let ((v   (car var))
