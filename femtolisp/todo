@@ -1189,3 +1189,11 @@ what needs more test coverage:
 - bitwise and logical ops
 - making a closure in a default value expression for an optional arg
 - gc during a catch block, then get stack trace
+
+-----------------------------------------------------------------------------
+
+5/4/10 todo:
+
+- flush and close open files on exit
+- make function versions of opcode builtins by wrapping in a lambda,
+  stored in a table indexed by opcode. use in _applyn
