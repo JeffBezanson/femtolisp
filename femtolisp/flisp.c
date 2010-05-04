@@ -487,6 +487,7 @@ static value_t relocate(value_t v)
         nfn->env = relocate(fn->env);
         nfn->vals = relocate(nfn->vals);
         nfn->bcode = relocate(nfn->bcode);
+        assert(!ismanaged(fn->name));
         nfn->name = fn->name;
         return nc;
     }
@@ -553,10 +554,17 @@ void gc(int mustgrow)
     relocate_typetable();
     rs = readstate;
     while (rs) {
-        for(i=0; i < rs->backrefs.size; i++)
-            rs->backrefs.table[i] = (void*)relocate((value_t)rs->backrefs.table[i]);
-        for(i=0; i < rs->gensyms.size; i++)
-            rs->gensyms.table[i] = (void*)relocate((value_t)rs->gensyms.table[i]);
+        value_t ent;
+        for(i=0; i < rs->backrefs.size; i++) {
+            ent = (value_t)rs->backrefs.table[i];
+            if (ent != HT_NOTFOUND)
+                rs->backrefs.table[i] = (void*)relocate(ent);
+        }
+        for(i=0; i < rs->gensyms.size; i++) {
+            ent = (value_t)rs->gensyms.table[i];
+            if (ent != HT_NOTFOUND)
+                rs->gensyms.table[i] = (void*)relocate(ent);
+        }
         rs->source = relocate(rs->source);
         rs = rs->prev;
     }
@@ -1697,6 +1705,7 @@ static value_t apply_cl(uint32_t nargs)
             v = Stack[bp+nargs];
             while (s--)
                 v = vector_elt(v, vector_size(v)-1);
+            assert(i < vector_size(v));
             vector_elt(v, i) = Stack[SP-1];
             NEXT_OP;
 

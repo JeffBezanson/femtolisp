@@ -75,7 +75,7 @@ typedef struct _symbol_t {
 #define vector_size(v) (((size_t*)ptr(v))[0]>>2)
 #define vector_setsize(v,n) (((size_t*)ptr(v))[0] = ((n)<<2))
 #define vector_elt(v,i) (((value_t*)ptr(v))[1+(i)])
-#define vector_grow_amt(x) ((x)<8 ? 4 : 6*((x)>>3))
+#define vector_grow_amt(x) ((x)<8 ? 5 : 6*((x)>>3))
 // functions ending in _ are unsafe, faster versions
 #define car_(v) (((cons_t*)ptr(v))->car)
 #define cdr_(v) (((cons_t*)ptr(v))->cdr)

@@ -121,6 +121,8 @@ void cv_autorelease(cvalue_t *cv)
 
 static value_t cprim(fltype_t *type, size_t sz)
 {
+    assert(!ismanaged((uptrint_t)type));
+    assert(sz == type->size);
     cprim_t *pcp = (cprim_t*)alloc_words(CPRIM_NWORDS-1+NWORDS(sz));
     pcp->type = type;
     return tagptr(pcp, TAG_CPRIM);
@@ -412,6 +414,7 @@ static int cvalue_array_init(fltype_t *ft, value_t arg, void *dest)
     sz = elsize * cnt;
 
     if (isvector(arg)) {
+        assert(cnt <= vector_size(arg));
         for(i=0; i < cnt; i++) {
             cvalue_init(eltype, vector_elt(arg,i), dest);
             dest += elsize;

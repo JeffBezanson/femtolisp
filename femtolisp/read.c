@@ -377,6 +377,7 @@ static value_t vector_grow(value_t v)
     size_t i, s = vector_size(v);
     size_t d = vector_grow_amt(s);
     PUSH(v);
+    assert(s+d > s);
     value_t newv = alloc_vector(s+d, 1);
     v = Stack[SP-1];
     for(i=0; i < s; i++)
@@ -408,6 +409,7 @@ static value_t read_vector(value_t label, u_int32_t closer)
         }
         elt = do_read_sexpr(UNBOUND);
         v = Stack[SP-1];
+        assert(i < vector_size(v));
         vector_elt(v,i) = elt;
         i++;
     }
@@ -521,7 +523,7 @@ static void read_list(value_t *pval, value_t label)
         }
         *pc = c;
         c = do_read_sexpr(UNBOUND); // must be on separate lines due to
-        car_(*pc) = c;                // undefined evaluation order
+        car_(*pc) = c;              // undefined evaluation order
 
         t = peek();
         if (t == TOK_DOT) {
@@ -666,9 +668,11 @@ value_t fl_read_sexpr(value_t f)
     state.source = f;
     readstate = &state;
     assert(toktype == TOK_NONE);
+    fl_gc_handle(&tokval);
 
     v = do_read_sexpr(UNBOUND);
 
+    fl_free_gc_handles(1);
     readstate = state.prev;
     free_readstate(&state);
     return v;
