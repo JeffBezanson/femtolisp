@@ -338,7 +338,8 @@
 	  #fn("9000r1e0c1_|43;" [foldl #.cons] reverse) reverse! #fn("7000r1c0q_41;" [#fn("9000r1]~F6C02~N~|~m02P2o005\x1c/2|;" [])] reverse!)
 	  self-evaluating? #fn("8000r1|?16602|C@17K02e0|3116A02|C16:02|e1|31<;" [constant?
   top-level-value] self-evaluating?)
-	  separate #fn("7000r2c0q]41;" [#fn(":000r1c0qm02|~\x7f__44;" [#fn(";000r4}\x85;0e0g2g342;|}M316@0~|}N}Mg2Kg344;~|}Ng2}Mg3K44;" [values] separate-)])] separate)
+	  separate #fn("7000r2c0q]41;" [#fn(":000r1c0qm02|~\x7f__44;" [#fn(";000r4}\x85C0e0e1g231e1g33142;|}M316@0~|}N}Mg2Kg344;~|}Ng2}Mg3K44;" [values
+  reverse] separate-)])] separate)
 	  set-syntax! #fn("9000r2e0e1|}43;" [put! *syntax-environment*] set-syntax!)
 	  simple-sort #fn("7000r1|A17602|NA640|;c0q|M41;" [#fn("8000r1e0c1qc2q42;" [call-with-values
   #fn("8000r0e0c1qi10N42;" [separate #fn("7000r1|~X;" [])])

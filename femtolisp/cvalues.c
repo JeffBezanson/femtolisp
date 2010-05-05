@@ -38,16 +38,17 @@ value_t cvalue_typeof(value_t *args, u_int32_t nargs);
 // trigger unconditional GC after this many bytes are allocated
 #define ALLOC_LIMIT_TRIGGER 67108864
 
+static size_t malloc_pressure = 0;
+
 static cvalue_t **Finalizers = NULL;
 static size_t nfinalizers=0;
 static size_t maxfinalizers=0;
-static size_t malloc_pressure = 0;
 
 void add_finalizer(cvalue_t *cv)
 {
     if (nfinalizers == maxfinalizers) {
         size_t nn = (maxfinalizers==0 ? 256 : maxfinalizers*2);
-        cvalue_t **temp = (cvalue_t**)LLT_REALLOC(Finalizers, nn*sizeof(value_t));
+        cvalue_t **temp = (cvalue_t**)realloc(Finalizers, nn*sizeof(value_t));
         if (temp == NULL)
             lerror(MemoryError, "out of memory");
         Finalizers = temp;

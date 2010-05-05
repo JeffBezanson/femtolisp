@@ -289,13 +289,6 @@ value_t symbol(char *str)
     return tagptr(*pnode, TAG_SYM);
 }
 
-typedef struct {
-    value_t isconst;
-    value_t binding;   // global value binding
-    fltype_t *type;
-    uint32_t id;
-} gensym_t;
-
 static uint32_t _gensym_ctr=0;
 // two static buffers for gensym printing so there can be two
 // gensym names available at a time, mostly for compare()
@@ -311,6 +304,11 @@ value_t fl_gensym(value_t *args, uint32_t nargs)
     gs->isconst = 0;
     gs->type = NULL;
     return tagptr(gs, TAG_SYM);
+}
+
+int fl_isgensym(value_t v)
+{
+    return isgensym(v);
 }
 
 static value_t fl_gensymp(value_t *args, u_int32_t nargs)
@@ -557,12 +555,12 @@ void gc(int mustgrow)
         value_t ent;
         for(i=0; i < rs->backrefs.size; i++) {
             ent = (value_t)rs->backrefs.table[i];
-            if (ent != HT_NOTFOUND)
+            if (ent != (value_t)HT_NOTFOUND)
                 rs->backrefs.table[i] = (void*)relocate(ent);
         }
         for(i=0; i < rs->gensyms.size; i++) {
             ent = (value_t)rs->gensyms.table[i];
-            if (ent != HT_NOTFOUND)
+            if (ent != (value_t)HT_NOTFOUND)
                 rs->gensyms.table[i] = (void*)relocate(ent);
         }
         rs->source = relocate(rs->source);
