@@ -93,7 +93,7 @@ value_t FL_NIL, FL_T, FL_F, FL_EOF, QUOTE;
 value_t IOError, ParseError, TypeError, ArgError, UnboundError, MemoryError;
 value_t DivideError, BoundsError, Error, KeyError, EnumerationError;
 value_t printwidthsym, printreadablysym, printprettysym, printlengthsym;
-value_t printlevelsym;
+value_t printlevelsym, builtins_table_sym;
 
 static value_t NIL, LAMBDA, IF, TRYCATCH;
 static value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT, FUNCTION;
@@ -625,6 +625,11 @@ static value_t _applyn(uint32_t n)
         v = ((builtin_t*)ptr(f))[3](&Stack[SP-n], n);
     }
     else if (isfunction(f)) {
+        v = apply_cl(n);
+    }
+    else if (isbuiltin(f)) {
+        value_t tab = symbol_value(builtins_table_sym);
+        Stack[SP-n-1] = vector_elt(tab, uintval(f));
         v = apply_cl(n);
     }
     else {
@@ -1728,7 +1733,10 @@ static value_t apply_cl(uint32_t nargs)
             else {
                 PUSH(Stack[bp]); // env has already been captured; share
             }
-            pv = alloc_words(4);
+            if (curheap > lim-2)
+                gc(0);
+            pv = (value_t*)curheap;
+            curheap += (4*sizeof(value_t));
             e = Stack[SP-2];  // closure to copy
             assert(isfunction(e));
             pv[0] = ((value_t*)ptr(e))[0];
@@ -2206,6 +2214,7 @@ static void lisp_init(size_t initial_heapsize)
     set(printwidthsym=symbol("*print-width*"), fixnum(SCR_WIDTH));
     set(printlengthsym=symbol("*print-length*"), FL_F);
     set(printlevelsym=symbol("*print-level*"), FL_F);
+    builtins_table_sym = symbol("*builtins*");
     fl_lasterror = NIL;
     i = 0;
     for (i=OP_EQ; i <= OP_ASET; i++) {

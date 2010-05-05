@@ -5,6 +5,27 @@
 
 (define (void) #t)  ; the unspecified value
 
+(define *builtins*
+  (vector
+   0 0 0 0 0 0 0 0 0 0 0 0
+   (lambda (x y) (eq? x y))          (lambda (x y) (eqv? x y))
+   (lambda (x y) (equal? x y))       (lambda (x) (atom? x))
+   (lambda (x) (not x))              (lambda (x) (null? x))
+   (lambda (x) (boolean? x))         (lambda (x) (symbol? x))
+   (lambda (x) (number? x))          (lambda (x) (bound? x))
+   (lambda (x) (pair? x))            (lambda (x) (builtin? x))
+   (lambda (x) (vector? x))          (lambda (x) (fixnum? x))
+   (lambda (x) (function? x))        (lambda (x y) (cons x y))
+   (lambda rest (apply list rest))   (lambda (x) (car x))
+   (lambda (x) (cdr x))              (lambda (x y) (set-car! x y))
+   (lambda (x y) (set-cdr! x y))     (lambda rest (apply apply rest))
+   (lambda rest (apply + rest))      (lambda rest (apply - rest))
+   (lambda rest (apply * rest))      (lambda rest (apply / rest))
+   (lambda rest (apply div0 rest))   (lambda (x y) (= x y))
+   (lambda (x y) (< x y))            (lambda (x y) (compare x y))
+   (lambda rest (apply vector rest)) (lambda (x y) (aref x y))
+   (lambda (x y z) (aset! x y z))))
+
 (if (not (bound? '*syntax-environment*))
     (define *syntax-environment* (table)))
 
@@ -18,19 +39,21 @@
 (define-macro (label name fn)
   `((lambda (,name) (set! ,name ,fn)) #f))
 
+(define (map1 f lst acc)
+  (cdr
+   (prog1 acc
+	  (while (pair? lst)
+		 (begin (set! acc
+			      (cdr (set-cdr! acc (cons (f (car lst)) ()))))
+			(set! lst (cdr lst)))))))
+
+(define (mapn f lsts)
+  (if (null? (car lsts))
+      ()
+      (cons (apply f (map1 car lsts (list ())))
+	    (mapn  f (map1 cdr lsts (list ()))))))
+
 (define (map f lst . lsts)
-  (define (map1 f lst acc)
-    (cdr
-     (prog1 acc
-      (while (pair? lst)
-	     (begin (set! acc
-			  (cdr (set-cdr! acc (cons (f (car lst)) ()))))
-		    (set! lst (cdr lst)))))))
-  (define (mapn f lsts)
-    (if (null? (car lsts))
-	()
-	(cons (apply f (map1 car lsts (list ())))
-	      (mapn  f (map1 cdr lsts (list ()))))))
   (if (null? lsts)
       (map1 f lst (list ()))
       (mapn f (cons lst lsts))))
@@ -265,12 +288,18 @@
 
 (define (separate pred lst)
   (define (separate- pred lst yes no)
-    (cond ((null? lst) (values (reverse yes) (reverse no)))
-	  ((pred (car lst))
-	   (separate- pred (cdr lst) (cons (car lst) yes) no))
-	  (else
-	   (separate- pred (cdr lst) yes (cons (car lst) no)))))
-  (separate- pred lst () ()))
+    (let ((vals
+	   (prog1
+	    (cons yes no)
+	    (while (pair? lst)
+		   (begin (if (pred (car lst))
+			      (set! yes
+				    (cdr (set-cdr! yes (cons (car lst) ()))))
+			      (set! no
+				    (cdr (set-cdr! no  (cons (car lst) ())))))
+			  (set! lst (cdr lst)))))))
+      (values (cdr (car vals)) (cdr (cdr vals)))))
+  (separate- pred lst (list ()) (list ())))
 
 (define (count f l)
   (define (count- f l n)

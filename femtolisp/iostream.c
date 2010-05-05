@@ -70,6 +70,11 @@ static ios_t *toiostream(value_t v, char *fname)
     return value2c(ios_t*, v);
 }
 
+ios_t *fl_toiostream(value_t v, char *fname)
+{
+    return toiostream(v, fname);
+}
+
 value_t fl_file(value_t *args, uint32_t nargs)
 {
     if (nargs < 1)
@@ -333,7 +338,9 @@ value_t fl_ioreaduntil(value_t *args, u_int32_t nargs)
     if (dest.buf != data) {
         // outgrew initial space
         cv->data = dest.buf;
+#ifndef BOEHM_GC
         cv_autorelease(cv);
+#endif
     }
     ((char*)cv->data)[n] = '\0';
     if (n == 0 && ios_eof(src))
@@ -378,7 +385,9 @@ value_t stream_to_string(value_t *ps)
         char *b = ios_takebuf(st, &n); n--;
         b[n] = '\0';
         str = cvalue_from_ref(stringtype, b, n, FL_NIL);
+#ifndef BOEHM_GC
         cv_autorelease((cvalue_t*)ptr(str));
+#endif
     }
     return str;
 }
