@@ -511,6 +511,10 @@
 		(string.sub s 0 (string.dec s (length s)))))
       k))
 
+(define (lambda-arg-names argl)
+  (map! (lambda (s) (if (pair? s) (keyword->symbol (car s)) s))
+	(to-proper argl)))
+
 (define (lambda-vars l)
   (define (check-formals l o opt kw)
     (cond ((or (null? l) (symbol? l)) #t)
@@ -539,8 +543,7 @@
 	       (error "compile error: invalid formal argument " l
 		      " in list " o)))))
   (check-formals l l #f #f)
-  (map! (lambda (s) (if (pair? s) (keyword->symbol (car s)) s))
-	(to-proper l)))
+  (lambda-arg-names l))
 
 (define (emit-optional-arg-inits g env opta vars i)
   ; i is the lexical var index of the opt arg to process next
@@ -553,6 +556,15 @@
 	(emit g 'pop)
 	(mark-label g nxt)
 	(emit-optional-arg-inits g env (cdr opta) vars (+ i 1)))))
+
+(define (free-vars e)
+  (cond ((symbol? e) (list e))
+	((or (atom? e) (eq? (car e) 'quote)) ())
+	((eq? (car e) 'lambda)
+	 (diff (free-vars (cddr e))
+	       (nconc (get-defined-vars (cons 'begin (cddr e)))
+		      (lambda-arg-names (cadr e)))))
+	(else (delete-duplicates (apply nconc (map free-vars (cdr e)))))))
 
 (define compile-f-
   (let ((*defines-processed-token* (gensym)))
@@ -575,6 +587,10 @@
 		B
 		(cons (list* 'lambda V B *defines-processed-token*)
 		      (map (lambda (x) (void)) V))))))
+      (define (lam:body f)
+	(if (eq? (lastcdr f) *defines-processed-token*)
+	    (caddr f)
+	    (lambda-body f)))
       
       (let ((g    (make-code-emitter))
 	    (args (cadr f))
@@ -610,10 +626,7 @@
 		((null? opta)            (emit g 'argc  nargs)))
 
 	  ; compile body and return
-	  (compile-in g (cons vars env) #t
-		      (if (eq? (lastcdr f) *defines-processed-token*)
-			  (caddr f)
-			  (lambda-body f)))
+	  (compile-in g (cons vars env) #t (lam:body f))
 	  (emit g 'ret)
 	  (values (function (encode-byte-code (bcode:code g))
 			    (const-to-idx-vec g) name)

@@ -143,14 +143,15 @@
   apply tapply])]) get arg-counts] compile-builtin-call)
 	  compile-f #fn("8000r2e0c1qc242;" [call-with-values #fn("8000r0e0~\x7f42;" [compile-f-])
 					    #fn("6000r2|;" [])] compile-f)
-	  compile-f- #fn("7000r2c0q]41;" [#fn(">000r1c0qm02c1qe230\x7f\x84e3\x7f\x8431e4\x7f\x8431e5c6\x7f\x8432e3\x7f31i10\x8270c7570e3\x7f3146;" [#fn("9000r1c0qe1|31F6N0e2|31F6=0c3e1|31K570e4|31560e53041;" [#fn("8000r1c0qe1|3141;" [#fn(":000r1|\x8540~;e0c1|~i4034e2c3|32K;" [list*
+	  compile-f- #fn("8000r2c0q]]42;" [#fn(">000r2c0qm02c1qm12c2qe330\x7f\x84e4\x7f\x8431e5\x7f\x8431e6c7\x7f\x8432e4\x7f31i10\x8270c8570e4\x7f3146;" [#fn("9000r1c0qe1|31F6N0e2|31F6=0c3e1|31K570e4|31560e53041;" [#fn("8000r1c0qe1|3141;" [#fn(":000r1|\x8540~;e0c1|~i4034e2c3|32K;" [list*
   lambda map #fn("6000r1e040;" [void])]) get-defined-vars]) cddr cdddr begin
-  caddr void] lambda-body) #fn("9000r6c0q}?660`570e1}3141;" [#fn("9000r1c0q|e1i0431x41;" [#fn("9000r1c0qe1e2i143241;" [#fn("D000r1i24\x87\xa90|\x85O0e0i20c1~i22\x8580i10560i10y345s0e2i20e3e4c5e4c6|32e7e8|31313331322e0i20c9~e8|31i22\x8580i10560i10y352e:i20i40i24i23~35530]2e;i10c<326L0e0i20i22\x8570c=540c>i10335]0i22\x87A0e0i20c?i10335H0i24\x85A0e0i20c@i1033530^2eAi20i23i40K]eBi4131i50\x82<0eCi41315:0i30i4131342e0i20cD322eEeFeGeHi203131eIi2031i2533i20b3[42;" [emit
+  caddr void] lambda-body) #fn("7000r1e0|31i20\x8280e1|41;~|41;" [lastcdr caddr] lam:body)
+  #fn("9000r6c0q}?660`570e1}3141;" [#fn("9000r1c0q|e1i0431x41;" [#fn("9000r1c0qe1e2i143241;" [#fn("C000r1i24\x87\xa90|\x85O0e0i20c1~i22\x8580i10560i10y345s0e2i20e3e4c5e4c6|32e7e8|31313331322e0i20c9~e8|31i22\x8580i10560i10y352e:i20i40i24i23~35530]2e;i10c<326L0e0i20i22\x8570c=540c>i10335]0i22\x87A0e0i20c?i10335H0i24\x85A0e0i20c@i1033530^2eAi20i23i40K]i31i4131342e0i20cB322eCeDeEeFi203131eGi2031i2533i20b3[42;" [emit
   optargs bcode:indexfor make-perfect-hash-table map #.cons #.car iota length
-  keyargs emit-optional-arg-inits > 255 largc lvargc vargc argc compile-in
-  lastcdr caddr ret values function encode-byte-code bcode:code
-  const-to-idx-vec]) filter keyword-arg?]) length]) length]) make-code-emitter
-  lastcdr lambda-vars filter #.pair? lambda])] #0=[#:g704 ()])
+  keyargs emit-optional-arg-inits > 255 largc lvargc vargc argc compile-in ret
+  values function encode-byte-code bcode:code const-to-idx-vec]) filter
+  keyword-arg?]) length]) length]) make-code-emitter lastcdr lambda-vars filter
+  #.pair? lambda])] #0=[#:g711 ()])
 	  compile-for #fn(":000r5e0g4316X0e1|}^g2342e1|}^g3342e1|}^g4342e2|c342;e4c541;" [1arg-lambda?
   compile-in emit for error "for: third form must be a 1-argument lambda"] compile-for)
 	  compile-if #fn("<000r4c0qe1|31e1|31g3\x84e2g331e3g331F6;0e4g331560e53045;" [#fn(";000r5g2]\x82>0e0~\x7fi02g344;g2^\x82>0e0~\x7fi02g444;e0~\x7f^g2342e1~c2|332e0~\x7fi02g3342i026<0e1~c3325:0e1~c4}332e5~|322e0~\x7fi02g4342e5~}42;" [compile-in
@@ -251,6 +252,9 @@
 	  foldl #fn(":000r3g2\x8540};e0||g2M}32g2N43;" [foldl] foldl) foldr
 	  #fn(";000r3g2\x8540};|g2Me0|}g2N3342;" [foldr] foldr) for-each #fn(";000s2c0q]41;" [#fn(":000r1c0qm02i02\x85J0]\x7fF6A02~\x7fM312\x7fNo015\x1e/5;0|~\x7fi02K322];" [#fn(":000r2}MF6I0|e0c1}32Q22~|e0c2}3242;];" [map
   #.car #.cdr] for-each-n)])] for-each)
+	  free-vars #fn("<000r1|C660|L1;|?17802|Mc0<640_;|Mc1\x82V0e2e3e4|3131e5e6c7e4|31K31e8|\x84313242;e9e5e:e3|N32Q241;" [quote
+  lambda diff free-vars cddr nconc get-defined-vars begin lambda-arg-names
+  delete-duplicates map] free-vars)
 	  get-defined-vars #fn("8000r1e0~|3141;" [delete-duplicates] #1=[#fn("9000r1|?640_;|Mc0<16602|NF6d0|\x84C16702|\x84L117S02|\x84F16E02e1|31C16:02e1|31L117402_;|Mc2\x82>0e3e4~|N32v2;_;" [define
   caadr begin nconc map] #1#) ()])
 	  hex5 #fn("9000r1e0e1|b@32b5c243;" [string.lpad number->string #\0] hex5)
@@ -266,12 +270,13 @@
 	  #fn("9000r1e0|316@0e1c2e3|313141;|;" [keyword? symbol #fn("<000r1e0|`e1|e2|313243;" [string.sub
   string.dec length]) string] keyword->symbol)
 	  keyword-arg? #fn("7000r1|F16902e0|M41;" [keyword?] keyword-arg?)
-	  lambda-vars #fn("7000r1c0q]41;" [#fn(":000r1c0qm02|~~^^342e1c2e3~3142;" [#fn(";000r4|A17502|C640];|F16602|MC6S0g217502g36<0e0c1}c243;~|N}g2g344;|F16602|MF6\x870e3|Mb23216902e4|31C660^5=0e0c5|Mc6}342e7e4|31316<0~|N}g2]44;g36<0e0c1}c843;~|N}]g344;|F6>0e0c9|Mc6}44;|}\x82:0e0c1}42;e0c9|c6}44;" [error
+	  lambda-arg-names #fn("9000r1e0c1e2|3142;" [map! #fn("7000r1|F690e0|M41;|;" [keyword->symbol])
+						     to-proper] lambda-arg-names)
+	  lambda-vars #fn("7000r1c0q]41;" [#fn(":000r1c0qm02|~~^^342e1~41;" [#fn(";000r4|A17502|C640];|F16602|MC6S0g217502g36<0e0c1}c243;~|N}g2g344;|F16602|MF6\x870e3|Mb23216902e4|31C660^5=0e0c5|Mc6}342e7e4|31316<0~|N}g2]44;g36<0e0c1}c843;~|N}]g344;|F6>0e0c9|Mc6}44;|}\x82:0e0c1}42;e0c9|c6}44;" [error
   "compile error: invalid argument list "
   ". optional arguments must come after required." length= caar "compile error: invalid optional argument "
   " in list " keyword? ". keyword arguments must come last."
-  "compile error: invalid formal argument "] check-formals) map! #fn("7000r1|F690e0|M41;|;" [keyword->symbol])
-  to-proper])] lambda-vars)
+  "compile error: invalid formal argument "] check-formals) lambda-arg-names])] lambda-vars)
 	  last-pair #fn("7000r1|N?640|;e0|N41;" [last-pair] last-pair) lastcdr
 	  #fn("7000r1|?640|;e0|31N;" [last-pair] lastcdr) length= #fn("9000r2}`X640^;}`W650|?;|?660}`W;e0|N}ax42;" [length=] length=)
 	  length> #fn("9000r2}`X640|;}`W6;0|F16402|;|?660}`X;e0|N}ax42;" [length>] length>)
