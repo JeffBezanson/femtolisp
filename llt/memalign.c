@@ -24,7 +24,7 @@ void *malloc_aligned(size_t size, size_t align_size)
 {
     char *ptr;
 
-    ptr = (char*)malloc(size + align_size-1 + sizeof(long));
+    ptr = (char*)LLT_ALLOC(size + align_size-1 + sizeof(long));
     if (ptr == NULL)
         return NULL;
 
@@ -33,7 +33,7 @@ void *malloc_aligned(size_t size, size_t align_size)
 
 void free_aligned(void *ptr)
 {
-    free(ALIGNED_TO_ACTUAL(ptr));
+    LLT_FREE(ALIGNED_TO_ACTUAL(ptr));
 }
 
 void *realloc_aligned(void *ptr, size_t size, size_t align_size)
@@ -42,7 +42,7 @@ void *realloc_aligned(void *ptr, size_t size, size_t align_size)
 
     if (ptr != NULL)
         ptr = ALIGNED_TO_ACTUAL(ptr);
-    pnew = realloc(ptr, size + align_size-1 + sizeof(long));
+    pnew = LLT_REALLOC(ptr, size + align_size-1 + sizeof(long));
     if (pnew == NULL)
         return NULL;
 
