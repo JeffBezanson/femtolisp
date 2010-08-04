@@ -393,7 +393,7 @@ value_t alloc_vector(size_t n, int init)
 // print ----------------------------------------------------------------------
 
 static int isnumtok(char *tok, value_t *pval);
-static int symchar(char c);
+static inline int symchar(char c);
 
 #include "print.c"
 
@@ -593,7 +593,7 @@ void gc(int mustgrow)
         tospace = temp;
         if (grew) {
             heapsize*=2;
-            temp = bitvector_resize(consflags, heapsize/sizeof(cons_t), 1);
+            temp = bitvector_resize(consflags, 0, heapsize/sizeof(cons_t), 1);
             if (temp == NULL)
                 fl_raise(memory_exception_value);
             consflags = (uint32_t*)temp;
@@ -936,7 +936,7 @@ static value_t apply_cl(uint32_t nargs)
     VM_APPLY_LABELS;
     uint32_t top_frame = curr_frame;
     // frame variables
-    uint32_t n, captured;
+    uint32_t n=0, captured;
     uint32_t bp;
     const uint8_t *ip;
     fixnum_t s, hi;

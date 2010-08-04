@@ -11,7 +11,6 @@
 
 #include "dtypes.h"
 #include "ptrhash.h"
-#include "hashing.h"
 
 #define OP_EQ(x,y) ((x)==(y))
 

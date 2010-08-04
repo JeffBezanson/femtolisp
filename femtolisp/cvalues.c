@@ -651,7 +651,7 @@ value_t cvalue_typeof(value_t *args, u_int32_t nargs)
     return cv_type((cvalue_t*)ptr(args[0]));
 }
 
-value_t cvalue_relocate(value_t v)
+static value_t cvalue_relocate(value_t v)
 {
     size_t nw;
     cvalue_t *cv = (cvalue_t*)ptr(v);
@@ -840,7 +840,7 @@ static value_t cvalue_array_aref(value_t *args)
 {
     char *data; ulong_t index;
     fltype_t *eltype = cv_class((cvalue_t*)ptr(args[0]))->eltype;
-    value_t el;
+    value_t el = 0;
     numerictype_t nt = eltype->numtype;
     if (nt >= T_INT32)
         el = cvalue(eltype, eltype->size);
@@ -885,7 +885,7 @@ value_t fl_builtin(value_t *args, u_int32_t nargs)
     symbol_t *name = tosymbol(args[0], "builtin");
     cvalue_t *cv;
     if (ismanaged(args[0]) || (cv=name->dlcache) == NULL) {
-        lerror(ArgError, "builtin: function not found");
+        lerrorf(ArgError, "builtin: function %s not found", name->name);
     }
     return tagptr(cv, TAG_CVALUE);
 }

@@ -7,7 +7,10 @@
 
 #include "llt.h"
 #include "flisp.h"
+#include "equalhash.h"
 
 #include "htable.inc"
 
-HTIMPL(equalhash, hash_lispvalue, equal_lispvalue)
+#define _equal_lispvalue_(x,y) equal_lispvalue((value_t)(x),(value_t)(y))
+
+HTIMPL(equalhash, hash_lispvalue, _equal_lispvalue_)
