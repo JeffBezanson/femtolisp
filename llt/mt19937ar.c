@@ -46,7 +46,7 @@
 /* Period parameters */  
 #define mtN 624
 #define mtM 397
-#define MATRIX_A 0x9908b0dfU   /* constant vector a */
+#define MATRIX_A   0x9908b0dfU /* constant vector a */
 #define UPPER_MASK 0x80000000U /* most significant w-r bits */
 #define LOWER_MASK 0x7fffffffU /* least significant r bits */
 
