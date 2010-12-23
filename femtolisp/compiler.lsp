@@ -557,7 +557,7 @@
 	(mark-label g nxt)
 	(emit-optional-arg-inits g env (cdr opta) vars (+ i 1)))))
 
-(define (free-vars e)
+#;(define (free-vars e)
   (cond ((symbol? e) (list e))
 	((or (atom? e) (eq? (car e) 'quote)) ())
 	((eq? (car e) 'lambda)

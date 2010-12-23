@@ -36,10 +36,7 @@
   `(set-syntax! ',(car form)
 		(lambda ,(cdr form) ,@body)))
 
-(define-macro (label name fn)
-  `((lambda (,name) (set! ,name ,fn)) #f))
-
-(define (map1 f lst acc)
+#;(define (map1 f lst acc)
   (cdr
    (prog1 acc
 	  (while (pair? lst)
@@ -47,16 +44,22 @@
 			      (cdr (set-cdr! acc (cons (f (car lst)) ()))))
 			(set! lst (cdr lst)))))))
 
-(define (mapn f lsts)
+#;(define (mapn f lsts)
   (if (null? (car lsts))
       ()
       (cons (apply f (map1 car lsts (list ())))
 	    (mapn  f (map1 cdr lsts (list ()))))))
 
-(define (map f lst . lsts)
+#;(define (map f lst . lsts)
   (if (null? lsts)
       (map1 f lst (list ()))
       (mapn f (cons lst lsts))))
+
+(define-macro (letrec binds . body)
+  `((lambda ,(map car binds)
+      ,.(map (lambda (b) `(set! ,@b)) binds)
+      ,@body)
+    ,.(map (lambda (x) (void)) binds)))
 
 (define-macro (let binds . body)
   (let ((lname #f))
@@ -71,15 +74,9 @@
 	  (theargs
 	   (map (lambda (c) (if (pair? c) (cadr c) (void))) binds)))
       (cons (if lname
-		`(label ,lname ,thelambda)
+		`(letrec ((,lname ,thelambda)) ,lname)
 		thelambda)
 	    theargs))))
-
-(define-macro (letrec binds . body)
-  `((lambda ,(map car binds)
-      ,.(map (lambda (b) `(set! ,@b)) binds)
-      ,@body)
-    ,.(map (lambda (x) (void)) binds)))
 
 (define-macro (cond . clauses)
   (define (cond-clauses->if lst)
@@ -322,7 +319,11 @@
   (if (null? lst) zero
       (foldl f (f (car lst) zero) (cdr lst))))
 
-(define (reverse lst) (foldl cons () lst))
+(define (reverse- zero lst)
+  (if (null? lst) zero
+      (reverse- (cons (car lst) zero) (cdr lst))))
+
+(define (reverse lst) (reverse- () lst))
 
 (define (reverse! l)
   (let ((prev ()))

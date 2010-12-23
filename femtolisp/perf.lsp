@@ -18,11 +18,11 @@
 (define (my-append . lsts)
   (cond ((null? lsts) ())
         ((null? (cdr lsts)) (car lsts))
-        (else ((label append2 (lambda (l d)
-				(if (null? l) d
-				    (cons (car l)
-					  (append2 (cdr l) d)))))
-	       (car lsts) (apply my-append (cdr lsts))))))
+        (else (letrec ((append2 (lambda (l d)
+				  (if (null? l) d
+				      (cons (car l)
+					    (append2 (cdr l) d))))))
+		(append2 (car lsts) (apply my-append (cdr lsts)))))))
 
 (princ "append: ")
 (set! L (map-int (lambda (x) (map-int identity 20)) 20))

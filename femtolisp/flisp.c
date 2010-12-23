@@ -99,7 +99,7 @@ static value_t NIL, LAMBDA, IF, TRYCATCH;
 static value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT, FUNCTION;
 
 static value_t pairsym, symbolsym, fixnumsym, vectorsym, builtinsym, vu8sym;
-static value_t definesym, defmacrosym, forsym, labelsym, setqsym;
+static value_t definesym, defmacrosym, forsym, setqsym;
 static value_t tsym, Tsym, fsym, Fsym, booleansym, nullsym, evalsym, fnsym;
 // for reading characters
 static value_t nulsym, alarmsym, backspacesym, tabsym, linefeedsym, newlinesym;
@@ -2142,6 +2142,72 @@ value_t fl_stacktrace(value_t *args, u_int32_t nargs)
     return _stacktrace(fl_throwing_frame ? fl_throwing_frame : curr_frame);
 }
 
+value_t fl_map1(value_t *args, u_int32_t nargs)
+{
+    if (nargs < 2)
+        lerror(ArgError, "map: too few arguments");
+    if (!iscons(args[1])) return NIL;
+    value_t first, last, v;
+    if (nargs == 2) {
+        if (SP+3 > N_STACK) grow_stack();
+        PUSH(args[0]);
+        PUSH(car_(args[1]));
+        v = _applyn(1);
+        PUSH(v);
+        v = mk_cons();
+        car_(v) = POP(); cdr_(v) = NIL;
+        last = first = v;
+        args[1] = cdr_(args[1]);
+        fl_gc_handle(&first);
+        fl_gc_handle(&last);
+        while (iscons(args[1])) {
+            Stack[SP-2] = args[0];
+            Stack[SP-1] = car_(args[1]);
+            v = _applyn(1);
+            PUSH(v);
+            v = mk_cons();
+            car_(v) = POP(); cdr_(v) = NIL;
+            cdr_(last) = v;
+            last = v;
+            args[1] = cdr_(args[1]);
+        }
+        POPN(2);
+        fl_free_gc_handles(2);
+    }
+    else {
+        size_t i;
+        while (SP+nargs+1 > N_STACK) grow_stack();
+        PUSH(args[0]);
+        for(i=1; i < nargs; i++) {
+            PUSH(car(args[i]));
+            args[i] = cdr_(args[i]);
+        }
+        v = _applyn(nargs-1);
+        PUSH(v);
+        v = mk_cons();
+        car_(v) = POP(); cdr_(v) = NIL;
+        last = first = v;
+        fl_gc_handle(&first);
+        fl_gc_handle(&last);
+        while (iscons(args[1])) {
+            Stack[SP-nargs] = args[0];
+            for(i=1; i < nargs; i++) {
+                Stack[SP-nargs+i] = car(args[i]);
+                args[i] = cdr_(args[i]);
+            }
+            v = _applyn(nargs-1);
+            PUSH(v);
+            v = mk_cons();
+            car_(v) = POP(); cdr_(v) = NIL;
+            cdr_(last) = v;
+            last = v;
+        }
+        POPN(nargs);
+        fl_free_gc_handles(2);
+    }
+    return first;
+}
+
 static builtinspec_t core_builtin_info[] = {
     { "function", fl_function },
     { "function:code", fl_function_code },
@@ -2155,6 +2221,7 @@ static builtinspec_t core_builtin_info[] = {
     { "copy-list", fl_copylist },
     { "append", fl_append },
     { "list*", fl_liststar },
+    { "map", fl_map1 },
     { NULL, NULL }
 };
 
@@ -2201,7 +2268,7 @@ static void lisp_init(size_t initial_heapsize)
     vectorsym = symbol("vector");     builtinsym = symbol("builtin");
     booleansym = symbol("boolean");   nullsym = symbol("null");
     definesym = symbol("define");     defmacrosym = symbol("define-macro");
-    forsym = symbol("for");           labelsym = symbol("label");
+    forsym = symbol("for");
     setqsym = symbol("set!");         evalsym = symbol("eval");
     vu8sym = symbol("vu8");           fnsym = symbol("fn");
     nulsym = symbol("nul");           alarmsym = symbol("alarm");
