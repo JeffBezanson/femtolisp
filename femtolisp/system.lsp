@@ -325,13 +325,14 @@
 
 (define (reverse lst) (reverse- () lst))
 
-(define (reverse! l)
-  (let ((prev ()))
-    (while (pair? l)
-	   (set! l (prog1 (cdr l)
-			  (set-cdr! l (prog1 prev
-					     (set! prev l))))))
-    prev))
+(define (reverse!- prev l)
+  (while (pair? l)
+	 (set! l (prog1 (cdr l)
+			(set-cdr! l (prog1 prev
+					   (set! prev l))))))
+  prev)
+
+(define (reverse! l) (reverse!- () l))
 
 (define (copy-tree l)
   (if (atom? l) l
@@ -350,8 +351,8 @@
 
 ; backquote -------------------------------------------------------------------
 
-(define (revappend l1 l2) (nconc (reverse  l1) l2))
-(define (nreconc   l1 l2) (nconc (reverse! l1) l2))
+(define (revappend l1 l2) (reverse-  l2 l1))
+(define (nreconc   l1 l2) (reverse!- l2 l1))
 
 (define (self-evaluating? x)
   (or (and (atom? x)
@@ -360,59 +361,84 @@
 	   (symbol? x)
            (eq x (top-level-value x)))))
 
-(define-macro (quasiquote x) (bq-process x))
+(define-macro (quasiquote x) (bq-process x 0))
 
-(define (bq-process x)
-  (define (splice-form? x)
-    (or (and (pair? x) (or (eq? (car x) 'unquote-splicing)
-			   (eq? (car x) 'unquote-nsplicing)))
-	(eq? x 'unquote)))
-  ; bracket without splicing
-  (define (bq-bracket1 x)
-    (if (and (pair? x) (eq? (car x) 'unquote))
-	(cadr x)
-	(bq-process x)))
-  (cond ((self-evaluating? x)
-         (if (vector? x)
-             (let ((body (bq-process (vector->list x))))
-               (if (eq? (car body) 'list)
-                   (cons vector (cdr body))
-		   (list apply vector body)))
-	     x))
-        ((atom? x)                    (list 'quote x))
-        ((eq? (car x) 'quasiquote)    (bq-process (bq-process (cadr x))))
-        ((eq? (car x) 'unquote)       (cadr x))
-        ((not (any splice-form? x))
+(define (splice-form? x)
+  (or (and (pair? x) (or (eq? (car x) 'unquote-splicing)
+			 (eq? (car x) 'unquote-nsplicing)
+			 (and (eq? (car x) 'unquote)
+			      (length> x 2))))
+      (eq? x 'unquote)))
+
+;; bracket without splicing
+(define (bq-bracket1 x d)
+  (if (and (pair? x) (eq? (car x) 'unquote))
+      (if (= d 0)
+	  (cadr x)
+	  (list cons ''unquote
+		(bq-process (cdr x) (- d 1))))
+      (bq-process x d)))
+
+(define (bq-bracket x d)
+  (cond ((atom? x)  (list list (bq-process x d)))
+	((eq? (car x) 'unquote)
+	 (if (= d 0)
+	     (cons list (cdr x))
+	     (list list (list cons ''unquote
+			      (bq-process (cdr x) (- d 1))))))
+	((eq? (car x) 'unquote-splicing)
+	 (if (= d 0)
+	     (list 'copy-list (cadr x))
+	     (list list (list list ''unquote-splicing
+			      (bq-process (cadr x) (- d 1))))))
+	((eq? (car x) 'unquote-nsplicing)
+	 (if (= d 0)
+	     (cadr x)
+	     (list list (list list ''unquote-nsplicing
+			      (bq-process (cadr x) (- d 1))))))
+	(else  (list list (bq-process x d)))))
+
+(define (bq-process x d)
+  (cond ((symbol? x)  (list 'quote x))
+	((vector? x)
+	 (let ((body (bq-process (vector->list x) d)))
+	   (if (eq? (car body) list)
+	       (cons vector (cdr body))
+	       (list apply vector body))))
+        ((atom? x)  x)
+        ((eq? (car x) 'quasiquote)
+	 (list list ''quasiquote (bq-process (cadr x) (+ d 1))))
+        ((eq? (car x) 'unquote)
+	 (if (and (= d 0) (length= x 2))
+	     (cadr x)
+	     (list cons ''unquote (bq-process (cdr x) (- d 1)))))
+	((or (> d 0) (not (any splice-form? x)))
          (let ((lc    (lastcdr x))
-               (forms (map bq-bracket1 x)))
+               (forms (map (lambda (x) (bq-bracket1 x d)) x)))
            (if (null? lc)
-               (cons 'list forms)
+               (cons list forms)
 	       (if (null? (cdr forms))
-		   (list cons (car forms) (bq-process lc))
-		   (nconc (cons 'list* forms) (list (bq-process lc)))))))
-        (#t (let ((p x) (q ()))
-	      (while (and (pair? p)
-			  (not (eq? (car p) 'unquote)))
-		     (set! q (cons (bq-bracket (car p)) q))
-		     (set! p (cdr p)))
-	      (let ((forms
-		     (cond ((pair? p) (nreconc q (list (cadr p))))
-			   ((null? p)  (reverse! q))
-			   (#t        (nreconc q (list (bq-process p)))))))
-		(if (null? (cdr forms))
-		    (car forms)
-		    (if (and (length= forms 2)
-			     (length= (car forms) 2)
-			     (eq? list (caar forms)))
-			(list cons (cadar forms) (cadr forms))
-			(cons 'nconc forms))))))))
-
-(define (bq-bracket x)
-  (cond ((atom? x)                        (list list (bq-process x)))
-        ((eq? (car x) 'unquote)           (list list (cadr x)))
-        ((eq? (car x) 'unquote-splicing)  (list 'copy-list (cadr x)))
-        ((eq? (car x) 'unquote-nsplicing) (cadr x))
-        (#t                               (list list (bq-process x)))))
+		   (list cons (car forms) (bq-process lc d))
+		   (nconc (cons list* forms) (list (bq-process lc d)))))))
+	(else
+	 (let loop ((p x) (q ()))
+	   (cond ((null? p) ;; proper list
+		  (cons 'nconc (reverse! q)))
+		 ((pair? p)
+		  (cond ((eq? (car p) 'unquote)
+			 ;; (... . ,x)
+			 (cons 'nconc
+			       (nreconc q
+					(if (= d 0)
+					    (cdr p)
+					    (list (list list ''unquote)
+						  (bq-process (cdr p)
+							       (- d 1)))))))
+			(else
+			 (loop (cdr p) (cons (bq-bracket (car p) d) q)))))
+		 (else
+		  ;; (... . x)
+		  (cons 'nconc (reverse! (cons (bq-process p d) q)))))))))
 
 ; standard macros -------------------------------------------------------------
 

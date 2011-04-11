@@ -29,6 +29,17 @@ int mysocket(int domain, int type, int protocol)
     return s;
 }
 
+void set_nonblock(int socket, int yes)
+{
+    int flags;
+    flags = fcntl(socket,F_GETFL,0);
+    assert(flags != -1);
+    if (yes)
+        fcntl(socket, F_SETFL, flags | O_NONBLOCK);
+    else
+        fcntl(socket, F_SETFL, flags & ~O_NONBLOCK);
+}
+
 #ifdef WIN32
 void bzero(void *s, size_t n)
 {
@@ -88,7 +99,7 @@ int open_any_udp_port(short *portno)
     int sockfd;
     struct sockaddr_in serv_addr;
 
-    sockfd = mysocket(PF_INET, SOCK_DGRAM, IPPROTO_TCP);
+    sockfd = mysocket(PF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0)
         return -1;
     bzero(&serv_addr, sizeof(serv_addr));

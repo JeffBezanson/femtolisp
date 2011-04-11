@@ -8,6 +8,7 @@
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <fcntl.h>
 #endif
 
 int open_tcp_port(short portno);
