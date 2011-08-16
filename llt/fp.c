@@ -47,7 +47,6 @@ static inline int64_t llabs(int64_t j)
     return NBABS(j, 64);
 }
 #else
-extern int64_t llabs(int64_t j);
 #endif
 
 int dbl_equals(double a, double b)

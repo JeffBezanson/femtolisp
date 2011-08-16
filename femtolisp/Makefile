@@ -11,7 +11,7 @@ LLT = $(LLTDIR)/libllt.a
 
 # OS flags: LINUX, WIN32, MACOSX
 # architecture flags: __CPU__=xxx, BITS64, ARCH_X86, ARCH_X86_64
-CONFIG = -DLINUX -DARCH_X86 -D__CPU__=586
+CONFIG = -DLINUX -DARCH_X86_64 -DBITS64 -D__CPU__=686
 FLAGS = -falign-functions -Wall -Wno-strict-aliasing -I$(LLTDIR) $(CFLAGS) -DUSE_COMPUTED_GOTO $(CONFIG)
 LIBFILES = $(LLT)
 LIBS = $(LIBFILES) -lm
