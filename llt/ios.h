@@ -11,7 +11,7 @@ typedef enum { bm_none, bm_line, bm_block, bm_mem } bufmode_t;
 typedef enum { bst_none, bst_rd, bst_wr } bufstate_t;
 
 #define IOS_INLSIZE 54
-#define IOS_BUFSIZE 8191
+#define IOS_BUFSIZE 131072
 
 typedef struct {
     bufmode_t bm;
@@ -29,17 +29,13 @@ typedef struct {
     size_t bpos;      // current position in buffer
     size_t ndirty;    // # bytes at &buf[0] that need to be written
 
-    // this is a public field that keeps a running count of bytes
-    // read or written. you can freely use and change it. this is
-    // intended for keeping track of relative positions in streams
-    // that don't have absolute positions (like sockets).
-    size_t tally;
+    off_t fpos;       // cached file pos
+    size_t lineno;    // current line number
 
     // pointer-size integer to support platforms where it might have
     // to be a pointer
     long fd;
 
-    unsigned char byteswap:1;
     unsigned char readonly:1;
     unsigned char ownbuf:1;
     unsigned char ownfd:1;
@@ -79,7 +75,6 @@ char *ios_takebuf(ios_t *s, size_t *psize);  // release buffer to caller
 int ios_setbuf(ios_t *s, char *buf, size_t size, int own);
 int ios_bufmode(ios_t *s, bufmode_t mode);
 void ios_set_readonly(ios_t *s);
-void ios_bswap(ios_t *s, int bswap);
 size_t ios_copy(ios_t *to, ios_t *from, size_t nbytes);
 size_t ios_copyall(ios_t *to, ios_t *from);
 size_t ios_copyuntil(ios_t *to, ios_t *from, char delim);
@@ -94,7 +89,7 @@ ios_t *ios_file(ios_t *s, char *fname, int rd, int wr, int create, int trunc);
 ios_t *ios_mem(ios_t *s, size_t initsize);
 ios_t *ios_str(ios_t *s, char *str);
 ios_t *ios_static_buffer(ios_t *s, char *buf, size_t sz);
-ios_t *ios_fd(ios_t *s, long fd, int isfile);
+ios_t *ios_fd(ios_t *s, long fd, int isfile, int own);
 // todo: ios_socket
 extern ios_t *ios_stdin;
 extern ios_t *ios_stdout;
@@ -119,6 +114,7 @@ int ios_ungetutf8(ios_t *s, uint32_t wc);
 int ios_getstringz(ios_t *dest, ios_t *src);
 int ios_getstringn(ios_t *dest, ios_t *src, size_t nchars);
 int ios_getline(ios_t *s, char **pbuf, size_t *psz);
+char *ios_readline(ios_t *s);
 
 // discard data buffered for reading
 void ios_purge(ios_t *s);

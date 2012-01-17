@@ -45,20 +45,6 @@ void *memrchr(const void *s, int c, size_t n)
 extern void *memrchr(const void *s, int c, size_t n);
 #endif
 
-static int _fd_available(long fd)
-{
-#ifndef WIN32
-    fd_set set;
-    struct timeval tv = {0, 0};
-
-    FD_ZERO(&set);
-    FD_SET(fd, &set);
-    return (select(fd+1, &set, NULL, NULL, &tv)!=0);
-#else
-    return 1;
-#endif
-}
-
 // poll for read, unless forwrite!=0
 static void _fd_poll(long fd, int forwrite)
 {
@@ -115,10 +101,8 @@ static int _os_read_all(long fd, void *buf, size_t n, size_t *nread)
         n -= got;
         *nread += got;
         buf += got;
-        if (err)
+        if (err || got==0)
             return err;
-        if (got == 0)
-            _fd_poll(fd, 0);
     }
     return 0;
 }
@@ -155,8 +139,6 @@ static int _os_write_all(long fd, void *buf, size_t n, size_t *nwritten)
         buf += wrote;
         if (err)
             return err;
-        if (wrote == 0)
-            _fd_poll(fd, 1);
     }
     return 0;
 }
@@ -274,6 +256,7 @@ static size_t _ios_read(ios_t *s, char *dest, size_t n, int all)
         s->bpos = s->size = 0;
         s->state = bst_rd;
         
+        s->fpos = -1;
         if (n > MOST_OF(s->maxsize)) {
             // doesn't fit comfortably in buffer; go direct
             if (all)
@@ -281,7 +264,7 @@ static size_t _ios_read(ios_t *s, char *dest, size_t n, int all)
             else
                 result = _os_read(s->fd, dest, n, &got);
             tot += got;
-            if (got < n)
+            if (got == 0)
                 s->_eof = 1;
             return tot;
         }
@@ -292,13 +275,8 @@ static size_t _ios_read(ios_t *s, char *dest, size_t n, int all)
                 return tot;
             }
             if (got == 0) {
-                if (all) {
-                    _fd_poll(s->fd, 0);
-                }
-                else {
-                    s->_eof = 1;
-                    return tot;
-                }
+                s->_eof = 1;
+                return tot;
             }
             s->size = got;
         }
@@ -377,6 +355,7 @@ size_t ios_write(ios_t *s, char *data, size_t n)
         wrote = _write_grow(s, data, n);
     }
     else if (s->bm == bm_none) {
+        s->fpos = -1;
         _os_write_all(s->fd, data, n, &wrote);
         return wrote;
     }
@@ -417,24 +396,67 @@ off_t ios_seek(ios_t *s, off_t pos)
         if ((size_t)pos > s->size)
             return -1;
         s->bpos = pos;
-        return s->bpos;
     }
-    // TODO
+    else {
+        ios_flush(s);
+        off_t fdpos = lseek(s->fd, pos, SEEK_SET);
+        if (fdpos == (off_t)-1)
+            return fdpos;
+        s->bpos = s->size = 0;
+    }
     return 0;
 }
 
 off_t ios_seek_end(ios_t *s)
 {
     s->_eof = 1;
-    // TODO
+    if (s->bm == bm_mem) {
+        s->bpos = s->size;
+    }
+    else {
+        ios_flush(s);
+        off_t fdpos = lseek(s->fd, 0, SEEK_END);
+        if (fdpos == (off_t)-1)
+            return fdpos;
+        s->bpos = s->size = 0;
+    }
     return 0;
 }
 
 off_t ios_skip(ios_t *s, off_t offs)
 {
-    if (offs < 0)
+    if (offs != 0) {
+        if (offs > 0) {
+            if (offs <= (off_t)(s->size-s->bpos)) {
+                s->bpos += offs;
+                return 0;
+            }
+            else if (s->bm == bm_mem) {
+                // TODO: maybe grow buffer
+                return -1;
+            }
+        }
+        else if (offs < 0) {
+            if (-offs <= (off_t)s->bpos) {
+                s->bpos += offs;
+                s->_eof = 0;
+                return 0;
+            }
+            else if (s->bm == bm_mem) {
+                return -1;
+            }
+        }
+        ios_flush(s);
+        if (s->state == bst_wr)
+            offs += s->bpos;
+        else if (s->state == bst_rd)
+            offs -= (s->size - s->bpos);
+        off_t fdpos = lseek(s->fd, offs, SEEK_CUR);
+        if (fdpos == (off_t)-1)
+            return fdpos;
+        s->bpos = s->size = 0;
         s->_eof = 0;
-    // TODO
+    }
     return 0;
 }
 
@@ -443,9 +465,13 @@ off_t ios_pos(ios_t *s)
     if (s->bm == bm_mem)
         return (off_t)s->bpos;
 
-    off_t fdpos = lseek(s->fd, 0, SEEK_CUR);
-    if (fdpos == (off_t)-1)
-        return fdpos;
+    off_t fdpos = s->fpos;
+    if (fdpos == (off_t)-1) {
+        fdpos = lseek(s->fd, 0, SEEK_CUR);
+        if (fdpos == (off_t)-1)
+            return fdpos;
+        s->fpos = fdpos;
+    }
 
     if (s->state == bst_wr)
         fdpos += s->bpos;
@@ -483,30 +509,6 @@ int ios_eof(ios_t *s)
     if (s->_eof)
         return 1;
     return 0;
-    /*
-    if (_fd_available(s->fd))
-        return 0;
-    s->_eof = 1;
-    return 1;
-    */
-}
-
-static void _discard_partial_buffer(ios_t *s)
-{
-    // this function preserves the invariant that data to write
-    // begins at the beginning of the buffer, and s->size refers
-    // to how much valid file data is stored in the buffer.
-
-    // this needs to be called when normal operation is interrupted in
-    // the middle of the buffer. "normal operation" is reading or
-    // writing to the end of the buffer. this happens e.g. when flushing.
-    size_t delta = 0;
-    if (s->ndirty && s->size > s->ndirty) {
-        delta = s->size - s->ndirty;
-        memmove(s->buf, s->buf + s->ndirty, delta);
-    }
-    s->size -= s->ndirty;
-    s->bpos -= s->ndirty;
 }
 
 int ios_flush(ios_t *s)
@@ -522,6 +524,7 @@ int ios_flush(ios_t *s)
     }
 
     size_t nw, ntowrite=s->ndirty;
+    s->fpos = -1;
     int err = _os_write_all(s->fd, s->buf, ntowrite, &nw);
     // todo: try recovering from some kinds of errors (e.g. retry)
 
@@ -533,12 +536,17 @@ int ios_flush(ios_t *s)
         if (s->bpos != nw &&
             lseek(s->fd, (off_t)s->bpos - (off_t)nw, SEEK_CUR) == (off_t)-1) {
         }
+        // now preserve the invariant that data to write
+        // begins at the beginning of the buffer, and s->size refers
+        // to how much valid file data is stored in the buffer.
+        if (s->size > s->ndirty) {
+            size_t delta = s->size - s->ndirty;
+            memmove(s->buf, s->buf + s->ndirty, delta);
+        }
+        s->size -= s->ndirty;
+        s->bpos = 0;
     }
 
-    if (s->ndirty <= s->bpos) {
-        // in this case assume we're done with the first part of the buffer
-        _discard_partial_buffer(s);
-    }
     s->ndirty = 0;
 
     if (err)
@@ -639,11 +647,6 @@ void ios_set_readonly(ios_t *s)
     s->readonly = 1;
 }
 
-void ios_bswap(ios_t *s, int bswap)
-{
-    s->byteswap = !!bswap;
-}
-
 static size_t ios_copy_(ios_t *to, ios_t *from, size_t nbytes, bool_t all)
 {
     size_t total = 0, avail;
@@ -686,16 +689,21 @@ size_t ios_copyall(ios_t *to, ios_t *from)
 
 size_t ios_copyuntil(ios_t *to, ios_t *from, char delim)
 {
-    size_t total = 0, avail;
+    size_t total = 0, avail=from->size - from->bpos;
+    int first = 1;
     if (!ios_eof(from)) {
         do {
-            avail = ios_readprep(from, LINE_CHUNK_SIZE);
+            if (avail == 0) {
+                first = 0;
+                avail = ios_readprep(from, LINE_CHUNK_SIZE);
+            }
             size_t written;
             char *pd = (char*)memchr(from->buf+from->bpos, delim, avail);
             if (pd == NULL) {
                 written = ios_write(to, from->buf+from->bpos, avail);
                 from->bpos += avail;
                 total += written;
+                avail = 0;
             }
             else {
                 size_t ntowrite = pd - (from->buf+from->bpos) + 1;
@@ -704,7 +712,7 @@ size_t ios_copyuntil(ios_t *to, ios_t *from, char delim)
                 total += written;
                 return total;
             }
-        } while (!ios_eof(from) && avail >= LINE_CHUNK_SIZE);
+        } while (!ios_eof(from) && (first || avail >= LINE_CHUNK_SIZE));
     }
     from->_eof = 1;
     return total;
@@ -721,9 +729,9 @@ static void _ios_init(ios_t *s)
     s->size = 0;
     s->bpos = 0;
     s->ndirty = 0;
-    s->tally = 0;
+    s->fpos = -1;
+    s->lineno = 1;
     s->fd = -1;
-    s->byteswap = 0;
     s->ownbuf = 1;
     s->ownfd = 0;
     s->_eof = 0;
@@ -745,8 +753,7 @@ ios_t *ios_file(ios_t *s, char *fname, int rd, int wr, int create, int trunc)
     fd = open(fname, flags, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH/*644*/);
     if (fd == -1)
         goto open_file_err;
-    s = ios_fd(s, fd, 1);
-    s->ownfd = 1;
+    s = ios_fd(s, fd, 1, 1);
     if (!wr)
         s->readonly = 1;
     return s;
@@ -781,13 +788,15 @@ ios_t *ios_static_buffer(ios_t *s, char *buf, size_t sz)
     return s;
 }
 
-ios_t *ios_fd(ios_t *s, long fd, int isfile)
+ios_t *ios_fd(ios_t *s, long fd, int isfile, int own)
 {
     _ios_init(s);
     s->fd = fd;
     if (isfile) s->rereadable = 1;
     _buf_init(s, bm_block);
-    s->ownfd = 0;
+    s->ownfd = own;
+    if (fd == STDERR_FILENO)
+        s->bm = bm_none;
     return s;
 }
 
@@ -798,14 +807,14 @@ ios_t *ios_stderr = NULL;
 void ios_init_stdstreams()
 {
     ios_stdin = LLT_ALLOC(sizeof(ios_t));
-    ios_fd(ios_stdin, STDIN_FILENO, 0);
+    ios_fd(ios_stdin, STDIN_FILENO, 0, 0);
 
     ios_stdout = LLT_ALLOC(sizeof(ios_t));
-    ios_fd(ios_stdout, STDOUT_FILENO, 0);
+    ios_fd(ios_stdout, STDOUT_FILENO, 0, 0);
     ios_stdout->bm = bm_line;
 
     ios_stderr = LLT_ALLOC(sizeof(ios_t));
-    ios_fd(ios_stderr, STDERR_FILENO, 0);
+    ios_fd(ios_stderr, STDERR_FILENO, 0, 0);
     ios_stderr->bm = bm_none;
 }
 
@@ -836,6 +845,7 @@ int ios_getc(ios_t *s)
         if (ios_read(s, &ch, 1) < 1)
             return IOS_EOF;
     }
+    if (ch == '\n') s->lineno++;
     return (unsigned char)ch;
 }
 
@@ -935,18 +945,30 @@ void ios_purge(ios_t *s)
     }
 }
 
+char *ios_readline(ios_t *s)
+{
+    ios_t dest;
+    ios_mem(&dest, 0);
+    ios_copyuntil(&dest, s, '\n');
+    size_t n;
+    return ios_takebuf(&dest, &n);
+}
+
 int vasprintf(char **strp, const char *fmt, va_list ap);
 
 int ios_vprintf(ios_t *s, const char *format, va_list args)
 {
     char *str=NULL;
     int c;
+    va_list al;
+    va_copy(al, args);
 
     if (s->state == bst_wr && s->bpos < s->maxsize && s->bm != bm_none) {
         size_t avail = s->maxsize - s->bpos;
         char *start = s->buf + s->bpos;
         c = vsnprintf(start, avail, format, args);
         if (c < 0) {
+            va_end(al);
             return c;
         }
         if (c < avail) {
@@ -955,16 +977,18 @@ int ios_vprintf(ios_t *s, const char *format, va_list args)
             // TODO: only works right if newline is at end
             if (s->bm == bm_line && memrchr(start, '\n', (size_t)c))
                 ios_flush(s);
+            va_end(al);
             return c;
         }
     }
-    c = vasprintf(&str, format, args);
+    c = vasprintf(&str, format, al);
 
     if (c >= 0) {
         ios_write(s, str, c);
 
         LLT_FREE(str);
     }
+    va_end(al);
     return c;
 }
 
