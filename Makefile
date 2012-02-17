@@ -6,7 +6,7 @@ OBJS = $(SRCS:%.c=%.o)
 DOBJS = $(SRCS:%.c=%.do)
 EXENAME = $(NAME)
 LIBTARGET = lib$(NAME)
-LLTDIR = ../llt
+LLTDIR = llt
 LLT = $(LLTDIR)/libllt.a
 
 # OS flags: LINUX, WIN32, MACOSX
