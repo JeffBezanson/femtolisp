@@ -56,3 +56,5 @@ clean:
 	rm -f *.o
 	rm -f *.do
 	rm -f $(EXENAME)
+	rm -f $(LIBTARGET).a
+	rm -f $(LIBTARGET).da
