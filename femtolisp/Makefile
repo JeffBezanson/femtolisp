@@ -22,7 +22,7 @@ SHIPFLAGS = -O2 -DNDEBUG $(FLAGS)
 default: release test
 
 test:
-	./flisp unittest.lsp
+	cd tests && ../flisp unittest.lsp
 
 %.o: %.c
 	$(CC) $(SHIPFLAGS) -c $< -o $@
