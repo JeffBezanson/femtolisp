@@ -178,17 +178,4 @@ extern float  F_NNAN;
 extern float  F_PINF;
 extern float  F_NINF;
 
-typedef enum { T_INT8, T_UINT8, T_INT16, T_UINT16, T_INT32, T_UINT32,
-               T_INT64, T_UINT64, T_FLOAT, T_DOUBLE } numerictype_t;
-
-#define N_NUMTYPES ((int)T_DOUBLE+1)
-
-#ifdef BITS64
-# define T_LONG T_INT64
-# define T_ULONG T_UINT64
-#else
-# define T_LONG T_INT32
-# define T_ULONG T_UINT32
-#endif
-
 #endif

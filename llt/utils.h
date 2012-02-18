@@ -1,78 +1,9 @@
 #ifndef __UTILS_H_
 #define __UTILS_H_
 
-/* these functions byteswap any-size units --------------------- */
-void bswap(byte_t *s, size_t n);
-void bswap_to(byte_t *dest, byte_t *src, size_t n);
-void bswap_buffer(byte_t *data, size_t sz, size_t npts);
-/* ------------------------------------------------------------- */
-
-/* reverse the order of elements of any size, in place or out of place */
-/* n is the number of elements */
-void memreverse(char *a, size_t n, size_t elsz);
-void memreverse_to(char *dest, char *a, size_t n, size_t elsz);
-
-/* swap the contents of two buffers */
-void memswap(char *a, char *b, size_t sz);
-
-/* allocating aligned blocks ----------------------------------- */
-void *malloc_aligned(size_t size, size_t align_size);
-void free_aligned(void *ptr);
-void *realloc_aligned(void *ptr, size_t size, size_t align_size);
-/* ------------------------------------------------------------- */
-
-int double_exponent(double d);
-double double_mantissa(double d);
-int float_exponent(float f);
-float float_mantissa(float f);
-void snprint_real(char *s, size_t cnt, double r,
-                  int width,    // printf field width, or 0
-                  int dec,      // # decimal digits desired, recommend 16
-                  // # of zeros in .00...0x before using scientific notation
-                  // recommend 3-4 or so
-                  int max_digs_rt,
-                  // # of digits left of decimal before scientific notation
-                  // recommend 10
-                  int max_digs_lf);
-void snprint_cplx(char *s, size_t cnt, double re, double im,
-                  // args to pass on to snprint_real
-                  int width, int dec,
-                  int max_digs_rt, int max_digs_lf,
-                  // print spaces around sign in a+bi
-                  int spflag);
-
 char *uint2str(char *dest, size_t len, uint64_t num, uint32_t base);
 int str2int(char *str, size_t len, int64_t *res, uint32_t base);
 int isdigit_base(char c, int base);
-
-extern double trunc(double x);
-
-STATIC_INLINE double fpart(double arg)
-{
-    return arg - trunc(arg);
-}
-
-#define ipart(x) trunc(x)
-
-numerictype_t effective_numerictype(double r);
-double conv_to_double(void *data, numerictype_t tag);
-void conv_from_double(void *data, double d, numerictype_t tag);
-int64_t conv_to_int64(void *data, numerictype_t tag);
-uint64_t conv_to_uint64(void *data, numerictype_t tag);
-int32_t conv_to_int32(void *data, numerictype_t tag);
-uint32_t conv_to_uint32(void *data, numerictype_t tag);
-#ifdef BITS64
-#define conv_to_long conv_to_int64
-#define conv_to_ulong conv_to_uint64
-#else
-#define conv_to_long conv_to_int32
-#define conv_to_ulong conv_to_uint32
-#endif
-int cmp_same_lt(void *a, void *b, numerictype_t tag);
-int cmp_same_eq(void *a, void *b, numerictype_t tag);
-int cmp_lt(void *a, numerictype_t atag, void *b, numerictype_t btag);
-int cmp_eq(void *a, numerictype_t atag, void *b, numerictype_t btag,
-           int equalnans);
 
 #ifdef ARCH_X86_64
 #  define LEGACY_REGS "=Q"

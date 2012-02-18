@@ -4,6 +4,13 @@
 #include "utils.h"
 #include "ieee754.h"
 
+extern double trunc(double x);
+
+STATIC_INLINE double fpart(double arg)
+{
+    return arg - trunc(arg);
+}
+
 // given a number, determine an appropriate type for storing it
 #if 0
 numerictype_t effective_numerictype(double r)

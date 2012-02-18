@@ -208,6 +208,19 @@ typedef struct {
 } cvtable_t;
 
 /* functions needed to implement the value interface (cvtable_t) */
+typedef enum { T_INT8, T_UINT8, T_INT16, T_UINT16, T_INT32, T_UINT32,
+               T_INT64, T_UINT64, T_FLOAT, T_DOUBLE } numerictype_t;
+
+#define N_NUMTYPES ((int)T_DOUBLE+1)
+
+#ifdef BITS64
+# define T_LONG T_INT64
+# define T_ULONG T_UINT64
+#else
+# define T_LONG T_INT32
+# define T_ULONG T_UINT32
+#endif
+
 value_t relocate_lispvalue(value_t v);
 void print_traverse(value_t v);
 void fl_print_chr(char c, ios_t *f);
@@ -350,6 +363,21 @@ value_t mk_uint64(uint64_t n);
 value_t mk_wchar(int32_t n);
 value_t return_from_uint64(uint64_t Uaccum);
 value_t return_from_int64(int64_t Saccum);
+
+numerictype_t effective_numerictype(double r);
+double conv_to_double(void *data, numerictype_t tag);
+void conv_from_double(void *data, double d, numerictype_t tag);
+int64_t conv_to_int64(void *data, numerictype_t tag);
+uint64_t conv_to_uint64(void *data, numerictype_t tag);
+int32_t conv_to_int32(void *data, numerictype_t tag);
+uint32_t conv_to_uint32(void *data, numerictype_t tag);
+#ifdef BITS64
+#define conv_to_long conv_to_int64
+#define conv_to_ulong conv_to_uint64
+#else
+#define conv_to_long conv_to_int32
+#define conv_to_ulong conv_to_uint32
+#endif
 
 typedef struct {
     char *name;
