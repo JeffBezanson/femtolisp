@@ -68,8 +68,6 @@ void test_dblprint()
 {
     char str[64];
 
-    dbl_tolerance(1e-12);
-
     prettycplx(0,0);
     prettycplx(1,0);
     prettycplx(0,1);

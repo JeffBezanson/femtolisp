@@ -21,10 +21,6 @@ void free_aligned(void *ptr);
 void *realloc_aligned(void *ptr, size_t size, size_t align_size);
 /* ------------------------------------------------------------- */
 
-int dbl_equals(double a, double b);
-int flt_equals(float a, float b);
-void dbl_tolerance(double tol);
-void flt_tolerance(float tol);
 int double_exponent(double d);
 double double_mantissa(double d);
 int float_exponent(float f);
