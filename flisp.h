@@ -1,5 +1,5 @@
-#ifndef _FLISP_H_
-#define _FLISP_H_
+#ifndef FLISP_H
+#define FLISP_H
 
 typedef uptrint_t value_t;
 typedef int_t fixnum_t;
