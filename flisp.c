@@ -2235,6 +2235,7 @@ static void lisp_init(size_t initial_heapsize)
     int i;
 
     llt_init();
+    setlocale(LC_NUMERIC, "C");
 
     heapsize = initial_heapsize;
 
