@@ -378,7 +378,7 @@ value_t fl_stringtonumber(value_t *args, uint32_t nargs)
         argcount("string->number", nargs, 2);
     char *str = tostring(args[0], "string->number");
     value_t n;
-    ulong radix = 0;
+    unsigned long radix = 0;
     if (nargs == 2)
         radix = get_radix_arg(args[1], "string->number");
     if (!isnumtok_base(str, &n, (int)radix))

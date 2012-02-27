@@ -29,8 +29,8 @@ test:
 %.do: %.c
 	$(CC) $(DEBUGFLAGS) -c $< -o $@
 
-flisp.o:  flisp.c cvalues.c types.c flisp.h print.c read.c equal.c
-flisp.do: flisp.c cvalues.c types.c flisp.h print.c read.c equal.c
+flisp.o:  flisp.c cvalues.c operators.c types.c flisp.h print.c read.c equal.c
+flisp.do: flisp.c cvalues.c operators.c types.c flisp.h print.c read.c equal.c
 flmain.o: flmain.c flisp.h
 flmain.do: flmain.c flisp.h
 
