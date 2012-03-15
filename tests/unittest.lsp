@@ -76,6 +76,8 @@
 
 (assert (equal? (string 'sym #byte(65) #wchar(945) "blah") "symA\u03B1blah"))
 
+(assert (> 9223372036854775808 9223372036854775807))
+
 ; NaNs
 (assert (equal? +nan.0 +nan.0))
 (assert (not (= +nan.0 +nan.0)))
