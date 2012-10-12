@@ -33,7 +33,7 @@ flmain.o: flmain.c flisp.h
 flmain.do: flmain.c flisp.h
 
 $(LLT):
-	cd $(LLTDIR) && make
+	cd $(LLTDIR) && make -f Makefile.macosx
 
 $(LIBTARGET).da: $(DOBJS)
 	rm -rf $@
