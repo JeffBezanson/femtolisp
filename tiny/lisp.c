@@ -26,8 +26,13 @@
 #include <ctype.h>
 #include <sys/types.h>
 
+#ifdef __LP64__
+typedef u_int64_t value_t;
+typedef int64_t number_t;
+#else
 typedef u_int32_t value_t;
 typedef int32_t number_t;
+#endif
 
 typedef struct {
     value_t car;
@@ -496,7 +501,7 @@ void print(FILE *f, value_t v)
     value_t cd;
 
     switch (tag(v)) {
-    case TAG_NUM: fprintf(f, "%d", numval(v)); break;
+    case TAG_NUM: fprintf(f, "%ld", numval(v)); break;
     case TAG_SYM: fprintf(f, "%s", ((symbol_t*)ptr(v))->name); break;
     case TAG_BUILTIN: fprintf(f, "#<builtin %s>",
                               builtin_names[intval(v)]); break;
@@ -558,7 +563,7 @@ value_t eval_sexpr(value_t e, value_t *penv)
             lerror("eval: error: variable %s has no value\n", sym->name);
         return v;
     }
-    if ((unsigned)(char*)&nargs < (unsigned)stack_bottom || SP>=(N_STACK-100))
+    if ((unsigned long)(char*)&nargs < (unsigned long)stack_bottom || SP>=(N_STACK-100))
         lerror("eval: error: stack overflow\n");
     saveSP = SP;
     PUSH(e);
