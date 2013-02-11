@@ -79,7 +79,7 @@
 	  __start #fn("8000r1e0302|NF6D0|Nk12^k22e3|\x84315E0|k12]k22e4e5312e6302e7`41;" [__init_globals
   *argv* *interactive* __script princ *banner* repl exit] __start)
 	  abs #fn("7000r1|`X650|y;|;" [] abs) any
-	  #fn("8000r2}F16D02|}M3117:02e0|}N42;" [any] any) arg-counts #table(#.not 1  #.atom? 1  #.number? 1  #.cons 2  #.set-cdr! 2  #.equal? 2  #.fixnum? 1  #.bound? 1  #.eq? 2  #.symbol? 1  #.builtin? 1  #.< 2  #.aset! 3  #.div0 2  #.cdr 1  #.null? 1  #.eqv? 2  #.compare 2  #.aref 2  #.car 1  #.set-car! 2  #.pair? 1  #.= 2  #.vector? 1  #.boolean? 1)
+	  #fn("8000r2}F16D02|}M3117:02e0|}N42;" [any] any) arg-counts #table(#.equal? 2  #.atom? 1  #.set-cdr! 2  #.symbol? 1  #.car 1  #.eq? 2  #.aref 2  #.boolean? 1  #.not 1  #.null? 1  #.eqv? 2  #.number? 1  #.pair? 1  #.builtin? 1  #.aset! 3  #.div0 2  #.= 2  #.bound? 1  #.compare 2  #.vector? 1  #.cdr 1  #.set-car! 2  #.< 2  #.fixnum? 1  #.cons 2)
 	  argc-error #fn("<000r2e0c1|c2}}aW670c3540c445;" [error "compile error: "
 							   " expects " " argument."
 							   " arguments."] argc-error)
@@ -104,7 +104,7 @@
   #.cons bq-process nconc list*]) lastcdr map #fn("8000r1e0|\x7f42;" [bq-bracket1])
   #fn("6000r1c0qm02|;" [#fn(">000r2|\x85;0c0e1}31K;|F6s0|Mc2\x82[0c0e3}i11`W670|N5E0c4c5L2e6|Ni11ax32L232K;~|Ne7|Mi1132}K42;c0e1e6|i1132}K31K;" [nconc
   reverse! unquote nreconc #.list 'unquote bq-process bq-bracket])])] bq-process)
-	  builtin->instruction #fn("9000r1e0~|^43;" [get] [#table(#.number? number?  #.cons cons  #.fixnum? fixnum?  #.equal? equal?  #.eq? eq?  #.symbol? symbol?  #.div0 div0  #.builtin? builtin?  #.aset! aset!  #.- -  #.boolean? boolean?  #.not not  #.apply apply  #.atom? atom?  #.set-cdr! set-cdr!  #./ /  #.function? function?  #.vector vector  #.list list  #.bound? bound?  #.< <  #.* *  #.cdr cdr  #.null? null?  #.+ +  #.eqv? eqv?  #.compare compare  #.aref aref  #.set-car! set-car!  #.car car  #.pair? pair?  #.= =  #.vector? vector?)
+	  builtin->instruction #fn("9000r1e0~|^43;" [get] [#table(#.equal? equal?  #.* *  #.car car  #.apply apply  #.aref aref  #.- -  #.boolean? boolean?  #.builtin? builtin?  #.null? null?  #.eqv? eqv?  #.function? function?  #.bound? bound?  #.cdr cdr  #.list list  #.set-car! set-car!  #.cons cons  #.atom? atom?  #.set-cdr! set-cdr!  #.symbol? symbol?  #.eq? eq?  #.vector vector  #.not not  #.pair? pair?  #.number? number?  #.div0 div0  #.aset! aset!  #.+ +  #.= =  #.compare compare  #.vector? vector?  #./ /  #.< <  #.fixnum? fixnum?)
 							   ()])
 	  caaaar #fn("6000r1|MMMM;" [] caaaar) caaadr
 	  #fn("6000r1|\x84MM;" [] caaadr) caaar #fn("6000r1|MMM;" [] caaar)
@@ -154,7 +154,7 @@
   keyargs emit-optional-arg-inits > 255 largc lvargc vargc argc compile-in ret
   values function encode-byte-code bcode:code const-to-idx-vec]) filter
   keyword-arg?]) length]) length]) make-code-emitter lastcdr lambda-vars filter
-  #.pair? lambda])] #0=[#:g709 ()])
+  #.pair? lambda])] #0=[#:g711 ()])
 	  compile-for #fn(":000r5e0g4316X0e1|}^g2342e1|}^g3342e1|}^g4342e2|c342;e4c541;" [1arg-lambda?
   compile-in emit for error "for: third form must be a 1-argument lambda"] compile-for)
 	  compile-if #fn("<000r4c0qe1|31e1|31g3\x84e2g331e3g331F6;0e4g331560e53045;" [#fn(";000r5g2]\x82>0e0~\x7fi02g344;g2^\x82>0e0~\x7fi02g444;e0~\x7f^g2342e1~c2|332e0~\x7fi02g3342i026<0e1~c3325:0e1~c4}332e5~|322e0~\x7fi02g4342e5~}42;" [compile-in
@@ -187,8 +187,9 @@
   #fn("8000r2~}|\\;" []) bcode:ctable]) vector.alloc bcode:nconst] const-to-idx-vec)
 	  copy-tree #fn("8000r1|?640|;e0|M31e0|N31K;" [copy-tree] copy-tree)
 	  count #fn("7000r2c0q]41;" [#fn("9000r1c0qm02|~\x7f`43;" [#fn(":000r3}\x8550g2;~|}N|}M31690g2aw540g243;" [] count-)])] count)
-	  delete-duplicates #fn("8000r1|?640|;c0|M|N42;" [#fn("8000r2e0|}32680e1}41;|e1}31K;" [member
-  delete-duplicates])] delete-duplicates)
+	  delete-duplicates #fn("8000r1e0|bD326<0c1qe23041;|?640|;c3|M|N42;" [length>
+  #fn("8000r1e0c1q~322e2|41;" [for-each #fn("9000r1e0~|]43;" [put!]) table.keys])
+  table #fn("8000r2e0|}32680e1}41;|e1}31K;" [member delete-duplicates])] delete-duplicates)
 	  disassemble #fn("=000s1}\x85C0e0|`322e1302];530]2c2}Me3|31e4|3143;" [disassemble
   newline #fn("7000r3c0q]41;" [#fn(":000r1c0qm02`~axc1u2e2c3e4\x7f`32c5332c6qb4e7\x7f3142;" [#fn("9000r1|J16602|G@6D0e0c1312e2|i10aw42;e3|41;" [princ
   "\n" disassemble print] print-val) #fn("7000r1e0c141;" [princ "\t"]) princ "maxstack "
