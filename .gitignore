@@ -3,3 +3,4 @@
 /*.a
 /*.da
 /flisp
+/llt/*.o
