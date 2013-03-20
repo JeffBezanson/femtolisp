@@ -47,6 +47,14 @@ value_t fl_string_count(value_t *args, u_int32_t nargs)
     return size_wrap(u8_charnum(str+start, stop-start));
 }
 
+
+#if defined( __WIN32__ ) || defined( __linux__ )
+extern int wcwidth( wchar_t );
+#else
+#  error "I need int wcwidth( wchar_t );"
+#endif
+
+
 value_t fl_string_width(value_t *args, u_int32_t nargs)
 {
     argcount("string.width", nargs, 1);

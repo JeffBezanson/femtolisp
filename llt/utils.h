@@ -1,6 +1,33 @@
 #ifndef __UTILS_H_
 #define __UTILS_H_
 
+
+#if defined( __amd64__ ) || defined( _M_AMD64 )
+#  define ARCH_X86_64
+#  define __CPU__ 686
+#elif defined( _M_IX86 )//msvs, intel, digital mars, watcom
+#  if ! defined( __386__ )
+#    error "unsupported target: 16-bit x86"
+#  endif
+#  define ARCH_X86
+#  define __CPU__  ( _M_IX86 + 86 )
+#elif defined( __i686__ )//gnu c
+#  define ARCH_X86
+#  define __CPU__ 686
+#elif defined( __i586__ )//gnu c
+#  define ARCH_X86
+#  define __CPU__ 586
+#elif defined( __i486__ )//gnu c
+#  define ARCH_X86
+#  define __CPU__ 486
+#elif defined( __i386__ )//gnu c
+#  define ARCH_X86
+#  define __CPU__ 386
+#else
+#  error "unknown architecture"
+#endif
+
+
 char *uint2str(char *dest, size_t len, uint64_t num, uint32_t base);
 int str2int(char *str, size_t len, int64_t *res, uint32_t base);
 int isdigit_base(char c, int base);
