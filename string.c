@@ -47,12 +47,6 @@ value_t fl_string_count(value_t *args, u_int32_t nargs)
     return size_wrap(u8_charnum(str+start, stop-start));
 }
 
-#if defined(__linux__) || (defined(__APPLE__) && defined(__MACH__))
-extern int wcwidth(uint32_t);
-#else
-#error "wcwidth function not available"
-#endif
-
 value_t fl_string_width(value_t *args, u_int32_t nargs)
 {
     argcount("string.width", nargs, 1);

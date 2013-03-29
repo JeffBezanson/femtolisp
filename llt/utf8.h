@@ -16,6 +16,10 @@ typedef unsigned long long u_int64_t;
 
 extern int locale_is_utf8;
 
+#if defined(__WIN32__) || defined(__linux__)
+extern int wcwidth(uint32_t);
+#endif
+
 /* is c the start of a utf8 sequence? */
 #define isutf(c) (((c)&0xC0)!=0x80)
 

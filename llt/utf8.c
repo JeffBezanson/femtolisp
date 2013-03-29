@@ -242,7 +242,9 @@ size_t u8_strlen(const char *s)
     return count;
 }
 
-int wcwidth(wchar_t c);
+#if defined(__WIN32__)
+#include "wcwidth.c"
+#endif
 
 size_t u8_strwidth(const char *s)
 {
