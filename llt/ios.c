@@ -45,6 +45,7 @@ void *memrchr(const void *s, int c, size_t n)
 extern void *memrchr(const void *s, int c, size_t n);
 #endif
 
+#if 0
 // poll for read, unless forwrite!=0
 static void _fd_poll(long fd, int forwrite)
 {
@@ -60,6 +61,7 @@ static void _fd_poll(long fd, int forwrite)
 #else
 #endif
 }
+#endif
 
 static int _enonfatal(int err)
 {
@@ -226,7 +228,6 @@ static size_t _ios_read(ios_t *s, char *dest, size_t n, int all)
 {
     size_t tot = 0;
     size_t got, avail;
-    int result;
 
     while (n > 0) {
         avail = s->size - s->bpos;
@@ -260,9 +261,9 @@ static size_t _ios_read(ios_t *s, char *dest, size_t n, int all)
         if (n > MOST_OF(s->maxsize)) {
             // doesn't fit comfortably in buffer; go direct
             if (all)
-                result = _os_read_all(s->fd, dest, n, &got);
+                _os_read_all(s->fd, dest, n, &got);
             else
-                result = _os_read(s->fd, dest, n, &got);
+                _os_read(s->fd, dest, n, &got);
             tot += got;
             if (got == 0)
                 s->_eof = 1;
