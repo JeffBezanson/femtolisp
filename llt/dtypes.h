@@ -16,46 +16,69 @@
   We assume the LP64 convention for 64-bit platforms.
 */
 
-#ifdef WIN32
-#define STDCALL __stdcall
-# ifdef IMPORT_EXPORTS
-#  define DLLEXPORT __declspec(dllimport)
-# else
-#  define DLLEXPORT __declspec(dllexport)
-# endif
+
+#if defined(__gnu_linux__)
+#  define LINUX
+#elif defined(__APPLE__) && defined(__MACH__)
+#  define MACOSX
+#elif defined(_WIN32)
+#  define WIN32
 #else
-#define STDCALL
-#define DLLEXPORT __attribute__ ((visibility("default")))
+#  error "unknown platform"
 #endif
 
-#ifdef LINUX
-#include <features.h>
-#include <endian.h>
-#define LITTLE_ENDIAN  __LITTLE_ENDIAN
-#define BIG_ENDIAN     __BIG_ENDIAN
-#define PDP_ENDIAN     __PDP_ENDIAN
-#define BYTE_ORDER     __BYTE_ORDER
+
+#ifndef __SIZEOF_POINTER__
+#  error "__SIZEOF_POINTER__ undefined"
+#endif
+#if( 8 == __SIZEOF_POINTER__ )
+#  define BITS64
+#elif( 4 == __SIZEOF_POINTER__ )
+#  define BITS32
+#else
+#  error "this is one weird machine"
 #endif
 
-#ifdef MACOSX
-#include <machine/endian.h>
-#define __LITTLE_ENDIAN  LITTLE_ENDIAN
-#define __BIG_ENDIAN     BIG_ENDIAN
-#define __PDP_ENDIAN     PDP_ENDIAN
-#define __BYTE_ORDER     BYTE_ORDER
+
+#if defined(WIN32)
+#  define STDCALL __stdcall
+#  if defined(IMPORT_EXPORTS)
+#    define DLLEXPORT __declspec(dllimport)
+#  else
+#    define DLLEXPORT __declspec(dllexport)
+#  endif
+#else
+#  define STDCALL
+#  define DLLEXPORT __attribute__ ((visibility("default")))
 #endif
 
-#ifdef WIN32
-#define __LITTLE_ENDIAN	1234
-#define __BIG_ENDIAN	4321
-#define __PDP_ENDIAN	3412
-#define __BYTE_ORDER       __LITTLE_ENDIAN
-#define __FLOAT_WORD_ORDER __LITTLE_ENDIAN
-#define LITTLE_ENDIAN  __LITTLE_ENDIAN
-#define BIG_ENDIAN     __BIG_ENDIAN
-#define PDP_ENDIAN     __PDP_ENDIAN
-#define BYTE_ORDER     __BYTE_ORDER
+#if defined(LINUX)
+#  include <features.h>
+#  include <endian.h>
+#  define LITTLE_ENDIAN  __LITTLE_ENDIAN
+#  define BIG_ENDIAN     __BIG_ENDIAN
+#  define PDP_ENDIAN     __PDP_ENDIAN
+#  define BYTE_ORDER     __BYTE_ORDER
+#elif defined(MACOSX)
+#  include <machine/endian.h>
+#  define __LITTLE_ENDIAN  LITTLE_ENDIAN
+#  define __BIG_ENDIAN     BIG_ENDIAN
+#  define __PDP_ENDIAN     PDP_ENDIAN
+#  define __BYTE_ORDER     BYTE_ORDER
+#elif defined(WIN32)
+#  define __LITTLE_ENDIAN	1234
+#  define __BIG_ENDIAN	4321
+#  define __PDP_ENDIAN	3412
+#  define __BYTE_ORDER       __LITTLE_ENDIAN
+#  define __FLOAT_WORD_ORDER __LITTLE_ENDIAN
+#  define LITTLE_ENDIAN  __LITTLE_ENDIAN
+#  define BIG_ENDIAN     __BIG_ENDIAN
+#  define PDP_ENDIAN     __PDP_ENDIAN
+#  define BYTE_ORDER     __BYTE_ORDER
+#else
+#  error "unknown platform"
 #endif
+
 
 #ifdef BOEHM_GC
 // boehm GC allocator
