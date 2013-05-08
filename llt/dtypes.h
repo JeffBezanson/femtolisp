@@ -28,6 +28,7 @@
 #endif
 
 
+#if !defined (BITS32) && !defined (BITS64)
 #ifndef __SIZEOF_POINTER__
 #  error "__SIZEOF_POINTER__ undefined"
 #endif
@@ -37,6 +38,7 @@
 #  define BITS32
 #else
 #  error "this is one weird machine"
+#endif
 #endif
 
 
