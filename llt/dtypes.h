@@ -21,12 +21,21 @@
 #  define LINUX
 #elif defined(__APPLE__) && defined(__MACH__)
 #  define MACOSX
+#elif defined(__OpenBSD__)
+#  define OPENBSD
 #elif defined(_WIN32)
 #  define WIN32
 #else
 #  error "unknown platform"
 #endif
 
+#if defined(OPENBSD)
+#if defined(__x86_64__)
+#  define __SIZEOF_POINTER__ 8
+#else
+#  define __SIZEOF_POINTER__ 4
+#endif
+#endif
 
 #if !defined (BITS32) && !defined (BITS64)
 #ifndef __SIZEOF_POINTER__
@@ -61,7 +70,7 @@
 #  define BIG_ENDIAN     __BIG_ENDIAN
 #  define PDP_ENDIAN     __PDP_ENDIAN
 #  define BYTE_ORDER     __BYTE_ORDER
-#elif defined(MACOSX)
+#elif defined(MACOSX) || defined(OPENBSD)
 #  include <machine/endian.h>
 #  define __LITTLE_ENDIAN  LITTLE_ENDIAN
 #  define __BIG_ENDIAN     BIG_ENDIAN
