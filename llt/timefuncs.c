@@ -106,7 +106,7 @@ void timestring(double seconds, char *buffer, size_t len)
 #endif
 }
 
-#if defined(LINUX) || defined(MACOSX)
+#if defined(LINUX) || defined(MACOSX) || defined(OPENBSD)
 extern char *strptime(const char *s, const char *format, struct tm *tm);
 double parsetime(const char *str)
 {
