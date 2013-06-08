@@ -1,6 +1,9 @@
 #ifndef FLISP_H
 #define FLISP_H
 
+#include <setjmp.h>
+#include <stdint.h>
+
 typedef uptrint_t value_t;
 typedef int_t fixnum_t;
 #ifdef BITS64
