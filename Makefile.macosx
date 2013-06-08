@@ -1,4 +1,5 @@
-CC = gcc
+CC ?= gcc
+CARBON_HEADERS ?= "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.7.sdk/Developer/Headers"
 
 NAME = flisp
 SRCS = $(NAME).c builtins.c string.c equalhash.c table.c iostream.c
@@ -9,7 +10,7 @@ LIBTARGET = lib$(NAME)
 LLTDIR = llt
 LLT = $(LLTDIR)/libllt.a
 
-CONFIG = -DMACOSX -DARCH_X86_64 -DBITS64 -D__CPU__=686
+CONFIG = -DMACOSX -DARCH_X86_64 -DBITS64 -D__CPU__=686 -I$(CARBON_HEADERS)
 FLAGS = -falign-functions -Wall -Wno-strict-aliasing -I$(LLTDIR) $(CFLAGS) -DUSE_COMPUTED_GOTO $(CONFIG)
 LIBFILES = $(LLT)
 LIBS = $(LIBFILES) -lm -framework ApplicationServices

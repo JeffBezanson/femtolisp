@@ -27,6 +27,9 @@ int main(int argc, char *argv[])
     fl_init(512*1024);
 
     fname_buf[0] = '\0';
+#ifdef INITFILE
+    strcat(fname_buf, INITFILE);
+#else
     value_t str = symbol_value(symbol("*install-dir*"));
     char *exedir = (str == UNBOUND ? NULL : cvalue_data(str));
     if (exedir != NULL) {
@@ -34,6 +37,7 @@ int main(int argc, char *argv[])
         strcat(fname_buf, PATHSEPSTRING);
     }
     strcat(fname_buf, "flisp.boot");
+#endif
 
     value_t args[2];
     fl_gc_handle(&args[0]);
