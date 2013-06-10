@@ -89,6 +89,12 @@ char *get_exename(char *buf, size_t size)
 
     return buf;
 }
+#elif defined(OPENBSD)
+char *get_exename(char *buf, size_t size)
+{
+  /* OpenBSD currently has no way of determining a processes pathname */
+  return NULL;
+}
 #elif defined(__FreeBSD__)
 #include <sys/types.h>
 #include <sys/sysctl.h>
@@ -113,8 +119,8 @@ char *get_exename(char *buf, size_t size)
     return buf;
 }
 #elif defined(MACOSX)
-#include "/Developer/Headers/FlatCarbon/Processes.h"
-#include "/Developer/Headers/FlatCarbon/Files.h"
+#include <FlatCarbon/Processes.h>
+#include <FlatCarbon/Files.h>
 char *get_exename(char *buf, size_t size)
 {
     ProcessSerialNumber PSN;

@@ -60,7 +60,7 @@ void add_finalizer(cvalue_t *cv)
 }
 
 // remove dead objects from finalization list in-place
-static void sweep_finalizers()
+static void sweep_finalizers(void)
 {
     cvalue_t **lst = Finalizers;
     size_t n=0, ndel=0, l=nfinalizers;
@@ -420,7 +420,7 @@ static int cvalue_array_init(fltype_t *ft, value_t arg, void *dest)
         assert(cnt <= vector_size(arg));
         for(i=0; i < cnt; i++) {
             cvalue_init(eltype, vector_elt(arg,i), dest);
-            dest += elsize;
+            dest = (char*)dest + elsize;
         }
         return 0;
     }
@@ -430,7 +430,7 @@ static int cvalue_array_init(fltype_t *ft, value_t arg, void *dest)
             if (i == cnt) { i++; break; } // trigger error
             cvalue_init(eltype, car_(arg), dest);
             i++;
-            dest += elsize;
+            dest = (char*)dest + elsize;
             arg = cdr_(arg);
         }
         if (i != cnt)
@@ -768,7 +768,6 @@ static numerictype_t sym_to_numtype(value_t type)
         return T_FLOAT;
     else if (type == doublesym)
         return T_DOUBLE;
-    assert(0);
     return N_NUMTYPES;
 }
 
@@ -940,7 +939,7 @@ static builtinspec_t cvalues_builtin_info[] = {
 #define mk_primtype_(name,ctype) \
   name##type=get_type(name##sym);name##type->init = &cvalue_##ctype##_init
 
-static void cvalues_init()
+static void cvalues_init(void)
 {
     htable_new(&TypeTable, 256);
     htable_new(&reverse_dlsym_lookup_table, 256);
@@ -1269,7 +1268,7 @@ int numeric_compare(value_t a, value_t b, int eq, int eqnans, char *fname)
 }
 
 static void DivideByZeroError() __attribute__ ((__noreturn__));
-static void DivideByZeroError()
+static void DivideByZeroError(void)
 {
     lerror(DivideError, "/: division by zero");
 }

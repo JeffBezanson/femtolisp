@@ -94,7 +94,7 @@ static u_int32_t toktype = TOK_NONE;
 static value_t tokval;
 static char buf[256];
 
-static char nextchar()
+static char nextchar(void)
 {
     int ch;
     char c;
@@ -174,7 +174,7 @@ static int read_token(char c, int digits)
 
 static value_t do_read_sexpr(value_t label);
 
-static u_int32_t peek()
+static u_int32_t peek(void)
 {
     char c, *end;
     fixnum_t x;
@@ -425,14 +425,14 @@ static value_t read_vector(value_t label, u_int32_t closer)
     return POP();
 }
 
-static value_t read_string()
+static value_t read_string(void)
 {
     char *buf, *temp;
     char eseq[10];
     size_t i=0, j, sz = 64, ndig;
     int c;
     value_t s;
-    u_int32_t wc;
+    u_int32_t wc=0;
 
     buf = malloc(sz);
     while (1) {
@@ -481,7 +481,7 @@ static value_t read_string()
                 if (c!=IOS_EOF) ios_ungetc(c, F);
                 eseq[j] = '\0';
                 if (j) wc = strtol(eseq, NULL, 16);
-                else {
+                if (!j || wc > 0x10ffff) {
                     free(buf);
                     lerror(ParseError, "read: invalid escape sequence");
                 }

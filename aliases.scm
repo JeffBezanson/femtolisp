@@ -1,5 +1,4 @@
-; definitions of standard scheme procedures in terms of
-; femtolisp procedures
+; definitions of standard scheme procedures in terms of femtolisp procedures
 ; sufficient to run the R5RS version of psyntax
 
 (define top-level-bound? bound?)
@@ -19,10 +18,7 @@
     (lambda ((x #f)) ($gensym))))
 
 (define-macro (begin0 first . rest)
-  (let ((g (gensym)))
-    `(let ((,g ,first))
-       ,@rest
-       ,g)))
+  `(prog1 ,first ,@rest))
 
 (define vector-ref aref)
 (define vector-set! aset!)
@@ -34,7 +30,7 @@
   #t)
 (define (vector-map f v) (vector.map f v))
 
-(define array-ref! aref)
+(define array-ref aref)
 (define (array-set! a obj i0 . idxs)
   (if (null? idxs)
       (aset! a i0 obj)

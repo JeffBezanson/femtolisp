@@ -435,9 +435,9 @@ static value_t fl_randf(value_t *args, u_int32_t nargs)
     return mk_float(rand_float());
 }
 
-extern void stringfuncs_init();
-extern void table_init();
-extern void iostream_init();
+extern void stringfuncs_init(void);
+extern void table_init(void);
+extern void iostream_init(void);
 
 static builtinspec_t builtin_info[] = {
     { "environment", fl_global_env },
@@ -479,7 +479,7 @@ static builtinspec_t builtin_info[] = {
     { NULL, NULL }
 };
 
-void builtins_init()
+void builtins_init(void)
 {
     assign_global_builtins(builtin_info);
     stringfuncs_init();

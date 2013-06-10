@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <setjmp.h>
+#include <stdint.h>
 #include <stdarg.h>
 #include <assert.h>
 #include <ctype.h>
@@ -2004,7 +2005,7 @@ static value_t _stacktrace(uint32_t top)
 void assign_global_builtins(builtinspec_t *b)
 {
     while (b->name != NULL) {
-        set(symbol(b->name), cbuiltin(b->name, b->fptr));
+        setc(symbol(b->name), cbuiltin(b->name, b->fptr));
         b++;
     }
 }
@@ -2230,8 +2231,8 @@ static builtinspec_t core_builtin_info[] = {
 
 // initialization -------------------------------------------------------------
 
-extern void builtins_init();
-extern void comparehash_init();
+extern void builtins_init(void);
+extern void comparehash_init(void);
 
 static void lisp_init(size_t initial_heapsize)
 {
@@ -2304,6 +2305,8 @@ static void lisp_init(size_t initial_heapsize)
     set(symbol("*os-name*"), symbol("win32"));
 #elif defined(MACOSX)
     set(symbol("*os-name*"), symbol("macos"));
+#elif defined(OPENBSD)
+    set(symbol("*os-name*"), symbol("openbsd"));
 #else
     set(symbol("*os-name*"), symbol("unknown"));
 #endif

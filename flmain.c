@@ -1,19 +1,8 @@
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
-#include <setjmp.h>
-#include <stdarg.h>
 #include <assert.h>
-#include <ctype.h>
-#include <wctype.h>
-#include <sys/types.h>
-#include <locale.h>
-#include <limits.h>
-#include <errno.h>
-#include <math.h>
 #include "llt.h"
 #include "flisp.h"
-#include "opcodes.h"
 
 static value_t argv_list(int argc, char *argv[])
 {
@@ -38,6 +27,9 @@ int main(int argc, char *argv[])
     fl_init(512*1024);
 
     fname_buf[0] = '\0';
+#ifdef INITFILE
+    strcat(fname_buf, INITFILE);
+#else
     value_t str = symbol_value(symbol("*install-dir*"));
     char *exedir = (str == UNBOUND ? NULL : cvalue_data(str));
     if (exedir != NULL) {
@@ -45,6 +37,7 @@ int main(int argc, char *argv[])
         strcat(fname_buf, PATHSEPSTRING);
     }
     strcat(fname_buf, "flisp.boot");
+#endif
 
     value_t args[2];
     fl_gc_handle(&args[0]);

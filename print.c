@@ -700,11 +700,17 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
     else if (issymbol(type)) {
         // handle other integer prims. we know it's smaller than uint64
         // at this point, so int64 is big enough to capture everything.
-        int64_t i64 = conv_to_int64(data, sym_to_numtype(type));
-        if (weak || print_princ)
-            HPOS += ios_printf(f, "%lld", i64);
-        else
-            HPOS += ios_printf(f, "#%s(%lld)", symbol_name(type), i64);
+        numerictype_t nt = sym_to_numtype(type);
+        if (nt == N_NUMTYPES) {
+            HPOS += ios_printf(f, "#<%s>", symbol_name(type));
+        }
+        else {
+            int64_t i64 = conv_to_int64(data, nt);
+            if (weak || print_princ)
+                HPOS += ios_printf(f, "%lld", i64);
+            else
+                HPOS += ios_printf(f, "#%s(%lld)", symbol_name(type), i64);
+        }
     }
     else if (iscons(type)) {
         if (car_(type) == arraysym) {
@@ -760,7 +766,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
                 if (i > 0)
                     outc(' ', f);
                 cvalue_printdata(f, data, elsize, eltype, 1);
-                data += elsize;
+                data = (char*)data + elsize;
             }
             if (!weak)
                 outc(')', f);
@@ -798,8 +804,8 @@ static void cvalue_print(ios_t *f, value_t v)
         void *fptr = *(void**)data;
         label = (value_t)ptrhash_get(&reverse_dlsym_lookup_table, cv);
         if (label == (value_t)HT_NOTFOUND) {
-            HPOS += ios_printf(f, "#<builtin @0x%08lx>",
-                               (unsigned long)(builtin_t)fptr);
+            HPOS += ios_printf(f, "#<builtin @0x%08zx>",
+                               (size_t)(builtin_t)fptr);
         }
         else {
             if (print_princ) {
@@ -823,7 +829,7 @@ static void cvalue_print(ios_t *f, value_t v)
     }
 }
 
-static void set_print_width()
+static void set_print_width(void)
 {
     value_t pw = symbol_value(printwidthsym);
     if (!isfixnum(pw)) return;
