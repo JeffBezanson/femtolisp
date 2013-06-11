@@ -2,7 +2,7 @@ CC = gcc
 
 SRCS = bitvector.c hashing.c socket.c timefuncs.c ptrhash.c utf8.c ios.c \
 	dirpath.c htable.c bitvector-ops.c int2str.c dump.c random.c \
-	lltinit.c arraylist.c
+	lltinit.c
 OBJS = $(SRCS:%.c=%.o)
 DOBJS = $(SRCS:%.c=%.do)
 TARGET = libllt.a
