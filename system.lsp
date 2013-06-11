@@ -16,7 +16,7 @@
    (lambda (x) (pair? x))            (lambda (x) (builtin? x))
    (lambda (x) (vector? x))          (lambda (x) (fixnum? x))
    (lambda (x) (function? x))        (lambda (x y) (cons x y))
-   (lambda rest (apply list rest))   (lambda (x) (car x))
+   (lambda rest rest)                (lambda (x) (car x))
    (lambda (x) (cdr x))              (lambda (x y) (set-car! x y))
    (lambda (x y) (set-cdr! x y))     (lambda rest (apply apply rest))
    (lambda rest (apply + rest))      (lambda rest (apply - rest))
