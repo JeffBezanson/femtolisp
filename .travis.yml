@@ -1,5 +1,2 @@
-language: c
+language: objective-c
 script: make && make test
-compiler:
-  - clang
-  - gcc
