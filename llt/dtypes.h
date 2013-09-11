@@ -29,15 +29,19 @@
 
 
 #ifndef __SIZEOF_POINTER__
-//#  error "__SIZEOF_POINTER__ undefined"
-#  define __SIZEOF_POINTER__ (sizeof(void*))
-#endif
-#if( 8 == __SIZEOF_POINTER__ )
-#  define BITS64
-#elif( 4 == __SIZEOF_POINTER__ )
-#  define BITS32
+#  ifdef __LP64__
+#    define BITS64
+#  else
+#    define BITS32
+#  endif
 #else
-#  error "this is one weird machine"
+#  if( 8 == __SIZEOF_POINTER__ )
+#    define BITS64
+#  elif( 4 == __SIZEOF_POINTER__ )
+#    define BITS32
+#  else
+#    error "this is one weird machine"
+#  endif
 #endif
 
 
