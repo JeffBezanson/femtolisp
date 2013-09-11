@@ -29,7 +29,8 @@
 
 
 #ifndef __SIZEOF_POINTER__
-#  error "__SIZEOF_POINTER__ undefined"
+//#  error "__SIZEOF_POINTER__ undefined"
+#  define __SIZEOF_POINTER__ (sizeof(void*))
 #endif
 #if( 8 == __SIZEOF_POINTER__ )
 #  define BITS64
