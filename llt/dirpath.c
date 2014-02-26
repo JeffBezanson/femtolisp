@@ -119,8 +119,7 @@ char *get_exename(char *buf, size_t size)
     return buf;
 }
 #elif defined(MACOSX)
-#include <FlatCarbon/Processes.h>
-#include <FlatCarbon/Files.h>
+#include <ApplicationServices/ApplicationServices.h>
 char *get_exename(char *buf, size_t size)
 {
     ProcessSerialNumber PSN;
