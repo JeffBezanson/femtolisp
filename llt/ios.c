@@ -752,9 +752,9 @@ ios_t *ios_file(ios_t *s, char *fname, int rd, int wr, int create, int trunc)
     if (create) flags |= O_CREAT;
     if (trunc)  flags |= O_TRUNC;
     fd = open(fname, flags, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH/*644*/);
+    s = ios_fd(s, fd, 1, 1);
     if (fd == -1)
         goto open_file_err;
-    s = ios_fd(s, fd, 1, 1);
     if (!wr)
         s->readonly = 1;
     return s;
