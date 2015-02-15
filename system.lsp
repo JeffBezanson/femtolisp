@@ -422,7 +422,7 @@
 	 (if (and (= d 0) (length= x 2))
 	     (cadr x)
 	     (list cons ''unquote (bq-process (cdr x) (- d 1)))))
-	((or (> d 0) (not (any splice-form? x)))
+	((not (any splice-form? x))
          (let ((lc    (lastcdr x))
                (forms (map (lambda (x) (bq-bracket1 x d)) x)))
            (if (null? lc)

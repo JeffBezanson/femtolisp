@@ -98,9 +98,9 @@
   unquote-nsplicing 'unquote-nsplicing] bq-bracket)
 	  bq-bracket1 #fn(";000r2|F16802|Mc0<6K0}`W650|\x84;c1c2e3|N}ax32L3;e3|}42;" [unquote
   #.cons 'unquote bq-process] bq-bracket1)
-	  bq-process #fn(";000r2|C680c0|L2;|H6A0c1e2e3|31}3241;|?640|;|Mc4\x82B0c5c6e2|\x84}aw32L3;|Mc7\x82W0}`W16:02e8|b232650|\x84;c9c:e2|N}ax32L3;e;}`3217;02e<e=|32@6E0c>qe?|31c@cAq|3242;cBq]31|_42;" [quote
+	  bq-process #fn(";000r2|C680c0|L2;|H6A0c1e2e3|31}3241;|?640|;|Mc4\x82B0c5c6e2|\x84}aw32L3;|Mc7\x82W0}`W16:02e8|b232650|\x84;c9c:e2|N}ax32L3;e;e<|327E0c=qe>|31c?c@q|3242;cAq]31|_42;" [quote
   #fn("8000r1|Mc0\x8280c1|NK;c2c1|L3;" [#.list #.vector #.apply]) bq-process
-  vector->list quasiquote #.list 'quasiquote unquote length= #.cons 'unquote >
+  vector->list quasiquote #.list 'quasiquote unquote length= #.cons 'unquote
   any splice-form? #fn(":000r2|\x8570c0}K;}N\x85?0c1}Me2|\x7f32L3;c3c4}Ke2|\x7f32L142;" [#.list
   #.cons bq-process #fn(nconc) #fn(list*)]) lastcdr #fn(map)
   #fn("8000r1e0|\x7f42;" [bq-bracket1]) #fn("6000r1c0qm02|;" [#fn(">000r2|\x85;0c0e1}31K;|F6s0|Mc2\x82[0c0e3}i11`W670|N5E0c4c5L2e6|Ni11ax32L232K;~|Ne7|Mi1132}K42;c0e1e6|i1132}K31K;" [nconc
@@ -157,7 +157,7 @@
   largc lvargc vargc argc compile-in ret values #fn(function) encode-byte-code
   bcode:code const-to-idx-vec]) filter keyword-arg?])
   #fn(length)]) #fn(length)]) make-code-emitter lastcdr lambda-vars filter #.pair?
-  lambda])] #0=[#:g715 ()])
+  lambda])] #0=[#:g714 ()])
 	  compile-for #fn(":000r5e0g4316X0e1|}^g2342e1|}^g3342e1|}^g4342e2|c342;e4c541;" [1arg-lambda?
   compile-in emit for error "for: third form must be a 1-argument lambda"] compile-for)
 	  compile-if #fn("<000r4c0qe1|31e1|31g3\x84e2g331e3g331F6;0e4g331560e53045;" [#fn(";000r5g2]\x82>0e0~\x7fi02g344;g2^\x82>0e0~\x7fi02g444;e0~\x7f^g2342e1~c2|332e0~\x7fi02g3342i026<0e1~c3325:0e1~c4}332e5~|322e0~\x7fi02g4342e5~}42;" [compile-in
