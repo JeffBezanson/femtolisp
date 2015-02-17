@@ -1,0 +1,15 @@
+language: c
+
+compiler:
+  - gcc
+  - clang
+
+script:
+  - mkdir -v build
+  - cd build
+  - mkdir -v ../m4
+  - autoreconf -ivf ..
+  - ../configure --prefix=${HOME}
+  - make check
+  - make distcheck
+  - make install
