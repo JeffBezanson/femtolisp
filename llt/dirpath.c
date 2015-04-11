@@ -95,7 +95,7 @@ char *get_exename(char *buf, size_t size)
   /* OpenBSD currently has no way of determining a processes pathname */
   return NULL;
 }
-#elif defined(__FreeBSD__)
+#elif defined(FREEBSD)
 #include <sys/types.h>
 #include <sys/sysctl.h>
 

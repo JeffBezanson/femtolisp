@@ -1,4 +1,5 @@
-CC = gcc
+FREEBSD-GE-10 = $(shell test `uname` = FreeBSD -a `uname -r | cut -d. -f1` -ge 10 && echo YES)
+CC = $(if $(FREEBSD-GE-10),clang,gcc)
 
 NAME = flisp
 SRCS = $(NAME).c builtins.c string.c equalhash.c table.c iostream.c
@@ -32,7 +33,7 @@ flmain.o: flmain.c flisp.h
 flmain.do: flmain.c flisp.h
 
 $(LLT):
-	cd $(LLTDIR) && make
+	cd $(LLTDIR) && $(MAKE)
 
 $(LIBTARGET).da: $(DOBJS)
 	rm -rf $@
@@ -44,7 +45,7 @@ $(LIBTARGET).a: $(OBJS)
 
 debug: $(DOBJS) $(LIBFILES) $(LIBTARGET).da flmain.do
 	$(CC) $(DEBUGFLAGS) $(DOBJS) flmain.do -o $(EXENAME) $(LIBS) $(LIBTARGET).da
-	make test
+	$(MAKE) test
 
 release: $(OBJS) $(LIBFILES) $(LIBTARGET).a flmain.o
 	$(CC) $(SHIPFLAGS) $(OBJS) flmain.o -o $(EXENAME) $(LIBS) $(LIBTARGET).a
