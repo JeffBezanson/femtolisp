@@ -1,4 +1,5 @@
-CC = gcc
+FREEBSD-GE-10 = $(shell test `uname` = FreeBSD -a `uname -r | cut -d. -f1` -ge 10 && echo YES)
+CC = $(if $(FREEBSD-GE-10),clang,gcc)
 
 SRCS = bitvector.c hashing.c socket.c timefuncs.c ptrhash.c utf8.c ios.c \
 	dirpath.c htable.c bitvector-ops.c int2str.c dump.c random.c \

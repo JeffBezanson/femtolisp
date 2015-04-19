@@ -2307,6 +2307,8 @@ static void lisp_init(size_t initial_heapsize)
     set(symbol("*os-name*"), symbol("macos"));
 #elif defined(OPENBSD)
     set(symbol("*os-name*"), symbol("openbsd"));
+#elif defined(FREEBSD)
+    set(symbol("*os-name*"), symbol("freebsd"));
 #else
     set(symbol("*os-name*"), symbol("unknown"));
 #endif
