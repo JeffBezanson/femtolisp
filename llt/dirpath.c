@@ -109,7 +109,7 @@ char *get_exename(char *buf, size_t size)
     mib[2] = pid;
     mib[3] = KERN_PROC_ARGV;
 
-    buf = NULL; // This ensures we return NULL on error.
+    buf = NULL;
     argv = NULL;
     len = 128;
 
@@ -136,47 +136,57 @@ char *get_exename(char *buf, size_t size)
     // If no error occurred in the sysctl(3) KERN_PROC_ARGV call
     // above, then buf at this point contains some kind of pathname.
 
-    if ( buf != NULL ) {
+    if (buf != NULL) {
+	if (strchr(buf, '/') == NULL) {
+	    // buf contains a `basename`-style pathname (i.e. "foo",
+	    // as opposed to "../foo" or "/usr/bin/foo"); search the
+	    // PATH for its location. (BTW the setgid(2), setuid(2)
+	    // calls are a pre-condition for the access(2) call
+	    // later.)
 
-        // If buf contains a `basename`-style pathname (i.e. "foo", as
-        // opposed to "../foo" or "/usr/bin/foo"), then search the
-        // PATH for its location. (BTW the setgid(2), setuid(2) calls
-        // are a pre-condition for the access(2) call later.)
+	    if ( (path = getenv("PATH")) != NULL &&
+		 !setgid(getegid()) && !setuid(geteuid()) ) {
 
-        if ( strchr(buf, '/') == NULL &&
-             (path = getenv("PATH")) != NULL &&
-             !setgid(getegid()) && !setuid(geteuid()) ) {
+		// The strdup(3) call below, if successful, will
+		// allocate memory for the PATH string returned by
+		// getenv(3) above.  This is necessary because the man
+		// page of getenv(3) says that its return value
+		// "should be considered read-only"; however, the
+		// strsep(3) call below is going to be destructively
+		// modifying that value. ("Hulk smash!")
 
-            // The strdup(3) call below, if successful, will allocate
-            // memory for the PATH string returned by getenv(3) above.
-            // This is necessary because the man page of getenv(3)
-            // says that its return value "should be considered
-            // read-only"; however, the strsep(3) call below is going
-            // to be destructively modifying that value. ("Hulk smash!")
+		if ((path = strdup(path)) != NULL) {
+		    pathcpy = path;
+		    len = strlen(buf);
+		    while ((p = strsep(&pathcpy, ":")) != NULL) {
+			if (*p == '\0') p = ".";
+			plen = strlen(p);
 
-            if ((path = strdup(path)) != NULL) {
-                pathcpy = path;
-                len = strlen(buf);
-                while ((p = strsep(&pathcpy, ":")) != NULL) {
-                    if (*p == '\0') p = ".";
-                    plen = strlen(p);
+			// strip trailing '/'
+			while (p[plen-1] == '/') p[--plen] = '\0';
 
-                    // strip trailing '/'
-                    while (p[plen-1] == '/') p[--plen] = '\0';
-
-                    if (plen + 1 + len < sizeof(filename)) {
-                        snprintf(filename, sizeof(filename), "%s/%s", p, buf);
-                        if ( (stat(filename, &sbuf) == 0) &&
-                             S_ISREG(sbuf.st_mode) &&
-                             access(filename, X_OK) == 0 ) {
-                            buf = strdup(filename);
-                            break;
-                        }
-                    }
-                }
-                free(path); // free the strdup(3) memory allocation.
-            }
-        }
+			if (plen + 1 + len < sizeof(filename)) {
+			    snprintf(filename, sizeof(filename), "%s/%s", p, buf);
+			    if ( (stat(filename, &sbuf) == 0) &&
+				 S_ISREG(sbuf.st_mode) &&
+				 access(filename, X_OK) == 0 ) {
+				buf = strdup(filename);
+				break;
+			    }
+			}
+		    }
+		    free(path); // free the strdup(3) memory allocation.
+		}
+	    }
+	    else buf = NULL; // call to getenv(3) or [sg]ete?[ug]id(2) failed.
+	}
+	if ( buf != NULL && *buf != '/' ) {
+	    // buf contains a relative pathname (e.g. "../foo");
+	    // resolve this to an absolute pathname.
+	    if ( strlcpy(filename, buf, sizeof(filename)) >= sizeof(filename) ||
+		 realpath(filename, buf) == NULL )
+		buf = NULL; 
+	}
     }
 
     return buf;
