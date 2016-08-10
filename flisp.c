@@ -1991,7 +1991,13 @@ static value_t _stacktrace(uint32_t top)
                    &vector_elt(Stack[bp+1],0), (sz-1)*sizeof(value_t));
         }
         else {
-            memcpy(&vector_elt(v,0), &Stack[bp], sz*sizeof(value_t));
+            uint32_t i;
+            for(i=0; i < sz; i++) {
+                value_t si = Stack[bp+i];
+                // if there's an error evaluating argument defaults some slots
+                // might be left set to UNBOUND (issue #22)
+                vector_elt(v,i) = (si == UNBOUND ? FL_UNSPECIFIED : si);
+            }
         }
         lst = fl_cons(v, lst);
         top = Stack[top-4];
