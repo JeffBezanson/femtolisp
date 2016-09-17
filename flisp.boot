@@ -68,8 +68,8 @@
 	  #fn("7000r1|aw;" [] 1+) 1- #fn("7000r1|ax;" [] 1-) 1arg-lambda?
 	  #fn("8000r1|F16T02|Mc0<16J02|NF16B02|\x84F16:02e1|\x84a42;" [lambda
   length=] 1arg-lambda?)
-	  <= #fn("7000r2|}X17602|}W;" [] <=) >
-	  #fn("7000r2}|X;" [] >) >= #fn("7000r2}|X17602|}W;" [] >=)
+	  <= #fn("7000r2}|X17B02e0|3116802e0}31@;" [nan?] <=) >
+	  #fn("7000r2}|X;" [] >) >= #fn("7000r2|}X17B02e0|3116802e0}31@;" [nan?] >=)
 	  Instructions #table(not 16  vargc 67  load1 49  = 39  setc.l 64  sub2 72  brne.l 83  largc 74  brnn 85  loadc.l 58  loadi8 50  < 40  nop 0  set-cdr! 32  loada 55  bound? 21  / 37  neg 73  brn.l 88  lvargc 75  brt 7  trycatch 68  null? 17  load0 48  jmp.l 8  loadv 51  seta 61  keyargs 91  * 36  function? 26  builtin? 23  aref 43  optargs 89  vector? 24  loadt 45  brf 6  symbol? 19  cdr 30  for 69  loadc00 78  pop 2  pair? 22  cadr 84  closure 65  loadf 46  compare 41  loadv.l 52  setg.l 60  brn 87  eqv? 13  aset! 44  eq? 12  atom? 15  boolean? 18  brt.l 10  tapply 70  dummy_nil 94  loada0 76  brbound 90  list 28  dup 1  apply 33  loadc 57  loadc01 79  dummy_t 92  setg 59  loada1 77  tcall.l 81  jmp 5  fixnum? 25  cons 27  loadg.l 54  tcall 4  call 3  - 35  brf.l 9  + 34  dummy_f 93  add2 71  seta.l 62  loadnil 47  brnn.l 86  setc 63  set-car! 31  vector 42  loadg 53  loada.l 56  argc 66  div0 38  ret 11  number? 20  equal? 14  car 29  call.l 80  brne 82)
 	  __init_globals #fn("7000r0e0c1<17B02e0c2<17802e0c3<6>0c4k52c6k75;0c8k52c9k72e:k;2e<k=2e>k?;" [*os-name*
   win32 win64 windows "\\" *directory-separator* "\r\n" *linefeed* "/" "\n"
@@ -157,7 +157,7 @@
   largc lvargc vargc argc compile-in ret values #fn(function) encode-byte-code
   bcode:code const-to-idx-vec]) filter keyword-arg?])
   #fn(length)]) #fn(length)]) make-code-emitter lastcdr lambda-vars filter #.pair?
-  lambda])] #0=[#:g714 ()])
+  lambda])] #0=[#:g717 ()])
 	  compile-for #fn(":000r5e0g4316X0e1|}^g2342e1|}^g3342e1|}^g4342e2|c342;e4c541;" [1arg-lambda?
   compile-in emit for error "for: third form must be a 1-argument lambda"] compile-for)
 	  compile-if #fn("<000r4c0qe1|31e1|31g3\x84e2g331e3g331F6;0e4g331560e53045;" [#fn(";000r5g2]\x82>0e0~\x7fi02g344;g2^\x82>0e0~\x7fi02g444;e0~\x7f^g2342e1~c2|332e0~\x7fi02g3342i026<0e1~c3325:0e1~c4}332e5~|322e0~\x7fi02g4342e5~}42;" [compile-in
@@ -342,8 +342,10 @@
 	  #fn("8000r2}?640^;}M|=640};e0|}N42;" [memv] memv) min #fn("<000s1}\x8540|;e0c1|}43;" [foldl
   #fn("7000r2|}X640|;};" [])] min)
 	  mod #fn("9000r2|e0|}32}T2x;" [div] mod) mod0
-	  #fn("8000r2||}V}T2x;" [] mod0) negative? #fn("7000r1|`X;" [] negative?)
-	  nestlist #fn(";000r3e0g2`32640_;}e1||}31g2ax33K;" [<= nestlist] nestlist)
+	  #fn("8000r2||}V}T2x;" [] mod0) nan? #fn("7000r1|c0>17702|c1>;" [+nan.0
+  -nan.0] nan?)
+	  negative? #fn("7000r1|`X;" [] negative?) nestlist
+	  #fn(";000r3e0g2`32640_;}e1||}31g2ax33K;" [<= nestlist] nestlist)
 	  newline #fn("9000\x8900001000\x8a0000770e0m02c1|e2322];" [*output-stream*
 								    #fn(io.write)
 								    *linefeed*] newline)

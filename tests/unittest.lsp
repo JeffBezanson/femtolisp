@@ -92,6 +92,14 @@
 (assert (equal? (> 3 +nan.0) (> (double 3) +nan.0)))
 (assert (not (>= +nan.0 +nan.0)))
 
+; comparing strings
+(assert (< "a" "b"))
+(assert (> "b" "a"))
+(assert (not (< "a" "a")))
+(assert (<= "a" "a"))
+(assert (>= "a" "a"))
+(assert (>= "ab" "aa"))
+
 ; -0.0 etc.
 (assert (not (equal? 0.0 0)))
 (assert (equal? 0.0 0.0))

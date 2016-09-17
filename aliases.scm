@@ -60,7 +60,6 @@
 (define (ceiling x) (if (< x 0) (truncate x) (truncate (+ x 0.5))))
 (define (finite? x) (and (< x +inf.0) (> x -inf.0)))
 (define (infinite? x) (or (equal? x +inf.0) (equal? x -inf.0)))
-(define (nan? x) (or (equal? x +nan.0) (equal? x -nan.0)))
 
 (define (char->integer c) (fixnum c))
 (define (integer->char i) (wchar i))

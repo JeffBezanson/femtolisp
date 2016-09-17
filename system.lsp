@@ -134,8 +134,11 @@
 	(#t          (assv item (cdr lst)))))
 
 (define (>  a b) (< b a))
-(define (<= a b) (or (< a b) (= a b)))
-(define (>= a b) (or (< b a) (= a b)))
+(define (nan? x) (or (equal? x +nan.0) (equal? x -nan.0)))
+(define (<= a b) (not (or (< b a)
+                          (and (nan? a) (nan? b)))))
+(define (>= a b) (not (or (< a b)
+                          (and (nan? a) (nan? b)))))
 (define (negative? x) (< x 0))
 (define (zero? x)     (= x 0))
 (define (positive? x) (> x 0))
