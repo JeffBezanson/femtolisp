@@ -1115,7 +1115,11 @@ static value_t fl_add_any(value_t *args, u_int32_t nargs, fixnum_t carryIn)
 static value_t fl_neg(value_t n)
 {
     if (isfixnum(n)) {
-        return fixnum(-numval(n));
+        fixnum_t s = fixnum(-numval(n));
+        if (__unlikely(s == n))
+            return mk_long(-numval(n)); // negate overflows
+        else
+            return s;
     }
     else if (iscprim(n)) {
         cprim_t *cp = (cprim_t*)ptr(n);
