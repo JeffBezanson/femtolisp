@@ -360,6 +360,9 @@ static u_int32_t peek(void)
         else
             ios_ungetc((char)ch, F);
     }
+    else if (c == '{' || c == '}') {
+        lerrorf(ParseError, "invalid character %c", c);
+    }
     else {
         if (!read_token(c, 0)) {
             if (buf[0]=='.' && buf[1]=='\0') {
@@ -507,7 +510,7 @@ static value_t read_string(void)
 // build a list of conses. this is complicated by the fact that all conses
 // can move whenever a new cons is allocated. we have to refer to every cons
 // through a handle to a relocatable pointer (i.e. a pointer on the stack).
-static void read_list(value_t *pval, value_t label)
+static void read_list(value_t *pval, value_t label, u_int32_t closer)
 {
     value_t c, *pc;
     u_int32_t t;
@@ -515,7 +518,7 @@ static void read_list(value_t *pval, value_t label)
     PUSH(NIL);
     pc = &Stack[SP-1];  // to keep track of current cons cell
     t = peek();
-    while (t != TOK_CLOSE) {
+    while (t != closer) {
         if (ios_eof(F))
             lerror(ParseError, "read: unexpected end of input");
         c = mk_cons(); car_(c) = cdr_(c) = NIL;
@@ -539,8 +542,8 @@ static void read_list(value_t *pval, value_t label)
             t = peek();
             if (ios_eof(F))
                 lerror(ParseError, "read: unexpected end of input");
-            if (t != TOK_CLOSE)
-                lerror(ParseError, "read: expected ')'");
+            if (t != closer)
+                lerrorf(ParseError, "read: expected '%c'", closer==TOK_CLOSEB ? ']' : ')');
         }
     }
     take();
@@ -593,7 +596,11 @@ static value_t do_read_sexpr(value_t label)
         return do_read_sexpr(label);
     case TOK_OPEN:
         PUSH(NIL);
-        read_list(&Stack[SP-1], label);
+        read_list(&Stack[SP-1], label, TOK_CLOSE);
+        return POP();
+    case TOK_OPENB:
+        PUSH(NIL);
+        read_list(&Stack[SP-1], label, TOK_CLOSEB);
         return POP();
     case TOK_SHARPSYM:
         sym = tokval;
@@ -609,7 +616,7 @@ static value_t do_read_sexpr(value_t label)
                     symbol_name(tokval));
         }
         PUSH(NIL);
-        read_list(&Stack[SP-1], UNBOUND);
+        read_list(&Stack[SP-1], UNBOUND, TOK_CLOSE);
         if (sym == vu8sym) {
             sym = arraysym;
             Stack[SP-1] = fl_cons(uint8sym, Stack[SP-1]);
@@ -621,8 +628,6 @@ static value_t do_read_sexpr(value_t label)
         if (v == UNBOUND)
             fl_raise(fl_list2(UnboundError, sym));
         return fl_apply(v, POP());
-    case TOK_OPENB:
-        return read_vector(label, TOK_CLOSEB);
     case TOK_SHARPOPEN:
         return read_vector(label, TOK_CLOSE);
     case TOK_SHARPDOT:

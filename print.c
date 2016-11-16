@@ -448,7 +448,7 @@ void fl_print_child(ios_t *f, value_t v)
     case TAG_CONS:
         if (print_circle_prefix(f, v)) break;
         if (isvector(v)) {
-            outc('[', f);
+            outs("#(", f);
             int newindent = HPOS, est;
             int i, sz = vector_size(v);
             for(i=0; i < sz; i++) {
@@ -474,7 +474,7 @@ void fl_print_child(ios_t *f, value_t v)
                     }
                 }
             }
-            outc(']', f);
+            outc(')', f);
             break;
         }
         if (iscvalue(v) || iscprim(v))
@@ -760,7 +760,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
                 }
             }
             else {
-                outc('[', f);
+                outs("#(", f);
             }
             for(i=0; i < cnt; i++) {
                 if (i > 0)
@@ -768,10 +768,7 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
                 cvalue_printdata(f, data, elsize, eltype, 1);
                 data = (char*)data + elsize;
             }
-            if (!weak)
-                outc(')', f);
-            else
-                outc(']', f);
+            outc(')', f);
         }
         else if (car_(type) == enumsym) {
             int n = *(int*)data;
