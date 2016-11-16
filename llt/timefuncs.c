@@ -82,7 +82,7 @@ void timestring(double seconds, char *buffer, size_t len)
 {
     time_t tme = (time_t)seconds;
 
-#ifdef LINUX
+#if defined(LINUX) || defined(MACOSX) || defined(OPENBSD) || defined(FREEBSD)
     char *fmt = "%c"; /* needed to suppress GCC warning */
     struct tm tm;
 
@@ -117,6 +117,8 @@ double parsetime(const char *str)
 
     res = strptime(str, fmt, &tm);
     if (res != NULL) {
+        tm.tm_isdst = -1; /* Not set by strptime(); tells mktime() to determine
+                            whether daylight saving time is in effect */
         t = mktime(&tm);
         if (t == ((time_t)-1))
             return -1;
