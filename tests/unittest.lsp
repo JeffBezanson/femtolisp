@@ -283,5 +283,9 @@
 (assert (not (equal? (hash (iota 41))
 		     (hash (iota 42)))))
 
+(if (top-level-bound? 'time.fromstring)
+    (assert (let ((ts (time.string (time.now))))
+                (eqv? ts (time.string (time.fromstring ts))))))
+
 (princ "all tests pass\n")
 #t
