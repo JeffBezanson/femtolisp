@@ -501,7 +501,7 @@ void print(FILE *f, value_t v)
     value_t cd;
 
     switch (tag(v)) {
-    case TAG_NUM: fprintf(f, "%ld", numval(v)); break;
+    case TAG_NUM: fprintf(f, "%lld", numval(v)); break;
     case TAG_SYM: fprintf(f, "%s", ((symbol_t*)ptr(v))->name); break;
     case TAG_BUILTIN: fprintf(f, "#<builtin %s>",
                               builtin_names[intval(v)]); break;
