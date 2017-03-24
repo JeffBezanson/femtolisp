@@ -4,8 +4,7 @@
 #include <setjmp.h>
 #include <stdint.h>
 
-#include "platform.h"
-#include "libsupport.h"
+#include "llt.h"
 #include "uv.h"
 
 //#define MEMDEBUG
@@ -38,7 +37,7 @@ typedef struct _symbol_t {
     // below fields are private
     struct _symbol_t *left;
     struct _symbol_t *right;
-    JL_ATTRIBUTE_ALIGN_PTRSIZE(char name[]);
+    char name[] __attribute__((aligned(_Alignof(void*))));
 } symbol_t;
 
 typedef struct {
@@ -227,6 +226,11 @@ typedef struct {
     void (*print_traverse)(fl_context_t *fl_ctx, value_t self);
 } cvtable_t;
 
+typedef enum { T_INT8, T_UINT8, T_INT16, T_UINT16, T_INT32, T_UINT32,
+               T_INT64, T_UINT64, T_FLOAT, T_DOUBLE } numerictype_t;
+
+#define N_NUMTYPES ((int)T_DOUBLE+1)
+
 /* functions needed to implement the value interface (cvtable_t) */
 value_t relocate_lispvalue(fl_context_t *fl_ctx, value_t v);
 void print_traverse(fl_context_t *fl_ctx, value_t v);
@@ -359,6 +363,14 @@ value_t mk_wchar(fl_context_t *fl_ctx, int32_t n);
 value_t return_from_uint64(fl_context_t *fl_ctx, uint64_t Uaccum);
 value_t return_from_int64(fl_context_t *fl_ctx, int64_t Saccum);
 
+numerictype_t effective_numerictype(double r);
+double conv_to_double(void *data, numerictype_t tag);
+void conv_from_double(void *data, double d, numerictype_t tag);
+int64_t conv_to_int64(void *data, numerictype_t tag);
+uint64_t conv_to_uint64(void *data, numerictype_t tag);
+int32_t conv_to_int32(void *data, numerictype_t tag);
+uint32_t conv_to_uint32(void *data, numerictype_t tag);
+
 typedef struct {
     const char *name;
     builtin_t fptr;
@@ -376,8 +388,8 @@ int fl_load_system_image(fl_context_t *fl_ctx, value_t ios);
 int fl_load_system_image_str(fl_context_t *fl_ctx, char* str, size_t len);
 
 /* julia extensions */
-JL_DLLEXPORT int jl_id_char(uint32_t wc);
-JL_DLLEXPORT int jl_id_start_char(uint32_t wc);
+int jl_id_char(uint32_t wc);
+int jl_id_start_char(uint32_t wc);
 
 struct _fl_context_t {
     symbol_t *symtab;

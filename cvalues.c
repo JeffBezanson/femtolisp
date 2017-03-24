@@ -319,15 +319,15 @@ size_t tosize(fl_context_t *fl_ctx, value_t n, const char *fname)
     return 0;
 }
 
-static int cvalue_enum_init(fltype_t *ft, value_t arg, void *dest)
+static int cvalue_enum_init(fl_context_t *fl_ctx, fltype_t *ft, value_t arg, void *dest)
 {
     int n=0;
     value_t syms;
     value_t type = ft->type;
 
-    syms = car(cdr(type));
+    syms = car(fl_ctx, cdr(fl_ctx, type));
     if (!isvector(syms))
-        type_error("enum", "vector", syms);
+        type_error(fl_ctx, "enum", "vector", syms);
     if (issymbol(arg)) {
         for(n=0; n < (int)vector_size(syms); n++) {
             if (vector_elt(syms, n) == arg) {
@@ -335,7 +335,7 @@ static int cvalue_enum_init(fltype_t *ft, value_t arg, void *dest)
                 return 0;
             }
         }
-        lerror(ArgError, "enum: invalid enum value");
+        lerror(fl_ctx, fl_ctx->ArgError, "enum: invalid enum value");
     }
     if (isfixnum(arg)) {
         n = (int)numval(arg);
@@ -345,21 +345,21 @@ static int cvalue_enum_init(fltype_t *ft, value_t arg, void *dest)
         n = conv_to_int32(cp_data(cp), cp_numtype(cp));
     }
     else {
-        type_error("enum", "number", arg);
+        type_error(fl_ctx, "enum", "number", arg);
     }
     if ((unsigned)n >= vector_size(syms))
-        lerror(ArgError, "enum: value out of range");
+        lerror(fl_ctx, fl_ctx->ArgError, "enum: value out of range");
     *(int*)dest = n;
     return 0;
 }
 
-value_t cvalue_enum(value_t *args, u_int32_t nargs)
+value_t cvalue_enum(fl_context_t *fl_ctx, value_t *args, u_int32_t nargs)
 {
-    argcount("enum", nargs, 2);
-    value_t type = fl_list2(enumsym, args[0]);
-    fltype_t *ft = get_type(type);
-    value_t cv = cvalue(ft, sizeof(int32_t));
-    cvalue_enum_init(ft, args[1], cp_data((cprim_t*)ptr(cv)));
+    argcount(fl_ctx, "enum", nargs, 2);
+    value_t type = fl_list2(fl_ctx, fl_ctx->enumsym, args[0]);
+    fltype_t *ft = get_type(fl_ctx, type);
+    value_t cv = cvalue(fl_ctx, ft, sizeof(int32_t));
+    cvalue_enum_init(fl_ctx, ft, args[1], cp_data((cprim_t*)ptr(cv)));
     return cv;
 }
 
@@ -368,32 +368,32 @@ static int isarray(value_t v)
     return iscvalue(v) && cv_class((cvalue_t*)ptr(v))->eltype != NULL;
 }
 
-static size_t predict_arraylen(value_t arg)
+static size_t predict_arraylen(fl_context_t *fl_ctx, value_t arg)
 {
     if (isvector(arg))
         return vector_size(arg);
     else if (iscons(arg))
         return llength(arg);
-    else if (arg == NIL)
+    else if (arg == fl_ctx->NIL)
         return 0;
     if (isarray(arg))
         return cvalue_arraylen(arg);
     return 1;
 }
 
-static int cvalue_array_init(fltype_t *ft, value_t arg, void *dest)
+static int cvalue_array_init(fl_context_t *fl_ctx, fltype_t *ft, value_t arg, void *dest)
 {
     value_t type = ft->type;
     size_t elsize, i, cnt, sz;
     fltype_t *eltype = ft->eltype;
 
     elsize = ft->elsz;
-    cnt = predict_arraylen(arg);
+    cnt = predict_arraylen(fl_ctx, arg);
 
     if (iscons(cdr_(cdr_(type)))) {
         size_t tc = toulong(car_(cdr_(cdr_(type))), "array");
         if (tc != cnt)
-            lerror(ArgError, "array: size mismatch");
+            lerror(fl_ctx, fl_ctx->ArgError, "array: size mismatch");
     }
 
     sz = elsize * cnt;
@@ -401,22 +401,22 @@ static int cvalue_array_init(fltype_t *ft, value_t arg, void *dest)
     if (isvector(arg)) {
         assert(cnt <= vector_size(arg));
         for(i=0; i < cnt; i++) {
-            cvalue_init(eltype, vector_elt(arg,i), dest);
+            cvalue_init(fl_ctx, eltype, vector_elt(arg,i), dest);
             dest = (char*)dest + elsize;
         }
         return 0;
     }
-    else if (iscons(arg) || arg==NIL) {
+    else if (iscons(arg) || arg==fl_ctx->NIL) {
         i = 0;
         while (iscons(arg)) {
             if (i == cnt) { i++; break; } // trigger error
-            cvalue_init(eltype, car_(arg), dest);
+            cvalue_init(fl_ctx, eltype, car_(arg), dest);
             i++;
             dest = (char*)dest + elsize;
             arg = cdr_(arg);
         }
         if (i != cnt)
-            lerror(ArgError, "array: size mismatch");
+            lerror(fl_ctx, fl_ctx->ArgError, "array: size mismatch");
         return 0;
     }
     else if (iscvalue(arg)) {
@@ -472,16 +472,16 @@ size_t cvalue_arraylen(value_t v)
     return cv_len(cv)/(cv_class(cv)->elsz);
 }
 
-static size_t cvalue_struct_offs(value_t type, value_t field, int computeTotal,
+static size_t cvalue_struct_offs(fl_context_t *fl_ctx, value_t type, value_t field, int computeTotal,
                                  int *palign)
 {
-    value_t fld = car(cdr_(type));
+    value_t fld = car(fl_ctx, cdr_(type));
     size_t fsz, ssz = 0;
     int al;
     *palign = 0;
 
     while (iscons(fld)) {
-        fsz = ctype_sizeof(car(cdr(car_(fld))), &al);
+        fsz = ctype_sizeof(fl_ctx, car(fl_ctx, cdr(fl_ctx, car_(fld))), &al);
 
         ssz = LLT_ALIGN(ssz, al);
         if (al > *palign)
@@ -498,15 +498,15 @@ static size_t cvalue_struct_offs(value_t type, value_t field, int computeTotal,
     return LLT_ALIGN(ssz, *palign);
 }
 
-static size_t cvalue_union_size(value_t type, int *palign)
+static size_t cvalue_union_size(fl_context_t *fl_ctx, value_t type, int *palign)
 {
-    value_t fld = car(cdr_(type));
+    value_t fld = car(fl_ctx, cdr_(type));
     size_t fsz, usz = 0;
     int al;
     *palign = 0;
 
     while (iscons(fld)) {
-        fsz = ctype_sizeof(car(cdr(car_(fld))), &al);
+        fsz = ctype_sizeof(fl_ctx, car(fl_ctx, cdr(fl_ctx, car_(fld))), &al);
         if (al > *palign) *palign = al;
         if (fsz > usz) usz = fsz;
         fld = cdr_(fld);
@@ -557,13 +557,13 @@ size_t ctype_sizeof(fl_context_t *fl_ctx, value_t type, int *palign)
             size_t sz = tosize(fl_ctx, n, "sizeof");
             return sz * ctype_sizeof(fl_ctx, t, palign);
         }
-        else if (hed == structsym) {
-            return cvalue_struct_offs(type, NIL, 1, palign);
+        else if (hed == fl_ctx->structsym) {
+            return cvalue_struct_offs(fl_ctx, type, fl_ctx->NIL, 1, palign);
         }
-        else if (hed == unionsym) {
-            return cvalue_union_size(type, palign);
+        else if (hed == fl_ctx->unionsym) {
+            return cvalue_union_size(fl_ctx, type, palign);
         }
-        else if (hed == enumsym) {
+        else if (hed == fl_ctx->enumsym) {
             *palign = ALIGN4;
             return 4;
         }

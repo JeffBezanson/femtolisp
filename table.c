@@ -4,51 +4,51 @@
 #include <string.h>
 #include <assert.h>
 #include <sys/types.h>
-#include <setjmp.h>
-#include "llt.h"
 #include "flisp.h"
 #include "equalhash.h"
 
-static value_t tablesym;
-static fltype_t *tabletype;
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-void print_htable(value_t v, ios_t *f)
+void print_htable(fl_context_t *fl_ctx, value_t v, ios_t *f)
 {
     htable_t *h = (htable_t*)cv_data((cvalue_t*)ptr(v));
     size_t i;
     int first=1;
-    fl_print_str("#table(", f);
+    fl_print_str(fl_ctx, "#table(", f);
     for(i=0; i < h->size; i+=2) {
         if (h->table[i+1] != HT_NOTFOUND) {
-            if (!first) fl_print_str("  ", f);
-            fl_print_child(f, (value_t)h->table[i]);
-            fl_print_chr(' ', f);
-            fl_print_child(f, (value_t)h->table[i+1]);
+            if (!first) fl_print_str(fl_ctx, "  ", f);
+            fl_print_child(fl_ctx, f, (value_t)h->table[i]);
+            fl_print_chr(fl_ctx, ' ', f);
+            fl_print_child(fl_ctx, f, (value_t)h->table[i+1]);
             first = 0;
         }
     }
-    fl_print_chr(')', f);
+    fl_print_chr(fl_ctx, ')', f);
 }
 
-void print_traverse_htable(value_t self)
+void print_traverse_htable(fl_context_t *fl_ctx, value_t self)
 {
     htable_t *h = (htable_t*)cv_data((cvalue_t*)ptr(self));
     size_t i;
     for(i=0; i < h->size; i+=2) {
         if (h->table[i+1] != HT_NOTFOUND) {
-            print_traverse((value_t)h->table[i]);
-            print_traverse((value_t)h->table[i+1]);
+            print_traverse(fl_ctx, (value_t)h->table[i]);
+            print_traverse(fl_ctx, (value_t)h->table[i+1]);
         }
     }
 }
 
-void free_htable(value_t self)
+void free_htable(fl_context_t *fl_ctx, value_t self)
 {
+    (void)fl_ctx;
     htable_t *h = (htable_t*)cv_data((cvalue_t*)ptr(self));
     htable_free(h);
 }
 
-void relocate_htable(value_t oldv, value_t newv)
+void relocate_htable(fl_context_t *fl_ctx, value_t oldv, value_t newv)
 {
     htable_t *oldh = (htable_t*)cv_data((cvalue_t*)ptr(oldv));
     htable_t *h = (htable_t*)cv_data((cvalue_t*)ptr(newv));

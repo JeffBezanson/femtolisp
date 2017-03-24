@@ -42,8 +42,7 @@
 #include <limits.h>
 #include <errno.h>
 
-#include "platform.h"
-#include "libsupport.h"
+#include "llt.h"
 #include "flisp.h"
 #include "opcodes.h"
 

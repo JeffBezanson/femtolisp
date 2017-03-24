@@ -75,7 +75,6 @@ enum {
     }
 
 #define VM_APPLY_LABELS                                                 \
-
     static void *vm_apply_labels[] = {                                  \
 NULL, &&L_OP_DUP, &&L_OP_POP, &&L_OP_CALL, &&L_OP_TCALL, &&L_OP_JMP, \
     &&L_OP_BRF, &&L_OP_BRT,                                             \

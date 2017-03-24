@@ -196,44 +196,44 @@ value_t fl_string_split(value_t *args, u_int32_t nargs)
     fl_free_gc_handles(2);
     return first;
 }
-
-value_t fl_string_sub(value_t *args, u_int32_t nargs)
+value_t fl_string_sub(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
     if (nargs != 2)
-        argcount("string.sub", nargs, 3);
-    char *s = tostring(args[0], "string.sub");
+        argcount(fl_ctx, "string.sub", nargs, 3);
+    char *s = tostring(fl_ctx, args[0], "string.sub");
     size_t len = cv_len((cvalue_t*)ptr(args[0]));
     size_t i1, i2;
-    i1 = toulong(args[1], "string.sub");
+    i1 = tosize(fl_ctx, args[1], "string.sub");
     if (i1 > len)
-        bounds_error("string.sub", args[0], args[1]);
+        bounds_error(fl_ctx, "string.sub", args[0], args[1]);
     if (nargs == 3) {
-        i2 = toulong(args[2], "string.sub");
+        i2 = tosize(fl_ctx, args[2], "string.sub");
         if (i2 > len)
-            bounds_error("string.sub", args[0], args[2]);
+            bounds_error(fl_ctx, "string.sub", args[0], args[2]);
     }
     else {
         i2 = len;
     }
     if (i2 <= i1)
-        return cvalue_string(0);
-    value_t ns = cvalue_string(i2-i1);
+        return cvalue_string(fl_ctx, 0);
+    value_t ns = cvalue_string(fl_ctx, i2-i1);
+    s = (char*)cvalue_data(args[0]); // reload after alloc
     memcpy(cv_data((cvalue_t*)ptr(ns)), &s[i1], i2-i1);
     return ns;
 }
 
-value_t fl_string_char(value_t *args, u_int32_t nargs)
+value_t fl_string_char(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
-    argcount("string.char", nargs, 2);
-    char *s = tostring(args[0], "string.char");
+    argcount(fl_ctx, "string.char", nargs, 2);
+    char *s = tostring(fl_ctx, args[0], "string.char");
     size_t len = cv_len((cvalue_t*)ptr(args[0]));
-    size_t i = toulong(args[1], "string.char");
+    size_t i = tosize(fl_ctx, args[1], "string.char");
     if (i >= len)
-        bounds_error("string.char", args[0], args[1]);
+        bounds_error(fl_ctx, "string.char", args[0], args[1]);
     size_t sl = u8_seqlen(&s[i]);
     if (sl > len || i > len-sl)
-        bounds_error("string.char", args[0], args[1]);
-    return mk_wchar(u8_nextchar(s, &i));
+        bounds_error(fl_ctx, "string.char", args[0], args[1]);
+    return mk_wchar(fl_ctx, u8_nextchar(s, &i));
 }
 
 value_t fl_char_upcase(value_t *args, u_int32_t nargs)
