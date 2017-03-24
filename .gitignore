@@ -6,3 +6,5 @@
 /llt/*.o
 /llt/*.a
 /flisp.boot.bak
+*.rej
+*.orig
