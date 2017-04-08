@@ -56,3 +56,4 @@ clean:
 	rm -f $(EXENAME)
 	rm -f $(LIBTARGET).a
 	rm -f $(LIBTARGET).da
+	$(MAKE) -C llt clean

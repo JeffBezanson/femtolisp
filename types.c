@@ -10,7 +10,7 @@ fltype_t *get_type(fl_context_t *fl_ctx, value_t t)
         if (ft != NULL)
             return ft;
     }
-    void **bp = equalhash_bp_r(&fl_ctx->TypeTable, fl_ctx, (void*)t);
+    void **bp = equalhash_bp_r(&fl_ctx->TypeTable, (void*)t, fl_ctx);
     if (*bp != HT_NOTFOUND)
         return (fltype_t*)*bp;
 
