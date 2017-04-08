@@ -8,7 +8,7 @@
 #include "flisp.h"
 #include "equalhash.h"
 
-#include "htable.inc"
+#include "llt/htable.inc"
 
 #define _equal_lispvalue_(x, y, ctx)                                    \
     equal_lispvalue((fl_context_t*)ctx, (value_t)(x), (value_t)(y))

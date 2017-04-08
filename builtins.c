@@ -313,19 +313,31 @@ static double todouble(fl_context_t *fl_ctx, value_t a, char *fname)
     if (iscprim(a)) {
         cprim_t *cp = (cprim_t*)ptr(a);
         numerictype_t nt = cp_numtype(cp);
-        return conv_to_double(fl_ctx, cp_data(cp), nt);
+        return conv_to_double(cp_data(cp), nt);
     }
     type_error(fl_ctx, fname, "number", a);
 }
 
-static value_t fl_time_string(value_t *args, uint32_t nargs)
+static value_t fl_time_string(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
-    argcount("time.string", nargs, 1);
-    double t = todouble(args[0], "time.string");
+    argcount(fl_ctx, "time.string", nargs, 1);
+    double t = todouble(fl_ctx, args[0], "time.string");
     char buf[64];
     timestring(t, buf, sizeof(buf));
-    return string_from_cstr(buf);
+    return string_from_cstr(fl_ctx, buf);
 }
+
+static value_t fl_time_fromstring(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
+{
+    argcount(fl_ctx, "time.fromstring", nargs, 1);
+    char *ptr = tostring(fl_ctx, args[0], "time.fromstring");
+    double t = parsetime(ptr);
+    int64_t it = (int64_t)t;
+    if ((double)it == t && fits_fixnum(it))
+        return fixnum(it);
+    return mk_double(fl_ctx, t);
+}
+
 
 static value_t fl_path_cwd(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
@@ -400,9 +412,9 @@ static value_t fl_os_setenv(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
     return fl_ctx->T;
 }
 
-static value_t fl_rand(value_t *args, u_int32_t nargs)
+static value_t fl_rand(fl_context_t *fl_ctx, value_t *args, u_int32_t nargs)
 {
-    (void)args; (void)nargs;
+    (void)args; (void)nargs; (void)fl_ctx;
     fixnum_t r;
 #ifdef BITS64
     r = ((((uint64_t)random())<<32) | random()) & 0x1fffffffffffffffLL;
@@ -411,31 +423,31 @@ static value_t fl_rand(value_t *args, u_int32_t nargs)
 #endif
     return fixnum(r);
 }
-static value_t fl_rand32(value_t *args, u_int32_t nargs)
+static value_t fl_rand32(fl_context_t *fl_ctx, value_t *args, u_int32_t nargs)
 {
-    (void)args; (void)nargs;
+    (void)args; (void)nargs; (void)fl_ctx;
     uint32_t r = random();
 #ifdef BITS64
     return fixnum(r);
 #else
-    return mk_uint32(r);
+    return mk_uint32(fl_ctx, r);
 #endif
 }
-static value_t fl_rand64(value_t *args, u_int32_t nargs)
+static value_t fl_rand64(fl_context_t *fl_ctx, value_t *args, u_int32_t nargs)
 {
     (void)args; (void)nargs;
     uint64_t r = (((uint64_t)random())<<32) | random();
-    return mk_uint64(r);
+    return mk_uint64(fl_ctx, r);
 }
-static value_t fl_randd(value_t *args, u_int32_t nargs)
+static value_t fl_randd(fl_context_t *fl_ctx, value_t *args, u_int32_t nargs)
 {
     (void)args; (void)nargs;
-    return mk_double(rand_double());
+    return mk_double(fl_ctx, rand_double());
 }
-static value_t fl_randf(value_t *args, u_int32_t nargs)
+static value_t fl_randf(fl_context_t *fl_ctx, value_t *args, u_int32_t nargs)
 {
     (void)args; (void)nargs;
-    return mk_float(rand_float());
+    return mk_float(fl_ctx, rand_float());
 }
 extern void stringfuncs_init(fl_context_t *fl_ctx);
 extern void table_init(fl_context_t *fl_ctx);

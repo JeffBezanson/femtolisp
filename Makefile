@@ -10,9 +10,9 @@ LIBTARGET = lib$(NAME)
 LLTDIR = llt
 LLT = $(LLTDIR)/libllt.a
 
-FLAGS = -falign-functions -Wall -Wno-strict-aliasing -I$(LLTDIR) $(CFLAGS) -DUSE_COMPUTED_GOTO
+FLAGS = $(if $(FREEBSD-GE-10),-falign-functions,) -Wall -Wno-strict-aliasing -I$(LLTDIR) $(CFLAGS) -DUSE_COMPUTED_GOTO
 LIBFILES = $(LLT)
-LIBS = $(LIBFILES) -lm
+LIBS = $(LIBFILES) -lm -ldl -luv
 
 DEBUGFLAGS = -g -DDEBUG $(FLAGS)
 SHIPFLAGS = -O2 -DNDEBUG $(FLAGS)

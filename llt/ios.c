@@ -29,47 +29,66 @@
 
 #define MOST_OF(x) ((x) - ((x)>>4))
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void (*ios_set_io_wait_func)(int) = NULL;
+static void set_io_wait_begin(int v)
+{
+    if (__likely(ios_set_io_wait_func)) {
+        ios_set_io_wait_func(v);
+    }
+}
+
 /* OS-level primitive wrappers */
 
-#if defined(MACOSX)
-void *memrchr(const void *s, int c, size_t n)
+#if defined(__APPLE__) || defined(_OS_WINDOWS_)
+JL_DLLEXPORT void *memrchr(const void *s, int c, size_t n)
 {
-    const unsigned char *src = s + n;
+    const unsigned char *src = (unsigned char*)s + n;
     unsigned char uc = c;
-    while (--src >= (unsigned char *) s)
+    while (--src >= (unsigned char*)s)
         if (*src == uc)
-            return (void *) src;
+            return (void*)src;
     return NULL;
 }
 #else
 extern void *memrchr(const void *s, int c, size_t n);
 #endif
 
-#if 0
-// poll for read, unless forwrite!=0
-static void _fd_poll(long fd, int forwrite)
+/*
+static int _fd_available(long fd)
 {
-#ifndef WIN32
+#ifndef _OS_WINDOWS_
     fd_set set;
+    struct timeval tv = {0, 0};
 
     FD_ZERO(&set);
     FD_SET(fd, &set);
-    if (forwrite)
-        select(fd+1, NULL, &set, NULL, NULL);
-    else
-        select(fd+1, &set, NULL, NULL, NULL);
+    return (select(fd+1, &set, NULL, NULL, &tv)!=0);
 #else
+    return 1;
 #endif
 }
-#endif
+*/
 
 static int _enonfatal(int err)
 {
-    return (err == EAGAIN || err == EINPROGRESS || err == EINTR ||
-            err == EWOULDBLOCK);
+    return (err == EAGAIN ||/* err == EINPROGRESS ||*/ err == EINTR /*|| err == EWOULDBLOCK*/); //jwn
 }
 
 #define SLEEP_TIME 5//ms
+
+#if defined(__APPLE__)
+#define MAXSIZE ((1l << 31) - 1)   // OSX cannot handle blocks larger than this
+#define LIMIT_IO_SIZE(n) ((n) < MAXSIZE ? (n) : MAXSIZE)
+#elif defined(_OS_WINDOWS_)
+#define MAXSIZE (0x7fffffff)       // Windows read() takes a uint
+#define LIMIT_IO_SIZE(n) ((n) < (size_t)MAXSIZE ? (unsigned int)(n) : MAXSIZE)
+#else
+#define LIMIT_IO_SIZE(n) (n)
+#endif
 
 // return error code, #bytes read in *nread
 // these wrappers retry operations until success or a fatal error
@@ -77,11 +96,19 @@ static int _os_read(long fd, void *buf, size_t n, size_t *nread)
 {
     ssize_t r;
 
+    n = LIMIT_IO_SIZE(n);
     while (1) {
+        set_io_wait_begin(1);
         r = read((int)fd, buf, n);
+        set_io_wait_begin(0);
         if (r > -1) {
             *nread = (size_t)r;
             return 0;
+        }
+        // This test is a hack to fix #11481 for Windows 7. Unnecessary for Windows 10.
+        if (errno == ENOMEM && n > 80) {
+            n >>= 3;
+            continue;
         }
         if (!_enonfatal(errno)) {
             *nread = 0;
@@ -109,7 +136,7 @@ static int _os_read_all(long fd, void *buf, size_t n, size_t *nread)
     return 0;
 }
 
-static int _os_write(long fd, void *buf, size_t n, size_t *nwritten)
+static int _os_write(long fd, const void *buf, size_t n, size_t *nwritten)
 {
     ssize_t r;
 
@@ -128,7 +155,7 @@ static int _os_write(long fd, void *buf, size_t n, size_t *nwritten)
     return 0;
 }
 
-static int _os_write_all(long fd, void *buf, size_t n, size_t *nwritten)
+static int _os_write_all(long fd, const void *buf, size_t n, size_t *nwritten)
 {
     size_t wrote;
 
@@ -138,7 +165,7 @@ static int _os_write_all(long fd, void *buf, size_t n, size_t *nwritten)
         int err = _os_write(fd, buf, n, &wrote);
         n -= wrote;
         *nwritten += wrote;
-        buf += wrote;
+        buf = (char *)buf + wrote;
         if (err)
             return err;
     }
@@ -187,7 +214,7 @@ static char *_buf_realloc(ios_t *s, size_t sz)
 
 // write a block of data into the buffer at the current position, resizing
 // if necessary. returns # written.
-static size_t _write_grow(ios_t *s, char *data, size_t n)
+static size_t _write_grow(ios_t *s, const char *data, size_t n)
 {
     size_t amt;
     size_t newsize;
@@ -333,7 +360,7 @@ static void _write_update_pos(ios_t *s)
     if (s->bpos > s->size)   s->size = s->bpos;
 }
 
-size_t ios_write(ios_t *s, char *data, size_t n)
+size_t ios_write(ios_t *s, const char *data, size_t n)
 {
     if (s->readonly) return 0;
     if (n == 0) return 0;
@@ -972,7 +999,7 @@ int ios_vprintf(ios_t *s, const char *format, va_list args)
             va_end(al);
             return c;
         }
-        if (c < avail) {
+        if ((size_t)c < avail) {
             s->bpos += (size_t)c;
             _write_update_pos(s);
             // TODO: only works right if newline is at end

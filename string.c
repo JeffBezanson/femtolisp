@@ -56,81 +56,79 @@ value_t fl_string_count(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
     return size_wrap(fl_ctx, u8_charnum(str+start, stop-start));
 }
 
-value_t fl_string_width(value_t *args, u_int32_t nargs)
+value_t fl_string_width(fl_context_t *fl_ctx, value_t *args, u_int32_t nargs)
 {
-    argcount("string.width", nargs, 1);
+    argcount(fl_ctx, "string.width", nargs, 1);
     if (iscprim(args[0])) {
         cprim_t *cp = (cprim_t*)ptr(args[0]);
-        if (cp_class(cp) == wchartype) {
+        if (cp_class(cp) == fl_ctx->wchartype) {
             int w = wcwidth(*(uint32_t*)cp_data(cp));
             if (w < 0)
-                return FL_F;
+                return fl_ctx->F;
             return fixnum(w);
         }
     }
-    char *s = tostring(args[0], "string.width");
-    return size_wrap(u8_strwidth(s));
+    char *s = tostring(fl_ctx, args[0], "string.width");
+    return size_wrap(fl_ctx, u8_strwidth(s));
 }
 
-value_t fl_string_reverse(value_t *args, u_int32_t nargs)
+value_t fl_string_reverse(fl_context_t *fl_ctx, value_t *args, u_int32_t nargs)
 {
-    argcount("string.reverse", nargs, 1);
-    if (!fl_isstring(args[0]))
-        type_error("string.reverse", "string", args[0]);
+    argcount(fl_ctx, "string.reverse", nargs, 1);
+    if (!fl_isstring(fl_ctx, args[0]))
+        type_error(fl_ctx, "string.reverse", "string", args[0]);
     size_t len = cv_len((cvalue_t*)ptr(args[0]));
-    value_t ns = cvalue_string(len);
+    value_t ns = cvalue_string(fl_ctx, len);
     u8_reverse(cvalue_data(ns), cvalue_data(args[0]), len);
     return ns;
 }
 
-value_t fl_string_encode(value_t *args, u_int32_t nargs)
+extern value_t fl_buffer(fl_context_t *fl_ctx, value_t *args, uint32_t nargs);
+extern value_t stream_to_string(fl_context_t *fl_ctx, value_t *ps);
+
+value_t fl_string_encode(fl_context_t *fl_ctx, value_t *args, u_int32_t nargs)
 {
-    argcount("string.encode", nargs, 1);
+    argcount(fl_ctx, "string.encode", nargs, 1);
     if (iscvalue(args[0])) {
         cvalue_t *cv = (cvalue_t*)ptr(args[0]);
         fltype_t *t = cv_class(cv);
-        if (t->eltype == wchartype) {
+        if (t->eltype == fl_ctx->wchartype) {
             size_t nc = cv_len(cv) / sizeof(uint32_t);
             uint32_t *ptr = (uint32_t*)cv_data(cv);
-extern value_t fl_buffer(fl_context_t *fl_ctx, value_t *args, uint32_t nargs);
-extern value_t stream_to_string(fl_context_t *fl_ctx, value_t *ps);
             size_t nbytes = u8_codingsize(ptr, nc);
-            value_t str = cvalue_string(nbytes);
+            value_t str = cvalue_string(fl_ctx, nbytes);
             ptr = cv_data((cvalue_t*)ptr(args[0]));  // relocatable pointer
             u8_toutf8(cvalue_data(str), nbytes, ptr, nc);
             return str;
         }
     }
-    type_error("string.encode", "wchar array", args[0]);
+    type_error(fl_ctx, "string.encode", "wchar array", args[0]);
 }
 
-value_t fl_string_decode(value_t *args, u_int32_t nargs)
+value_t fl_string_decode(fl_context_t *fl_ctx, value_t *args, u_int32_t nargs)
 {
     int term=0;
     if (nargs == 2) {
-        term = (args[1] != FL_F);
+        term = (args[1] != fl_ctx->F);
     }
     else {
-        argcount("string.decode", nargs, 1);
+        argcount(fl_ctx, "string.decode", nargs, 1);
     }
-    if (!fl_isstring(args[0]))
-        type_error("string.decode", "string", args[0]);
+    if (!fl_isstring(fl_ctx, args[0]))
+        type_error(fl_ctx, "string.decode", "string", args[0]);
     cvalue_t *cv = (cvalue_t*)ptr(args[0]);
     char *ptr = (char*)cv_data(cv);
     size_t nb = cv_len(cv);
     size_t nc = u8_charnum(ptr, nb);
     size_t newsz = nc*sizeof(uint32_t);
     if (term) newsz += sizeof(uint32_t);
-    value_t wcstr = cvalue(wcstringtype, newsz);
+    value_t wcstr = cvalue(fl_ctx, fl_ctx->wcstringtype, newsz);
     ptr = cv_data((cvalue_t*)ptr(args[0]));  // relocatable pointer
     uint32_t *pwc = cvalue_data(wcstr);
     u8_toucs(pwc, nc, ptr, nb);
     if (term) pwc[nc] = 0;
     return wcstr;
 }
-
-extern value_t fl_buffer(value_t *args, u_int32_t nargs);
-extern value_t stream_to_string(value_t *ps);
 
 value_t fl_string(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
@@ -154,18 +152,18 @@ value_t fl_string(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
     return outp;
 }
 
-value_t fl_string_split(value_t *args, u_int32_t nargs)
+value_t fl_string_split(fl_context_t *fl_ctx, value_t *args, u_int32_t nargs)
 {
-    argcount("string.split", nargs, 2);
-    char *s = tostring(args[0], "string.split");
-    char *delim = tostring(args[1], "string.split");
+    argcount(fl_ctx, "string.split", nargs, 2);
+    char *s = tostring(fl_ctx, args[0], "string.split");
+    char *delim = tostring(fl_ctx, args[1], "string.split");
     size_t len = cv_len((cvalue_t*)ptr(args[0]));
     size_t dlen = cv_len((cvalue_t*)ptr(args[1]));
     size_t ssz, tokend=0, tokstart=0, i=0;
-    value_t first=FL_NIL, c=FL_NIL, last;
+    value_t first=fl_ctx->NIL, c=fl_ctx->NIL, last;
     size_t junk;
-    fl_gc_handle(&first);
-    fl_gc_handle(&last);
+    fl_gc_handle(fl_ctx, &first);
+    fl_gc_handle(fl_ctx, &last);
 
     do {
         // find and allocate next token
@@ -175,7 +173,7 @@ value_t fl_string_split(value_t *args, u_int32_t nargs)
             tokend = i;
         ssz = tokend - tokstart;
         last = c;  // save previous cons cell
-        c = fl_cons(cvalue_string(ssz), FL_NIL);
+        c = fl_cons(fl_ctx, cvalue_string(fl_ctx, ssz), fl_ctx->NIL);
 
         // we've done allocation; reload movable pointers
         s = cv_data((cvalue_t*)ptr(args[0]));
@@ -184,7 +182,7 @@ value_t fl_string_split(value_t *args, u_int32_t nargs)
         if (ssz) memcpy(cv_data((cvalue_t*)ptr(car_(c))), &s[tokstart], ssz);
 
         // link new cell
-        if (last == FL_NIL)
+        if (last == fl_ctx->NIL)
             first = c;   // first time, save first cons
         else
             ((cons_t*)ptr(last))->cdr = c;
@@ -193,7 +191,7 @@ value_t fl_string_split(value_t *args, u_int32_t nargs)
         // delimiter, we need to go around one more time to add an
         // empty string. this happens when (i==len && tokend<i)
     } while (i < len || (i==len && (tokend!=i)));
-    fl_free_gc_handles(2);
+    fl_free_gc_handles(fl_ctx, 2);
     return first;
 }
 value_t fl_string_sub(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
@@ -236,21 +234,21 @@ value_t fl_string_char(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
     return mk_wchar(fl_ctx, u8_nextchar(s, &i));
 }
 
-value_t fl_char_upcase(value_t *args, u_int32_t nargs)
+value_t fl_char_upcase(fl_context_t *fl_ctx, value_t *args, u_int32_t nargs)
 {
-    argcount("char.upcase", nargs, 1);
+    argcount(fl_ctx, "char.upcase", nargs, 1);
     cprim_t *cp = (cprim_t*)ptr(args[0]);
-    if (!iscprim(args[0]) || cp_class(cp) != wchartype)
-      type_error("char.upcase", "wchar", args[0]);
-    return mk_wchar(towupper(*(int32_t*)cp_data(cp)));
+    if (!iscprim(args[0]) || cp_class(cp) != fl_ctx->wchartype)
+      type_error(fl_ctx, "char.upcase", "wchar", args[0]);
+    return mk_wchar(fl_ctx, towupper(*(int32_t*)cp_data(cp)));
 }
-value_t fl_char_downcase(value_t *args, u_int32_t nargs)
+value_t fl_char_downcase(fl_context_t *fl_ctx, value_t *args, u_int32_t nargs)
 {
-    argcount("char.downcase", nargs, 1);
+    argcount(fl_ctx, "char.downcase", nargs, 1);
     cprim_t *cp = (cprim_t*)ptr(args[0]);
-    if (!iscprim(args[0]) || cp_class(cp) != wchartype)
-      type_error("char.downcase", "wchar", args[0]);
-    return mk_wchar(towlower(*(int32_t*)cp_data(cp)));
+    if (!iscprim(args[0]) || cp_class(cp) != fl_ctx->wchartype)
+      type_error(fl_ctx, "char.downcase", "wchar", args[0]);
+    return mk_wchar(fl_ctx, towlower(*(int32_t*)cp_data(cp)));
 }
 static value_t mem_find_byte(fl_context_t *fl_ctx, char *s, char c, size_t start, size_t len)
 {

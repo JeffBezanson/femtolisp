@@ -370,6 +370,15 @@ int64_t conv_to_int64(void *data, numerictype_t tag);
 uint64_t conv_to_uint64(void *data, numerictype_t tag);
 int32_t conv_to_int32(void *data, numerictype_t tag);
 uint32_t conv_to_uint32(void *data, numerictype_t tag);
+#if NBITS == 64
+#define conv_to_size conv_to_uint64
+#define conv_to_ptrdiff conv_to_int64
+#elif NBITS == 32
+#define conv_to_size conv_to_uint32
+#define conv_to_ptrdiff conv_to_int32
+#else
+#error bad size of pointers
+#endif
 
 typedef struct {
     const char *name;

@@ -36,6 +36,7 @@ static fl_context_t fl_global_ctx;
 
 int main(int argc, char *argv[])
 {
+    ios_init_stdstreams();
     char fname_buf[1024];
     fl_context_t *fl_ctx = &fl_global_ctx;
 

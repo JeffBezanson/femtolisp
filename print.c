@@ -732,24 +732,25 @@ static void cvalue_printdata(fl_context_t *fl_ctx, ios_t *f, void *data,
             if (!weak)
                 outc(fl_ctx, ')', f);
             else
+                outc(fl_ctx, ']', f);
         }
-        else if (car_(type) == enumsym) {
+        else if (car_(type) == fl_ctx->enumsym) {
             int n = *(int*)data;
             value_t syms = car(fl_ctx, cdr_(type));
             assert(isvector(syms));
             if (!weak) {
-                outsn("#enum(", f, 6);
-                fl_print_child(f, syms);
-                outc(' ', f);
+                outsn(fl_ctx, "#enum(", f, 6);
+                fl_print_child(fl_ctx, f, syms);
+                outc(fl_ctx, ' ', f);
             }
             if (n >= (int)vector_size(syms)) {
-                cvalue_printdata(f, data, len, int32sym, 1);
+                cvalue_printdata(fl_ctx, f, data, len, fl_ctx->int32sym, 1);
             }
             else {
-                fl_print_child(f, vector_elt(syms, n));
+                fl_print_child(fl_ctx, f, vector_elt(syms, n));
             }
             if (!weak)
-                outc(')', f);
+                outc(fl_ctx, ')', f);
         }
     }
 }

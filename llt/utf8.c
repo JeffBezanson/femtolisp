@@ -131,7 +131,7 @@ size_t u8_toucs(u_int32_t *dest, size_t sz, const char *src, size_t srcsz)
 */
 size_t u8_toutf8(char *dest, size_t sz, const u_int32_t *src, size_t srcsz)
 {
-    u_int32_t ch;
+    uint32_t ch;
     size_t i = 0;
     char *dest0 = dest;
     char *dest_end = dest + sz;
@@ -169,7 +169,7 @@ size_t u8_toutf8(char *dest, size_t sz, const u_int32_t *src, size_t srcsz)
     return (dest-dest0);
 }
 
-size_t u8_wc_toutf8(char *dest, u_int32_t ch)
+size_t u8_wc_toutf8(char *dest, uint32_t ch)
 {
     if (ch < 0x80) {
         dest[0] = (char)ch;

@@ -77,7 +77,7 @@ u_int32_t bitvector_get(u_int32_t *b, u_int64_t n)
     return b[n>>5] & (1<<(n&31));
 }
 
-static int ntz(uint32_t x)
+static uint32_t ntz(uint32_t x)
 {
     int n;
 

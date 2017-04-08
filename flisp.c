@@ -2036,6 +2036,8 @@ static value_t _stacktrace(fl_context_t *fl_ctx, uint32_t top)
         uint32_t i;
         for (i = 0; i < sz; ++i) {
             value_t si = fl_ctx->Stack[bp + i];
+            // if there's an error evaluating argument defaults some slots
+            // might be left set to UNBOUND (issue #22)
             vector_elt(v, i) = (si == UNBOUND ? FL_UNSPECIFIED(fl_ctx) : si);
         }
         lst = fl_cons(fl_ctx, v, lst);
@@ -2313,8 +2315,6 @@ static void lisp_init(fl_context_t *fl_ctx, size_t initial_heapsize)
 {
     int i;
 
-    libsupport_init();
-
     fl_ctx->SP = 0;
     fl_ctx->curr_frame = 0;
     fl_ctx->N_GCHND = 0;
@@ -2340,7 +2340,7 @@ static void lisp_init(fl_context_t *fl_ctx, size_t initial_heapsize)
     fl_ctx->consflags = bitvector_new(fl_ctx->heapsize/sizeof(cons_t), 1);
     fl_print_init(fl_ctx);
     comparehash_init(fl_ctx);
-    jl_charmap_init(fl_ctx);
+    //jl_charmap_init(fl_ctx);
     fl_ctx->N_STACK = 262144;
     fl_ctx->Stack = (value_t*)malloc(fl_ctx->N_STACK*sizeof(value_t));
     CHECK_ALIGN8(fl_ctx->Stack);
@@ -2436,7 +2436,7 @@ extern void fl_init_julia_extensions(fl_context_t *fl_ctx);
 void fl_init(fl_context_t *fl_ctx, size_t initial_heapsize)
 {
     lisp_init(fl_ctx, initial_heapsize);
-    fl_init_julia_extensions(fl_ctx);
+    //fl_init_julia_extensions(fl_ctx);
 }
 
 int fl_load_system_image_str(fl_context_t *fl_ctx, char *str, size_t len)

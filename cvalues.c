@@ -1,3 +1,7 @@
+#include "operators.c"
+#include <stdlib.h>
+#include <string.h>
+#include "flisp.h"
 #ifdef _P64
 #define NWORDS(sz) (((sz)+7)>>3)
 #else
@@ -229,6 +233,7 @@ void cv_pin(fl_context_t *fl_ctx, cvalue_t *cv)
 static int cvalue_##ctype##_init(fl_context_t *fl_ctx, fltype_t *type, \
                                  value_t arg, void *dest)              \
 {                                                                      \
+    (void)fl_ctx;                                                      \
     fl_##ctype##_t n=0;                                                \
     (void)type;                                                        \
     if (isfixnum(arg)) {                                               \
@@ -391,7 +396,7 @@ static int cvalue_array_init(fl_context_t *fl_ctx, fltype_t *ft, value_t arg, vo
     cnt = predict_arraylen(fl_ctx, arg);
 
     if (iscons(cdr_(cdr_(type)))) {
-        size_t tc = toulong(car_(cdr_(cdr_(type))), "array");
+        size_t tc = tosize(fl_ctx, car_(cdr_(cdr_(type))), "array");
         if (tc != cnt)
             lerror(fl_ctx, fl_ctx->ArgError, "array: size mismatch");
     }
@@ -1092,10 +1097,7 @@ static value_t fl_neg(fl_context_t *fl_ctx, value_t n)
 {
     if (isfixnum(n)) {
         fixnum_t s = fixnum(-numval(n));
-        if (__unlikely(s == n))
-            return mk_long(-numval(n)); // negate overflows
-        else
-            return s;
+        return s;
     }
     else if (iscprim(n)) {
         cprim_t *cp = (cprim_t*)ptr(n);
@@ -1517,4 +1519,3 @@ static value_t fl_ash(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
     type_error(fl_ctx, "ash", "integer", a);
     return fl_ctx->NIL;
 }
-

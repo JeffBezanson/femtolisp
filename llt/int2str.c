@@ -1,6 +1,12 @@
+// This file is a part of Julia. License is MIT: http://julialang.org/license
+
 #include <stdlib.h>
 #include "dtypes.h"
 #include "utils.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 char *uint2str(char *dest, size_t len, uint64_t num, uint32_t base)
 {
@@ -57,3 +63,7 @@ int str2int(char *str, size_t len, int64_t *res, uint32_t base)
     return 0;
 }
 */
+
+#ifdef __cplusplus
+}
+#endif

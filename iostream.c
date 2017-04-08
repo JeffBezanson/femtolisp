@@ -310,21 +310,21 @@ value_t fl_iowrite(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
     return size_wrap(fl_ctx, ios_write(s, data, nb));
 }
 
-value_t fl_dump(value_t *args, u_int32_t nargs)
+value_t fl_dump(fl_context_t *fl_ctx, value_t *args, u_int32_t nargs)
 {
     if (nargs < 1 || nargs > 3)
-        argcount("dump", nargs, 1);
-    ios_t *s = toiostream(symbol_value(outstrsym), "dump");
+        argcount(fl_ctx, "dump", nargs, 1);
+    ios_t *s = toiostream(fl_ctx, symbol_value(fl_ctx->outstrsym), "dump");
     char *data;
     size_t sz, offs=0;
-    to_sized_ptr(args[0], "dump", &data, &sz);
+    to_sized_ptr(fl_ctx, args[0], "dump", &data, &sz);
     size_t nb = sz;
     if (nargs > 1) {
-        get_start_count_args(args, nargs, sz, &offs, &nb, "dump");
+        get_start_count_args(fl_ctx, args, nargs, sz, &offs, &nb, "dump");
         data += offs;
     }
     hexdump(s, data, nb, offs);
-    return FL_T;
+    return fl_ctx->T;
 }
 static char get_delim_arg(fl_context_t *fl_ctx, value_t arg, char *fname)
 {
@@ -349,7 +349,7 @@ value_t fl_ioreaduntil(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
     ios_setbuf(&dest, data, 80, 0);
     char delim = get_delim_arg(fl_ctx, args[1], "io.readuntil");
     ios_t *src = toiostream(fl_ctx, args[0], "io.readuntil");
-    size_t n = ios_copyuntil(&dest, src, delim, 0);
+    size_t n = ios_copyuntil(&dest, src, delim);
     cv->len = n;
     if (dest.buf != data) {
         // outgrew initial space
@@ -368,7 +368,7 @@ value_t fl_iocopyuntil(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
     ios_t *dest = toiostream(fl_ctx, args[0], "io.copyuntil");
     ios_t *src = toiostream(fl_ctx, args[1], "io.copyuntil");
     char delim = get_delim_arg(fl_ctx, args[2], "io.copyuntil");
-    return size_wrap(fl_ctx, ios_copyuntil(dest, src, delim, 0));
+    return size_wrap(fl_ctx, ios_copyuntil(dest, src, delim));
 }
 
 value_t fl_iocopy(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
@@ -397,7 +397,7 @@ value_t stream_to_string(fl_context_t *fl_ctx, value_t *ps)
         ios_trunc(st, 0);
     }
     else {
-        char *b = ios_take_buffer(st, &n); n--;
+        char *b = ios_takebuf(st, &n); n--;
         b[n] = '\0';
         str = cvalue_from_ref(fl_ctx, fl_ctx->stringtype, b, n, fl_ctx->NIL);
         cv_autorelease(fl_ctx, (cvalue_t*)ptr(str));
@@ -418,6 +418,7 @@ static const builtinspec_t iostreamfunc_info[] = {
     { "iostream?", fl_iostreamp },
     { "eof-object", fl_eof_object },
     { "eof-object?", fl_eof_objectp },
+    { "dump", fl_dump },
     { "file", fl_file },
     { "buffer", fl_buffer },
     { "read", fl_read },
