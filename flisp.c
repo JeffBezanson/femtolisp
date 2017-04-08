@@ -2315,6 +2315,8 @@ static void lisp_init(fl_context_t *fl_ctx, size_t initial_heapsize)
 {
     int i;
 
+    llt_init();
+
     fl_ctx->SP = 0;
     fl_ctx->curr_frame = 0;
     fl_ctx->N_GCHND = 0;
@@ -2493,4 +2495,3 @@ int fl_load_system_image(fl_context_t *fl_ctx, value_t sys_image_iostream)
 #ifdef __cplusplus
 }
 #endif
-

@@ -719,4 +719,3 @@ static void fl_read_init(fl_context_t *fl_ctx)
     fl_ctx->readtokval = 0;
     memset(fl_ctx->readbuf, 0, sizeof(fl_ctx->readbuf));
 }
-

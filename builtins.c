@@ -24,7 +24,6 @@ extern "C" {
 
 size_t llength(value_t v)
 {
-
     size_t n = 0;
     while (iscons(v)) {
         n++;

@@ -382,4 +382,3 @@ value_t fl_hash(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
     argcount(fl_ctx, "hash", nargs, 1);
     return fixnum(hash_lispvalue(fl_ctx, args[0]));
 }
-

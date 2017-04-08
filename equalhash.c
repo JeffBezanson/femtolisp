@@ -24,4 +24,3 @@ HTIMPL_R(equalhash, _hash_lispvalue_, _equal_lispvalue_)
 #ifdef __cplusplus
 }
 #endif
-
