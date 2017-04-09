@@ -1,3 +1,5 @@
+#include "flisp.h"
+#include <string.h>
 #define BOUNDED_COMPARE_BOUND 4096
 #define BOUNDED_HASH_BOUND    16384
 
@@ -241,7 +243,7 @@ static value_t cyc_compare(fl_context_t *fl_ctx, value_t a, value_t b, htable_t 
     return bounded_compare(fl_ctx, a, b, 1, eq);
 }
 
-void comparehash_init(fl_context_t *fl_ctx)
+static void comparehash_init(fl_context_t *fl_ctx)
 {
     htable_new(&fl_ctx->equal_eq_hashtable, 512);
 }

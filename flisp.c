@@ -1484,12 +1484,19 @@ static value_t apply_cl(fl_context_t *fl_ctx, uint32_t nargs)
             PUSH(fl_ctx, fl_apply_v);
             NEXT_OP;
         OP(OP_NEG)
-        do_neg:
-            if (isfixnum(fl_ctx->Stack[fl_ctx->SP-1]))
-                fl_ctx->Stack[fl_ctx->SP-1] = fixnum(-numval(fl_ctx->Stack[fl_ctx->SP-1]));
+        do_neg: {
+            value_t *stacktop = fl_ctx->Stack + (fl_ctx->SP - 1);
+            if (isfixnum(*stacktop)) {
+                s = fixnum(-numval(*stacktop));
+                if (__unlikely(s == *stacktop))
+                  *stacktop = mk_int64(fl_ctx, -numval(*stacktop)); // negate overflows
+                else
+                  *stacktop = s;
+            }
             else
-                fl_ctx->Stack[fl_ctx->SP-1] = fl_neg(fl_ctx, fl_ctx->Stack[fl_ctx->SP-1]);
+                *stacktop = fl_neg(fl_ctx, *stacktop);
             NEXT_OP;
+        }
         OP(OP_SUB2)
         do_sub2:
             if (bothfixnums(fl_ctx->Stack[fl_ctx->SP-2], fl_ctx->Stack[fl_ctx->SP-1])) {

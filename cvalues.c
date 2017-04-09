@@ -1097,7 +1097,10 @@ static value_t fl_neg(fl_context_t *fl_ctx, value_t n)
 {
     if (isfixnum(n)) {
         fixnum_t s = fixnum(-numval(n));
-        return s;
+        if (__unlikely(s == n))
+            return mk_int64(fl_ctx, -numval(n)); // negate overflows
+        else
+            return s;
     }
     else if (iscprim(n)) {
         cprim_t *cp = (cprim_t*)ptr(n);

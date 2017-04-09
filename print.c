@@ -828,7 +828,7 @@ void fl_print(fl_context_t *fl_ctx, ios_t *f, value_t v)
     }
 }
 
-void fl_print_init(fl_context_t *fl_ctx)
+static void fl_print_init(fl_context_t *fl_ctx)
 {
     htable_new(&fl_ctx->printconses, 32);
     fl_ctx->SCR_WIDTH = 80;

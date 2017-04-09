@@ -15,8 +15,7 @@
 		      #fn("5000r1|I;" [])
 		      #fn("5000r1|J;" [])
 		      #fn("6000r2|}K;" [])
-		      #fn("8000s0c0|v2;" [#.list])
-		      #fn("5000r1|M;" [])
+		      #fn("7000s0|;" []) #fn("5000r1|M;" [])
 		      #fn("5000r1|N;" [])
 		      #fn("6000r2|}O;" [])
 		      #fn("6000r2|}P;" [])
@@ -33,38 +32,40 @@
 		      #fn("6000r2|}[;" [])
 		      #fn("7000r3|}g2\\;" [])]
 	  *interactive* #f *syntax-environment*
-	  #table(throw #fn("9000r2c0c1c2c3L2|}L4L2;" [raise list quote
-						      thrown-value])  assert #fn(";000r1c0|]c1c2c3|L2L2L2L4;" [if
-  raise quote assert-failed])  case #fn("@000s1]\x8c6g6c0O2c130c2g7|L2L1c3c4c5g6g7q2}32KL3;" [#fn("8000r2}c0\x8250c0;}\x8540^;}C6=0c1|e2}31L3;}?6=0c3|e2}31L3;}N\x85>0c3|e2}M31L3;e4c5}326=0c6|c7}L2L3;c8|c7}L2L3;" [else
-  eq? quote-value eqv? every #.symbol? memq quote memv] vals->cond)
-  #fn(gensym) let cond #fn(map) #fn("7000r1~M\x7f|M32|NK;" [])])  unwind-protect #fn("A000r2c030c030c1g7c2_}L3L2L1c3c4|c2g6L1c5g7L1c6g6L2L3L3L3g7L1L3L3;" [#fn(gensym)
-  let lambda prog1 trycatch begin raise])  with-bindings #fn("F000s1c0c1|32c0e2|32c0c3|32c4c5L1c0c6g8g633L1c7c0c8g6g73331c9c:c7}31Kc:c7c0c;g6g83331KL3L144;" [#fn(map)
+	  #table(with-bindings #fn("F000s1c0c1|32c0e2|32c0c3|32c4c5L1c0c6g8g633L1c7c0c8g6g73331c9c:c7}31Kc:c7c0c;g6g83331KL3L144;" [#fn(map)
   #.car cadr #fn("5000r1c040;" [#fn(gensym)])
   #fn(nconc) let #.list #fn(copy-list) #fn("7000r2c0|}L3;" [set!])
-  unwind-protect begin #fn("7000r2c0|}L3;" [set!])])  time #fn(">000r1c030c1g5c2L1L2L1c3|c4c5c6c2L1g5L3c7L4L3L3;" [#fn(gensym)
-  let time.now prog1 princ "Elapsed time: " - " seconds\n"])  dotimes #fn("A000s1|M|\x84c0`c1g7aL3c2c3L1g6L1L1c4}3133L4;" [for
-  - #fn(nconc) lambda #fn(copy-list)])  define-macro #fn(">000s1c0c1|ML2c2c3L1|NL1c4}3133L3;" [set-syntax!
-  quote #fn(nconc) lambda #fn(copy-list)])  unless #fn("<000s1c0|^c1}KL4;" [if
-  begin])  with-output-to #fn("<000s1c0c1L1c2|L2L1L1c3}3143;" [#fn(nconc)
-							       with-bindings
-							       *output-stream*
-							       #fn(copy-list)])  cond #fn(":000s0]\x8c5g5c0g5q1O2g5M|41;" [#fn(">000r1|?640^;|Mg5Mc0<17802g5M]<6C0g5N\x8560g5M;c1g5NK;g5N\x85@0c2g5M~M|N31L3;g5\x84c3\x82\x980e4e5g531316c0e6e5g53131c7g6g5ML2L1c8g6c1e9e5g53131K~M|N31L4L3;c:30c7g6g5ML2L1c8g6e5g531g6L2~M|N31L4L3;c8g5Mc1g5NK~M|N31L4;" [else
-  begin or => 1arg-lambda? caddr caadr let if cddr #fn(gensym)] cond-clauses->if)])  with-input-from #fn("<000s1c0c1L1c2|L2L1L1c3}3143;" [#fn(nconc)
-  with-bindings *input-stream* #fn(copy-list)])  quasiquote #fn("6000r1e0|41;" [bq-process])  letrec #fn("=000s1c0c1L1c2c3|32L1c2c4|32c5}3134c2c6|32K;" [#fn(nconc)
+  unwind-protect begin #fn("7000r2c0|}L3;" [set!])])  letrec #fn("=000s1c0c1L1c2c3|32L1c2c4|32c5}3134c2c6|32K;" [#fn(nconc)
   lambda #fn(map) #.car #fn("7000r1c0c1|31K;" [set! #fn(copy-list)])
-  #fn(copy-list) #fn("5000r1e040;" [void])])  receive #fn("?000s2c0c1_}L3c2c1L1|L1c3g23133L3;" [call-with-values
-  lambda #fn(nconc) #fn(copy-list)])  let* #fn("@000s1|?6E0c0c1L1_L1c2}3133L1;c0c1L1e3|31L1L1c2|NF6H0c0c4L1|NL1c2}3133L1530}3133e5|31L2;" [#fn(nconc)
-  lambda #fn(copy-list) caar let* cadar])  when #fn(";000s1c0|c1}K^L4;" [if
-  begin])  catch #fn("@000r2c030c1}c2g6L1c3c4c5g6L2c6c7g6L2c8c9L2L3c6c:g6L2|L3L4c;g6L2c<g6L2L4L3L3;" [#fn(gensym)
-  trycatch lambda if and pair? eq? car quote thrown-value cadr caddr raise])  let #fn(">000s1^|C6B0|m62}Mm02}Nm1530]2c0c1L1c2c3|32L1c4}3133c2c5|32g66C0c6g6g7L2L1g6L3540g7g8K;" [#fn(nconc)
+  #fn(copy-list) #fn("5000r1e040;" [void])])  assert #fn(";000r1c0|]c1c2c3|L2L2L2L4;" [if
+  raise quote assert-failed])  do #fn("I000s2c030}Mc1c2|32c1e3|32c1c4|32c5g7c6g9c7g8c8c9}N31Kc:c8L1c9g231g7g;KL133L4L3L2L1g7g:KL3;" [#fn(gensym)
+  #fn(map) #.car cadr #fn("6000r1e0|31F680e1|41;|M;" [cddr caddr]) letrec
+  lambda if begin #fn(copy-list) #fn(nconc)])  quasiquote #fn("6000r1e0|41;" [bq-process])  when #fn(";000s1c0|c1}K^L4;" [if
+  begin])  with-input-from #fn("<000s1c0c1L1c2|L2L1L1c3}3143;" [#fn(nconc)
+								with-bindings
+								*input-stream*
+								#fn(copy-list)])  unwind-protect #fn("A000r2c030c030c1g7c2_}L3L2L1c3c4|c2g6L1c5g7L1c6g6L2L3L3L3g7L1L3L3;" [#fn(gensym)
+  let lambda prog1 trycatch begin raise])  dotimes #fn("A000s1|M|\x84c0`c1g7aL3c2c3L1g6L1L1c4}3133L4;" [for
+  - #fn(nconc) lambda #fn(copy-list)])  define-macro #fn(">000s1c0c1|ML2c2c3L1|NL1c4}3133L3;" [set-syntax!
+  quote #fn(nconc) lambda #fn(copy-list)])  receive #fn("?000s2c0c1_}L3c2c1L1|L1c3g23133L3;" [call-with-values
+  lambda #fn(nconc) #fn(copy-list)])  unless #fn("<000s1c0|^c1}KL4;" [if begin])  let #fn(">000s1^|C6B0|m62}Mm02}Nm1530]2c0c1L1c2c3|32L1c4}3133c2c5|32g66C0c6g6g7L2L1g6L3540g7g8K;" [#fn(nconc)
   lambda #fn(map) #fn("5000r1|F650|M;|;" [])
-  #fn(copy-list) #fn("5000r1|F650|\x84;e040;" [void]) letrec]))
-	  1+ #fn("6000r1|aw;" [] 1+) 1-
-	  #fn("6000r1|ax;" [] 1-) 1arg-lambda? #fn("7000r1|F16T02|Mc0<16J02|NF16B02|\x84F16:02e1|\x84a42;" [lambda
+  #fn(copy-list) #fn("5000r1|F650|\x84;e040;" [void]) letrec])  cond #fn(":000s0]\x8c5g5c0g5q1O2g5M|41;" [#fn(">000r1|?640^;|Mg5Mc0<17802g5M]<6C0g5N\x8560g5M;c1g5NK;g5N\x85@0c2g5M~M|N31L3;g5\x84c3\x82\x980e4e5g531316c0e6e5g53131c7g6g5ML2L1c8g6c1e9e5g53131K~M|N31L4L3;c:30c7g6g5ML2L1c8g6e5g531g6L2~M|N31L4L3;c8g5Mc1g5NK~M|N31L4;" [else
+  begin or => 1arg-lambda? caddr caadr let if cddr #fn(gensym)] cond-clauses->if)])  throw #fn("9000r2c0c1c2c3L2|}L4L2;" [raise
+  list quote thrown-value])  time #fn(">000r1c030c1g5c2L1L2L1c3|c4c5c6c2L1g5L3c7L4L3L3;" [#fn(gensym)
+  let time.now prog1 princ "Elapsed time: " - " seconds\n"])  let* #fn("@000s1|?6E0c0c1L1_L1c2}3133L1;c0c1L1e3|31L1L1c2|NF6H0c0c4L1|NL1c2}3133L1530}3133e5|31L2;" [#fn(nconc)
+  lambda #fn(copy-list) caar let* cadar])  case #fn("@000s1]\x8c6g6c0O2c130c2g7|L2L1c3c4c5g6g7q2}32KL3;" [#fn("8000r2}c0\x8250c0;}\x8540^;}C6=0c1|e2}31L3;}?6=0c3|e2}31L3;}N\x85>0c3|e2}M31L3;e4c5}326=0c6|c7}L2L3;c8|c7}L2L3;" [else
+  eq? quote-value eqv? every #.symbol? memq quote memv] vals->cond)
+  #fn(gensym) let cond #fn(map) #fn("7000r1~M\x7f|M32|NK;" [])])  with-output-to #fn("<000s1c0c1L1c2|L2L1L1c3}3143;" [#fn(nconc)
+  with-bindings *output-stream* #fn(copy-list)])  catch #fn("@000r2c030c1}c2g6L1c3c4c5g6L2c6c7g6L2c8c9L2L3c6c:g6L2|L3L4c;g6L2c<g6L2L4L3L3;" [#fn(gensym)
+  trycatch lambda if and pair? eq? car quote thrown-value cadr caddr raise]))
+	  *whitespace* "\t\n\v\f\r \u0085  ᠎           \u2028\u2029  　" 1+
+	  #fn("6000r1|aw;" [] 1+) 1- #fn("6000r1|ax;" [] 1-) 1arg-lambda?
+	  #fn("7000r1|F16T02|Mc0<16J02|NF16B02|\x84F16:02e1|\x84a42;" [lambda
   length=] 1arg-lambda?)
-	  <= #fn("6000r2|}X17602|}W;" [] <=) >
-	  #fn("6000r2}|X;" [] >) >= #fn("6000r2}|X17602|}W;" [] >=)
-	  Instructions #table(jmp.l 8  loadg.l 54  loadt 45  brn.l 88  lvargc 75  box 92  boolean? 18  eq? 12  + 34  loada 55  brn 87  box.l 93  aset! 44  brt.l 10  seta.l 62  null? 17  ret 11  vector 42  loadv 51  cadr 84  builtin? 23  setg.l 60  apply 33  keyargs 91  trycatch 68  dup 1  aref 43  list 28  set-car! 31  seta 61  removed-setc.l 64  cons 27  brne 82  closure 65  dummy_nil 97  neg 73  loadc0 78  pop 2  pair? 22  brbound 90  loada1 77  / 37  loadc1 79  vargc 67  sub2 72  brf.l 9  function? 26  load1 49  call.l 80  symbol? 19  = 39  loada0 76  call 3  set-cdr! 32  compare 41  dummy_t 95  load0 48  atom? 15  tcall 4  equal? 14  car 29  loadc.l 58  eqv? 13  loada.l 56  for 69  loadf 46  tcall.l 81  removed-setc 63  dummy_f 96  brt 7  jmp 5  < 40  brf 6  tapply 70  loadnil 47  argc 66  not 16  add2 71  largc 74  cdr 30  brnn 85  brne.l 83  loadc 57  - 35  shift 94  * 36  nop 0  div0 38  loadv.l 52  optargs 89  vector? 24  brnn.l 86  loadg 53  fixnum? 25  number? 20  setg 59  bound? 21  loadi8 50)
+	  <= #fn("6000r2}|X17B02e0|3116802e0}31@;" [nan?] <=) >
+	  #fn("6000r2}|X;" [] >) >= #fn("6000r2|}X17B02e0|3116802e0}31@;" [nan?] >=)
+	  Instructions #table(not 16  vargc 67  load1 49  loadc0 78  = 39  sub2 72  brne.l 83  box 92  largc 74  brnn 85  loadc.l 58  loadi8 50  < 40  nop 0  set-cdr! 32  loada 55  bound? 21  / 37  removed-setc 63  neg 73  lvargc 75  brn.l 88  brt 7  trycatch 68  null? 17  load0 48  jmp.l 8  removed-setc.l 64  loadv 51  seta 61  keyargs 91  * 36  function? 26  builtin? 23  aref 43  optargs 89  vector? 24  loadt 45  brf 6  symbol? 19  cdr 30  for 69  cadr 84  pop 2  pair? 22  closure 65  loadf 46  compare 41  loadv.l 52  setg.l 60  brn 87  eqv? 13  aset! 44  eq? 12  atom? 15  boolean? 18  brt.l 10  tapply 70  dummy_nil 97  loada0 76  brbound 90  list 28  dup 1  apply 33  loadc 57  dummy_t 95  setg 59  loada1 77  tcall.l 81  jmp 5  fixnum? 25  cons 27  loadg.l 54  tcall 4  call 3  - 35  brf.l 9  + 34  shift 94  dummy_f 96  add2 71  seta.l 62  loadnil 47  brnn.l 86  set-car! 31  vector 42  loadg 53  box.l 93  loada.l 56  argc 66  loadc1 79  div0 38  ret 11  number? 20  equal? 14  car 29  call.l 80  brne 82)
 	  __init_globals #fn("6000r0e0c1<17B02e0c2<17802e0c3<6>0c4k52c6k75;0c8k52c9k72e:k;2e<k=2e>k?;" [*os-name*
   win32 win64 windows "\\" *directory-separator* "\r\n" *linefeed* "/" "\n"
   *stdout* *output-stream* *stdin* *input-stream* *stderr* *error-stream*] __init_globals)
@@ -184,12 +185,25 @@
   lambda:vars inlineable? #fn(map) #fn(";000r1e0|~^\x7fi2i346;" [complex-bindings-])] complex-bindings-)
 	  const-to-idx-vec #fn("9000r1c0e1|3131e2c3g5q1e4|31322g5;" [#fn(vector.alloc)
   bcode:nconst table.foreach #fn("7000r2~}|\\;" []) bcode:ctable] const-to-idx-vec)
+	  copy-tree #fn("7000r1|?640|;e0|M31e0|N31K;" [copy-tree] copy-tree)
 	  count #fn("9000r2]\x8c6g6c0g6q1O2g6M|}`43;" [#fn("9000r3}\x8550g2;~M|}N|}M31690g2aw540g243;" [] count-)] count)
 	  delete-duplicates #fn(":000r1e0|bD326O0c130]\x8c6g6c2g5g6q2O2g6M\x8e1|_42;|?640|;|M|Ne3g5g632690e4g641;g5e4g631K;" [length>
   #fn(table) #fn("8000r2|?680e0}41;c1~|M326:0\x7fM|N}42;c2~|M]332\x7fM|N|M}K42;" [reverse!
   #fn(has?) #fn(put!)]) member delete-duplicates] delete-duplicates)
 	  diff #fn("8000r2|\x8540_;c0|M}326:0e1|N}42;|Me1|N}32K;" [#fn(memq)
 								   diff] diff)
+	  disassemble #fn("P000s1}\x85C0e0|`322e1302];530]2}Mc2|31c3|31]c4g6q1m92`g6axc5u2e6c7e8g7`32c9332b4c:g731\x8c:]g:Mg;X6)12c;c<g7g:q2^e=33e>g:Mb432690e130530]2`g6axc?u2e6e@g:Mb4x31cAcBg<31cC342g:g:MawO2g<cDg=cE326O0g9g8e8g7g:M32[312g:g:Mb4wO5\xa81cDg=cF326K0g9g8g7g:M[[312g:g:MawO5\x841cDg=cG326L0e6cHg7g:M[31312g:g:MawO5_1cDg=cI326P0e6cHe8g7g:M3231312g:g:Mb4wO561cDg=cJ326\x9e0e6cHe8g7g:M3231cK322g:g:Mb4wO2e6cHe8g7g:M3231312g:g:Mb4wO2g<cL\x82Y0e6cK312e6cHe8g7g:M3231cK322g:g:Mb4wO530]5\xbf0g=cM=6R0e6cHe8g7g:M3231cK322g:g:Mb4wO5\x970cDg=cN326Y0e6cOe@g:Mb,ePg7g:M32R331322g:g:Mb2wO5e0cDg=cQ326Y0e6cOe@g:Mb,e8g7g:M32R331322g:g:Mb4wO530^\x8e1\x8e152.;" [disassemble
+  newline #fn(function:code) #fn(function:vals)
+  #fn("8000r1|J16602|G@6B0e0c1312e2|~aw42;e3|41;" [princ "\n" disassemble print] print-val)
+  #fn("6000r1e0c141;" [princ "\t"]) princ "maxstack " ref-int32-LE "\n" #fn(length)
+  #fn(table.foldl) #fn("7000r3g217?02}~\x7fM[<16402|;" []) Instructions > #fn("6000r1e0c141;" [princ
+  "\t"]) hex5 ":  " #fn(string) "\t" #fn(memq)
+  (loadv.l loadg.l setg.l) (loadv loadg setg)
+  (loada seta loadc call tcall list + - * / vector argc vargc loadi8 apply
+   tapply closure box shift) #fn(number->string)
+  (loada.l seta.l loadc.l largc lvargc call.l tcall.l box.l) (optargs keyargs)
+  " " keyargs brbound (jmp brf brt brne brnn brn) "@" ref-int16-LE (jmp.l brf.l
+  brt.l brne.l brnn.l brn.l)] disassemble)
 	  div #fn("7000r2|}V|`X16C02}`X16402a17502b/17402`w;" [] div) emit
 	  #fn("P000s2g2\x85b0}c0<16C02|`[F16:02|`[Mc1<6;0|`[c2O5:0|`}|`[K\\5\xb91c3}c4326A0e5|g2M32L1m2530]2c6}c732g716<02e8g2Mc9326:0g7\x84m1530]\x8e12c6}c:32g716<02e8g2Mc9326:0g7\x84m1530]\x8e12}c;\x82\\0g2c<>6=0c=m12_m25F0g2c>>6=0c?m12_m2530^530]2}c@\x82\\0g2c<>6=0cAm12_m25F0g2c>>6=0cBm12_m2530^530]2|`[F690|`[M530_|`[}cC<16\x9f02g7cD<16902g8\x84cE<6E0|`g2McFeGg831KK\\5x0g7cD\x82B0|`g2McHg8NKK\\5a0g7cI\x82B0|`g2McJg8NKK\\5J0g7cE\x82B0|`g2McKg8NKK\\530^17a02}cH<16802g7cE<6B0|`g2McFg8NKK\\5?0|`eL}g2Kg832\\\x8e22|;" [car
   cdr cadr #fn(memq) (loadv loadg setg) bcode:indexfor #fn(assq)
@@ -238,9 +252,12 @@
 	  extend-env #fn("8000r3e0}g2`33|K;" [vars-to-env] extend-env) filter
 	  #fn("9000r2]c0|q1m62g6|}_L143;" [#fn("8000r3g2]}F6Q02~}M316?0g2}M_KPNm2530]2}Nm15\x0e/2N;" [] filter-)] filter)
 	  fits-i8 #fn("7000r1|I16F02e0|b\xb03216:02e1|b\xaf42;" [>= <=] fits-i8)
-	  foldl #fn("9000r3g2\x8540};e0||g2M}32g2N43;" [foldl] foldl)
+	  foldl #fn("9000r3g2\x8540};e0||g2M}32g2N43;" [foldl] foldl) foldr
+	  #fn(":000r3g2\x8540};|g2Me0|}g2N3342;" [foldr] foldr)
 	  get-defined-vars #fn("7000r1e0~M|3141;" [delete-duplicates] [#0=(#fn("8000r1|?640_;|Mc0<16602|NF6d0|\x84C16702|\x84L117S02|\x84F16E02e1|31C16:02e1|31L117402_;|Mc2\x82?0c3c4~M|N32v2;_;" [define
   caadr begin #fn(nconc) #fn(map)] [#0#]))])
+	  hex5 #fn("8000r1e0c1|b@32b5c243;" [string.lpad #fn(number->string)
+					     #\0] hex5)
 	  identity #fn("5000r1|;" [] identity) in-env?
 	  #fn("7000r2}F16F02c0|}M3217:02e1|}N42;" [#fn(assq) in-env?] in-env?)
 	  index-of #fn("9000r3}\x8540^;|}M\x8250g2;e0|}Ng2aw43;" [index-of] index-of)
@@ -287,6 +304,7 @@
   #fn("5000r1e040;" [void])] lambda-body) quoted? define lower-define
   expand-define lambda #fn(nconc) lastcdr #fn(map)] lower-define)
 	  macrocall? #fn("6000r1|MC16902e0|M41;" [symbol-syntax] macrocall?)
+	  macroexpand-1 #fn("7000r1|?640|;e0|31g5690g5|Nv2;|;" [macrocall?] macroexpand-1)
 	  make-code-emitter #fn("9000r0_c030`_`Z5;" [#fn(table)] make-code-emitter)
 	  make-label #fn("5000r1c040;" [#fn(gensym)] make-label)
 	  make-perfect-hash-table #fn(";000r1]\x8c5g5c0O2]\x8c6g6c1g5g6|q3O2g6M\x8e1c2|3141;" [#fn("8000r2e0e1c2|3131}42;" [mod0
@@ -306,15 +324,18 @@
   #fn(write) #fn(nconc) #fn(map) #.list #fn(top-level-value)
   #fn(io.write) *linefeed* #fn(io.close)])
   #fn("6000r1~302c0|41;" [#fn(raise)])] make-system-image)
-	  map-int #fn(";000r2e0}`32640_;|`31_K_\x8c7g7g6O2a}axc1g7|q2u2g6;" [<=
-  #fn("7000r1~M\x7f|31_KP2~~MNO;" [])] map-int)
+	  map! #fn("8000r2}]}F6B02}|}M31O2}Nm15\x1d/2;" [] map!) map-int
+	  #fn(";000r2e0}`32640_;|`31_K_\x8c7g7g6O2a}axc1g7|q2u2g6;" [<= #fn("7000r1~M\x7f|31_KP2~~MNO;" [])] map-int)
 	  mark-label #fn("8000r2e0|c1}43;" [emit label] mark-label) max
 	  #fn(";000s1}\x8540|;e0c1|}43;" [foldl #fn("6000r2|}X640};|;" [])] max)
 	  member #fn("7000r2}?640^;}M|>640};e0|}N42;" [member] member) memv
 	  #fn("7000r2}?640^;}M|=640};e0|}N42;" [memv] memv) min #fn(";000s1}\x8540|;e0c1|}43;" [foldl
   #fn("6000r2|}X640|;};" [])] min)
 	  mod #fn("8000r2|e0|}32}T2x;" [div] mod) mod0
-	  #fn("7000r2||}V}T2x;" [] mod0) negative? #fn("6000r1|`X;" [] negative?)
+	  #fn("7000r2||}V}T2x;" [] mod0) nan? #fn("6000r1|c0>17702|c1>;" [+nan.0
+  -nan.0] nan?)
+	  negative? #fn("6000r1|`X;" [] negative?) nestlist
+	  #fn(":000r3e0g2`32640_;}e1||}31g2ax33K;" [<= nestlist] nestlist)
 	  newline #fn("8000\x8900001000\x8a0000770e0m02c1|e2322];" [*output-stream*
 								    #fn(io.write)
 								    *linefeed*] newline)
@@ -348,9 +369,15 @@
 	  printable? #fn("6000r1c0|3117802c1|31@;" [#fn(iostream?)
 						    #fn(eof-object?)] printable?)
 	  quote-value #fn("6000r1e0|31640|;c1|L2;" [self-evaluating? quote] quote-value)
-	  quoted? #fn("6000r1|Mc0<;" [quote] quoted?) read-all
-	  #fn("7000r1e0c1|42;" [read-all-of #fn(read)] read-all) read-all-of #fn(":000r2]\x8c6g6c0}g6|q3O2g6M\x8e1_|}3142;" [#fn("8000r2c0~31680e1|41;\x7fM}|Ki2~3142;" [#fn(io.eof?)
+	  quoted? #fn("6000r1|Mc0<;" [quote] quoted?) random
+	  #fn("7000r1c0|316<0e1c230|42;c330|T2;" [#fn(integer?) mod #fn(rand)
+						  #fn(rand.double)] random)
+	  read-all #fn("7000r1e0c1|42;" [read-all-of #fn(read)] read-all)
+	  read-all-of #fn(":000r2]\x8c6g6c0}g6|q3O2g6M\x8e1_|}3142;" [#fn("8000r2c0~31680e1|41;\x7fM}|Ki2~3142;" [#fn(io.eof?)
   reverse!])] read-all-of)
+	  ref-int16-LE #fn(":000r2e0c1|}`w[`32c1|}aw[b832w41;" [int16 #fn(ash)] ref-int16-LE)
+	  ref-int32-LE #fn("<000r2e0c1|}`w[`32c1|}aw[b832c1|}b2w[b@32c1|}b3w[bH32R441;" [int32
+  #fn(ash)] ref-int32-LE)
 	  repl #fn(":000r0]]\x8c4\x8c5g4c0O2g5c1g4g5q2O2g5M302e240;" [#fn("8000r0e0c1312c2e3312c4c5tc6e731@16F02e8g431e9g5312g5k:2];" [princ
   "> " #fn(io.flush) *output-stream* #fn("5000r0c040;" [#fn(read)])
   #fn("6000r1c0e1312c2|41;" [#fn(io.discardbuffer) *input-stream* #fn(raise)])
@@ -374,30 +401,61 @@
   #fn(buffer) #fn(io.write) #fn(for-each)
   #fn("7000r1c0~\x7f322c0~|42;" [#fn(io.write)])
   #fn(io.tostring!)] string.join)
+	  string.lpad #fn(":000r3c0e1g2}c2|31x32|42;" [#fn(string) string.rep
+						       #fn(string.count)] string.lpad)
 	  string.map #fn("=000r2c030c1}31`]g8g7X6P02c2g6|c3}g83231322c4}g832m85\x0c/\x8e12c5g641;" [#fn(buffer)
   #fn(length) #fn(io.putc) #fn(string.char)
   #fn(string.inc) #fn(io.tostring!)] string.map)
+	  string.rep #fn(":000r2}b4X6`0e0}`32650c1;}aW680c2|41;}b2W690c2||42;c2|||43;e3}316@0c2|e4|}ax3242;e4c2||32}b2U242;" [<=
+  "" #fn(string) odd? string.rep] string.rep)
+	  string.rpad #fn(";000r3c0|e1g2}c2|31x3242;" [#fn(string) string.rep
+						       #fn(string.count)] string.rpad)
 	  string.tail #fn(":000r2c0|c1|`}3342;" [#fn(string.sub)
 						 #fn(string.inc)] string.tail)
+	  string.trim #fn(">000r3]]\x8c7\x8c8g7c0g7q1O2g8c1g8q1O2c2|31c3|g7M|}`g934g8M|g2g93343;" [#fn(":000r4g2g3X16?02c0}c1|g232326B0~M|}c2|g232g344;g2;" [#fn(string.find)
+  #fn(string.char) #fn(string.inc)] trim-start)
+  #fn(";000r3e0g2`3216D02c1}c2|c3|g23232326@0~M|}c3|g23243;g2;" [> #fn(string.find)
+								 #fn(string.char)
+								 #fn(string.dec)] trim-end)
+  #fn(length) #fn(string.sub)] string.trim)
 	  symbol-syntax #fn("8000r1c0e1|^43;" [#fn(get)
 					       *syntax-environment*] symbol-syntax)
+	  table.clone #fn("9000r1c030c1c2g5q1_|332g5;" [#fn(table)
+							#fn(table.foldl)
+							#fn("8000r3c0~|}43;" [#fn(put!)])] table.clone)
 	  table.foreach #fn("8000r2c0c1|q1_}43;" [#fn(table.foldl)
 						  #fn("7000r3~|}322];" [])] table.foreach)
+	  table.invert #fn("9000r1c030c1c2g5q1_|332g5;" [#fn(table)
+							 #fn(table.foldl)
+							 #fn("8000r3c0~}|43;" [#fn(put!)])] table.invert)
 	  table.keys #fn("8000r1c0c1_|43;" [#fn(table.foldl)
 					    #fn("6000r3|g2K;" [])] table.keys)
 	  table.pairs #fn("8000r1c0c1_|43;" [#fn(table.foldl)
 					     #fn("6000r3|}Kg2K;" [])] table.pairs)
+	  table.values #fn("8000r1c0c1_|43;" [#fn(table.foldl)
+					      #fn("6000r3}g2K;" [])] table.values)
 	  to-proper #fn("7000r1|\x8540|;|?660|L1;|Me0|N31K;" [to-proper] to-proper)
 	  top-level-exception-handler #fn("9000r1e0e1k02c2g5q1c3|q1c4g6q1tg6302;" [*output-stream*
   *stderr* #fn("5000r0~k0;" [*output-stream*])
   #fn("6000r0e0~312e1c23041;" [print-exception print-stack-trace #fn(stacktrace)])
   #fn("6000r1~302c0|41;" [#fn(raise)])] top-level-exception-handler)
+	  trace #fn("A000r1c0|31c130e2g5317g0c3|e4c5g6c6c7c8c9|L2g6L3L2c:L1c;c9g5L2g6L3L4L33132530]\x8e1\x8e12c<;" [#fn(top-level-value)
+  #fn(gensym) traced? #fn(set-top-level-value!) eval lambda begin write cons
+  quote newline apply ok] trace)
+	  traced? #fn("7000r1e0|3116?02c1|31c1~M31>;" [closure? #fn(function:code)] [(#fn("9000s0c0c1|K312e2302c3|v2;" [#fn(write)
+  x newline #.apply]))])
+	  untrace #fn("9000r1c0|31e1g5316A0c2|c3g531b2[42;];" [#fn(top-level-value)
+							       traced? #fn(set-top-level-value!)
+							       #fn(function:vals)] untrace)
 	  values #fn("8000s0|F16602|NA650|M;~|K;" [] [#1#]) vars-to-env
 	  #fn(":000r3c0c1}g2q2|e2c3|313143;" [#fn(map)
 					      #fn("9000r2e0|c1|~32@@}\x7fw43;" [vinfo
   #fn(memq)]) iota #fn(length)] vars-to-env)
 	  vector->list #fn("<000r1c0|31_\x8c6ag5c1g6|g5q3u2g6M;" [#fn(length)
 								  #fn("8000r1~\x7fi2|x[~MKO;" [])] vector->list)
+	  vector.map #fn("<000r2c0}31c1g631`g6axc2g7|}q3u2g7;" [#fn(length)
+								#fn(vector.alloc)
+								#fn("9000r1~|\x7fi2|[31\\;" [])] vector.map)
 	  vinfo #fn("7000r3|}g2L3;" [] vinfo) vinfo:heap?
 	  #2# vinfo:index #3# vinfo:sym #.car void
 	  #fn("5000r0];" [] void) zero? #fn("6000r1|`W;" [] zero?))
