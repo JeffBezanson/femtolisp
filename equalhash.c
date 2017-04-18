@@ -5,12 +5,22 @@
 #include <limits.h>
 #include <setjmp.h>
 
-#include "llt.h"
 #include "flisp.h"
 #include "equalhash.h"
 
-#include "htable.inc"
+#include "llt/htable.inc"
 
-#define _equal_lispvalue_(x,y) equal_lispvalue((value_t)(x),(value_t)(y))
+#define _equal_lispvalue_(x, y, ctx)                                    \
+    equal_lispvalue((fl_context_t*)ctx, (value_t)(x), (value_t)(y))
+#define _hash_lispvalue_(x, ctx)                        \
+    hash_lispvalue((fl_context_t*)ctx, (value_t)(x))
 
-HTIMPL(equalhash, hash_lispvalue, _equal_lispvalue_)
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+HTIMPL_R(equalhash, _hash_lispvalue_, _equal_lispvalue_)
+
+#ifdef __cplusplus
+}
+#endif

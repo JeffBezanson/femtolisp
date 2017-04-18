@@ -1,5 +1,6 @@
 #include <limits.h>
 #include <assert.h>
+#include "flisp.h"
 #include "dtypes.h"
 #include "utils.h"
 #include "ieee754.h"
@@ -156,7 +157,7 @@ uint64_t conv_to_uint64(void *data, numerictype_t tag)
     return i;
 }
 
-int cmp_same_lt(void *a, void *b, numerictype_t tag)
+static int cmp_same_lt(void *a, void *b, numerictype_t tag)
 {
     switch (tag) {
     case T_INT8:   return *(int8_t*)a < *(int8_t*)b;
@@ -173,7 +174,7 @@ int cmp_same_lt(void *a, void *b, numerictype_t tag)
     return 0;
 }
 
-int cmp_same_eq(void *a, void *b, numerictype_t tag)
+static int cmp_same_eq(void *a, void *b, numerictype_t tag)
 {
     switch (tag) {
     case T_INT8:   return *(int8_t*)a == *(int8_t*)b;
@@ -190,7 +191,7 @@ int cmp_same_eq(void *a, void *b, numerictype_t tag)
     return 0;
 }
 
-int cmp_lt(void *a, numerictype_t atag, void *b, numerictype_t btag)
+static int cmp_lt(void *a, numerictype_t atag, void *b, numerictype_t btag)
 {
     if (atag==btag)
         return cmp_same_lt(a, b, atag);
@@ -244,7 +245,7 @@ int cmp_lt(void *a, numerictype_t atag, void *b, numerictype_t btag)
     return 0;
 }
 
-int cmp_eq(void *a, numerictype_t atag, void *b, numerictype_t btag,
+static int cmp_eq(void *a, numerictype_t atag, void *b, numerictype_t btag,
            int equalnans)
 {
     union { double d; int64_t i64; } u, v;

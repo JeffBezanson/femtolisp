@@ -32,7 +32,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <setjmp.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <assert.h>
@@ -42,12 +41,23 @@
 #include <locale.h>
 #include <limits.h>
 #include <errno.h>
-#include <math.h>
+
 #include "llt.h"
 #include "flisp.h"
 #include "opcodes.h"
 
-static char *builtin_names[] =
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#if defined(_OS_WINDOWS_) && !defined(_COMPILER_MINGW_)
+#include <malloc.h>
+JL_DLLEXPORT char * dirname(char *);
+#else
+#include <libgen.h>
+#endif
+
+static const char *const builtin_names[] =
     { NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
       NULL, NULL, NULL, NULL,
       // predicates
@@ -70,7 +80,7 @@ static char *builtin_names[] =
 
 #define ANYARGS -10000
 
-static short builtin_arg_counts[] =
+static const short builtin_arg_counts[] =
     { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
       2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
       2, ANYARGS, 1, 1, 2, 2,
@@ -78,39 +88,20 @@ static short builtin_arg_counts[] =
       ANYARGS, -1, ANYARGS, -1, 2,  2, 2, 2,
       ANYARGS, 2, 3 };
 
-static uint32_t N_STACK;
-static value_t *Stack;
-static uint32_t SP = 0;
-static uint32_t curr_frame = 0;
-#define PUSH(v) (Stack[SP++] = (v))
-#define POP()   (Stack[--SP])
-#define POPN(n) (SP-=(n))
+#define PUSH(fl_ctx, v) (fl_ctx->Stack[fl_ctx->SP++] = (v))
+#define POP(fl_ctx)   (fl_ctx->Stack[--fl_ctx->SP])
+#define POPN(fl_ctx, n) (fl_ctx->SP-=(n))
 
-#define N_GC_HANDLES 1024
-static value_t *GCHandleStack[N_GC_HANDLES];
-static uint32_t N_GCHND = 0;
+static value_t apply_cl(fl_context_t *fl_ctx, uint32_t nargs);
+static value_t *alloc_words(fl_context_t *fl_ctx, int n);
+static value_t relocate(fl_context_t *fl_ctx, value_t v);
 
-value_t FL_NIL, FL_T, FL_F, FL_EOF, QUOTE;
-value_t IOError, ParseError, TypeError, ArgError, UnboundError, MemoryError;
-value_t DivideError, BoundsError, Error, KeyError, EnumerationError;
-value_t printwidthsym, printreadablysym, printprettysym, printlengthsym;
-value_t printlevelsym, builtins_table_sym;
-
-static value_t NIL, LAMBDA, IF, TRYCATCH;
-static value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT, FUNCTION;
-
-static value_t pairsym, symbolsym, fixnumsym, vectorsym, builtinsym, vu8sym;
-static value_t definesym, defmacrosym, forsym, setqsym;
-static value_t tsym, Tsym, fsym, Fsym, booleansym, nullsym, evalsym, fnsym;
-// for reading characters
-static value_t nulsym, alarmsym, backspacesym, tabsym, linefeedsym, newlinesym;
-static value_t vtabsym, pagesym, returnsym, escsym, spacesym, deletesym;
-
-static value_t apply_cl(uint32_t nargs);
-static value_t *alloc_words(int n);
-static value_t relocate(value_t v);
-
-static fl_readstate_t *readstate = NULL;
+typedef struct _fl_readstate_t {
+    htable_t backrefs;
+    htable_t gensyms;
+    value_t source;
+    struct _fl_readstate_t *prev;
+} fl_readstate_t;
 
 static void free_readstate(fl_readstate_t *rs)
 {
@@ -118,136 +109,123 @@ static void free_readstate(fl_readstate_t *rs)
     htable_free(&rs->gensyms);
 }
 
-static unsigned char *fromspace;
-static unsigned char *tospace;
-static unsigned char *curheap;
-static unsigned char *lim;
-static uint32_t heapsize;//bytes
-static uint32_t *consflags;
-
 // error utilities ------------------------------------------------------------
 
-// saved execution state for an unwind target
-fl_exception_context_t *fl_ctx = NULL;
-uint32_t fl_throwing_frame=0;  // active frame when exception was thrown
-value_t fl_lasterror;
-
-#define FL_TRY \
+#define FL_TRY(fl_ctx)                           \
   fl_exception_context_t _ctx; int l__tr, l__ca; \
-  _ctx.sp=SP; _ctx.frame=curr_frame; _ctx.rdst=readstate; _ctx.prev=fl_ctx; \
-  _ctx.ngchnd = N_GCHND; fl_ctx = &_ctx;                                    \
-  if (!setjmp(_ctx.buf)) \
-    for (l__tr=1; l__tr; l__tr=0, (void)(fl_ctx=fl_ctx->prev))
+  _ctx.sp=fl_ctx->SP; _ctx.frame=fl_ctx->curr_frame; _ctx.rdst=fl_ctx->readstate; _ctx.prev=fl_ctx->exc_ctx; \
+  _ctx.ngchnd = fl_ctx->N_GCHND; fl_ctx->exc_ctx = &_ctx;                                    \
+  if (!fl_setjmp(_ctx.buf)) \
+    for (l__tr=1; l__tr; l__tr=0, (void)(fl_ctx->exc_ctx=fl_ctx->exc_ctx->prev))
 
-#define FL_CATCH \
-  else \
-    for(l__ca=1; l__ca; l__ca=0, \
-      fl_lasterror=FL_NIL,fl_throwing_frame=0,SP=_ctx.sp,curr_frame=_ctx.frame)
+#define FL_CATCH(fl_ctx)                                                \
+    else                                                                \
+        for(l__ca=1; l__ca; l__ca=0,                                    \
+                fl_ctx->lasterror=fl_ctx->NIL,fl_ctx->throwing_frame=0,fl_ctx->SP=_ctx.sp,fl_ctx->curr_frame=_ctx.frame)
 
-void fl_savestate(fl_exception_context_t *_ctx)
+void fl_savestate(fl_context_t *fl_ctx, fl_exception_context_t *_ctx)
 {
-    _ctx->sp = SP;
-    _ctx->frame = curr_frame;
-    _ctx->rdst = readstate;
-    _ctx->prev = fl_ctx;
-    _ctx->ngchnd = N_GCHND;
+    _ctx->sp = fl_ctx->SP;
+    _ctx->frame = fl_ctx->curr_frame;
+    _ctx->rdst = fl_ctx->readstate;
+    _ctx->prev = fl_ctx->exc_ctx;
+    _ctx->ngchnd = fl_ctx->N_GCHND;
 }
 
-void fl_restorestate(fl_exception_context_t *_ctx)
+void fl_restorestate(fl_context_t *fl_ctx, fl_exception_context_t *_ctx)
 {
-    fl_lasterror = FL_NIL;
-    fl_throwing_frame = 0;
-    SP = _ctx->sp;
-    curr_frame = _ctx->frame;
+    fl_ctx->lasterror = fl_ctx->NIL;
+    fl_ctx->throwing_frame = 0;
+    fl_ctx->SP = _ctx->sp;
+    fl_ctx->curr_frame = _ctx->frame;
 }
 
-void fl_raise(value_t e)
+void fl_raise(fl_context_t *fl_ctx, value_t e)
 {
-    fl_lasterror = e;
+    fl_ctx->lasterror = e;
     // unwind read state
-    while (readstate != fl_ctx->rdst) {
-        free_readstate(readstate);
-        readstate = readstate->prev;
+    while (fl_ctx->readstate != (fl_readstate_t*)fl_ctx->exc_ctx->rdst) {
+        free_readstate(fl_ctx->readstate);
+        fl_ctx->readstate = fl_ctx->readstate->prev;
     }
-    if (fl_throwing_frame == 0)
-        fl_throwing_frame = curr_frame;
-    N_GCHND = fl_ctx->ngchnd;
-    fl_exception_context_t *thisctx = fl_ctx;
-    if (fl_ctx->prev)   // don't throw past toplevel
-        fl_ctx = fl_ctx->prev;
-    longjmp(thisctx->buf, 1);
+    if (fl_ctx->throwing_frame == 0)
+        fl_ctx->throwing_frame = fl_ctx->curr_frame;
+    fl_ctx->N_GCHND = fl_ctx->exc_ctx->ngchnd;
+    fl_exception_context_t *thisctx = fl_ctx->exc_ctx;
+    if (fl_ctx->exc_ctx->prev)   // don't throw past toplevel
+        fl_ctx->exc_ctx = fl_ctx->exc_ctx->prev;
+    fl_longjmp(thisctx->buf, 1);
 }
 
-static value_t make_error_msg(char *format, va_list args)
+static value_t make_error_msg(fl_context_t *fl_ctx, const char *format, va_list args)
 {
     char msgbuf[512];
-    vsnprintf(msgbuf, sizeof(msgbuf), format, args);
-    return string_from_cstr(msgbuf);
+    size_t len = vsnprintf(msgbuf, sizeof(msgbuf), format, args);
+    return string_from_cstrn(fl_ctx, msgbuf, len);
 }
 
-void lerrorf(value_t e, char *format, ...)
+void lerrorf(fl_context_t *fl_ctx, value_t e, const char *format, ...)
 {
     va_list args;
-    PUSH(e);
+    PUSH(fl_ctx, e);
     va_start(args, format);
-    value_t msg = make_error_msg(format, args);
+    value_t msg = make_error_msg(fl_ctx, format, args);
     va_end(args);
 
-    e = POP();
-    fl_raise(fl_list2(e, msg));
+    e = POP(fl_ctx);
+    fl_raise(fl_ctx, fl_list2(fl_ctx, e, msg));
 }
 
-void lerror(value_t e, const char *msg)
+void lerror(fl_context_t *fl_ctx, value_t e, const char *msg)
 {
-    PUSH(e);
-    value_t m = cvalue_static_cstring(msg);
-    e = POP();
-    fl_raise(fl_list2(e, m));
+    PUSH(fl_ctx, e);
+    value_t m = cvalue_static_cstring(fl_ctx, msg);
+    e = POP(fl_ctx);
+    fl_raise(fl_ctx, fl_list2(fl_ctx, e, m));
 }
 
-void type_error(char *fname, char *expected, value_t got)
+void type_error(fl_context_t *fl_ctx, const char *fname, const char *expected, value_t got)
 {
-    fl_raise(fl_listn(4, TypeError, symbol(fname), symbol(expected), got));
+    fl_raise(fl_ctx, fl_listn(fl_ctx, 4, fl_ctx->TypeError, symbol(fl_ctx, fname), symbol(fl_ctx, expected), got));
 }
 
-void bounds_error(char *fname, value_t arr, value_t ind)
+void bounds_error(fl_context_t *fl_ctx, const char *fname, value_t arr, value_t ind)
 {
-    fl_raise(fl_listn(4, BoundsError, symbol(fname), arr, ind));
+    fl_raise(fl_ctx, fl_listn(fl_ctx, 4, fl_ctx->BoundsError, symbol(fl_ctx, fname), arr, ind));
 }
 
 // safe cast operators --------------------------------------------------------
 
-#define isstring fl_isstring
-#define SAFECAST_OP(type,ctype,cnvt)                                          \
-ctype to##type(value_t v, char *fname)                                        \
-{                                                                             \
-    if (is##type(v))                                                          \
-        return (ctype)cnvt(v);                                                \
-    type_error(fname, #type, v);                                              \
-}
+#define isstring(v) fl_isstring(fl_ctx, v)
+#define SAFECAST_OP(type,ctype,cnvt)                                    \
+    ctype to##type(fl_context_t *fl_ctx, value_t v, const char *fname)  \
+    {                                                                   \
+        if (is##type(v))                                                \
+            return (ctype)cnvt(v);                                      \
+        type_error(fl_ctx, fname, #type, v);                            \
+    }
 SAFECAST_OP(cons,  cons_t*,  ptr)
 SAFECAST_OP(symbol,symbol_t*,ptr)
 SAFECAST_OP(fixnum,fixnum_t, numval)
-SAFECAST_OP(cvalue,cvalue_t*,ptr)
 SAFECAST_OP(string,char*,    cvalue_data)
 #undef isstring
 
 // symbol table ---------------------------------------------------------------
 
-symbol_t *symtab = NULL;
-
-int fl_is_keyword_name(char *str, size_t len)
+int fl_is_keyword_name(const char *str, size_t len)
 {
-    return ((str[0] == ':' || str[len-1] == ':') && str[1] != '\0');
+    return len>1 && ((str[0] == ':' || str[len-1] == ':') && str[1] != '\0');
 }
 
-static symbol_t *mk_symbol(char *str)
+#define CHECK_ALIGN8(p) assert((((uintptr_t)(p))&0x7)==0 && "flisp requires malloc to return 8-aligned pointers")
+
+static symbol_t *mk_symbol(const char *str)
 {
     symbol_t *sym;
     size_t len = strlen(str);
 
-    sym = (symbol_t*)malloc(sizeof(symbol_t)-sizeof(void*) + len + 1);
-    assert(((uptrint_t)sym & 0x7) == 0); // make sure malloc aligns 8
+    sym = (symbol_t*)malloc((offsetof(symbol_t,name)+len+1+7)&-8);
+    CHECK_ALIGN8(sym);
     sym->left = sym->right = NULL;
     sym->flags = 0;
     if (fl_is_keyword_name(str, len)) {
@@ -258,17 +236,18 @@ static symbol_t *mk_symbol(char *str)
     else {
         sym->binding = UNBOUND;
     }
-    sym->type = sym->dlcache = NULL;
+    sym->type = NULL;
+    sym->dlcache = NULL;
     sym->hash = memhash32(str, len)^0xAAAAAAAA;
     strcpy(&sym->name[0], str);
     return sym;
 }
 
-static symbol_t **symtab_lookup(symbol_t **ptree, char *str)
+static symbol_t **symtab_lookup(symbol_t **ptree, const char *str)
 {
     int x;
 
-    while(*ptree != NULL) {
+    while (*ptree != NULL) {
         x = strcmp(str, (*ptree)->name);
         if (x == 0)
             return ptree;
@@ -280,108 +259,145 @@ static symbol_t **symtab_lookup(symbol_t **ptree, char *str)
     return ptree;
 }
 
-value_t symbol(char *str)
+value_t symbol(fl_context_t *fl_ctx, const char *str)
 {
-    symbol_t **pnode;
-
-    pnode = symtab_lookup(&symtab, str);
+    symbol_t **pnode = symtab_lookup(&fl_ctx->symtab, str);
     if (*pnode == NULL)
         *pnode = mk_symbol(str);
     return tagptr(*pnode, TAG_SYM);
 }
 
-static uint32_t _gensym_ctr=0;
-// two static buffers for gensym printing so there can be two
-// gensym names available at a time, mostly for compare()
-static char gsname[2][16];
-static int gsnameno=0;
-value_t fl_gensym(value_t *args, uint32_t nargs)
+value_t fl_gensym(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
-    argcount("gensym", nargs, 0);
+#ifdef MEMDEBUG2
+    fl_ctx->gsnameno = 1-fl_ctx->gsnameno;
+    char *n = uint2str(fl_ctx->gsname[fl_ctx->gsnameno]+1, sizeof(fl_ctx->gsname[0])-1, fl_ctx->gensym_ctr++, 10);
+    *(--n) = 'g';
+    return tagptr(mk_symbol(n), TAG_SYM);
+#else
+    argcount(fl_ctx, "gensym", nargs, 0);
     (void)args;
-    gensym_t *gs = (gensym_t*)alloc_words(sizeof(gensym_t)/sizeof(void*));
-    gs->id = _gensym_ctr++;
+    gensym_t *gs = (gensym_t*)alloc_words(fl_ctx, sizeof(gensym_t)/sizeof(void*));
+    gs->id = fl_ctx->gensym_ctr++;
     gs->binding = UNBOUND;
     gs->isconst = 0;
     gs->type = NULL;
     return tagptr(gs, TAG_SYM);
+#endif
 }
 
-int fl_isgensym(value_t v)
+int fl_isgensym(fl_context_t *fl_ctx, value_t v)
 {
-    return isgensym(v);
+    return isgensym(fl_ctx, v);
 }
 
-static value_t fl_gensymp(value_t *args, u_int32_t nargs)
+static value_t fl_gensymp(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
-    argcount("gensym?", nargs, 1);
-    return isgensym(args[0]) ? FL_T : FL_F;
+    argcount(fl_ctx, "gensym?", nargs, 1);
+    return isgensym(fl_ctx, args[0]) ? fl_ctx->T : fl_ctx->F;
 }
 
-char *symbol_name(value_t v)
+char *symbol_name(fl_context_t *fl_ctx, value_t v)
 {
-    if (ismanaged(v)) {
+#ifndef MEMDEBUG2
+    if (ismanaged(fl_ctx, v)) {
         gensym_t *gs = (gensym_t*)ptr(v);
-        gsnameno = 1-gsnameno;
-        char *n = uint2str(gsname[gsnameno]+1, sizeof(gsname[0])-1, gs->id, 10);
+        fl_ctx->gsnameno = 1-fl_ctx->gsnameno;
+        char *n = uint2str(fl_ctx->gsname[fl_ctx->gsnameno]+1, sizeof(fl_ctx->gsname[0])-1, gs->id, 10);
         *(--n) = 'g';
         return n;
     }
+#else
+    (void)fl_ctx;
+#endif
     return ((symbol_t*)ptr(v))->name;
 }
 
 // conses ---------------------------------------------------------------------
 
-void gc(int mustgrow);
+#ifdef MEMDEBUG2
+#define GC_INTERVAL 100000
+#endif
 
-static value_t mk_cons(void)
+void gc(fl_context_t *fl_ctx, int mustgrow);
+
+static value_t mk_cons(fl_context_t *fl_ctx)
 {
     cons_t *c;
 
-    if (__unlikely(curheap > lim))
-        gc(0);
-    c = (cons_t*)curheap;
-    curheap += sizeof(cons_t);
+#ifdef MEMDEBUG2
+    if (fl_ctx->n_allocd > GC_INTERVAL)
+        gc(fl_ctx, 0);
+    c = (cons_t*)((void**)malloc(3*sizeof(void*)) + 1);
+    CHECK_ALIGN8(c);
+    ((void**)c)[-1] = fl_ctx->tochain;
+    fl_ctx->tochain = c;
+    fl_ctx->n_allocd += sizeof(cons_t);
+#else
+    if (__unlikely(fl_ctx->curheap > fl_ctx->lim))
+        gc(fl_ctx, 0);
+    c = (cons_t*)fl_ctx->curheap;
+    fl_ctx->curheap += sizeof(cons_t);
+#endif
     return tagptr(c, TAG_CONS);
 }
 
-static value_t *alloc_words(int n)
+static value_t *alloc_words(fl_context_t *fl_ctx, int n)
 {
     value_t *first;
 
     assert(n > 0);
     n = LLT_ALIGN(n, 2);   // only allocate multiples of 2 words
-    if (__unlikely((value_t*)curheap > ((value_t*)lim)+2-n)) {
-        gc(0);
-        while ((value_t*)curheap > ((value_t*)lim)+2-n) {
-            gc(1);
+#ifdef MEMDEBUG2
+    if (fl_ctx->n_allocd > GC_INTERVAL)
+        gc(fl_ctx, 0);
+    first = (value_t*)malloc((n+1)*sizeof(value_t)) + 1;
+    CHECK_ALIGN8(first);
+    first[-1] = (value_t)fl_ctx->tochain;
+    fl_ctx->tochain = first;
+    fl_ctx->n_allocd += (n*sizeof(value_t));
+#else
+    if (__unlikely((value_t*)fl_ctx->curheap > ((value_t*)fl_ctx->lim)+2-n)) {
+        gc(fl_ctx, 0);
+        while ((value_t*)fl_ctx->curheap > ((value_t*)fl_ctx->lim)+2-n) {
+            gc(fl_ctx, 1);
         }
     }
-    first = (value_t*)curheap;
-    curheap += (n*sizeof(value_t));
+    first = (value_t*)fl_ctx->curheap;
+    fl_ctx->curheap += (n*sizeof(value_t));
+#endif
     return first;
 }
 
 // allocate n consecutive conses
-#define cons_reserve(n) tagptr(alloc_words((n)*2), TAG_CONS)
+#ifndef MEMDEBUG2
+#define cons_reserve(fl_ctx, n) tagptr(alloc_words(fl_ctx, (n)*2), TAG_CONS)
+#endif
 
-#define cons_index(c)  (((cons_t*)ptr(c))-((cons_t*)fromspace))
-#define ismarked(c)    bitvector_get(consflags, cons_index(c))
-#define mark_cons(c)   bitvector_set(consflags, cons_index(c), 1)
-#define unmark_cons(c) bitvector_set(consflags, cons_index(c), 0)
+#ifndef MEMDEBUG2
+#define cons_index(fl_ctx, c)  (((cons_t*)ptr(c))-((cons_t*)fl_ctx->fromspace))
+#endif
 
-static value_t the_empty_vector;
+#ifdef MEMDEBUG2
+#define ismarked(fl_ctx, c)    ((((value_t*)ptr(c))[-1]&1) != 0)
+#define mark_cons(fl_ctx, c)   ((((value_t*)ptr(c))[-1]) |= 1)
+#define unmark_cons(fl_ctx, c) ((((value_t*)ptr(c))[-1]) &= (~(value_t)1))
+#else
+#define ismarked(fl_ctx, c)    bitvector_get(fl_ctx->consflags, cons_index(fl_ctx, c))
+#define mark_cons(fl_ctx, c)   bitvector_set(fl_ctx->consflags, cons_index(fl_ctx, c), 1)
+#define unmark_cons(fl_ctx, c) bitvector_set(fl_ctx->consflags, cons_index(fl_ctx, c), 0)
+#endif
 
-value_t alloc_vector(size_t n, int init)
+value_t alloc_vector(fl_context_t *fl_ctx, size_t n, int init)
 {
-    if (n == 0) return the_empty_vector;
-    value_t *c = alloc_words(n+1);
+    if (n == 0) return fl_ctx->the_empty_vector;
+    value_t *c = alloc_words(fl_ctx, n+1);
     value_t v = tagptr(c, TAG_VECTOR);
     vector_setsize(v, n);
     if (init) {
         unsigned int i;
         for(i=0; i < n; i++)
-            vector_elt(v, i) = FL_UNSPECIFIED;
+            vector_elt(v, i) = FL_UNSPECIFIED(fl_ctx);
     }
     return v;
 }
@@ -393,30 +409,45 @@ value_t alloc_vector(size_t n, int init)
 
 // print ----------------------------------------------------------------------
 
-static int isnumtok(char *tok, value_t *pval);
+static int isnumtok(fl_context_t *fl_ctx, char *tok, value_t *pval);
 static inline int symchar(char c);
 
 #include "print.c"
 
 // collector ------------------------------------------------------------------
 
-void fl_gc_handle(value_t *pv)
+void fl_gc_handle(fl_context_t *fl_ctx, value_t *pv)
 {
-    if (N_GCHND >= N_GC_HANDLES)
-        lerror(MemoryError, "out of gc handles");
-    GCHandleStack[N_GCHND++] = pv;
+    if (fl_ctx->N_GCHND >= FL_N_GC_HANDLES)
+        lerror(fl_ctx, fl_ctx->OutOfMemoryError, "out of gc handles");
+    fl_ctx->GCHandleStack[fl_ctx->N_GCHND++] = pv;
 }
 
-void fl_free_gc_handles(uint32_t n)
+void fl_free_gc_handles(fl_context_t *fl_ctx, uint32_t n)
 {
-    assert(N_GCHND >= n);
-    N_GCHND -= n;
+    assert(fl_ctx->N_GCHND >= n);
+    fl_ctx->N_GCHND -= n;
 }
 
-static value_t relocate(value_t v)
+value_t relocate_lispvalue(fl_context_t *fl_ctx, value_t v)
+{
+    return relocate(fl_ctx, v);
+}
+
+static void trace_globals(fl_context_t *fl_ctx, symbol_t *root)
+{
+    while (root != NULL) {
+        if (root->binding != UNBOUND)
+            root->binding = relocate(fl_ctx, root->binding);
+        trace_globals(fl_ctx, root->left);
+        root = root->right;
+    }
+}
+
+static value_t relocate(fl_context_t *fl_ctx, value_t v)
 {
     value_t a, d, nc, first, *pcdr;
-    uptrint_t t = tag(v);
+    uintptr_t t = tag(v);
 
     if (t == TAG_CONS) {
         // iterative implementation allows arbitrarily long cons chains
@@ -426,20 +457,26 @@ static value_t relocate(value_t v)
                 *pcdr = cdr_(v);
                 return first;
             }
-            *pcdr = nc = tagptr((cons_t*)curheap, TAG_CONS);
-            curheap += sizeof(cons_t);
+#ifdef MEMDEBUG2
+            *pcdr = nc = mk_cons(fl_ctx);
+#else
+            *pcdr = nc = tagptr((cons_t*)fl_ctx->curheap, TAG_CONS);
+            fl_ctx->curheap += sizeof(cons_t);
+#endif
             d = cdr_(v);
             car_(v) = TAG_FWD; cdr_(v) = nc;
-            car_(nc) = relocate(a);
+            if ((tag(a)&3) == 0 || !ismanaged(fl_ctx, a))
+                car_(nc) = a;
+            else
+                car_(nc) = relocate(fl_ctx, a);
             pcdr = &cdr_(nc);
             v = d;
         } while (iscons(v));
-        *pcdr = (d==NIL) ? NIL : relocate(d);
+        *pcdr = (d==fl_ctx->NIL) ? fl_ctx->NIL : relocate(fl_ctx, d);
         return first;
     }
 
-    if ((t&3) == 0) return v;
-    if (!ismanaged(v)) return v;
+    if ((t&3) == 0 || !ismanaged(fl_ctx, v)) return v;
     if (isforwarded(v)) return forwardloc(v);
 
     if (t == TAG_VECTOR) {
@@ -447,18 +484,23 @@ static value_t relocate(value_t v)
         size_t i, sz = vector_size(v);
         if (vector_elt(v,-1) & 0x1) {
             // grown vector
-            nc = relocate(vector_elt(v,0));
+            nc = relocate(fl_ctx, vector_elt(v,0));
             forward(v, nc);
         }
         else {
-            nc = tagptr(alloc_words(sz+1), TAG_VECTOR);
+            nc = tagptr(alloc_words(fl_ctx, sz+1), TAG_VECTOR);
             vector_setsize(nc, sz);
             a = vector_elt(v,0);
             forward(v, nc);
             if (sz > 0) {
-                vector_elt(nc,0) = relocate(a);
-                for(i=1; i < sz; i++)
-                    vector_elt(nc,i) = relocate(vector_elt(v,i));
+                vector_elt(nc,0) = relocate(fl_ctx, a);
+                for(i=1; i < sz; i++) {
+                    a = vector_elt(v,i);
+                    if ((tag(a)&3) == 0 || !ismanaged(fl_ctx, a))
+                        vector_elt(nc,i) = a;
+                    else
+                        vector_elt(nc,i) = relocate(fl_ctx, a);
+                }
             }
         }
         return nc;
@@ -466,7 +508,7 @@ static value_t relocate(value_t v)
     else if (t == TAG_CPRIM) {
         cprim_t *pcp = (cprim_t*)ptr(v);
         size_t nw = CPRIM_NWORDS-1+NWORDS(cp_class(pcp)->size);
-        cprim_t *ncp = (cprim_t*)alloc_words(nw);
+        cprim_t *ncp = (cprim_t*)alloc_words(fl_ctx, nw);
         while (nw--)
             ((value_t*)ncp)[nw] = ((value_t*)pcp)[nw];
         nc = tagptr(ncp, TAG_CPRIM);
@@ -474,267 +516,288 @@ static value_t relocate(value_t v)
         return nc;
     }
     else if (t == TAG_CVALUE) {
-        return cvalue_relocate(v);
+        return cvalue_relocate(fl_ctx, v);
     }
     else if (t == TAG_FUNCTION) {
         function_t *fn = (function_t*)ptr(v);
-        function_t *nfn = (function_t*)alloc_words(4);
+        function_t *nfn = (function_t*)alloc_words(fl_ctx, 4);
         nfn->bcode = fn->bcode;
         nfn->vals = fn->vals;
         nc = tagptr(nfn, TAG_FUNCTION);
         forward(v, nc);
-        nfn->env = relocate(fn->env);
-        nfn->vals = relocate(nfn->vals);
-        nfn->bcode = relocate(nfn->bcode);
-        assert(!ismanaged(fn->name));
+        nfn->env = relocate(fl_ctx, fn->env);
+        nfn->vals = relocate(fl_ctx, nfn->vals);
+        nfn->bcode = relocate(fl_ctx, nfn->bcode);
         nfn->name = fn->name;
         return nc;
     }
     else if (t == TAG_SYM) {
         gensym_t *gs = (gensym_t*)ptr(v);
-        gensym_t *ng = (gensym_t*)alloc_words(sizeof(gensym_t)/sizeof(void*));
+        gensym_t *ng = (gensym_t*)alloc_words(fl_ctx, sizeof(gensym_t)/sizeof(void*));
         ng->id = gs->id;
         ng->binding = gs->binding;
         ng->isconst = 0;
         nc = tagptr(ng, TAG_SYM);
         forward(v, nc);
         if (ng->binding != UNBOUND)
-            ng->binding = relocate(ng->binding);
+            ng->binding = relocate(fl_ctx, ng->binding);
         return nc;
     }
     return v;
 }
 
-value_t relocate_lispvalue(value_t v)
+void gc(fl_context_t *fl_ctx, int mustgrow)
 {
-    return relocate(v);
-}
-
-static void trace_globals(symbol_t *root)
-{
-    while (root != NULL) {
-        if (root->binding != UNBOUND)
-            root->binding = relocate(root->binding);
-        trace_globals(root->left);
-        root = root->right;
-    }
-}
-
-static value_t memory_exception_value;
-
-void gc(int mustgrow)
-{
-    static int grew = 0;
     void *temp;
     uint32_t i, f, top;
     fl_readstate_t *rs;
+#ifdef MEMDEBUG2
+    temp = fl_ctx->tochain;
+    fl_ctx->tochain = NULL;
+    fl_ctx->n_allocd = -100000000000LL;
+#else
+    size_t hsz = fl_ctx->gc_grew ? fl_ctx->heapsize*2 : fl_ctx->heapsize;
+#ifdef MEMDEBUG
+    fl_ctx->tospace = LLT_ALLOC(hsz);
+#endif
+    fl_ctx->curheap = fl_ctx->tospace;
+    fl_ctx->lim = fl_ctx->curheap + hsz - sizeof(cons_t);
+#endif
 
-    curheap = tospace;
-    if (grew)
-        lim = curheap+heapsize*2-sizeof(cons_t);
-    else
-        lim = curheap+heapsize-sizeof(cons_t);
-
-    if (fl_throwing_frame > curr_frame) {
-        top = fl_throwing_frame - 4;
-        f = Stack[fl_throwing_frame-4];
+    if (fl_ctx->throwing_frame > fl_ctx->curr_frame) {
+        top = fl_ctx->throwing_frame - 3;
+        f = fl_ctx->Stack[fl_ctx->throwing_frame-3];
     }
     else {
-        top = SP;
-        f = curr_frame;
+        top = fl_ctx->SP;
+        f = fl_ctx->curr_frame;
     }
     while (1) {
         for (i=f; i < top; i++)
-            Stack[i] = relocate(Stack[i]);
+            fl_ctx->Stack[i] = relocate(fl_ctx, fl_ctx->Stack[i]);
         if (f == 0) break;
-        top = f - 4;
-        f = Stack[f-4];
+        top = f - 3;
+        f = fl_ctx->Stack[f-3];
     }
-    for (i=0; i < N_GCHND; i++)
-        *GCHandleStack[i] = relocate(*GCHandleStack[i]);
-    trace_globals(symtab);
-    relocate_typetable();
-    rs = readstate;
+    for (i=0; i < fl_ctx->N_GCHND; i++)
+        *fl_ctx->GCHandleStack[i] = relocate(fl_ctx, *fl_ctx->GCHandleStack[i]);
+    trace_globals(fl_ctx, fl_ctx->symtab);
+    relocate_typetable(fl_ctx);
+    rs = fl_ctx->readstate;
     while (rs) {
-        value_t ent;
-        for(i=0; i < rs->backrefs.size; i++) {
-            ent = (value_t)rs->backrefs.table[i];
-            if (ent != (value_t)HT_NOTFOUND)
-                rs->backrefs.table[i] = (void*)relocate(ent);
-        }
-        for(i=0; i < rs->gensyms.size; i++) {
-            ent = (value_t)rs->gensyms.table[i];
-            if (ent != (value_t)HT_NOTFOUND)
-                rs->gensyms.table[i] = (void*)relocate(ent);
-        }
-        rs->source = relocate(rs->source);
+        for(i=0; i < rs->backrefs.size; i++)
+            rs->backrefs.table[i] = (void*)relocate(fl_ctx, (value_t)rs->backrefs.table[i]);
+        for(i=0; i < rs->gensyms.size; i++)
+            rs->gensyms.table[i] = (void*)relocate(fl_ctx, (value_t)rs->gensyms.table[i]);
+        rs->source = relocate(fl_ctx, rs->source);
         rs = rs->prev;
     }
-    fl_lasterror = relocate(fl_lasterror);
-    memory_exception_value = relocate(memory_exception_value);
-    the_empty_vector = relocate(the_empty_vector);
+    fl_ctx->lasterror = relocate(fl_ctx, fl_ctx->lasterror);
+    fl_ctx->memory_exception_value = relocate(fl_ctx, fl_ctx->memory_exception_value);
+    fl_ctx->the_empty_vector = relocate(fl_ctx, fl_ctx->the_empty_vector);
 
-    sweep_finalizers();
+    sweep_finalizers(fl_ctx);
 
+#ifdef MEMDEBUG2
+    while (temp != NULL) {
+        void *next = ((void**)temp)[-1];
+        free(&((void**)temp)[-1]);
+        temp = next;
+    }
+    fl_ctx->n_allocd = 0;
+#else
 #ifdef VERBOSEGC
     printf("GC: found %d/%d live conses\n",
-           (curheap-tospace)/sizeof(cons_t), heapsize/sizeof(cons_t));
+           (fl_ctx->curheap-fl_ctx->tospace)/sizeof(cons_t), fl_ctx->heapsize/sizeof(cons_t));
 #endif
-    temp = tospace;
-    tospace = fromspace;
-    fromspace = temp;
+
+    temp = fl_ctx->tospace;
+    fl_ctx->tospace = fl_ctx->fromspace;
+    fl_ctx->fromspace = (unsigned char*)temp;
 
     // if we're using > 80% of the space, resize tospace so we have
     // more space to fill next time. if we grew tospace last time,
     // grow the other half of the heap this time to catch up.
-    if (grew || ((lim-curheap) < (int)(heapsize/5)) || mustgrow) {
-        temp = LLT_REALLOC(tospace, heapsize*2);
+    if (fl_ctx->gc_grew || mustgrow
+#ifdef MEMDEBUG
+        // GC more often
+        || ((fl_ctx->lim-fl_ctx->curheap) < (int)(fl_ctx->heapsize/128))
+#else
+        || ((fl_ctx->lim-fl_ctx->curheap) < (int)(fl_ctx->heapsize/5))
+#endif
+        ) {
+        temp = LLT_REALLOC(fl_ctx->tospace, fl_ctx->heapsize*2);
         if (temp == NULL)
-            fl_raise(memory_exception_value);
-        tospace = temp;
-        if (grew) {
-            heapsize*=2;
-            temp = bitvector_resize(consflags, 0, heapsize/sizeof(cons_t), 1);
+            fl_raise(fl_ctx, fl_ctx->memory_exception_value);
+        fl_ctx->tospace = (unsigned char*)temp;
+        if (fl_ctx->gc_grew) {
+            fl_ctx->heapsize*=2;
+            temp = bitvector_resize(fl_ctx->consflags, 0, fl_ctx->heapsize/sizeof(cons_t), 1);
             if (temp == NULL)
-                fl_raise(memory_exception_value);
-            consflags = (uint32_t*)temp;
+                fl_raise(fl_ctx, fl_ctx->memory_exception_value);
+            fl_ctx->consflags = (uint32_t*)temp;
         }
-        grew = !grew;
+        fl_ctx->gc_grew = !fl_ctx->gc_grew;
     }
-    if (curheap > lim)  // all data was live
-        gc(0);
+#ifdef MEMDEBUG
+    LLT_FREE(fl_ctx->tospace);
+#endif
+    if ((value_t*)fl_ctx->curheap > ((value_t*)fl_ctx->lim)-2) {
+        // all data was live; gc again and grow heap.
+        // but also always leave at least 4 words available, so a closure
+        // can be allocated without an extra check.
+        gc(fl_ctx, 0);
+    }
+#endif
 }
 
-static void grow_stack(void)
+static void grow_stack(fl_context_t *fl_ctx)
 {
-    size_t newsz = N_STACK + (N_STACK>>1);
-    value_t *ns = realloc(Stack, newsz*sizeof(value_t));
+    size_t newsz = fl_ctx->N_STACK + (fl_ctx->N_STACK>>1);
+    value_t *ns = (value_t*)realloc(fl_ctx->Stack, newsz*sizeof(value_t));
     if (ns == NULL)
-        lerror(MemoryError, "stack overflow");
-    Stack = ns;
-    N_STACK = newsz;
+        lerror(fl_ctx, fl_ctx->OutOfMemoryError, "stack overflow");
+    fl_ctx->Stack = ns;
+    fl_ctx->N_STACK = newsz;
 }
 
 // utils ----------------------------------------------------------------------
 
 // apply function with n args on the stack
-static value_t _applyn(uint32_t n)
+static value_t _applyn(fl_context_t *fl_ctx, uint32_t n)
 {
-    value_t f = Stack[SP-n-1];
-    uint32_t saveSP = SP;
+    value_t f = fl_ctx->Stack[fl_ctx->SP-n-1];
+    uint32_t saveSP = fl_ctx->SP;
     value_t v;
-    if (iscbuiltin(f)) {
-        v = ((builtin_t*)ptr(f))[3](&Stack[SP-n], n);
+    if (iscbuiltin(fl_ctx, f)) {
+        v = ((builtin_t*)ptr(f))[3](fl_ctx, &fl_ctx->Stack[fl_ctx->SP-n], n);
     }
     else if (isfunction(f)) {
-        v = apply_cl(n);
+        v = apply_cl(fl_ctx, n);
     }
     else if (isbuiltin(f)) {
-        value_t tab = symbol_value(builtins_table_sym);
-        Stack[SP-n-1] = vector_elt(tab, uintval(f));
-        v = apply_cl(n);
+        value_t tab = symbol_value(fl_ctx->builtins_table_sym);
+        fl_ctx->Stack[fl_ctx->SP-n-1] = vector_elt(tab, uintval(f));
+        v = apply_cl(fl_ctx, n);
     }
     else {
-        type_error("apply", "function", f);
+        type_error(fl_ctx, "apply", "function", f);
     }
-    SP = saveSP;
+    fl_ctx->SP = saveSP;
     return v;
 }
 
-value_t fl_apply(value_t f, value_t l)
+value_t fl_apply(fl_context_t *fl_ctx, value_t f, value_t l)
 {
     value_t v = l;
-    uint32_t n = SP;
+    uint32_t n = fl_ctx->SP;
 
-    PUSH(f);
+    PUSH(fl_ctx, f);
     while (iscons(v)) {
-        if (SP >= N_STACK)
-            grow_stack();
-        PUSH(car_(v));
+        if (fl_ctx->SP >= fl_ctx->N_STACK)
+            grow_stack(fl_ctx);
+        PUSH(fl_ctx, car_(v));
         v = cdr_(v);
     }
-    n = SP - n - 1;
-    v = _applyn(n);
-    POPN(n+1);
+    n = fl_ctx->SP - n - 1;
+    v = _applyn(fl_ctx, n);
+    POPN(fl_ctx, n+1);
     return v;
 }
 
-value_t fl_applyn(uint32_t n, value_t f, ...)
+value_t fl_applyn(fl_context_t *fl_ctx, uint32_t n, value_t f, ...)
 {
     va_list ap;
     va_start(ap, f);
     size_t i;
 
-    PUSH(f);
-    while (SP+n > N_STACK)
-        grow_stack();
+    PUSH(fl_ctx, f);
+    while (fl_ctx->SP+n > fl_ctx->N_STACK)
+        grow_stack(fl_ctx);
     for(i=0; i < n; i++) {
         value_t a = va_arg(ap, value_t);
-        PUSH(a);
+        PUSH(fl_ctx, a);
     }
-    value_t v = _applyn(n);
-    POPN(n+1);
+    value_t v = _applyn(fl_ctx, n);
+    POPN(fl_ctx, n+1);
     va_end(ap);
     return v;
 }
 
-value_t fl_listn(size_t n, ...)
+value_t fl_listn(fl_context_t *fl_ctx, size_t n, ...)
 {
     va_list ap;
     va_start(ap, n);
-    uint32_t si = SP;
+    uint32_t si = fl_ctx->SP;
     size_t i;
 
-    while (SP+n > N_STACK)
-        grow_stack();
+    while (fl_ctx->SP+n > fl_ctx->N_STACK)
+        grow_stack(fl_ctx);
     for(i=0; i < n; i++) {
         value_t a = va_arg(ap, value_t);
-        PUSH(a);
+        PUSH(fl_ctx, a);
     }
-    cons_t *c = (cons_t*)alloc_words(n*2);
+#ifdef MEMDEBUG2
+    si = fl_ctx->SP-1;
+    value_t l = fl_ctx->NIL;
+    for(i=0; i < n; i++) {
+        l = fl_cons(fl_ctx, fl_ctx->Stack[si--], l);
+    }
+    POPN(fl_ctx, n);
+    va_end(ap);
+    return l;
+#else
+    cons_t *c = (cons_t*)alloc_words(fl_ctx, n*2);
     cons_t *l = c;
     for(i=0; i < n; i++) {
-        c->car = Stack[si++];
+        c->car = fl_ctx->Stack[si++];
         c->cdr = tagptr(c+1, TAG_CONS);
         c++;
     }
-    (c-1)->cdr = NIL;
-
-    POPN(n);
+    (c-1)->cdr = fl_ctx->NIL;
+    POPN(fl_ctx, n);
     va_end(ap);
     return tagptr(l, TAG_CONS);
+#endif
 }
 
-value_t fl_list2(value_t a, value_t b)
+value_t fl_list2(fl_context_t *fl_ctx, value_t a, value_t b)
 {
-    PUSH(a);
-    PUSH(b);
-    cons_t *c = (cons_t*)alloc_words(4);
-    b = POP();
-    a = POP();
+    PUSH(fl_ctx, a);
+    PUSH(fl_ctx, b);
+#ifdef MEMDEBUG2
+    fl_ctx->Stack[fl_ctx->SP-1] = fl_cons(fl_ctx, b, fl_ctx->NIL);
+    a = fl_cons(fl_ctx, fl_ctx->Stack[fl_ctx->SP-2], fl_ctx->Stack[fl_ctx->SP-1]);
+    POPN(fl_ctx, 2);
+    return a;
+#else
+    cons_t *c = (cons_t*)alloc_words(fl_ctx, 4);
+    b = POP(fl_ctx);
+    a = POP(fl_ctx);
     c[0].car = a;
     c[0].cdr = tagptr(c+1, TAG_CONS);
     c[1].car = b;
-    c[1].cdr = NIL;
+    c[1].cdr = fl_ctx->NIL;
     return tagptr(c, TAG_CONS);
+#endif
 }
 
-value_t fl_cons(value_t a, value_t b)
+value_t fl_cons(fl_context_t *fl_ctx, value_t a, value_t b)
 {
-    PUSH(a);
-    PUSH(b);
-    value_t c = mk_cons();
-    cdr_(c) = POP();
-    car_(c) = POP();
+    PUSH(fl_ctx, a);
+    PUSH(fl_ctx, b);
+    value_t c = mk_cons(fl_ctx);
+    cdr_(c) = POP(fl_ctx);
+    car_(c) = POP(fl_ctx);
     return c;
 }
 
-int fl_isnumber(value_t v)
+int fl_isnumber(fl_context_t *fl_ctx, value_t v)
 {
     if (isfixnum(v)) return 1;
     if (iscprim(v)) {
         cprim_t *c = (cprim_t*)ptr(v);
-        return c->type != wchartype;
+        return c->type != fl_ctx->wchartype;
     }
     return 0;
 }
@@ -749,14 +812,38 @@ int fl_isnumber(value_t v)
 
 // eval -----------------------------------------------------------------------
 
-#define list(a,n) _list((a),(n),0)
+#define list(fl_ctx, a,n) _list(fl_ctx, (a), (n), 0)
 
-static value_t _list(value_t *args, uint32_t nargs, int star)
+static value_t _list(fl_context_t *fl_ctx, value_t *args, uint32_t nargs, int star)
 {
     cons_t *c;
-    uint32_t i;
+    int i;
     value_t v;
-    v = cons_reserve(nargs);
+#ifdef MEMDEBUG2
+    value_t n;
+    i = nargs-1;
+    if (star) {
+        n = mk_cons(fl_ctx);
+        c = (cons_t*)ptr(n);
+        c->car = args[i-1];
+        c->cdr = args[i];
+        i -= 2;
+        v = n;
+    }
+    else {
+        v = fl_ctx->NIL;
+    }
+    PUSH(fl_ctx, v);
+    for(; i >= 0; i--) {
+        n = mk_cons(fl_ctx);
+        c = (cons_t*)ptr(n);
+        c->car = args[i];
+        c->cdr = fl_ctx->Stack[fl_ctx->SP-1];
+        fl_ctx->Stack[fl_ctx->SP-1] = n;
+    }
+    v = POP(fl_ctx);
+#else
+    v = cons_reserve(fl_ctx, nargs);
     c = (cons_t*)ptr(v);
     for(i=0; i < nargs; i++) {
         c->car = args[i];
@@ -766,55 +853,56 @@ static value_t _list(value_t *args, uint32_t nargs, int star)
     if (star)
         (c-2)->cdr = (c-1)->car;
     else
-        (c-1)->cdr = NIL;
+        (c-1)->cdr = fl_ctx->NIL;
+#endif
     return v;
 }
 
-static value_t copy_list(value_t L)
+static value_t copy_list(fl_context_t *fl_ctx, value_t L)
 {
     if (!iscons(L))
-        return NIL;
-    PUSH(NIL);
-    PUSH(L);
-    value_t *plcons = &Stack[SP-2];
-    value_t *pL = &Stack[SP-1];
+        return fl_ctx->NIL;
+    PUSH(fl_ctx, fl_ctx->NIL);
+    PUSH(fl_ctx, L);
+    value_t *plcons = &fl_ctx->Stack[fl_ctx->SP-2];
+    value_t *pL = &fl_ctx->Stack[fl_ctx->SP-1];
     value_t c;
-    c = mk_cons(); PUSH(c);  // save first cons
+    c = mk_cons(fl_ctx); PUSH(fl_ctx, c);  // save first cons
     car_(c) = car_(*pL);
-    cdr_(c) = NIL;
+    cdr_(c) = fl_ctx->NIL;
     *plcons = c;
     *pL = cdr_(*pL);
     while (iscons(*pL)) {
-        c = mk_cons();
+        c = mk_cons(fl_ctx);
         car_(c) = car_(*pL);
-        cdr_(c) = NIL;
+        cdr_(c) = fl_ctx->NIL;
         cdr_(*plcons) = c;
         *plcons = c;
         *pL = cdr_(*pL);
     }
-    c = POP();  // first cons
-    POPN(2);
+    c = POP(fl_ctx);  // first cons
+    POPN(fl_ctx, 2);
     return c;
 }
 
-static value_t do_trycatch(void)
+static value_t do_trycatch(fl_context_t *fl_ctx)
 {
-    uint32_t saveSP = SP;
+    uint32_t saveSP = fl_ctx->SP;
     value_t v;
-    value_t thunk = Stack[SP-2];
-    Stack[SP-2] = Stack[SP-1];
-    Stack[SP-1] = thunk;
+    value_t thunk = fl_ctx->Stack[fl_ctx->SP-2];
+    fl_ctx->Stack[fl_ctx->SP-2] = fl_ctx->Stack[fl_ctx->SP-1];
+    fl_ctx->Stack[fl_ctx->SP-1] = thunk;
 
-    FL_TRY {
-        v = apply_cl(0);
+    FL_TRY(fl_ctx) {
+        v = apply_cl(fl_ctx, 0);
     }
-    FL_CATCH {
-        v = Stack[saveSP-2];
-        PUSH(v);
-        PUSH(fl_lasterror);
-        v = apply_cl(1);
+    FL_CATCH(fl_ctx) {
+        v = fl_ctx->Stack[saveSP-2];
+        PUSH(fl_ctx, v);
+        PUSH(fl_ctx, fl_ctx->lasterror);
+        v = apply_cl(fl_ctx, 1);
     }
-    SP = saveSP;
+    fl_ctx->SP = saveSP;
     return v;
 }
 
@@ -822,23 +910,24 @@ static value_t do_trycatch(void)
   argument layout on stack is
   |--required args--|--opt args--|--kw args--|--rest args...
 */
-static uint32_t process_keys(value_t kwtable,
+static uint32_t process_keys(fl_context_t *fl_ctx, value_t kwtable,
                              uint32_t nreq, uint32_t nkw, uint32_t nopt,
                              uint32_t bp, uint32_t nargs, int va)
 {
+    uintptr_t n;
     uint32_t extr = nopt+nkw;
     uint32_t ntot = nreq+extr;
-    value_t args[extr], v;
+    value_t *args = (value_t*)alloca(extr*sizeof(value_t));
+    value_t v;
     uint32_t i, a = 0, nrestargs;
-    value_t s1 = Stack[SP-1];
-    value_t s2 = Stack[SP-2];
-    value_t s4 = Stack[SP-4];
-    value_t s5 = Stack[SP-5];
+    value_t s1 = fl_ctx->Stack[fl_ctx->SP-1];
+    value_t s3 = fl_ctx->Stack[fl_ctx->SP-3];
+    value_t s4 = fl_ctx->Stack[fl_ctx->SP-4];
     if (nargs < nreq)
-        lerror(ArgError, "apply: too few arguments");
+        lerror(fl_ctx, fl_ctx->ArgError, "apply: too few arguments");
     for (i=0; i < extr; i++) args[i] = UNBOUND;
     for (i=nreq; i < nargs; i++) {
-        v = Stack[bp+i];
+        v = fl_ctx->Stack[bp+i];
         if (issymbol(v) && iskeyword((symbol_t*)ptr(v)))
             break;
         if (a >= nopt)
@@ -847,46 +936,45 @@ static uint32_t process_keys(value_t kwtable,
     }
     if (i >= nargs) goto no_kw;
     // now process keywords
-    uptrint_t n = vector_size(kwtable)/2;
+    n = vector_size(kwtable)/2;
     do {
         i++;
         if (i >= nargs)
-            lerrorf(ArgError, "keyword %s requires an argument",
-                    symbol_name(v));
+            lerrorf(fl_ctx, fl_ctx->ArgError, "keyword %s requires an argument",
+                    symbol_name(fl_ctx, v));
         value_t hv = fixnum(((symbol_t*)ptr(v))->hash);
-        uptrint_t x = 2*(labs(numval(hv)) % n);
+        uintptr_t x = 2*(labs(numval(hv)) % n);
         if (vector_elt(kwtable, x) == v) {
-            uptrint_t idx = numval(vector_elt(kwtable, x+1));
+            uintptr_t idx = numval(vector_elt(kwtable, x+1));
             assert(idx < nkw);
             idx += nopt;
             if (args[idx] == UNBOUND) {
                 // if duplicate key, keep first value
-                args[idx] = Stack[bp+i];
+                args[idx] = fl_ctx->Stack[bp+i];
             }
         }
         else {
-            lerrorf(ArgError, "unsupported keyword %s", symbol_name(v));
+            lerrorf(fl_ctx, fl_ctx->ArgError, "unsupported keyword %s", symbol_name(fl_ctx, v));
         }
         i++;
         if (i >= nargs) break;
-        v = Stack[bp+i];
+        v = fl_ctx->Stack[bp+i];
     } while (issymbol(v) && iskeyword((symbol_t*)ptr(v)));
  no_kw:
     nrestargs = nargs - i;
     if (!va && nrestargs > 0)
-        lerror(ArgError, "apply: too many arguments");
+        lerror(fl_ctx, fl_ctx->ArgError, "apply: too many arguments");
     nargs = ntot + nrestargs;
     if (nrestargs)
-        memmove(&Stack[bp+ntot], &Stack[bp+i], nrestargs*sizeof(value_t));
-    memcpy(&Stack[bp+nreq], args, extr*sizeof(value_t));
-    SP = bp + nargs;
-    assert(SP < N_STACK-5);
-    PUSH(s5);
-    PUSH(s4);
-    PUSH(nargs);
-    PUSH(s2);
-    PUSH(s1);
-    curr_frame = SP;
+        memmove(&fl_ctx->Stack[bp+ntot], &fl_ctx->Stack[bp+i], nrestargs*sizeof(value_t));
+    memcpy(&fl_ctx->Stack[bp+nreq], args, extr*sizeof(value_t));
+    fl_ctx->SP = bp + nargs;
+    assert(fl_ctx->SP < fl_ctx->N_STACK-4);
+    PUSH(fl_ctx, s4);
+    PUSH(fl_ctx, s3);
+    PUSH(fl_ctx, nargs);
+    PUSH(fl_ctx, s1);
+    fl_ctx->curr_frame = fl_ctx->SP;
     return nargs;
 }
 
@@ -924,20 +1012,20 @@ static uint32_t process_keys(value_t kwtable,
   - put the stack in this state
   - provide arg count
   - respect tail position
-  - restore SP
+  - restore fl_ctx->SP
 
   callee's responsibility:
   - check arg counts
   - allocate vararg array
   - push closed env, set up new environment
 */
-static value_t apply_cl(uint32_t nargs)
+static value_t apply_cl(fl_context_t *fl_ctx, uint32_t nargs)
 {
     VM_LABELS;
     VM_APPLY_LABELS;
-    uint32_t top_frame = curr_frame;
+    uint32_t top_frame = fl_ctx->curr_frame;
     // frame variables
-    uint32_t n=0, captured;
+    uint32_t n=0;
     uint32_t bp;
     const uint8_t *ip;
     fixnum_t s, hi;
@@ -948,28 +1036,30 @@ static value_t apply_cl(uint32_t nargs)
 #endif
     uint32_t i;
     symbol_t *sym;
-    static cons_t *c;
-    static value_t *pv;
-    static int64_t accum;
-    static value_t func, v, e;
+#define fl_apply_c fl_ctx->apply_c
+#define fl_apply_pv fl_ctx->apply_pv
+#define fl_apply_accum fl_ctx->apply_accum
+#define fl_apply_func fl_ctx->apply_func
+#define fl_apply_v fl_ctx->apply_v
+#define fl_apply_e fl_ctx->apply_e
 
  apply_cl_top:
-    captured = 0;
-    func = Stack[SP-nargs-1];
-    ip = cv_data((cvalue_t*)ptr(fn_bcode(func)));
-    assert(!ismanaged((uptrint_t)ip));
-    while (SP+GET_INT32(ip) > N_STACK) {
-        grow_stack();
+    fl_apply_func = fl_ctx->Stack[fl_ctx->SP-nargs-1];
+    ip = (uint8_t*)cv_data((cvalue_t*)ptr(fn_bcode(fl_apply_func)));
+#ifndef MEMDEBUG2
+    assert(!ismanaged(fl_ctx, (uintptr_t)ip));
+#endif
+    while (fl_ctx->SP+GET_INT32(ip) > fl_ctx->N_STACK) {
+        grow_stack(fl_ctx);
     }
     ip += 4;
 
-    bp = SP-nargs;
-    PUSH(fn_env(func));
-    PUSH(curr_frame);
-    PUSH(nargs);
-    SP++;//PUSH(0); //ip
-    PUSH(0); //captured?
-    curr_frame = SP;
+    bp = fl_ctx->SP-nargs;
+    PUSH(fl_ctx, fn_env(fl_apply_func));
+    PUSH(fl_ctx, fl_ctx->curr_frame);
+    PUSH(fl_ctx, nargs);
+    fl_ctx->SP++;//PUSH(fl_ctx, 0); //ip
+    fl_ctx->curr_frame = fl_ctx->SP;
 
     {
 #ifdef USE_COMPUTED_GOTO
@@ -986,9 +1076,9 @@ static value_t apply_cl(uint32_t nargs)
         do_argc:
             if (nargs != n) {
                 if (nargs > n)
-                    lerror(ArgError, "apply: too many arguments");
+                    lerror(fl_ctx, fl_ctx->ArgError, "apply: too many arguments");
                 else
-                    lerror(ArgError, "apply: too few arguments");
+                    lerror(fl_ctx, fl_ctx->ArgError, "apply: too few arguments");
             }
             NEXT_OP;
         OP(OP_VARGC)
@@ -996,28 +1086,27 @@ static value_t apply_cl(uint32_t nargs)
         do_vargc:
             s = (fixnum_t)nargs - (fixnum_t)i;
             if (s > 0) {
-                v = list(&Stack[bp+i], s);
-                Stack[bp+i] = v;
+                fl_apply_v = list(fl_ctx, &fl_ctx->Stack[bp+i], s);
+                fl_ctx->Stack[bp+i] = fl_apply_v;
                 if (s > 1) {
-                    Stack[bp+i+1] = Stack[bp+nargs+0];
-                    Stack[bp+i+2] = Stack[bp+nargs+1];
-                    Stack[bp+i+3] = i+1;
-                    //Stack[bp+i+4] = 0;
-                    Stack[bp+i+5] = 0;
-                    SP =  bp+i+6;
-                    curr_frame = SP;
+                    fl_ctx->Stack[bp+i+1] = fl_ctx->Stack[bp+nargs+0];
+                    fl_ctx->Stack[bp+i+2] = fl_ctx->Stack[bp+nargs+1];
+                    fl_ctx->Stack[bp+i+3] = i+1;
+                    fl_ctx->Stack[bp+i+4] = 0;
+                    fl_ctx->SP =  bp+i+5;
+                    fl_ctx->curr_frame = fl_ctx->SP;
                 }
             }
             else if (s < 0) {
-                lerror(ArgError, "apply: too few arguments");
+                lerror(fl_ctx, fl_ctx->ArgError, "apply: too few arguments");
             }
             else {
-                PUSH(0);
-                Stack[SP-3] = i+1;
-                Stack[SP-4] = Stack[SP-5];
-                Stack[SP-5] = Stack[SP-6];
-                Stack[SP-6] = NIL;
-                curr_frame = SP;
+                fl_ctx->SP++;
+                fl_ctx->Stack[fl_ctx->SP-2] = i+1;
+                fl_ctx->Stack[fl_ctx->SP-3] = fl_ctx->Stack[fl_ctx->SP-4];
+                fl_ctx->Stack[fl_ctx->SP-4] = fl_ctx->Stack[fl_ctx->SP-5];
+                fl_ctx->Stack[fl_ctx->SP-5] = fl_ctx->NIL;
+                fl_ctx->curr_frame = fl_ctx->SP;
             }
             nargs = i+1;
             NEXT_OP;
@@ -1029,40 +1118,37 @@ static value_t apply_cl(uint32_t nargs)
             goto do_vargc;
         OP(OP_BRBOUND)
             i = GET_INT32(ip); ip+=4;
-            if (captured)
-                v = vector_elt(Stack[bp], i);
-            else
-                v = Stack[bp+i];
-            if (v != UNBOUND) PUSH(FL_T);
-            else PUSH(FL_F);
+            fl_apply_v = fl_ctx->Stack[bp+i];
+            if (fl_apply_v != UNBOUND) PUSH(fl_ctx, fl_ctx->T);
+            else PUSH(fl_ctx, fl_ctx->F);
             NEXT_OP;
-        OP(OP_DUP) SP++; Stack[SP-1] = Stack[SP-2]; NEXT_OP;
-        OP(OP_POP) POPN(1); NEXT_OP;
+        OP(OP_DUP) fl_ctx->SP++; fl_ctx->Stack[fl_ctx->SP-1] = fl_ctx->Stack[fl_ctx->SP-2]; NEXT_OP;
+        OP(OP_POP) POPN(fl_ctx, 1); NEXT_OP;
         OP(OP_TCALL)
             n = *ip++;  // nargs
         do_tcall:
-            func = Stack[SP-n-1];
-            if (tag(func) == TAG_FUNCTION) {
-                if (func > (N_BUILTINS<<3)) {
-                    curr_frame = Stack[curr_frame-4];
+            fl_apply_func = fl_ctx->Stack[fl_ctx->SP-n-1];
+            if (tag(fl_apply_func) == TAG_FUNCTION) {
+                if (fl_apply_func > (N_BUILTINS<<3)) {
+                    fl_ctx->curr_frame = fl_ctx->Stack[fl_ctx->curr_frame-3];
                     for(s=-1; s < (fixnum_t)n; s++)
-                        Stack[bp+s] = Stack[SP-n+s];
-                    SP = bp+n;
+                        fl_ctx->Stack[bp+s] = fl_ctx->Stack[fl_ctx->SP-n+s];
+                    fl_ctx->SP = bp+n;
                     nargs = n;
                     goto apply_cl_top;
                 }
                 else {
-                    i = uintval(func);
+                    i = uintval(fl_apply_func);
                     if (i <= OP_ASET) {
                         s = builtin_arg_counts[i];
                         if (s >= 0)
-                            argcount(builtin_names[i], n, s);
+                            argcount(fl_ctx, builtin_names[i], n, s);
                         else if (s != ANYARGS && (signed)n < -s)
-                            argcount(builtin_names[i], n, -s);
+                            argcount(fl_ctx, builtin_names[i], n, -s);
                         // remove function arg
-                        for(s=SP-n-1; s < (int)SP-1; s++)
-                            Stack[s] = Stack[s+1];
-                        SP--;
+                        for(s=fl_ctx->SP-n-1; s < (int)fl_ctx->SP-1; s++)
+                            fl_ctx->Stack[s] = fl_ctx->Stack[s+1];
+                        fl_ctx->SP--;
 #ifdef USE_COMPUTED_GOTO
                         if (i == OP_APPLY)
                             goto apply_tapply;
@@ -1084,37 +1170,37 @@ static value_t apply_cl(uint32_t nargs)
                     }
                 }
             }
-            else if (iscbuiltin(func)) {
-                s = SP;
-                v = ((builtin_t)(((void**)ptr(func))[3]))(&Stack[SP-n], n);
-                SP = s-n;
-                Stack[SP-1] = v;
+            else if (iscbuiltin(fl_ctx, fl_apply_func)) {
+                s = fl_ctx->SP;
+                fl_apply_v = ((builtin_t)(((void**)ptr(fl_apply_func))[3]))(fl_ctx, &fl_ctx->Stack[fl_ctx->SP-n], n);
+                fl_ctx->SP = s-n;
+                fl_ctx->Stack[fl_ctx->SP-1] = fl_apply_v;
                 NEXT_OP;
             }
-            type_error("apply", "function", func);
+            type_error(fl_ctx, "apply", "function", fl_apply_func);
         // WARNING: repeated code ahead
         OP(OP_CALL)
             n = *ip++;  // nargs
         do_call:
-            func = Stack[SP-n-1];
-            if (tag(func) == TAG_FUNCTION) {
-                if (func > (N_BUILTINS<<3)) {
-                    Stack[curr_frame-2] = (uptrint_t)ip;
+            fl_apply_func = fl_ctx->Stack[fl_ctx->SP-n-1];
+            if (tag(fl_apply_func) == TAG_FUNCTION) {
+                if (fl_apply_func > (N_BUILTINS<<3)) {
+                    fl_ctx->Stack[fl_ctx->curr_frame-1] = (uintptr_t)ip;
                     nargs = n;
                     goto apply_cl_top;
                 }
                 else {
-                    i = uintval(func);
+                    i = uintval(fl_apply_func);
                     if (i <= OP_ASET) {
                         s = builtin_arg_counts[i];
                         if (s >= 0)
-                            argcount(builtin_names[i], n, s);
+                            argcount(fl_ctx, builtin_names[i], n, s);
                         else if (s != ANYARGS && (signed)n < -s)
-                            argcount(builtin_names[i], n, -s);
+                            argcount(fl_ctx, builtin_names[i], n, -s);
                         // remove function arg
-                        for(s=SP-n-1; s < (int)SP-1; s++)
-                            Stack[s] = Stack[s+1];
-                        SP--;
+                        for(s=fl_ctx->SP-n-1; s < (int)fl_ctx->SP-1; s++)
+                            fl_ctx->Stack[s] = fl_ctx->Stack[s+1];
+                        fl_ctx->SP--;
 #ifdef USE_COMPUTED_GOTO
                         goto *vm_apply_labels[i];
 #else
@@ -1134,220 +1220,223 @@ static value_t apply_cl(uint32_t nargs)
                     }
                 }
             }
-            else if (iscbuiltin(func)) {
-                s = SP;
-                v = ((builtin_t)(((void**)ptr(func))[3]))(&Stack[SP-n], n);
-                SP = s-n;
-                Stack[SP-1] = v;
+            else if (iscbuiltin(fl_ctx, fl_apply_func)) {
+                s = fl_ctx->SP;
+                fl_apply_v = ((builtin_t)(((void**)ptr(fl_apply_func))[3]))(fl_ctx, &fl_ctx->Stack[fl_ctx->SP-n], n);
+                fl_ctx->SP = s-n;
+                fl_ctx->Stack[fl_ctx->SP-1] = fl_apply_v;
                 NEXT_OP;
             }
-            type_error("apply", "function", func);
+            type_error(fl_ctx, "apply", "function", fl_apply_func);
         OP(OP_TCALLL) n = GET_INT32(ip); ip+=4; goto do_tcall;
         OP(OP_CALLL)  n = GET_INT32(ip); ip+=4; goto do_call;
-        OP(OP_JMP) ip += (ptrint_t)GET_INT16(ip); NEXT_OP;
+        OP(OP_JMP) ip += (intptr_t)GET_INT16(ip); NEXT_OP;
         OP(OP_BRF)
-            v = POP();
-            if (v == FL_F) ip += (ptrint_t)GET_INT16(ip);
+            fl_apply_v = POP(fl_ctx);
+            if (fl_apply_v == fl_ctx->F) ip += (intptr_t)GET_INT16(ip);
             else ip += 2;
             NEXT_OP;
         OP(OP_BRT)
-            v = POP();
-            if (v != FL_F) ip += (ptrint_t)GET_INT16(ip);
+            fl_apply_v = POP(fl_ctx);
+            if (fl_apply_v != fl_ctx->F) ip += (intptr_t)GET_INT16(ip);
             else ip += 2;
             NEXT_OP;
-        OP(OP_JMPL) ip += (ptrint_t)GET_INT32(ip); NEXT_OP;
+        OP(OP_JMPL) ip += (intptr_t)GET_INT32(ip); NEXT_OP;
         OP(OP_BRFL)
-            v = POP();
-            if (v == FL_F) ip += (ptrint_t)GET_INT32(ip);
+            fl_apply_v = POP(fl_ctx);
+            if (fl_apply_v == fl_ctx->F) ip += (intptr_t)GET_INT32(ip);
             else ip += 4;
             NEXT_OP;
         OP(OP_BRTL)
-            v = POP();
-            if (v != FL_F) ip += (ptrint_t)GET_INT32(ip);
+            fl_apply_v = POP(fl_ctx);
+            if (fl_apply_v != fl_ctx->F) ip += (intptr_t)GET_INT32(ip);
             else ip += 4;
             NEXT_OP;
         OP(OP_BRNE)
-            if (Stack[SP-2] != Stack[SP-1]) ip += (ptrint_t)GET_INT16(ip);
+            if (fl_ctx->Stack[fl_ctx->SP-2] != fl_ctx->Stack[fl_ctx->SP-1]) ip += (intptr_t)GET_INT16(ip);
             else ip += 2;
-            POPN(2);
+            POPN(fl_ctx, 2);
             NEXT_OP;
         OP(OP_BRNEL)
-            if (Stack[SP-2] != Stack[SP-1]) ip += (ptrint_t)GET_INT32(ip);
+            if (fl_ctx->Stack[fl_ctx->SP-2] != fl_ctx->Stack[fl_ctx->SP-1]) ip += (intptr_t)GET_INT32(ip);
             else ip += 4;
-            POPN(2);
+            POPN(fl_ctx, 2);
             NEXT_OP;
         OP(OP_BRNN)
-            v = POP();
-            if (v != NIL) ip += (ptrint_t)GET_INT16(ip);
+            fl_apply_v = POP(fl_ctx);
+            if (fl_apply_v != fl_ctx->NIL) ip += (intptr_t)GET_INT16(ip);
             else ip += 2;
             NEXT_OP;
         OP(OP_BRNNL)
-            v = POP();
-            if (v != NIL) ip += (ptrint_t)GET_INT32(ip);
+            fl_apply_v = POP(fl_ctx);
+            if (fl_apply_v != fl_ctx->NIL) ip += (intptr_t)GET_INT32(ip);
             else ip += 4;
             NEXT_OP;
         OP(OP_BRN)
-            v = POP();
-            if (v == NIL) ip += (ptrint_t)GET_INT16(ip);
+            fl_apply_v = POP(fl_ctx);
+            if (fl_apply_v == fl_ctx->NIL) ip += (intptr_t)GET_INT16(ip);
             else ip += 2;
             NEXT_OP;
         OP(OP_BRNL)
-            v = POP();
-            if (v == NIL) ip += (ptrint_t)GET_INT32(ip);
+            fl_apply_v = POP(fl_ctx);
+            if (fl_apply_v == fl_ctx->NIL) ip += (intptr_t)GET_INT32(ip);
             else ip += 4;
             NEXT_OP;
         OP(OP_RET)
-            v = POP();
-            SP = curr_frame;
-            curr_frame = Stack[SP-4];
-            if (curr_frame == top_frame) return v;
-            SP -= (5+nargs);
-            captured     = Stack[curr_frame-1];
-            ip = (uint8_t*)Stack[curr_frame-2];
-            nargs        = Stack[curr_frame-3];
-            bp           = curr_frame - 5 - nargs;
-            Stack[SP-1] = v;
+            fl_apply_v = POP(fl_ctx);
+            fl_ctx->SP = fl_ctx->curr_frame;
+            fl_ctx->curr_frame = fl_ctx->Stack[fl_ctx->SP-3];
+            if (fl_ctx->curr_frame == top_frame) return fl_apply_v;
+            fl_ctx->SP -= (4+nargs);
+            ip = (uint8_t*)fl_ctx->Stack[fl_ctx->curr_frame-1];
+            nargs        = fl_ctx->Stack[fl_ctx->curr_frame-2];
+            bp           = fl_ctx->curr_frame - 4 - nargs;
+            fl_ctx->Stack[fl_ctx->SP-1] = fl_apply_v;
             NEXT_OP;
 
         OP(OP_EQ)
-            Stack[SP-2] = ((Stack[SP-2] == Stack[SP-1]) ? FL_T : FL_F);
-            POPN(1); NEXT_OP;
+            fl_ctx->Stack[fl_ctx->SP-2] = ((fl_ctx->Stack[fl_ctx->SP-2] == fl_ctx->Stack[fl_ctx->SP-1]) ? fl_ctx->T : fl_ctx->F);
+            POPN(fl_ctx, 1); NEXT_OP;
         OP(OP_EQV)
-            if (Stack[SP-2] == Stack[SP-1]) {
-                v = FL_T;
+            if (fl_ctx->Stack[fl_ctx->SP-2] == fl_ctx->Stack[fl_ctx->SP-1]) {
+                fl_apply_v = fl_ctx->T;
             }
-            else if (!leafp(Stack[SP-2]) || !leafp(Stack[SP-1])) {
-                v = FL_F;
+            else if (!leafp(fl_ctx->Stack[fl_ctx->SP-2]) || !leafp(fl_ctx->Stack[fl_ctx->SP-1])) {
+                fl_apply_v = fl_ctx->F;
             }
             else {
-                v = (compare_(Stack[SP-2], Stack[SP-1], 1)==0 ? FL_T : FL_F);
+                fl_apply_v = (compare_(fl_ctx, fl_ctx->Stack[fl_ctx->SP-2], fl_ctx->Stack[fl_ctx->SP-1], 1)==0 ? fl_ctx->T : fl_ctx->F);
             }
-            Stack[SP-2] = v; POPN(1);
+            fl_ctx->Stack[fl_ctx->SP-2] = fl_apply_v; POPN(fl_ctx, 1);
             NEXT_OP;
         OP(OP_EQUAL)
-            if (Stack[SP-2] == Stack[SP-1]) {
-                v = FL_T;
+            if (fl_ctx->Stack[fl_ctx->SP-2] == fl_ctx->Stack[fl_ctx->SP-1]) {
+                fl_apply_v = fl_ctx->T;
             }
             else {
-                v = (compare_(Stack[SP-2], Stack[SP-1], 1)==0 ? FL_T : FL_F);
+                fl_apply_v = (compare_(fl_ctx, fl_ctx->Stack[fl_ctx->SP-2], fl_ctx->Stack[fl_ctx->SP-1], 1)==0 ? fl_ctx->T : fl_ctx->F);
             }
-            Stack[SP-2] = v; POPN(1);
+            fl_ctx->Stack[fl_ctx->SP-2] = fl_apply_v; POPN(fl_ctx, 1);
             NEXT_OP;
         OP(OP_PAIRP)
-            Stack[SP-1] = (iscons(Stack[SP-1]) ? FL_T : FL_F); NEXT_OP;
+            fl_ctx->Stack[fl_ctx->SP-1] = (iscons(fl_ctx->Stack[fl_ctx->SP-1]) ? fl_ctx->T : fl_ctx->F); NEXT_OP;
         OP(OP_ATOMP)
-            Stack[SP-1] = (iscons(Stack[SP-1]) ? FL_F : FL_T); NEXT_OP;
+            fl_ctx->Stack[fl_ctx->SP-1] = (iscons(fl_ctx->Stack[fl_ctx->SP-1]) ? fl_ctx->F : fl_ctx->T); NEXT_OP;
         OP(OP_NOT)
-            Stack[SP-1] = ((Stack[SP-1]==FL_F) ? FL_T : FL_F); NEXT_OP;
+            fl_ctx->Stack[fl_ctx->SP-1] = ((fl_ctx->Stack[fl_ctx->SP-1]==fl_ctx->F) ? fl_ctx->T : fl_ctx->F); NEXT_OP;
         OP(OP_NULLP)
-            Stack[SP-1] = ((Stack[SP-1]==NIL) ? FL_T : FL_F); NEXT_OP;
+            fl_ctx->Stack[fl_ctx->SP-1] = ((fl_ctx->Stack[fl_ctx->SP-1]==fl_ctx->NIL) ? fl_ctx->T : fl_ctx->F); NEXT_OP;
         OP(OP_BOOLEANP)
-            v = Stack[SP-1];
-            Stack[SP-1] = ((v == FL_T || v == FL_F) ? FL_T:FL_F); NEXT_OP;
+            fl_apply_v = fl_ctx->Stack[fl_ctx->SP-1];
+            fl_ctx->Stack[fl_ctx->SP-1] = ((fl_apply_v == fl_ctx->T || fl_apply_v == fl_ctx->F) ? fl_ctx->T:fl_ctx->F); NEXT_OP;
         OP(OP_SYMBOLP)
-            Stack[SP-1] = (issymbol(Stack[SP-1]) ? FL_T : FL_F); NEXT_OP;
+            fl_ctx->Stack[fl_ctx->SP-1] = (issymbol(fl_ctx->Stack[fl_ctx->SP-1]) ? fl_ctx->T : fl_ctx->F); NEXT_OP;
         OP(OP_NUMBERP)
-            v = Stack[SP-1];
-            Stack[SP-1] = (fl_isnumber(v) ? FL_T:FL_F); NEXT_OP;
+            fl_apply_v = fl_ctx->Stack[fl_ctx->SP-1];
+            fl_ctx->Stack[fl_ctx->SP-1] = (fl_isnumber(fl_ctx, fl_apply_v) ? fl_ctx->T:fl_ctx->F); NEXT_OP;
         OP(OP_FIXNUMP)
-            Stack[SP-1] = (isfixnum(Stack[SP-1]) ? FL_T : FL_F); NEXT_OP;
+            fl_ctx->Stack[fl_ctx->SP-1] = (isfixnum(fl_ctx->Stack[fl_ctx->SP-1]) ? fl_ctx->T : fl_ctx->F); NEXT_OP;
         OP(OP_BOUNDP)
-            sym = tosymbol(Stack[SP-1], "bound?");
-            Stack[SP-1] = ((sym->binding == UNBOUND) ? FL_F : FL_T);
+            sym = tosymbol(fl_ctx, fl_ctx->Stack[fl_ctx->SP-1], "bound?");
+            fl_ctx->Stack[fl_ctx->SP-1] = ((sym->binding == UNBOUND) ? fl_ctx->F : fl_ctx->T);
             NEXT_OP;
         OP(OP_BUILTINP)
-            v = Stack[SP-1];
-            Stack[SP-1] = (isbuiltin(v) || iscbuiltin(v)) ? FL_T : FL_F;
+            fl_apply_v = fl_ctx->Stack[fl_ctx->SP-1];
+        fl_ctx->Stack[fl_ctx->SP-1] = (isbuiltin(fl_apply_v) || iscbuiltin(fl_ctx, fl_apply_v)) ? fl_ctx->T : fl_ctx->F;
             NEXT_OP;
         OP(OP_FUNCTIONP)
-            v = Stack[SP-1];
-            Stack[SP-1] = ((tag(v)==TAG_FUNCTION &&
-                            (uintval(v)<=OP_ASET || v>(N_BUILTINS<<3))) ||
-                           iscbuiltin(v)) ? FL_T : FL_F;
+            fl_apply_v = fl_ctx->Stack[fl_ctx->SP-1];
+            fl_ctx->Stack[fl_ctx->SP-1] = ((tag(fl_apply_v)==TAG_FUNCTION &&
+                            (uintval(fl_apply_v)<=OP_ASET || fl_apply_v>(N_BUILTINS<<3))) ||
+                                 iscbuiltin(fl_ctx, fl_apply_v)) ? fl_ctx->T : fl_ctx->F;
             NEXT_OP;
         OP(OP_VECTORP)
-            Stack[SP-1] = (isvector(Stack[SP-1]) ? FL_T : FL_F); NEXT_OP;
+            fl_ctx->Stack[fl_ctx->SP-1] = (isvector(fl_ctx->Stack[fl_ctx->SP-1]) ? fl_ctx->T : fl_ctx->F); NEXT_OP;
 
         OP(OP_CONS)
-            if (curheap > lim)
-                gc(0);
-            c = (cons_t*)curheap;
-            curheap += sizeof(cons_t);
-            c->car = Stack[SP-2];
-            c->cdr = Stack[SP-1];
-            Stack[SP-2] = tagptr(c, TAG_CONS);
-            POPN(1); NEXT_OP;
+#ifdef MEMDEBUG2
+            fl_apply_c = (cons_t*)ptr(mk_cons(fl_ctx));
+#else
+            if (fl_ctx->curheap > fl_ctx->lim)
+                gc(fl_ctx, 0);
+            fl_apply_c = (cons_t*)fl_ctx->curheap;
+            fl_ctx->curheap += sizeof(cons_t);
+#endif
+            fl_apply_c->car = fl_ctx->Stack[fl_ctx->SP-2];
+            fl_apply_c->cdr = fl_ctx->Stack[fl_ctx->SP-1];
+            fl_ctx->Stack[fl_ctx->SP-2] = tagptr(fl_apply_c, TAG_CONS);
+            POPN(fl_ctx, 1); NEXT_OP;
         OP(OP_CAR)
-            v = Stack[SP-1];
-            if (!iscons(v)) type_error("car", "cons", v);
-            Stack[SP-1] = car_(v);
+            fl_apply_v = fl_ctx->Stack[fl_ctx->SP-1];
+            if (!iscons(fl_apply_v)) type_error(fl_ctx, "car", "cons", fl_apply_v);
+            fl_ctx->Stack[fl_ctx->SP-1] = car_(fl_apply_v);
             NEXT_OP;
         OP(OP_CDR)
-            v = Stack[SP-1];
-            if (!iscons(v)) type_error("cdr", "cons", v);
-            Stack[SP-1] = cdr_(v);
+            fl_apply_v = fl_ctx->Stack[fl_ctx->SP-1];
+            if (!iscons(fl_apply_v)) type_error(fl_ctx, "cdr", "cons", fl_apply_v);
+            fl_ctx->Stack[fl_ctx->SP-1] = cdr_(fl_apply_v);
             NEXT_OP;
         OP(OP_CADR)
-            v = Stack[SP-1];
-            if (!iscons(v)) type_error("cdr", "cons", v);
-            v = cdr_(v);
-            if (!iscons(v)) type_error("car", "cons", v);
-            Stack[SP-1] = car_(v);
+            fl_apply_v = fl_ctx->Stack[fl_ctx->SP-1];
+            if (!iscons(fl_apply_v)) type_error(fl_ctx, "cdr", "cons", fl_apply_v);
+            fl_apply_v = cdr_(fl_apply_v);
+            if (!iscons(fl_apply_v)) type_error(fl_ctx, "car", "cons", fl_apply_v);
+            fl_ctx->Stack[fl_ctx->SP-1] = car_(fl_apply_v);
             NEXT_OP;
         OP(OP_SETCAR)
-            car(Stack[SP-2]) = Stack[SP-1];
-            POPN(1); NEXT_OP;
+            car(fl_ctx, fl_ctx->Stack[fl_ctx->SP-2]) = fl_ctx->Stack[fl_ctx->SP-1];
+            POPN(fl_ctx, 1); NEXT_OP;
         OP(OP_SETCDR)
-            cdr(Stack[SP-2]) = Stack[SP-1];
-            POPN(1); NEXT_OP;
+            cdr(fl_ctx, fl_ctx->Stack[fl_ctx->SP-2]) = fl_ctx->Stack[fl_ctx->SP-1];
+            POPN(fl_ctx, 1); NEXT_OP;
         OP(OP_LIST)
             n = *ip++;
         apply_list:
             if (n > 0) {
-                v = list(&Stack[SP-n], n);
-                POPN(n);
-                PUSH(v);
+                fl_apply_v = list(fl_ctx, &fl_ctx->Stack[fl_ctx->SP-n], n);
+                POPN(fl_ctx, n);
+                PUSH(fl_ctx, fl_apply_v);
             }
             else {
-                PUSH(NIL);
+                PUSH(fl_ctx, fl_ctx->NIL);
             }
             NEXT_OP;
 
         OP(OP_TAPPLY)
             n = *ip++;
         apply_tapply:
-            v = POP();     // arglist
-            n = SP-(n-2);  // n-2 == # leading arguments not in the list
-            while (iscons(v)) {
-                if (SP >= N_STACK)
-                    grow_stack();
-                PUSH(car_(v));
-                v = cdr_(v);
+            fl_apply_v = POP(fl_ctx);     // arglist
+            n = fl_ctx->SP-(n-2);  // n-2 == # leading arguments not in the list
+            while (iscons(fl_apply_v)) {
+                if (fl_ctx->SP >= fl_ctx->N_STACK)
+                    grow_stack(fl_ctx);
+                PUSH(fl_ctx, car_(fl_apply_v));
+                fl_apply_v = cdr_(fl_apply_v);
             }
-            n = SP-n;
+            n = fl_ctx->SP-n;
             goto do_tcall;
         OP(OP_APPLY)
             n = *ip++;
         apply_apply:
-            v = POP();     // arglist
-            n = SP-(n-2);  // n-2 == # leading arguments not in the list
-            while (iscons(v)) {
-                if (SP >= N_STACK)
-                    grow_stack();
-                PUSH(car_(v));
-                v = cdr_(v);
+            fl_apply_v = POP(fl_ctx);     // arglist
+            n = fl_ctx->SP-(n-2);  // n-2 == # leading arguments not in the list
+            while (iscons(fl_apply_v)) {
+                if (fl_ctx->SP >= fl_ctx->N_STACK)
+                    grow_stack(fl_ctx);
+                PUSH(fl_ctx, car_(fl_apply_v));
+                fl_apply_v = cdr_(fl_apply_v);
             }
-            n = SP-n;
+            n = fl_ctx->SP-n;
             goto do_call;
 
         OP(OP_ADD)
             n = *ip++;
         apply_add:
             s = 0;
-            i = SP-n;
-            for (; i < SP; i++) {
-                if (isfixnum(Stack[i])) {
-                    s += numval(Stack[i]);
+            i = fl_ctx->SP-n;
+            for (; i < fl_ctx->SP; i++) {
+                if (isfixnum(fl_ctx->Stack[i])) {
+                    s += numval(fl_ctx->Stack[i]);
                     if (!fits_fixnum(s)) {
                         i++;
                         goto add_ovf;
@@ -1355,443 +1444,407 @@ static value_t apply_cl(uint32_t nargs)
                 }
                 else {
                 add_ovf:
-                    v = fl_add_any(&Stack[i], SP-i, s);
+                    fl_apply_v = fl_add_any(fl_ctx, &fl_ctx->Stack[i], fl_ctx->SP-i, s);
                     break;
                 }
             }
-            if (i==SP)
-                v = fixnum(s);
-            POPN(n);
-            PUSH(v);
+            if (i==fl_ctx->SP)
+                fl_apply_v = fixnum(s);
+            POPN(fl_ctx, n);
+            PUSH(fl_ctx, fl_apply_v);
             NEXT_OP;
         OP(OP_ADD2)
-            if (bothfixnums(Stack[SP-1], Stack[SP-2])) {
-                s = numval(Stack[SP-1]) + numval(Stack[SP-2]);
+            if (bothfixnums(fl_ctx->Stack[fl_ctx->SP-1], fl_ctx->Stack[fl_ctx->SP-2])) {
+                s = numval(fl_ctx->Stack[fl_ctx->SP-1]) + numval(fl_ctx->Stack[fl_ctx->SP-2]);
                 if (fits_fixnum(s))
-                    v = fixnum(s);
+                    fl_apply_v = fixnum(s);
                 else
-                    v = mk_long(s);
+                    fl_apply_v = mk_ptrdiff(fl_ctx, s);
             }
             else {
-                v = fl_add_any(&Stack[SP-2], 2, 0);
+                fl_apply_v = fl_add_any(fl_ctx, &fl_ctx->Stack[fl_ctx->SP-2], 2, 0);
             }
-            POPN(1);
-            Stack[SP-1] = v;
+            POPN(fl_ctx, 1);
+            fl_ctx->Stack[fl_ctx->SP-1] = fl_apply_v;
             NEXT_OP;
         OP(OP_SUB)
             n = *ip++;
         apply_sub:
             if (n == 2) goto do_sub2;
             if (n == 1) goto do_neg;
-            i = SP-n;
+            i = fl_ctx->SP-n;
             // we need to pass the full arglist on to fl_add_any
             // so it can handle rest args properly
-            PUSH(Stack[i]);
-            Stack[i] = fixnum(0);
-            Stack[i+1] = fl_neg(fl_add_any(&Stack[i], n, 0));
-            Stack[i] = POP();
-            v = fl_add_any(&Stack[i], 2, 0);
-            POPN(n);
-            PUSH(v);
+            PUSH(fl_ctx, fl_ctx->Stack[i]);
+            fl_ctx->Stack[i] = fixnum(0);
+            fl_ctx->Stack[i+1] = fl_neg(fl_ctx, fl_add_any(fl_ctx, &fl_ctx->Stack[i], n, 0));
+            fl_ctx->Stack[i] = POP(fl_ctx);
+            fl_apply_v = fl_add_any(fl_ctx, &fl_ctx->Stack[i], 2, 0);
+            POPN(fl_ctx, n);
+            PUSH(fl_ctx, fl_apply_v);
             NEXT_OP;
         OP(OP_NEG)
-        do_neg:
-            if (isfixnum(Stack[SP-1])) {
-                s = fixnum(-numval(Stack[SP-1]));
-                if (__unlikely(s == Stack[SP-1]))
-                  Stack[SP-1] = mk_long(-numval(Stack[SP-1])); // negate overflows
+        do_neg: {
+            value_t *stacktop = fl_ctx->Stack + (fl_ctx->SP - 1);
+            if (isfixnum(*stacktop)) {
+                s = fixnum(-numval(*stacktop));
+                if (__unlikely(s == *stacktop))
+                  *stacktop = mk_int64(fl_ctx, -numval(*stacktop)); // negate overflows
                 else
-                  Stack[SP-1] = s;
+                  *stacktop = s;
             }
             else
-                Stack[SP-1] = fl_neg(Stack[SP-1]);
+                *stacktop = fl_neg(fl_ctx, *stacktop);
             NEXT_OP;
+        }
         OP(OP_SUB2)
         do_sub2:
-            if (bothfixnums(Stack[SP-2], Stack[SP-1])) {
-                s = numval(Stack[SP-2]) - numval(Stack[SP-1]);
+            if (bothfixnums(fl_ctx->Stack[fl_ctx->SP-2], fl_ctx->Stack[fl_ctx->SP-1])) {
+                s = numval(fl_ctx->Stack[fl_ctx->SP-2]) - numval(fl_ctx->Stack[fl_ctx->SP-1]);
                 if (fits_fixnum(s))
-                    v = fixnum(s);
+                    fl_apply_v = fixnum(s);
                 else
-                    v = mk_long(s);
+                    fl_apply_v = mk_ptrdiff(fl_ctx, s);
             }
             else {
-                Stack[SP-1] = fl_neg(Stack[SP-1]);
-                v = fl_add_any(&Stack[SP-2], 2, 0);
+                fl_ctx->Stack[fl_ctx->SP-1] = fl_neg(fl_ctx, fl_ctx->Stack[fl_ctx->SP-1]);
+                fl_apply_v = fl_add_any(fl_ctx, &fl_ctx->Stack[fl_ctx->SP-2], 2, 0);
             }
-            POPN(1);
-            Stack[SP-1] = v;
+            POPN(fl_ctx, 1);
+            fl_ctx->Stack[fl_ctx->SP-1] = fl_apply_v;
             NEXT_OP;
         OP(OP_MUL)
             n = *ip++;
         apply_mul:
-            accum = 1;
-            i = SP-n;
-            for (; i < SP; i++) {
-                if (isfixnum(Stack[i])) {
-                    accum *= numval(Stack[i]);
+            fl_apply_accum = 1;
+            i = fl_ctx->SP-n;
+            for (; i < fl_ctx->SP; i++) {
+                if (isfixnum(fl_ctx->Stack[i])) {
+                    fl_apply_accum *= numval(fl_ctx->Stack[i]);
                 }
                 else {
-                    v = fl_mul_any(&Stack[i], SP-i, accum);
+                    fl_apply_v = fl_mul_any(fl_ctx, &fl_ctx->Stack[i], fl_ctx->SP-i, fl_apply_accum);
                     break;
                 }
             }
-            if (i == SP) {
-                if (fits_fixnum(accum))
-                    v = fixnum(accum);
+            if (i == fl_ctx->SP) {
+                if (fits_fixnum(fl_apply_accum))
+                    fl_apply_v = fixnum(fl_apply_accum);
                 else
-                    v = return_from_int64(accum);
+                    fl_apply_v = return_from_int64(fl_ctx, fl_apply_accum);
             }
-            POPN(n);
-            PUSH(v);
+            POPN(fl_ctx, n);
+            PUSH(fl_ctx, fl_apply_v);
             NEXT_OP;
         OP(OP_DIV)
             n = *ip++;
         apply_div:
-            i = SP-n;
+            i = fl_ctx->SP-n;
             if (n == 1) {
-                Stack[SP-1] = fl_div2(fixnum(1), Stack[i]);
+                fl_ctx->Stack[fl_ctx->SP-1] = fl_div2(fl_ctx, fixnum(1), fl_ctx->Stack[i]);
             }
             else {
                 if (n > 2) {
-                    PUSH(Stack[i]);
-                    Stack[i] = fixnum(1);
-                    Stack[i+1] = fl_mul_any(&Stack[i], n, 1);
-                    Stack[i] = POP();
+                    PUSH(fl_ctx, fl_ctx->Stack[i]);
+                    fl_ctx->Stack[i] = fixnum(1);
+                    fl_ctx->Stack[i+1] = fl_mul_any(fl_ctx, &fl_ctx->Stack[i], n, 1);
+                    fl_ctx->Stack[i] = POP(fl_ctx);
                 }
-                v = fl_div2(Stack[i], Stack[i+1]);
-                POPN(n);
-                PUSH(v);
+                fl_apply_v = fl_div2(fl_ctx, fl_ctx->Stack[i], fl_ctx->Stack[i+1]);
+                POPN(fl_ctx, n);
+                PUSH(fl_ctx, fl_apply_v);
             }
             NEXT_OP;
         OP(OP_IDIV)
-            v = Stack[SP-2]; e = Stack[SP-1];
-            if (bothfixnums(v, e)) {
-                if (e==0) DivideByZeroError();
-                v = fixnum(numval(v) / numval(e));
+            fl_apply_v = fl_ctx->Stack[fl_ctx->SP-2]; fl_apply_e = fl_ctx->Stack[fl_ctx->SP-1];
+            if (bothfixnums(fl_apply_v, fl_apply_e)) {
+                if (fl_apply_e==0) DivideByZeroError(fl_ctx);
+                fl_apply_v = fixnum(numval(fl_apply_v) / numval(fl_apply_e));
             }
             else
-                v = fl_idiv2(v, e);
-            POPN(1);
-            Stack[SP-1] = v;
+                fl_apply_v = fl_idiv2(fl_ctx, fl_apply_v, fl_apply_e);
+            POPN(fl_ctx, 1);
+            fl_ctx->Stack[fl_ctx->SP-1] = fl_apply_v;
             NEXT_OP;
         OP(OP_NUMEQ)
-            v = Stack[SP-2]; e = Stack[SP-1];
-            if (bothfixnums(v, e))
-                v = (v == e) ? FL_T : FL_F;
+            fl_apply_v = fl_ctx->Stack[fl_ctx->SP-2]; fl_apply_e = fl_ctx->Stack[fl_ctx->SP-1];
+            if (bothfixnums(fl_apply_v, fl_apply_e))
+                fl_apply_v = (fl_apply_v == fl_apply_e) ? fl_ctx->T : fl_ctx->F;
             else
-                v = (!numeric_compare(v,e,1,0,"=")) ? FL_T : FL_F;
-            POPN(1);
-            Stack[SP-1] = v;
+                fl_apply_v = (!numeric_compare(fl_ctx,fl_apply_v,fl_apply_e,1,0,"=")) ? fl_ctx->T : fl_ctx->F;
+            POPN(fl_ctx, 1);
+            fl_ctx->Stack[fl_ctx->SP-1] = fl_apply_v;
             NEXT_OP;
         OP(OP_LT)
-            if (bothfixnums(Stack[SP-2], Stack[SP-1])) {
-                v = (numval(Stack[SP-2]) < numval(Stack[SP-1])) ? FL_T : FL_F;
+            if (bothfixnums(fl_ctx->Stack[fl_ctx->SP-2], fl_ctx->Stack[fl_ctx->SP-1])) {
+                fl_apply_v = (numval(fl_ctx->Stack[fl_ctx->SP-2]) < numval(fl_ctx->Stack[fl_ctx->SP-1])) ? fl_ctx->T : fl_ctx->F;
             }
             else {
-                v = (numval(fl_compare(Stack[SP-2], Stack[SP-1])) < 0) ?
-                    FL_T : FL_F;
+                fl_apply_v = (numval(fl_compare(fl_ctx, fl_ctx->Stack[fl_ctx->SP-2], fl_ctx->Stack[fl_ctx->SP-1])) < 0) ?
+                    fl_ctx->T : fl_ctx->F;
             }
-            POPN(1);
-            Stack[SP-1] = v;
+            POPN(fl_ctx, 1);
+            fl_ctx->Stack[fl_ctx->SP-1] = fl_apply_v;
             NEXT_OP;
         OP(OP_COMPARE)
-            Stack[SP-2] = compare_(Stack[SP-2], Stack[SP-1], 0);
-            POPN(1);
+            fl_ctx->Stack[fl_ctx->SP-2] = compare_(fl_ctx, fl_ctx->Stack[fl_ctx->SP-2], fl_ctx->Stack[fl_ctx->SP-1], 0);
+            POPN(fl_ctx, 1);
             NEXT_OP;
 
         OP(OP_VECTOR)
             n = *ip++;
         apply_vector:
-            v = alloc_vector(n, 0);
+            fl_apply_v = alloc_vector(fl_ctx, n, 0);
             if (n) {
-                memcpy(&vector_elt(v,0), &Stack[SP-n], n*sizeof(value_t));
-                POPN(n);
+                memcpy(&vector_elt(fl_apply_v,0), &fl_ctx->Stack[fl_ctx->SP-n], n*sizeof(value_t));
+                POPN(fl_ctx, n);
             }
-            PUSH(v);
+            PUSH(fl_ctx, fl_apply_v);
             NEXT_OP;
 
         OP(OP_AREF)
-            v = Stack[SP-2];
-            if (isvector(v)) {
-                e = Stack[SP-1];
-                if (isfixnum(e))
-                    i = numval(e);
+            fl_apply_v = fl_ctx->Stack[fl_ctx->SP-2];
+            if (isvector(fl_apply_v)) {
+                fl_apply_e = fl_ctx->Stack[fl_ctx->SP-1];
+                if (isfixnum(fl_apply_e))
+                    i = numval(fl_apply_e);
                 else
-                    i = (uint32_t)toulong(e, "aref");
-                if ((unsigned)i >= vector_size(v))
-                    bounds_error("aref", v, e);
-                v = vector_elt(v, i);
+                    i = (uint32_t)tosize(fl_ctx, fl_apply_e, "aref");
+                if ((unsigned)i >= vector_size(fl_apply_v))
+                    bounds_error(fl_ctx, "aref", fl_apply_v, fl_apply_e);
+                fl_apply_v = vector_elt(fl_apply_v, i);
             }
-            else if (isarray(v)) {
-                v = cvalue_array_aref(&Stack[SP-2]);
+            else if (isarray(fl_apply_v)) {
+                fl_apply_v = cvalue_array_aref(fl_ctx, &fl_ctx->Stack[fl_ctx->SP-2]);
             }
             else {
-                type_error("aref", "sequence", v);
+                type_error(fl_ctx, "aref", "sequence", fl_apply_v);
             }
-            POPN(1);
-            Stack[SP-1] = v;
+            POPN(fl_ctx, 1);
+            fl_ctx->Stack[fl_ctx->SP-1] = fl_apply_v;
             NEXT_OP;
         OP(OP_ASET)
-            e = Stack[SP-3];
-            if (isvector(e)) {
-                i = tofixnum(Stack[SP-2], "aset!");
-                if ((unsigned)i >= vector_size(e))
-                    bounds_error("aset!", v, Stack[SP-1]);
-                vector_elt(e, i) = (v=Stack[SP-1]);
+            fl_apply_e = fl_ctx->Stack[fl_ctx->SP-3];
+            if (isvector(fl_apply_e)) {
+                i = tofixnum(fl_ctx, fl_ctx->Stack[fl_ctx->SP-2], "aset!");
+                if ((unsigned)i >= vector_size(fl_apply_e))
+                    bounds_error(fl_ctx, "aset!", fl_apply_v, fl_ctx->Stack[fl_ctx->SP-1]);
+                vector_elt(fl_apply_e, i) = (fl_apply_v=fl_ctx->Stack[fl_ctx->SP-1]);
             }
-            else if (isarray(e)) {
-                v = cvalue_array_aset(&Stack[SP-3]);
+            else if (isarray(fl_apply_e)) {
+                fl_apply_v = cvalue_array_aset(fl_ctx, &fl_ctx->Stack[fl_ctx->SP-3]);
             }
             else {
-                type_error("aset!", "sequence", e);
+                type_error(fl_ctx, "aset!", "sequence", fl_apply_e);
             }
-            POPN(2);
-            Stack[SP-1] = v;
+            POPN(fl_ctx, 2);
+            fl_ctx->Stack[fl_ctx->SP-1] = fl_apply_v;
             NEXT_OP;
         OP(OP_FOR)
-            s  = tofixnum(Stack[SP-3], "for");
-            hi = tofixnum(Stack[SP-2], "for");
-            //f = Stack[SP-1];
-            v = FL_UNSPECIFIED;
-            SP += 2;
-            n = SP;
+            s  = tofixnum(fl_ctx, fl_ctx->Stack[fl_ctx->SP-3], "for");
+            hi = tofixnum(fl_ctx, fl_ctx->Stack[fl_ctx->SP-2], "for");
+            //f = fl_ctx->Stack[fl_ctx->SP-1];
+            fl_apply_v = FL_UNSPECIFIED(fl_ctx);
+            fl_ctx->SP += 2;
+            n = fl_ctx->SP;
             for(; s <= hi; s++) {
-                Stack[SP-2] = Stack[SP-3];
-                Stack[SP-1] = fixnum(s);
-                v = apply_cl(1);
-                SP = n;
+                fl_ctx->Stack[fl_ctx->SP-2] = fl_ctx->Stack[fl_ctx->SP-3];
+                fl_ctx->Stack[fl_ctx->SP-1] = fixnum(s);
+                fl_apply_v = apply_cl(fl_ctx, 1);
+                fl_ctx->SP = n;
             }
-            POPN(4);
-            Stack[SP-1] = v;
+            POPN(fl_ctx, 4);
+            fl_ctx->Stack[fl_ctx->SP-1] = fl_apply_v;
             NEXT_OP;
 
-        OP(OP_LOADT) PUSH(FL_T); NEXT_OP;
-        OP(OP_LOADF) PUSH(FL_F); NEXT_OP;
-        OP(OP_LOADNIL) PUSH(NIL); NEXT_OP;
-        OP(OP_LOAD0) PUSH(fixnum(0)); NEXT_OP;
-        OP(OP_LOAD1) PUSH(fixnum(1)); NEXT_OP;
-        OP(OP_LOADI8) s = (int8_t)*ip++; PUSH(fixnum(s)); NEXT_OP;
+        OP(OP_LOADT) PUSH(fl_ctx, fl_ctx->T); NEXT_OP;
+        OP(OP_LOADF) PUSH(fl_ctx, fl_ctx->F); NEXT_OP;
+        OP(OP_LOADNIL) PUSH(fl_ctx, fl_ctx->NIL); NEXT_OP;
+        OP(OP_LOAD0) PUSH(fl_ctx, fixnum(0)); NEXT_OP;
+        OP(OP_LOAD1) PUSH(fl_ctx, fixnum(1)); NEXT_OP;
+        OP(OP_LOADI8) s = (int8_t)*ip++; PUSH(fl_ctx, fixnum(s)); NEXT_OP;
         OP(OP_LOADV)
-            v = fn_vals(Stack[bp-1]);
-            assert(*ip < vector_size(v));
-            v = vector_elt(v, *ip); ip++;
-            PUSH(v);
+            fl_apply_v = fn_vals(fl_ctx->Stack[bp-1]);
+            assert(*ip < vector_size(fl_apply_v));
+            fl_apply_v = vector_elt(fl_apply_v, *ip); ip++;
+            PUSH(fl_ctx, fl_apply_v);
             NEXT_OP;
         OP(OP_LOADVL)
-            v = fn_vals(Stack[bp-1]);
-            v = vector_elt(v, GET_INT32(ip)); ip+=4;
-            PUSH(v);
+            fl_apply_v = fn_vals(fl_ctx->Stack[bp-1]);
+            fl_apply_v = vector_elt(fl_apply_v, GET_INT32(ip)); ip+=4;
+            PUSH(fl_ctx, fl_apply_v);
             NEXT_OP;
         OP(OP_LOADGL)
-            v = fn_vals(Stack[bp-1]);
-            v = vector_elt(v, GET_INT32(ip)); ip+=4;
+            fl_apply_v = fn_vals(fl_ctx->Stack[bp-1]);
+            fl_apply_v = vector_elt(fl_apply_v, GET_INT32(ip)); ip+=4;
             goto do_loadg;
         OP(OP_LOADG)
-            v = fn_vals(Stack[bp-1]);
-            assert(*ip < vector_size(v));
-            v = vector_elt(v, *ip); ip++;
+            fl_apply_v = fn_vals(fl_ctx->Stack[bp-1]);
+            assert(*ip < vector_size(fl_apply_v));
+            fl_apply_v = vector_elt(fl_apply_v, *ip); ip++;
         do_loadg:
-            assert(issymbol(v));
-            sym = (symbol_t*)ptr(v);
+            assert(issymbol(fl_apply_v));
+            sym = (symbol_t*)ptr(fl_apply_v);
             if (sym->binding == UNBOUND)
-                fl_raise(fl_list2(UnboundError, v));
-            PUSH(sym->binding);
+                fl_raise(fl_ctx, fl_list2(fl_ctx, fl_ctx->UnboundError, fl_apply_v));
+            PUSH(fl_ctx, sym->binding);
             NEXT_OP;
 
         OP(OP_SETGL)
-            v = fn_vals(Stack[bp-1]);
-            v = vector_elt(v, GET_INT32(ip)); ip+=4;
+            fl_apply_v = fn_vals(fl_ctx->Stack[bp-1]);
+            fl_apply_v = vector_elt(fl_apply_v, GET_INT32(ip)); ip+=4;
             goto do_setg;
         OP(OP_SETG)
-            v = fn_vals(Stack[bp-1]);
-            assert(*ip < vector_size(v));
-            v = vector_elt(v, *ip); ip++;
+            fl_apply_v = fn_vals(fl_ctx->Stack[bp-1]);
+            assert(*ip < vector_size(fl_apply_v));
+            fl_apply_v = vector_elt(fl_apply_v, *ip); ip++;
         do_setg:
-            assert(issymbol(v));
-            sym = (symbol_t*)ptr(v);
-            v = Stack[SP-1];
+            assert(issymbol(fl_apply_v));
+            sym = (symbol_t*)ptr(fl_apply_v);
+            fl_apply_v = fl_ctx->Stack[fl_ctx->SP-1];
             if (!isconstant(sym))
-                sym->binding = v;
+                sym->binding = fl_apply_v;
             NEXT_OP;
 
         OP(OP_LOADA)
-            assert(nargs > 0);
             i = *ip++;
-            if (captured) {
-                e = Stack[bp];
-                assert(isvector(e));
-                assert(i < vector_size(e));
-                v = vector_elt(e, i);
-            }
-            else {
-                v = Stack[bp+i];
-            }
-            PUSH(v);
+            fl_apply_v = fl_ctx->Stack[bp+i];
+            PUSH(fl_ctx, fl_apply_v);
             NEXT_OP;
         OP(OP_LOADA0)
-            if (captured)
-                v = vector_elt(Stack[bp], 0);
-            else
-                v = Stack[bp];
-            PUSH(v);
+            fl_apply_v = fl_ctx->Stack[bp];
+            PUSH(fl_ctx, fl_apply_v);
             NEXT_OP;
         OP(OP_LOADA1)
-            if (captured)
-                v = vector_elt(Stack[bp], 1);
-            else
-                v = Stack[bp+1];
-            PUSH(v);
+            fl_apply_v = fl_ctx->Stack[bp+1];
+            PUSH(fl_ctx, fl_apply_v);
             NEXT_OP;
         OP(OP_LOADAL)
-            assert(nargs > 0);
             i = GET_INT32(ip); ip+=4;
-            if (captured)
-                v = vector_elt(Stack[bp], i);
-            else
-                v = Stack[bp+i];
-            PUSH(v);
+            fl_apply_v = fl_ctx->Stack[bp+i];
+            PUSH(fl_ctx, fl_apply_v);
             NEXT_OP;
         OP(OP_SETA)
-            assert(nargs > 0);
-            v = Stack[SP-1];
+            fl_apply_v = fl_ctx->Stack[fl_ctx->SP-1];
             i = *ip++;
-            if (captured) {
-                e = Stack[bp];
-                assert(isvector(e));
-                assert(i < vector_size(e));
-                vector_elt(e, i) = v;
-            }
-            else {
-                Stack[bp+i] = v;
-            }
+            fl_ctx->Stack[bp+i] = fl_apply_v;
             NEXT_OP;
         OP(OP_SETAL)
-            assert(nargs > 0);
-            v = Stack[SP-1];
+            fl_apply_v = fl_ctx->Stack[fl_ctx->SP-1];
             i = GET_INT32(ip); ip+=4;
-            if (captured)
-                vector_elt(Stack[bp], i) = v;
-            else
-                Stack[bp+i] = v;
+            fl_ctx->Stack[bp+i] = fl_apply_v;
             NEXT_OP;
+
+        OP(OP_BOX)
+            i = *ip++;
+            fl_apply_v = mk_cons(fl_ctx);
+            car_(fl_apply_v) = fl_ctx->Stack[bp+i];
+            cdr_(fl_apply_v) = fl_ctx->NIL;
+            fl_ctx->Stack[bp+i] = fl_apply_v;
+            NEXT_OP;
+        OP(OP_BOXL)
+            i = GET_INT32(ip); ip+=4;
+            fl_apply_v = mk_cons(fl_ctx);
+            car_(fl_apply_v) = fl_ctx->Stack[bp+i];
+            cdr_(fl_apply_v) = fl_ctx->NIL;
+            fl_ctx->Stack[bp+i] = fl_apply_v;
+            NEXT_OP;
+
+        OP(OP_SHIFT)
+            i = *ip++;
+            fl_ctx->Stack[fl_ctx->SP-1-i] = fl_ctx->Stack[fl_ctx->SP-1];
+            fl_ctx->SP -= i;
+            NEXT_OP;
+
         OP(OP_LOADC)
-            s = *ip++;
             i = *ip++;
-            v = Stack[bp+nargs];
-            while (s--)
-                v = vector_elt(v, vector_size(v)-1);
-            assert(isvector(v));
-            assert(i < vector_size(v));
-            PUSH(vector_elt(v, i));
+            fl_apply_v = fl_ctx->Stack[bp+nargs];
+            assert(isvector(fl_apply_v));
+            assert(i < vector_size(fl_apply_v));
+            PUSH(fl_ctx, vector_elt(fl_apply_v, i));
             NEXT_OP;
-        OP(OP_SETC)
-            s = *ip++;
-            i = *ip++;
-            v = Stack[bp+nargs];
-            while (s--)
-                v = vector_elt(v, vector_size(v)-1);
-            assert(isvector(v));
-            assert(i < vector_size(v));
-            vector_elt(v, i) = Stack[SP-1];
+
+        OP(OP_LOADC0)
+            PUSH(fl_ctx, vector_elt(fl_ctx->Stack[bp+nargs], 0));
             NEXT_OP;
-        OP(OP_LOADC00)
-            PUSH(vector_elt(Stack[bp+nargs], 0));
+        OP(OP_LOADC1)
+            PUSH(fl_ctx, vector_elt(fl_ctx->Stack[bp+nargs], 1));
             NEXT_OP;
-        OP(OP_LOADC01)
-            PUSH(vector_elt(Stack[bp+nargs], 1));
-            NEXT_OP;
+
         OP(OP_LOADCL)
-            s = GET_INT32(ip); ip+=4;
             i = GET_INT32(ip); ip+=4;
-            v = Stack[bp+nargs];
-            while (s--)
-                v = vector_elt(v, vector_size(v)-1);
-            PUSH(vector_elt(v, i));
-            NEXT_OP;
-        OP(OP_SETCL)
-            s = GET_INT32(ip); ip+=4;
-            i = GET_INT32(ip); ip+=4;
-            v = Stack[bp+nargs];
-            while (s--)
-                v = vector_elt(v, vector_size(v)-1);
-            assert(i < vector_size(v));
-            vector_elt(v, i) = Stack[SP-1];
+            fl_apply_v = fl_ctx->Stack[bp+nargs];
+            PUSH(fl_ctx, vector_elt(fl_apply_v, i));
             NEXT_OP;
 
         OP(OP_CLOSURE)
-            // build a closure (lambda args body . env)
-            if (nargs > 0 && !captured) {
-                // save temporary environment to the heap
-                n = nargs;
-                pv = alloc_words(n + 2);
-                PUSH(tagptr(pv, TAG_VECTOR));
-                pv[0] = fixnum(n+1);
-                pv++;
-                do {
-                    pv[n] = Stack[bp+n];
-                } while (n--);
-                // environment representation changed; install
-                // the new representation so everybody can see it
-                captured = 1;
-                Stack[curr_frame-1] = 1;
-                Stack[bp] = Stack[SP-1];
-            }
-            else {
-                PUSH(Stack[bp]); // env has already been captured; share
-            }
-            if (curheap > lim-2)
-                gc(0);
-            pv = (value_t*)curheap;
-            curheap += (4*sizeof(value_t));
-            e = Stack[SP-2];  // closure to copy
-            assert(isfunction(e));
-            pv[0] = ((value_t*)ptr(e))[0];
-            pv[1] = ((value_t*)ptr(e))[1];
-            pv[2] = Stack[SP-1];  // env
-            pv[3] = ((value_t*)ptr(e))[3];
-            POPN(1);
-            Stack[SP-1] = tagptr(pv, TAG_FUNCTION);
+            n = *ip++;
+            assert(n > 0);
+            fl_apply_pv = alloc_words(fl_ctx, n + 1);
+            fl_apply_v = tagptr(fl_apply_pv, TAG_VECTOR);
+            fl_apply_pv[0] = fixnum(n);
+            i = 1;
+            do {
+                fl_apply_pv[i] = fl_ctx->Stack[fl_ctx->SP-n + i-1];
+                i++;
+            } while (i<=n);
+            POPN(fl_ctx, n);
+            PUSH(fl_ctx, fl_apply_v);
+#ifdef MEMDEBUG2
+            fl_apply_pv = alloc_words(fl_ctx, 4);
+#else
+            if ((value_t*)fl_ctx->curheap > ((value_t*)fl_ctx->lim)-2)
+                gc(fl_ctx, 0);
+            fl_apply_pv = (value_t*)fl_ctx->curheap;
+            fl_ctx->curheap += (4*sizeof(value_t));
+#endif
+            fl_apply_e = fl_ctx->Stack[fl_ctx->SP-2];  // closure to copy
+            assert(isfunction(fl_apply_e));
+            fl_apply_pv[0] = ((value_t*)ptr(fl_apply_e))[0];
+            fl_apply_pv[1] = ((value_t*)ptr(fl_apply_e))[1];
+            fl_apply_pv[2] = fl_ctx->Stack[fl_ctx->SP-1];  // env
+            fl_apply_pv[3] = ((value_t*)ptr(fl_apply_e))[3];
+            POPN(fl_ctx, 1);
+            fl_ctx->Stack[fl_ctx->SP-1] = tagptr(fl_apply_pv, TAG_FUNCTION);
             NEXT_OP;
 
         OP(OP_TRYCATCH)
-            v = do_trycatch();
-            POPN(1);
-            Stack[SP-1] = v;
+            fl_apply_v = do_trycatch(fl_ctx);
+            POPN(fl_ctx, 1);
+            fl_ctx->Stack[fl_ctx->SP-1] = fl_apply_v;
             NEXT_OP;
 
         OP(OP_OPTARGS)
             i = GET_INT32(ip); ip+=4;
             n = GET_INT32(ip); ip+=4;
             if (nargs < i)
-                lerror(ArgError, "apply: too few arguments");
+                lerror(fl_ctx, fl_ctx->ArgError, "apply: too few arguments");
             if ((int32_t)n > 0) {
                 if (nargs > n)
-                    lerror(ArgError, "apply: too many arguments");
+                    lerror(fl_ctx, fl_ctx->ArgError, "apply: too many arguments");
             }
             else n = -n;
             if (n > nargs) {
                 n -= nargs;
-                SP += n;
-                Stack[SP-1] = Stack[SP-n-1];
-                Stack[SP-2] = Stack[SP-n-2];
-                Stack[SP-3] = nargs+n;
-                Stack[SP-4] = Stack[SP-n-4];
-                Stack[SP-5] = Stack[SP-n-5];
-                curr_frame = SP;
+                fl_ctx->SP += n;
+                fl_ctx->Stack[fl_ctx->SP-1] = fl_ctx->Stack[fl_ctx->SP-n-1];
+                fl_ctx->Stack[fl_ctx->SP-2] = nargs+n;
+                fl_ctx->Stack[fl_ctx->SP-3] = fl_ctx->Stack[fl_ctx->SP-n-3];
+                fl_ctx->Stack[fl_ctx->SP-4] = fl_ctx->Stack[fl_ctx->SP-n-4];
+                fl_ctx->curr_frame = fl_ctx->SP;
                 for(i=0; i < n; i++) {
-                    Stack[bp+nargs+i] = UNBOUND;
+                    fl_ctx->Stack[bp+nargs+i] = UNBOUND;
                 }
                 nargs += n;
             }
             NEXT_OP;
         OP(OP_KEYARGS)
-            v = fn_vals(Stack[bp-1]);
-            v = vector_elt(v, 0);
+            fl_apply_v = fn_vals(fl_ctx->Stack[bp-1]);
+            fl_apply_v = vector_elt(fl_apply_v, 0);
             i = GET_INT32(ip); ip+=4;
             n = GET_INT32(ip); ip+=4;
             s = GET_INT32(ip); ip+=4;
-            nargs = process_keys(v, i, n, abs(s)-(i+n), bp, nargs, s<0);
+            nargs = process_keys(fl_ctx, fl_apply_v, i, n, llabs(s)-(i+n), bp, nargs, s<0);
             NEXT_OP;
 
 #ifndef USE_COMPUTED_GOTO
@@ -1913,7 +1966,7 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len, int bswap)
         case OP_PAIRP: case OP_ATOMP: case OP_NOT: case OP_NULLP:
         case OP_BOOLEANP: case OP_SYMBOLP: case OP_NUMBERP: case OP_FIXNUMP:
         case OP_BOUNDP: case OP_BUILTINP: case OP_FUNCTIONP: case OP_VECTORP:
-        case OP_NOP: case OP_CAR: case OP_CDR: case OP_NEG: case OP_CLOSURE:
+        case OP_NOP: case OP_CAR: case OP_CDR: case OP_NEG:
             break;
 
         case OP_TAPPLY: case OP_APPLY:
@@ -1926,6 +1979,14 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len, int bswap)
             n = *ip++;
             sp -= (n-1);
             break;
+        case OP_CLOSURE:
+            n = *ip++;
+            sp -= n;
+            break;
+        case OP_SHIFT:
+            n = *ip++;
+            sp -= n;
+            break;
 
         case OP_ASET:
             sp -= 2;
@@ -1936,8 +1997,8 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len, int bswap)
             break;
 
         case OP_LOADT: case OP_LOADF: case OP_LOADNIL: case OP_LOAD0:
-        case OP_LOAD1: case OP_LOADA0: case OP_LOADA1: case OP_LOADC00:
-        case OP_LOADC01: case OP_DUP:
+        case OP_LOAD1: case OP_LOADA0: case OP_LOADA1: case OP_DUP:
+        case OP_LOADC0: case OP_LOADC1:
             sp++;
             break;
 
@@ -1951,89 +2012,71 @@ static uint32_t compute_maxstack(uint8_t *code, size_t len, int bswap)
             sp++;
             break;
 
-        case OP_SETG: case OP_SETA:
+        case OP_SETG: case OP_SETA: case OP_BOX:
             ip++;
             break;
-        case OP_SETGL: case OP_SETAL:
+        case OP_SETGL: case OP_SETAL: case OP_BOXL:
             if (bswap) SWAP_INT32(ip);
             ip+=4;
             break;
 
-        case OP_LOADC: ip+=2; sp++; break;
-        case OP_SETC:
-            ip+=2;
-            break;
+        case OP_LOADC: ip+=1; sp++; break;
         case OP_LOADCL:
             if (bswap) SWAP_INT32(ip);
             ip+=4;
-            if (bswap) SWAP_INT32(ip);
-            ip+=4;
             sp++; break;
-        case OP_SETCL:
-            if (bswap) SWAP_INT32(ip);
-            ip+=4;
-            if (bswap) SWAP_INT32(ip);
-            ip+=4;
-            break;
         }
     }
-    return maxsp+5;
+    return maxsp+4;
 }
 
 // top = top frame pointer to start at
-static value_t _stacktrace(uint32_t top)
+static value_t _stacktrace(fl_context_t *fl_ctx, uint32_t top)
 {
     uint32_t bp, sz;
-    value_t v, lst = NIL;
-    fl_gc_handle(&lst);
+    value_t v, lst = fl_ctx->NIL;
+    fl_gc_handle(fl_ctx, &lst);
     while (top > 0) {
-        sz = Stack[top-3]+1;
-        bp = top-5-sz;
-        v = alloc_vector(sz, 0);
-        if (Stack[top-1] /*captured*/) {
-            vector_elt(v, 0) = Stack[bp];
-            memcpy(&vector_elt(v, 1),
-                   &vector_elt(Stack[bp+1],0), (sz-1)*sizeof(value_t));
+        sz = fl_ctx->Stack[top-2]+1;
+        bp = top-4-sz;
+        v = alloc_vector(fl_ctx, sz, 0);
+        uint32_t i;
+        for (i = 0; i < sz; ++i) {
+            value_t si = fl_ctx->Stack[bp + i];
+            // if there's an error evaluating argument defaults some slots
+            // might be left set to UNBOUND (issue #22)
+            vector_elt(v, i) = (si == UNBOUND ? FL_UNSPECIFIED(fl_ctx) : si);
         }
-        else {
-            uint32_t i;
-            for(i=0; i < sz; i++) {
-                value_t si = Stack[bp+i];
-                // if there's an error evaluating argument defaults some slots
-                // might be left set to UNBOUND (issue #22)
-                vector_elt(v,i) = (si == UNBOUND ? FL_UNSPECIFIED : si);
-            }
-        }
-        lst = fl_cons(v, lst);
-        top = Stack[top-4];
+        lst = fl_cons(fl_ctx, v, lst);
+        top = fl_ctx->Stack[top-3];
     }
-    fl_free_gc_handles(1);
+    fl_free_gc_handles(fl_ctx, 1);
     return lst;
 }
 
 // builtins -------------------------------------------------------------------
 
-void assign_global_builtins(builtinspec_t *b)
+void assign_global_builtins(fl_context_t *fl_ctx, const builtinspec_t *b)
 {
     while (b->name != NULL) {
-        setc(symbol(b->name), cbuiltin(b->name, b->fptr));
+        setc(symbol(fl_ctx, b->name), cbuiltin(fl_ctx, b->name, b->fptr));
         b++;
     }
 }
 
-static value_t fl_function(value_t *args, uint32_t nargs)
+static value_t fl_function(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
     if (nargs == 1 && issymbol(args[0]))
-        return fl_builtin(args, nargs);
+        return fl_builtin(fl_ctx, args, nargs);
     if (nargs < 2 || nargs > 4)
-        argcount("function", nargs, 2);
-    if (!fl_isstring(args[0]))
-        type_error("function", "string", args[0]);
+        argcount(fl_ctx, "function", nargs, 2);
+    if (!fl_isstring(fl_ctx, args[0]))
+        type_error(fl_ctx, "function", "string", args[0]);
     if (!isvector(args[1]))
-        type_error("function", "vector", args[1]);
+        type_error(fl_ctx, "function", "vector", args[1]);
     cvalue_t *arr = (cvalue_t*)ptr(args[0]);
-    cv_pin(arr);
-    char *data = cv_data(arr);
+    cv_pin(fl_ctx, arr);
+    char *data = (char*)cv_data(arr);
     int swap = 0;
     if ((uint8_t)data[4] >= N_OPCODES) {
         // read syntax, shifted 48 for compact text representation
@@ -2048,12 +2091,12 @@ static value_t fl_function(value_t *args, uint32_t nargs)
     }
     uint32_t ms = compute_maxstack((uint8_t*)data, cv_len(arr), swap);
     PUT_INT32(data, ms);
-    function_t *fn = (function_t*)alloc_words(4);
+    function_t *fn = (function_t*)alloc_words(fl_ctx, 4);
     value_t fv = tagptr(fn, TAG_FUNCTION);
     fn->bcode = args[0];
     fn->vals = args[1];
-    fn->env = NIL;
-    fn->name = LAMBDA;
+    fn->env = fl_ctx->NIL;
+    fn->name = fl_ctx->LAMBDA;
     if (nargs > 2) {
         if (issymbol(args[2])) {
             fn->name = args[2];
@@ -2064,166 +2107,194 @@ static value_t fl_function(value_t *args, uint32_t nargs)
             fn->env = args[2];
             if (nargs > 3) {
                 if (!issymbol(args[3]))
-                    type_error("function", "symbol", args[3]);
+                    type_error(fl_ctx, "function", "symbol", args[3]);
                 fn->name = args[3];
             }
         }
-        if (isgensym(fn->name))
-            lerror(ArgError, "function: name should not be a gensym");
+        if (isgensym(fl_ctx, fn->name))
+            lerror(fl_ctx, fl_ctx->ArgError, "function: name should not be a gensym");
     }
     return fv;
 }
 
-static value_t fl_function_code(value_t *args, uint32_t nargs)
+static value_t fl_function_code(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
-    argcount("function:code", nargs, 1);
+    argcount(fl_ctx, "function:code", nargs, 1);
     value_t v = args[0];
-    if (!isclosure(v)) type_error("function:code", "function", v);
+    if (!isclosure(v)) type_error(fl_ctx, "function:code", "function", v);
     return fn_bcode(v);
 }
-static value_t fl_function_vals(value_t *args, uint32_t nargs)
+static value_t fl_function_vals(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
-    argcount("function:vals", nargs, 1);
+    argcount(fl_ctx, "function:vals", nargs, 1);
     value_t v = args[0];
-    if (!isclosure(v)) type_error("function:vals", "function", v);
+    if (!isclosure(v)) type_error(fl_ctx, "function:vals", "function", v);
     return fn_vals(v);
 }
-static value_t fl_function_env(value_t *args, uint32_t nargs)
+static value_t fl_function_env(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
-    argcount("function:env", nargs, 1);
+    argcount(fl_ctx, "function:env", nargs, 1);
     value_t v = args[0];
-    if (!isclosure(v)) type_error("function:env", "function", v);
+    if (!isclosure(v)) type_error(fl_ctx, "function:env", "function", v);
     return fn_env(v);
 }
-static value_t fl_function_name(value_t *args, uint32_t nargs)
+static value_t fl_function_name(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
-    argcount("function:name", nargs, 1);
+    argcount(fl_ctx, "function:name", nargs, 1);
     value_t v = args[0];
-    if (!isclosure(v)) type_error("function:name", "function", v);
+    if (!isclosure(v)) type_error(fl_ctx, "function:name", "function", v);
     return fn_name(v);
 }
 
-value_t fl_copylist(value_t *args, u_int32_t nargs)
+value_t fl_copylist(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
-    argcount("copy-list", nargs, 1);
-    return copy_list(args[0]);
+    argcount(fl_ctx, "copy-list", nargs, 1);
+    return copy_list(fl_ctx, args[0]);
 }
 
-value_t fl_append(value_t *args, u_int32_t nargs)
+value_t fl_append(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
     if (nargs == 0)
-        return NIL;
-    value_t first=NIL, lst, lastcons=NIL;
-    fl_gc_handle(&first);
-    fl_gc_handle(&lastcons);
+        return fl_ctx->NIL;
+    value_t first=fl_ctx->NIL, lst, lastcons=fl_ctx->NIL;
+    fl_gc_handle(fl_ctx, &first);
+    fl_gc_handle(fl_ctx, &lastcons);
     uint32_t i=0;
     while (1) {
         lst = args[i++];
         if (i >= nargs) break;
         if (iscons(lst)) {
-            lst = copy_list(lst);
-            if (first == NIL)
+            lst = copy_list(fl_ctx, lst);
+            if (first == fl_ctx->NIL)
                 first = lst;
             else
                 cdr_(lastcons) = lst;
-            lastcons = tagptr((((cons_t*)curheap)-1), TAG_CONS);
+#ifdef MEMDEBUG2
+            lastcons = lst;
+            while (cdr_(lastcons) != fl_ctx->NIL)
+                lastcons = cdr_(lastcons);
+#else
+            lastcons = tagptr((((cons_t*)fl_ctx->curheap)-1), TAG_CONS);
+#endif
         }
-        else if (lst != NIL) {
-            type_error("append", "cons", lst);
+        else if (lst != fl_ctx->NIL) {
+            type_error(fl_ctx, "append", "cons", lst);
         }
     }
-    if (first == NIL)
+    if (first == fl_ctx->NIL)
         first = lst;
     else
         cdr_(lastcons) = lst;
-    fl_free_gc_handles(2);
+    fl_free_gc_handles(fl_ctx, 2);
     return first;
 }
 
-value_t fl_liststar(value_t *args, u_int32_t nargs)
+value_t fl_liststar(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
     if (nargs == 1) return args[0];
-    else if (nargs == 0) argcount("list*", nargs, 1);
-    return _list(args, nargs, 1);
+    else if (nargs == 0) argcount(fl_ctx, "list*", nargs, 1);
+    return _list(fl_ctx, args, nargs, 1);
 }
 
-value_t fl_stacktrace(value_t *args, u_int32_t nargs)
+value_t fl_stacktrace(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
     (void)args;
-    argcount("stacktrace", nargs, 0);
-    return _stacktrace(fl_throwing_frame ? fl_throwing_frame : curr_frame);
+    argcount(fl_ctx, "stacktrace", nargs, 0);
+    return _stacktrace(fl_ctx, fl_ctx->throwing_frame ? fl_ctx->throwing_frame : fl_ctx->curr_frame);
 }
 
-value_t fl_map1(value_t *args, u_int32_t nargs)
+value_t fl_map1(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
 {
     if (nargs < 2)
-        lerror(ArgError, "map: too few arguments");
-    if (!iscons(args[1])) return NIL;
-    value_t first, last, v;
-    int64_t argSP = args-Stack;
-    assert(argSP >= 0 && argSP < N_STACK);
+        lerror(fl_ctx, fl_ctx->ArgError, "map: too few arguments");
+    if (!iscons(args[1])) return fl_ctx->NIL;
+    value_t v;
+    uint32_t first, last, argSP = args-fl_ctx->Stack;
+    assert(args >= fl_ctx->Stack && argSP < fl_ctx->N_STACK);
     if (nargs == 2) {
-        if (SP+3 > N_STACK) grow_stack();
-        PUSH(Stack[argSP]);
-        PUSH(car_(Stack[argSP+1]));
-        v = _applyn(1);
-        PUSH(v);
-        v = mk_cons();
-        car_(v) = POP(); cdr_(v) = NIL;
-        last = first = v;
-        Stack[argSP+1] = cdr_(Stack[argSP+1]);
-        fl_gc_handle(&first);
-        fl_gc_handle(&last);
-        while (iscons(Stack[argSP+1])) {
-            Stack[SP-2] = Stack[argSP];
-            Stack[SP-1] = car_(Stack[argSP+1]);
-            v = _applyn(1);
-            PUSH(v);
-            v = mk_cons();
-            car_(v) = POP(); cdr_(v) = NIL;
-            cdr_(last) = v;
-            last = v;
-            Stack[argSP+1] = cdr_(Stack[argSP+1]);
+        if (fl_ctx->SP+4 > fl_ctx->N_STACK) grow_stack(fl_ctx);
+        PUSH(fl_ctx, fl_ctx->Stack[argSP]);
+        PUSH(fl_ctx, car_(fl_ctx->Stack[argSP+1]));
+        v = _applyn(fl_ctx, 1);
+        POPN(fl_ctx, 2);
+        PUSH(fl_ctx, v);
+        v = mk_cons(fl_ctx);
+        car_(v) = POP(fl_ctx); cdr_(v) = fl_ctx->NIL;
+        PUSH(fl_ctx, v);
+        PUSH(fl_ctx, v);
+        first = fl_ctx->SP-2;
+        last = fl_ctx->SP-1;
+        fl_ctx->Stack[argSP+1] = cdr_(fl_ctx->Stack[argSP+1]);
+        while (iscons(fl_ctx->Stack[argSP+1])) {
+            PUSH(fl_ctx, fl_ctx->Stack[argSP]);
+            PUSH(fl_ctx, car_(fl_ctx->Stack[argSP+1]));
+            v = _applyn(fl_ctx, 1);
+            POPN(fl_ctx, 2);
+            PUSH(fl_ctx, v);
+            v = mk_cons(fl_ctx);
+            car_(v) = POP(fl_ctx); cdr_(v) = fl_ctx->NIL;
+            cdr_(fl_ctx->Stack[last]) = v;
+            fl_ctx->Stack[last] = v;
+            fl_ctx->Stack[argSP+1] = cdr_(fl_ctx->Stack[argSP+1]);
         }
-        POPN(2);
-        fl_free_gc_handles(2);
+        POPN(fl_ctx, 2);
     }
     else {
         size_t i;
-        while (SP+nargs+1 > N_STACK) grow_stack();
-        PUSH(Stack[argSP]);
+        while (fl_ctx->SP+nargs+1 > fl_ctx->N_STACK) grow_stack(fl_ctx);
+        PUSH(fl_ctx, fl_ctx->Stack[argSP]);
         for(i=1; i < nargs; i++) {
-            PUSH(car(Stack[argSP+i]));
-            Stack[argSP+i] = cdr_(Stack[argSP+i]);
+            PUSH(fl_ctx, car(fl_ctx, fl_ctx->Stack[argSP+i]));
+            fl_ctx->Stack[argSP+i] = cdr_(fl_ctx->Stack[argSP+i]);
         }
-        v = _applyn(nargs-1);
-        POPN(nargs);
-        PUSH(v);
-        v = mk_cons();
-        car_(v) = POP(); cdr_(v) = NIL;
-        last = first = v;
-        fl_gc_handle(&first);
-        fl_gc_handle(&last);
-        while (iscons(Stack[argSP+1])) {
-            PUSH(Stack[argSP]);
+        v = _applyn(fl_ctx, nargs-1);
+        POPN(fl_ctx, nargs);
+        PUSH(fl_ctx, v);
+        v = mk_cons(fl_ctx);
+        car_(v) = POP(fl_ctx); cdr_(v) = fl_ctx->NIL;
+        PUSH(fl_ctx, v);
+        PUSH(fl_ctx, v);
+        first = fl_ctx->SP-2;
+        last = fl_ctx->SP-1;
+        while (iscons(fl_ctx->Stack[argSP+1])) {
+            PUSH(fl_ctx, fl_ctx->Stack[argSP]);
             for(i=1; i < nargs; i++) {
-                PUSH(car(Stack[argSP+i]));
-                Stack[argSP+i] = cdr_(Stack[argSP+i]);
+                PUSH(fl_ctx, car(fl_ctx, fl_ctx->Stack[argSP+i]));
+                fl_ctx->Stack[argSP+i] = cdr_(fl_ctx->Stack[argSP+i]);
             }
-            v = _applyn(nargs-1);
-            POPN(nargs);
-            PUSH(v);
-            v = mk_cons();
-            car_(v) = POP(); cdr_(v) = NIL;
-            cdr_(last) = v;
-            last = v;
+            v = _applyn(fl_ctx, nargs-1);
+            POPN(fl_ctx, nargs);
+            PUSH(fl_ctx, v);
+            v = mk_cons(fl_ctx);
+            car_(v) = POP(fl_ctx); cdr_(v) = fl_ctx->NIL;
+            cdr_(fl_ctx->Stack[last]) = v;
+            fl_ctx->Stack[last] = v;
         }
-        fl_free_gc_handles(2);
+        POPN(fl_ctx, 2);
     }
-    return first;
+    return fl_ctx->Stack[first];
 }
 
-static builtinspec_t core_builtin_info[] = {
+value_t fl_foreach(fl_context_t *fl_ctx, value_t *args, uint32_t nargs)
+{
+    if (nargs != 2)
+        lerror(fl_ctx, fl_ctx->ArgError, "for-each: expected 2 arguments");
+    uint32_t argSP = args-fl_ctx->Stack;
+    assert(args >= fl_ctx->Stack && argSP < fl_ctx->N_STACK);
+    if (fl_ctx->SP+2 > fl_ctx->N_STACK) grow_stack(fl_ctx);
+    PUSH(fl_ctx, fl_ctx->T);
+    PUSH(fl_ctx, fl_ctx->T);
+    while (iscons(fl_ctx->Stack[argSP+1])) {
+        fl_ctx->Stack[fl_ctx->SP-2] = fl_ctx->Stack[argSP];
+        fl_ctx->Stack[fl_ctx->SP-1] = car_(fl_ctx->Stack[argSP+1]);
+        _applyn(fl_ctx, 1);
+        fl_ctx->Stack[argSP+1] = cdr_(fl_ctx->Stack[argSP+1]);
+    }
+    POPN(fl_ctx, 2);
+    return fl_ctx->T;
+}
+
+static const builtinspec_t core_builtin_info[] = {
     { "function", fl_function },
     { "function:code", fl_function_code },
     { "function:vals", fl_function_vals },
@@ -2237,152 +2308,179 @@ static builtinspec_t core_builtin_info[] = {
     { "append", fl_append },
     { "list*", fl_liststar },
     { "map", fl_map1 },
+    { "for-each", fl_foreach },
     { NULL, NULL }
 };
 
 // initialization -------------------------------------------------------------
 
-extern void builtins_init(void);
-extern void comparehash_init(void);
+extern void builtins_init(fl_context_t *fl_ctx);
+extern void comparehash_init(fl_context_t *fl_ctx);
+extern void jl_charmap_init(fl_context_t *fl_ctx);
 
-static void lisp_init(size_t initial_heapsize)
+static void lisp_init(fl_context_t *fl_ctx, size_t initial_heapsize)
 {
     int i;
 
     llt_init();
-    setlocale(LC_NUMERIC, "C");
 
-    heapsize = initial_heapsize;
+    fl_ctx->SP = 0;
+    fl_ctx->curr_frame = 0;
+    fl_ctx->N_GCHND = 0;
+    fl_ctx->readstate = NULL;
+    fl_ctx->gensym_ctr = 0;
+    fl_ctx->gsnameno = 0;
 
-    fromspace = LLT_ALLOC(heapsize);
-    tospace   = LLT_ALLOC(heapsize);
-    curheap = fromspace;
-    lim = curheap+heapsize-sizeof(cons_t);
-    consflags = bitvector_new(heapsize/sizeof(cons_t), 1);
-    htable_new(&printconses, 32);
-    comparehash_init();
-    N_STACK = 262144;
-    Stack = malloc(N_STACK*sizeof(value_t));
-
-    FL_NIL = NIL = builtin(OP_THE_EMPTY_LIST);
-    FL_T = builtin(OP_BOOL_CONST_T);
-    FL_F = builtin(OP_BOOL_CONST_F);
-    FL_EOF = builtin(OP_EOF_OBJECT);
-    LAMBDA = symbol("lambda");        FUNCTION = symbol("function");
-    QUOTE = symbol("quote");          TRYCATCH = symbol("trycatch");
-    BACKQUOTE = symbol("quasiquote");       COMMA = symbol("unquote");
-    COMMAAT = symbol("unquote-splicing");   COMMADOT = symbol("unquote-nsplicing");
-    IOError = symbol("io-error");     ParseError = symbol("parse-error");
-    TypeError = symbol("type-error"); ArgError = symbol("arg-error");
-    UnboundError = symbol("unbound-error");
-    KeyError = symbol("key-error");   MemoryError = symbol("memory-error");
-    BoundsError = symbol("bounds-error");
-    DivideError = symbol("divide-error");
-    EnumerationError = symbol("enumeration-error");
-    Error = symbol("error");          pairsym = symbol("pair");
-    symbolsym = symbol("symbol");     fixnumsym = symbol("fixnum");
-    vectorsym = symbol("vector");     builtinsym = symbol("builtin");
-    booleansym = symbol("boolean");   nullsym = symbol("null");
-    definesym = symbol("define");     defmacrosym = symbol("define-macro");
-    forsym = symbol("for");
-    setqsym = symbol("set!");         evalsym = symbol("eval");
-    vu8sym = symbol("vu8");           fnsym = symbol("fn");
-    nulsym = symbol("nul");           alarmsym = symbol("alarm");
-    backspacesym = symbol("backspace"); tabsym = symbol("tab");
-    linefeedsym = symbol("linefeed"); vtabsym = symbol("vtab");
-    pagesym = symbol("page");         returnsym = symbol("return");
-    escsym = symbol("esc");           spacesym = symbol("space");
-    deletesym = symbol("delete");     newlinesym = symbol("newline");
-    tsym = symbol("t"); Tsym = symbol("T");
-    fsym = symbol("f"); Fsym = symbol("F");
-    set(printprettysym=symbol("*print-pretty*"), FL_T);
-    set(printreadablysym=symbol("*print-readably*"), FL_T);
-    set(printwidthsym=symbol("*print-width*"), fixnum(SCR_WIDTH));
-    set(printlengthsym=symbol("*print-length*"), FL_F);
-    set(printlevelsym=symbol("*print-level*"), FL_F);
-    builtins_table_sym = symbol("*builtins*");
-    fl_lasterror = NIL;
-    i = 0;
-    for (i=OP_EQ; i <= OP_ASET; i++) {
-        setc(symbol(builtin_names[i]), builtin(i));
-    }
-    setc(symbol("eq"), builtin(OP_EQ));
-    setc(symbol("procedure?"), builtin(OP_FUNCTIONP));
-    setc(symbol("top-level-bound?"), builtin(OP_BOUNDP));
-
-#ifdef LINUX
-    set(symbol("*os-name*"), symbol("linux"));
-#elif defined(WIN32) || defined(WIN64)
-    set(symbol("*os-name*"), symbol("win32"));
-#elif defined(MACOSX)
-    set(symbol("*os-name*"), symbol("macos"));
-#elif defined(OPENBSD)
-    set(symbol("*os-name*"), symbol("openbsd"));
-#elif defined(FREEBSD)
-    set(symbol("*os-name*"), symbol("freebsd"));
-#else
-    set(symbol("*os-name*"), symbol("unknown"));
+#ifdef MEMDEBUG2
+    fl_ctx->tochain = NULL;
+    fl_ctx->n_allocd = 0;
 #endif
 
-    the_empty_vector = tagptr(alloc_words(1), TAG_VECTOR);
-    vector_setsize(the_empty_vector, 0);
+    fl_ctx->heapsize = initial_heapsize;
 
-    cvalues_init();
+    fl_ctx->fromspace = (unsigned char*)LLT_ALLOC(fl_ctx->heapsize);
+#ifdef MEMDEBUG
+    fl_ctx->tospace   = NULL;
+#else
+    fl_ctx->tospace   = (unsigned char*)LLT_ALLOC(fl_ctx->heapsize);
+#endif
+    fl_ctx->curheap = fl_ctx->fromspace;
+    fl_ctx->lim = fl_ctx->curheap+fl_ctx->heapsize-sizeof(cons_t);
+    fl_ctx->consflags = bitvector_new(fl_ctx->heapsize/sizeof(cons_t), 1);
+    fl_print_init(fl_ctx);
+    comparehash_init(fl_ctx);
+    //jl_charmap_init(fl_ctx);
+    fl_ctx->N_STACK = 262144;
+    fl_ctx->Stack = (value_t*)malloc(fl_ctx->N_STACK*sizeof(value_t));
+    CHECK_ALIGN8(fl_ctx->Stack);
 
-    char buf[1024];
-    char *exename = get_exename(buf, sizeof(buf));
-    if (exename != NULL) {
-        path_to_dirname(exename);
-        setc(symbol("*install-dir*"), cvalue_static_cstring(strdup(exename)));
+    fl_ctx->NIL = builtin(OP_THE_EMPTY_LIST);
+    fl_ctx->T = builtin(OP_BOOL_CONST_T);
+    fl_ctx->F = builtin(OP_BOOL_CONST_F);
+    fl_ctx->FL_EOF = builtin(OP_EOF_OBJECT);
+    fl_ctx->LAMBDA = symbol(fl_ctx, "lambda");        fl_ctx->FUNCTION = symbol(fl_ctx, "function");
+    fl_ctx->QUOTE = symbol(fl_ctx, "quote");          fl_ctx->TRYCATCH = symbol(fl_ctx, "trycatch");
+    fl_ctx->BACKQUOTE = symbol(fl_ctx, "quasiquote");       fl_ctx->COMMA = symbol(fl_ctx, "unquote");
+    fl_ctx->COMMAAT = symbol(fl_ctx, "unquote-splicing");   fl_ctx->COMMADOT = symbol(fl_ctx, "unquote-nsplicing");
+    fl_ctx->IOError = symbol(fl_ctx, "io-error");     fl_ctx->ParseError = symbol(fl_ctx, "parse-error");
+    fl_ctx->TypeError = symbol(fl_ctx, "type-error"); fl_ctx->ArgError = symbol(fl_ctx, "arg-error");
+    fl_ctx->UnboundError = symbol(fl_ctx, "unbound-error");
+    fl_ctx->KeyError = symbol(fl_ctx, "key-error");   fl_ctx->OutOfMemoryError = symbol(fl_ctx, "memory-error");
+    fl_ctx->BoundsError = symbol(fl_ctx, "bounds-error");
+    fl_ctx->DivideError = symbol(fl_ctx, "divide-error");
+    fl_ctx->EnumerationError = symbol(fl_ctx, "enumeration-error");
+    fl_ctx->pairsym = symbol(fl_ctx, "pair");
+    fl_ctx->symbolsym = symbol(fl_ctx, "symbol");     fl_ctx->fixnumsym = symbol(fl_ctx, "fixnum");
+    fl_ctx->vectorsym = symbol(fl_ctx, "vector");     fl_ctx->builtinsym = symbol(fl_ctx, "builtin");
+    fl_ctx->booleansym = symbol(fl_ctx, "boolean");   fl_ctx->nullsym = symbol(fl_ctx, "null");
+    fl_ctx->definesym = symbol(fl_ctx, "define");     fl_ctx->defmacrosym = symbol(fl_ctx, "define-macro");
+    fl_ctx->forsym = symbol(fl_ctx, "for");
+    fl_ctx->setqsym = symbol(fl_ctx, "set!");         fl_ctx->evalsym = symbol(fl_ctx, "eval");
+    fl_ctx->vu8sym = symbol(fl_ctx, "vu8");           fl_ctx->fnsym = symbol(fl_ctx, "fn");
+    fl_ctx->nulsym = symbol(fl_ctx, "nul");           fl_ctx->alarmsym = symbol(fl_ctx, "alarm");
+    fl_ctx->backspacesym = symbol(fl_ctx, "backspace"); fl_ctx->tabsym = symbol(fl_ctx, "tab");
+    fl_ctx->linefeedsym = symbol(fl_ctx, "linefeed"); fl_ctx->vtabsym = symbol(fl_ctx, "vtab");
+    fl_ctx->pagesym = symbol(fl_ctx, "page");         fl_ctx->returnsym = symbol(fl_ctx, "return");
+    fl_ctx->escsym = symbol(fl_ctx, "esc");           fl_ctx->spacesym = symbol(fl_ctx, "space");
+    fl_ctx->deletesym = symbol(fl_ctx, "delete");     fl_ctx->newlinesym = symbol(fl_ctx, "newline");
+    fl_ctx->tsym = symbol(fl_ctx, "t"); fl_ctx->Tsym = symbol(fl_ctx, "T");
+    fl_ctx->fsym = symbol(fl_ctx, "f"); fl_ctx->Fsym = symbol(fl_ctx, "F");
+    set(fl_ctx->printprettysym=symbol(fl_ctx, "*print-pretty*"), fl_ctx->T);
+    set(fl_ctx->printreadablysym=symbol(fl_ctx, "*print-readably*"), fl_ctx->T);
+    set(fl_ctx->printwidthsym=symbol(fl_ctx, "*print-width*"), fixnum(fl_ctx->SCR_WIDTH));
+    set(fl_ctx->printlengthsym=symbol(fl_ctx, "*print-length*"), fl_ctx->F);
+    set(fl_ctx->printlevelsym=symbol(fl_ctx, "*print-level*"), fl_ctx->F);
+    fl_ctx->builtins_table_sym = symbol(fl_ctx, "*builtins*");
+    fl_ctx->lasterror = fl_ctx->NIL;
+    i = 0;
+    for (i=OP_EQ; i <= OP_ASET; i++) {
+        setc(symbol(fl_ctx, builtin_names[i]), builtin(i));
+    }
+    setc(symbol(fl_ctx, "eq"), builtin(OP_EQ));
+    setc(symbol(fl_ctx, "procedure?"), builtin(OP_FUNCTIONP));
+    setc(symbol(fl_ctx, "top-level-bound?"), builtin(OP_BOUNDP));
+
+#if defined(_OS_LINUX_)
+    set(symbol(fl_ctx, "*os-name*"), symbol(fl_ctx, "linux"));
+#elif defined(_OS_WINDOWS_)
+    set(symbol(fl_ctx, "*os-name*"), symbol(fl_ctx, "win32"));
+#elif defined(_OS_DARWIN_)
+    set(symbol(fl_ctx, "*os-name*"), symbol(fl_ctx, "macos"));
+#else
+    set(symbol(fl_ctx, "*os-name*"), symbol(fl_ctx, "unknown"));
+#endif
+
+    fl_ctx->jl_sym = symbol(fl_ctx, "julia_value");
+
+    fl_ctx->the_empty_vector = tagptr(alloc_words(fl_ctx, 1), TAG_VECTOR);
+    vector_setsize(fl_ctx->the_empty_vector, 0);
+
+    cvalues_init(fl_ctx);
+
+    char exename[1024];
+    size_t exe_size = sizeof(exename) / sizeof(exename[0]);
+    if ( uv_exepath(exename, &exe_size) == 0 ) {
+        setc(symbol(fl_ctx, "*install-dir*"), cvalue_static_cstring(fl_ctx, strdup(dirname(exename))));
     }
 
-    memory_exception_value = fl_list2(MemoryError,
-                                      cvalue_static_cstring("out of memory"));
+    fl_ctx->memory_exception_value = fl_list2(fl_ctx, fl_ctx->OutOfMemoryError,
+                                              cvalue_static_cstring(fl_ctx, "out of memory"));
 
-    assign_global_builtins(core_builtin_info);
+    assign_global_builtins(fl_ctx, core_builtin_info);
 
-    builtins_init();
+    fl_read_init(fl_ctx);
+
+    builtins_init(fl_ctx);
 }
 
 // top level ------------------------------------------------------------------
 
-value_t fl_toplevel_eval(value_t expr)
+value_t fl_toplevel_eval(fl_context_t *fl_ctx, value_t expr)
 {
-    return fl_applyn(1, symbol_value(evalsym), expr);
+    return fl_applyn(fl_ctx, 1, symbol_value(fl_ctx->evalsym), expr);
 }
 
-void fl_init(size_t initial_heapsize)
+extern void fl_init_julia_extensions(fl_context_t *fl_ctx);
+
+void fl_init(fl_context_t *fl_ctx, size_t initial_heapsize)
 {
-#ifdef BOEHM_GC
-    GC_init();
-#endif
-    lisp_init(initial_heapsize);
+    lisp_init(fl_ctx, initial_heapsize);
+    //fl_init_julia_extensions(fl_ctx);
 }
 
-int fl_load_system_image(value_t sys_image_iostream)
+int fl_load_system_image_str(fl_context_t *fl_ctx, char *str, size_t len)
+{
+    value_t img = cvalue(fl_ctx, fl_ctx->iostreamtype, sizeof(ios_t));
+    ios_t *pi = value2c(ios_t*, img);
+    ios_static_buffer(pi, str, len);
+
+    return fl_load_system_image(fl_ctx, img);
+}
+
+int fl_load_system_image(fl_context_t *fl_ctx, value_t sys_image_iostream)
 {
     value_t e;
     int saveSP;
     symbol_t *sym;
 
-    PUSH(sys_image_iostream);
-    saveSP = SP;
-    FL_TRY {
+    PUSH(fl_ctx, sys_image_iostream);
+    saveSP = fl_ctx->SP;
+    FL_TRY(fl_ctx) {
         while (1) {
-            e = fl_read_sexpr(Stack[SP-1]);
-            if (ios_eof(value2c(ios_t*,Stack[SP-1]))) break;
+            e = fl_read_sexpr(fl_ctx, fl_ctx->Stack[fl_ctx->SP-1]);
+            if (ios_eof(value2c(ios_t*,fl_ctx->Stack[fl_ctx->SP-1]))) break;
             if (isfunction(e)) {
                 // stage 0 format: series of thunks
-                PUSH(e);
-                (void)_applyn(0);
-                SP = saveSP;
+                PUSH(fl_ctx, e);
+                (void)_applyn(fl_ctx, 0);
+                fl_ctx->SP = saveSP;
             }
             else {
                 // stage 1 format: list alternating symbol/value
                 while (iscons(e)) {
-                    sym = tosymbol(car_(e), "bootstrap");
+                    sym = tosymbol(fl_ctx, car_(e), "bootstrap");
                     e = cdr_(e);
-                    (void)tocons(e, "bootstrap");
+                    (void)tocons(fl_ctx, e, "bootstrap");
                     sym->binding = car_(e);
                     e = cdr_(e);
                 }
@@ -2390,13 +2488,17 @@ int fl_load_system_image(value_t sys_image_iostream)
             }
         }
     }
-    FL_CATCH {
+    FL_CATCH(fl_ctx) {
         ios_puts("fatal error during bootstrap:\n", ios_stderr);
-        fl_print(ios_stderr, fl_lasterror);
+        fl_print(fl_ctx, ios_stderr, fl_ctx->lasterror);
         ios_putc('\n', ios_stderr);
         return 1;
     }
-    ios_close(value2c(ios_t*,Stack[SP-1]));
-    POPN(1);
+    ios_close(value2c(ios_t*,fl_ctx->Stack[fl_ctx->SP-1]));
+    POPN(fl_ctx, 1);
     return 0;
 }
+
+#ifdef __cplusplus
+}
+#endif

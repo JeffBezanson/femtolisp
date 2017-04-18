@@ -1,5 +1,5 @@
-#ifndef __LLT_H_
-#define __LLT_H_
+#ifndef LLT_H_INCLUDED
+#define LLT_H_INCLUDED
 
 #include <stdarg.h>
 #include "dtypes.h"
