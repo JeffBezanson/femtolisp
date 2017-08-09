@@ -1048,6 +1048,7 @@ static value_t fl_add_any(value_t *args, u_int32_t nargs, fixnum_t carryIn)
     uint64_t Uaccum=0;
     int64_t Saccum = carryIn;
     double Faccum=0;
+    int32_t inexact = 0;
     uint32_t i;
     value_t arg=NIL;
 
@@ -1075,8 +1076,8 @@ static value_t fl_add_any(value_t *args, u_int32_t nargs, fixnum_t carryIn)
                     Saccum += i64;
                 break;
             case T_UINT64: Uaccum += *(uint64_t*)a; break;
-            case T_FLOAT:  Faccum += *(float*)a; break;
-            case T_DOUBLE: Faccum += *(double*)a; break;
+            case T_FLOAT:  Faccum += *(float*)a; inexact = 1; break;
+            case T_DOUBLE: Faccum += *(double*)a; inexact = 1; break;
             default:
                 goto add_type_error;
             }
@@ -1085,7 +1086,7 @@ static value_t fl_add_any(value_t *args, u_int32_t nargs, fixnum_t carryIn)
     add_type_error:
         type_error("+", "number", arg);
     }
-    if (Faccum != 0) {
+    if (inexact) {
         Faccum += Uaccum;
         Faccum += Saccum;
         return mk_double(Faccum);
@@ -1159,6 +1160,7 @@ static value_t fl_mul_any(value_t *args, u_int32_t nargs, int64_t Saccum)
 {
     uint64_t Uaccum=1;
     double Faccum=1;
+    int32_t inexact = 0;
     uint32_t i;
     value_t arg=NIL;
 
@@ -1186,8 +1188,8 @@ static value_t fl_mul_any(value_t *args, u_int32_t nargs, int64_t Saccum)
                     Saccum *= i64;
                 break;
             case T_UINT64: Uaccum *= *(uint64_t*)a; break;
-            case T_FLOAT:  Faccum *= *(float*)a; break;
-            case T_DOUBLE: Faccum *= *(double*)a; break;
+            case T_FLOAT:  Faccum *= *(float*)a; inexact = 1; break;
+            case T_DOUBLE: Faccum *= *(double*)a; inexact = 1; break;
             default:
                 goto mul_type_error;
             }
@@ -1196,7 +1198,7 @@ static value_t fl_mul_any(value_t *args, u_int32_t nargs, int64_t Saccum)
     mul_type_error:
         type_error("*", "number", arg);
     }
-    if (Faccum != 1) {
+    if (inexact) {
         Faccum *= Uaccum;
         Faccum *= Saccum;
         return mk_double(Faccum);
