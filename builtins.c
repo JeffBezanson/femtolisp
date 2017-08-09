@@ -284,18 +284,14 @@ static value_t fl_vector_alloc(value_t *args, u_int32_t nargs)
     i = (fixnum_t)toulong(args[0], "vector.alloc");
     if (i < 0)
         lerror(ArgError, "vector.alloc: invalid size");
+    v = alloc_vector((unsigned)i, 0);
     if (nargs == 2)
         f = args[1];
     else
         f = FL_UNSPECIFIED;
-    fl_gc_handle(&f);
-    v = alloc_vector((unsigned)i, f==FL_UNSPECIFIED);
-    if (f != FL_UNSPECIFIED) {
-        int k;
-        for(k=0; k < i; k++)
-            vector_elt(v,k) = f;
-    }
-    fl_free_gc_handles(1);
+    int k;
+    for(k=0; k < i; k++)
+        vector_elt(v,k) = f;
     return v;
 }
 
