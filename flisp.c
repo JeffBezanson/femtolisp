@@ -1791,7 +1791,7 @@ static value_t apply_cl(uint32_t nargs)
             i = GET_INT32(ip); ip+=4;
             n = GET_INT32(ip); ip+=4;
             s = GET_INT32(ip); ip+=4;
-            nargs = process_keys(v, i, n, abs(s)-(i+n), bp, nargs, s<0);
+            nargs = process_keys(v, i, n, labs(s)-(i+n), bp, nargs, s<0);
             NEXT_OP;
 
 #ifndef USE_COMPUTED_GOTO
