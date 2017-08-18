@@ -48,7 +48,7 @@ fltype_t *get_type(value_t t)
             ft->elsz = eltype->size;
             ft->eltype = eltype;
             ft->init = &cvalue_array_init;
-            eltype->artype = ft;
+            //eltype->artype = ft; -- this is a bad idea since some types carry array sizes
         }
         else if (car_(t) == enumsym) {
             ft->numtype = T_INT32;
@@ -62,9 +62,9 @@ fltype_t *get_type(value_t t)
 fltype_t *get_array_type(value_t eltype)
 {
     fltype_t *et = get_type(eltype);
-    if (et->artype != NULL)
-        return et->artype;
-    return get_type(fl_list2(arraysym, eltype));
+    if (et->artype == NULL)
+        et->artype = get_type(fl_list2(arraysym, eltype));
+    return et->artype;
 }
 
 fltype_t *define_opaque_type(value_t sym, size_t sz, cvtable_t *vtab,
