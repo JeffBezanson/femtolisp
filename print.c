@@ -89,9 +89,6 @@ void print_traverse(value_t v)
         for(i=0; i < vector_size(v); i++)
             print_traverse(vector_elt(v,i));
     }
-    else if (iscprim(v)) {
-        mark_cons(v);
-    }
     else if (isclosure(v)) {
         mark_cons(v);
         function_t *f = (function_t*)ptr(v);
@@ -171,7 +168,7 @@ static inline int tinyp(value_t v)
     if (fl_isstring(v))
         return (cv_len((cvalue_t*)ptr(v)) < SMALL_STR_LEN);
     return (isfixnum(v) || isbuiltin(v) || v==FL_F || v==FL_T || v==FL_NIL ||
-            v == FL_EOF);
+            v == FL_EOF || iscprim(v));
 }
 
 static int smallp(value_t v)
@@ -208,6 +205,8 @@ static int lengthestimate(value_t v)
     // get the width of an expression if we can do so cheaply
     if (issymbol(v))
         return u8_strwidth(symbol_name(v));
+    if (iscprim(v) && cp_class((cprim_t*)ptr(v)) == wchartype)
+        return 4;
     return -1;
 }
 
@@ -441,9 +440,13 @@ void fl_print_child(ios_t *f, value_t v)
             }
         }
         break;
-    case TAG_CVALUE:
     case TAG_CPRIM:
-        if (v == UNBOUND) { outs("#<undefined>", f); break; }
+        if (v == UNBOUND)
+            outs("#<undefined>", f);
+        else
+            cvalue_print(f, v);
+        break;
+    case TAG_CVALUE:
     case TAG_VECTOR:
     case TAG_CONS:
         if (print_circle_prefix(f, v)) break;
@@ -477,7 +480,7 @@ void fl_print_child(ios_t *f, value_t v)
             outc(']', f);
             break;
         }
-        if (iscvalue(v) || iscprim(v))
+        if (iscvalue(v))
             cvalue_print(f, v);
         else
             print_pair(f, v);
@@ -640,13 +643,13 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
             else if (wc == 0x07) outsn("alarm", f, 5);
             else if (wc == 0x08) outsn("backspace", f, 9);
             else if (wc == 0x09) outsn("tab", f, 3);
-            else if (wc == 0x0A) outsn("linefeed", f, 8);
-            //else if (wc == 0x0A) outsn("newline", f, 7);
+            //else if (wc == 0x0A) outsn("linefeed", f, 8);
+            else if (wc == 0x0A) outsn("newline", f, 7);
             else if (wc == 0x0B) outsn("vtab", f, 4);
             else if (wc == 0x0C) outsn("page", f, 4);
             else if (wc == 0x0D) outsn("return", f, 6);
             else if (wc == 0x1B) outsn("esc", f, 3);
-            else if (wc == 0x20) outsn("space", f, 5);
+            //else if (wc == 0x20) outsn("space", f, 5);
             else if (wc == 0x7F) outsn("delete", f, 6);
             else if (iswprint(wc)) outs(seq, f);
             else HPOS+=ios_printf(f, "x%04x", (int)wc);

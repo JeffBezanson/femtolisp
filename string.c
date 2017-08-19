@@ -230,7 +230,7 @@ value_t fl_char_upcase(value_t *args, u_int32_t nargs)
     argcount("char.upcase", nargs, 1);
     cprim_t *cp = (cprim_t*)ptr(args[0]);
     if (!iscprim(args[0]) || cp_class(cp) != wchartype)
-      type_error("char.upcase", "wchar", args[0]);
+        type_error("char.upcase", "wchar", args[0]);
     return mk_wchar(towupper(*(int32_t*)cp_data(cp)));
 }
 value_t fl_char_downcase(value_t *args, u_int32_t nargs)
@@ -238,7 +238,7 @@ value_t fl_char_downcase(value_t *args, u_int32_t nargs)
     argcount("char.downcase", nargs, 1);
     cprim_t *cp = (cprim_t*)ptr(args[0]);
     if (!iscprim(args[0]) || cp_class(cp) != wchartype)
-      type_error("char.downcase", "wchar", args[0]);
+        type_error("char.downcase", "wchar", args[0]);
     return mk_wchar(towlower(*(int32_t*)cp_data(cp)));
 }
 
