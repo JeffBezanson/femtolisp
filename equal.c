@@ -1,4 +1,4 @@
-#define BOUNDED_COMPARE_BOUND 4096
+#define BOUNDED_COMPARE_BOUND 128
 #define BOUNDED_HASH_BOUND    16384
 
 // comparable tag
