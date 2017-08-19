@@ -78,6 +78,7 @@
 (assert (equal? (uint64 (double -123)) #uint64(0xffffffffffffff85)))
 
 (assert (equal? (string 'sym #byte(65) #wchar(945) "blah") "symA\u03B1blah"))
+(assert (= (length (string #\x0)) 1))
 
 (assert (> 9223372036854775808 9223372036854775807))
 

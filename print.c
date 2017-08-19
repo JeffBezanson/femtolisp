@@ -635,7 +635,10 @@ static void cvalue_printdata(ios_t *f, void *data, size_t len, value_t type,
         seq[nb] = '\0';
         if (print_princ) {
             // TODO: better multibyte handling
-            outs(seq, f);
+            if (wc == 0)
+                ios_putc(0, f);
+            else
+                outs(seq, f);
         }
         else {
             outsn("#\\", f, 2);
