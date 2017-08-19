@@ -449,7 +449,7 @@ void fl_print_child(ios_t *f, value_t v)
     case TAG_CVALUE:
     case TAG_VECTOR:
     case TAG_CONS:
-        if (print_circle_prefix(f, v)) break;
+        if (!print_princ && print_circle_prefix(f, v)) break;
         if (isvector(v)) {
             outc('[', f);
             int newindent = HPOS, est;
@@ -858,7 +858,7 @@ void fl_print(ios_t *f, value_t v)
     P_LEVEL = 0;
 
     printlabel = 0;
-    print_traverse(v);
+    if (!print_princ) print_traverse(v);
     HPOS = VPOS = 0;
 
     fl_print_child(f, v);
