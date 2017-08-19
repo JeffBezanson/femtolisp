@@ -13,6 +13,7 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <math.h>
 #include "llt.h"
 #include "flisp.h"
 #include "random.h"
@@ -433,6 +434,29 @@ static value_t fl_randf(value_t *args, u_int32_t nargs)
     return mk_float(rand_float());
 }
 
+#define MATH_FUNC_1ARG(name)                                    \
+static value_t fl_##name(value_t *args, u_int32_t nargs)        \
+{                                                               \
+    argcount(#name, nargs, 1);                                  \
+    if (iscprim(args[0])) {                                     \
+        cprim_t *cp = (cprim_t*)ptr(args[0]);                   \
+        numerictype_t nt = cp_numtype(cp);                      \
+        if (nt == T_FLOAT)                                      \
+            return mk_float(name##f(*(float*)cp_data(cp)));     \
+    }                                                           \
+    return mk_double(name(todouble(args[0], #name)));           \
+}
+
+MATH_FUNC_1ARG(sqrt)
+MATH_FUNC_1ARG(exp)
+MATH_FUNC_1ARG(log)
+MATH_FUNC_1ARG(sin)
+MATH_FUNC_1ARG(cos)
+MATH_FUNC_1ARG(tan)
+MATH_FUNC_1ARG(asin)
+MATH_FUNC_1ARG(acos)
+MATH_FUNC_1ARG(atan)
+
 extern void stringfuncs_init(void);
 extern void table_init(void);
 extern void iostream_init(void);
@@ -468,6 +492,16 @@ static builtinspec_t builtin_info[] = {
     { "rand.uint64", fl_rand64 },
     { "rand.double", fl_randd },
     { "rand.float", fl_randf },
+
+    { "sqrt", fl_sqrt },
+    { "exp",  fl_exp },
+    { "log",  fl_log },
+    { "sin",  fl_sin },
+    { "cos",  fl_cos },
+    { "tan",  fl_tan },
+    { "asin", fl_asin },
+    { "acos", fl_acos },
+    { "atan", fl_atan },
 
     { "path.cwd", fl_path_cwd },
     { "path.exists?", fl_path_exists },
