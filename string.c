@@ -242,6 +242,15 @@ value_t fl_char_downcase(value_t *args, u_int32_t nargs)
     return mk_wchar(towlower(*(int32_t*)cp_data(cp)));
 }
 
+value_t fl_char_alpha(value_t *args, u_int32_t nargs)
+{
+    argcount("char-alphabetic?", nargs, 1);
+    cprim_t *cp = (cprim_t*)ptr(args[0]);
+    if (!iscprim(args[0]) || cp_class(cp) != wchartype)
+        type_error("char-alphabetic?", "wchar", args[0]);
+    return iswalpha(*(int32_t*)cp_data(cp)) ? FL_T : FL_F;
+}
+
 static value_t mem_find_byte(char *s, char c, size_t start, size_t len)
 {
     char *p = memchr(s+start, c, len-start);
@@ -412,6 +421,7 @@ static builtinspec_t stringfunc_info[] = {
 
     { "char.upcase", fl_char_upcase },
     { "char.downcase", fl_char_downcase },
+    { "char-alphabetic?", fl_char_alpha },
 
     { "number->string", fl_numbertostring },
     { "string->number", fl_stringtonumber },
