@@ -3,32 +3,32 @@
 (define Instructions
   (let ((e (table))
 	(keys 
-	 [nop dup pop call tcall jmp brf brt jmp.l brf.l brt.l ret
-	  
-	  eq? eqv? equal? atom? not null? boolean? symbol?
-	  number? bound? pair? builtin? vector? fixnum? function?
-	  
-	  cons list car cdr set-car! set-cdr!
-	  apply
-	  
-	  + - * / div0 = < compare
-	  
-	  vector aref aset!
-	  
-	  loadt loadf loadnil load0 load1 loadi8
-	  loadv loadv.l
-	  loadg loadg.l
-	  loada loada.l loadc loadc.l
-	  setg setg.l
-	  seta seta.l setc setc.l
-	  
-	  closure argc vargc trycatch for tapply
-	  add2 sub2 neg largc lvargc
-	  loada0 loada1 loadc00 loadc01 call.l tcall.l
-	  brne brne.l cadr brnn brnn.l brn brn.l
-	  optargs brbound keyargs
-	  
-	  dummy_t dummy_f dummy_nil]))
+	 #(nop dup pop call tcall jmp brf brt jmp.l brf.l brt.l ret
+	   
+	   eq? eqv? equal? atom? not null? boolean? symbol?
+	   number? bound? pair? builtin? vector? fixnum? function?
+	   
+	   cons list car cdr set-car! set-cdr!
+	   apply
+	   
+	   + - * / div0 = < compare
+	   
+	   vector aref aset!
+	   
+	   loadt loadf loadnil load0 load1 loadi8
+	   loadv loadv.l
+	   loadg loadg.l
+	   loada loada.l loadc loadc.l
+	   setg setg.l
+	   seta seta.l setc setc.l
+	   
+	   closure argc vargc trycatch for tapply
+	   add2 sub2 neg largc lvargc
+	   loada0 loada1 loadc00 loadc01 call.l tcall.l
+	   brne brne.l cadr brnn brnn.l brn brn.l
+	   optargs brbound keyargs
+	   
+	   dummy_t dummy_f dummy_nil)))
     (for 0 (1- (length keys))
 	 (lambda (i)
 	   (put! e (aref keys i) i)))))
@@ -385,7 +385,7 @@
 		(argc-error b 1)
 		(emit g b nargs)))
       (vector   (if (= nargs 0)
-		    (emit g 'loadv [])
+		    (emit g 'loadv #())
 		    (emit g b nargs)))
       (apply    (if (< nargs 2)
 		    (argc-error b 2)
@@ -439,7 +439,7 @@
 (define (fits-i8 x) (and (fixnum? x) (>= x -128) (<= x 127)))
 
 (define (compile-in g env tail? x)
-  (cond ((symbol? x) (compile-sym g env x [loada loadc loadg]))
+  (cond ((symbol? x) (compile-sym g env x #(loada loadc loadg)))
 	((atom? x)
 	 (cond ((eq? x 0)   (emit g 'load0))
 	       ((eq? x 1)   (emit g 'load1))
@@ -472,7 +472,7 @@
 	   (return   (compile-in g env #t (cadr x))
 		     (emit g 'ret))
 	   (set!     (compile-in g env #f (caddr x))
-		     (compile-sym g env (cadr x) [seta setc setg]))
+		     (compile-sym g env (cadr x) #(seta setc setg)))
 	   (define   (compile-in g env tail?
 				 (expand-define x)))
 	   (trycatch (compile-in g env #f `(lambda () ,(cadr x)))
