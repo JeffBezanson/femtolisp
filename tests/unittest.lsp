@@ -301,5 +301,7 @@
   (assert (equal? (with-output-to-string #f (lambda () (print (list c c))))
                   "(#\\a #\\a)")))
 
+(assert-fail (eval '(set! (car (cons 1 2)) 3)))
+
 (princ "all tests pass\n")
 #t

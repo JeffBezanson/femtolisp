@@ -157,22 +157,22 @@
   largc lvargc vargc argc compile-in ret values #fn(function) encode-byte-code
   bcode:code const-to-idx-vec]) filter keyword-arg?])
   #fn(length)]) #fn(length)]) make-code-emitter lastcdr lambda-vars filter #.pair?
-  lambda])] #0=[#:g717 ()])
+  lambda])] #0=[#:g718 ()])
 	  compile-for #fn(":000r5e0g4316X0e1|}^g2342e1|}^g3342e1|}^g4342e2|c342;e4c541;" [1arg-lambda?
   compile-in emit for error "for: third form must be a 1-argument lambda"] compile-for)
 	  compile-if #fn("<000r4c0qe1|31e1|31g3\x84e2g331e3g331F6;0e4g331560e53045;" [#fn(";000r5g2]\x82>0e0~\x7fi02g344;g2^\x82>0e0~\x7fi02g444;e0~\x7f^g2342e1~c2|332e0~\x7fi02g3342i026<0e1~c3325:0e1~c4}332e5~|322e0~\x7fi02g4342e5~}42;" [compile-in
   emit brf ret jmp mark-label]) make-label caddr cdddr cadddr void] compile-if)
 	  compile-in #fn(";000r4g3C6=0e0|}g3c144;g3?6\xaf0g3`\x82:0e2|c342;g3a\x82:0e2|c442;g3]\x82:0e2|c542;g3^\x82:0e2|c642;g3_\x82:0e2|c742;e8g3316<0e2|c9g343;c:g3316C0e;|}g2c<c=31L144;e2|c>g343;g3MC@17D02g3ME17;02e?g3M}326=0e@|}g2g344;cAqg3M41;" [compile-sym
   [loada loadc loadg] emit load0 load1 loadt loadf loadnil fits-i8 loadi8 #fn(eof-object?)
-  compile-in #fn(top-level-value) eof-object loadv in-env? compile-app #fn("<000r1|c0\x82W0e1i03\x84316@0e2~\x7fi02i03\x8444;e3~c4i03\x8443;|c5\x82?0e6~\x7fi02i0344;|c7\x82@0e8~\x7fi02i03N44;|c9\x82<0e:~\x7fi0343;|c;\x82=0e<c=qc>q42;|c?\x82@0e@~\x7fi02i03N44;|cA\x82@0eB~\x7fi02i03N44;|cC\x82G0eD~\x7fi03\x84c7eEi0331K44;|cF\x82K0eG~\x7fi03\x84eHi0331eIi033145;|cJ\x82F0e2~\x7f]i03\x84342e3~cK42;|cL\x82N0e2~\x7f^eHi0331342eM~\x7fi03\x84cN44;|cO\x82C0e2~\x7fi02ePi033144;|cQ\x82s0e2~\x7f^c;_i03\x84L3342eReHi033131660^580eScT312e2~\x7f^eHi0331342e3~cQ42;eU~\x7fi02i0344;" [quote
+  compile-in #fn(top-level-value) eof-object loadv in-env? compile-app #fn("<000r1|c0\x82W0e1i03\x84316@0e2~\x7fi02i03\x8444;e3~c4i03\x8443;|c5\x82?0e6~\x7fi02i0344;|c7\x82@0e8~\x7fi02i03N44;|c9\x82<0e:~\x7fi0343;|c;\x82=0e<c=qc>q42;|c?\x82@0e@~\x7fi02i03N44;|cA\x82@0eB~\x7fi02i03N44;|cC\x82G0eD~\x7fi03\x84c7eEi0331K44;|cF\x82K0eG~\x7fi03\x84eHi0331eIi033145;|cJ\x82F0e2~\x7f]i03\x84342e3~cK42;|cL\x82_0e2~\x7f^eHi0331342i03\x84C17902eMcN312eO~\x7fi03\x84cP44;|cQ\x82C0e2~\x7fi02eRi033144;|cS\x82s0e2~\x7f^c;_i03\x84L3342eTeHi033131660^580eMcU312e2~\x7f^eHi0331342e3~cS42;eV~\x7fi02i0344;" [quote
   self-evaluating? compile-in emit loadv if compile-if begin compile-begin
   prog1 compile-prog1 lambda call-with-values #fn("8000r0e0i11i1342;" [compile-f-])
   #fn("9000r2e0i10c1|332e2i10}322}e3i1131X6<0e0i10c442;];" [emit loadv
 							    bcode:cdepth nnn
 							    closure]) and
   compile-and or compile-or while compile-while cddr for compile-for caddr
-  cadddr return ret set! compile-sym [seta setc setg] define expand-define
-  trycatch 1arg-lambda? error "trycatch: second form must be a 1-argument lambda"
+  cadddr return ret set! error "set!: second argument must be a symbol"
+  compile-sym [seta setc setg] define expand-define trycatch 1arg-lambda? "trycatch: second form must be a 1-argument lambda"
   compile-app])] compile-in)
 	  compile-or #fn("<000r4e0|}g2g3^c146;" [compile-short-circuit brt] compile-or)
 	  compile-prog1 #fn(";000r3e0|}^g2\x84342e1g231F6H0e2|}^e1g231342e3|c442;];" [compile-in
@@ -278,8 +278,7 @@
   #fn("7000r1|c0>16:02c1i1031670c240;|;" ["" #fn(io.eof?)
 					  #fn(eof-object)])
   #fn(io.tostring!)]) #fn(buffer)] io.readall)
-	  io.readline #fn("8000r1c0|c142;" [#fn(io.readuntil)
-					    #\linefeed] io.readline)
+	  io.readline #fn("8000r1c0|c142;" [#fn(io.readuntil) #\newline] io.readline)
 	  io.readlines #fn("8000r1e0e1|42;" [read-all-of io.readline] io.readlines)
 	  iota #fn("8000r1e0e1|42;" [map-int identity] iota) keyword->symbol
 	  #fn("9000r1c0|316@0c1c2c3|313141;|;" [#fn(keyword?)

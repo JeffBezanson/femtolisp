@@ -472,6 +472,8 @@
 	   (return   (compile-in g env #t (cadr x))
 		     (emit g 'ret))
 	   (set!     (compile-in g env #f (caddr x))
+		     (or (symbol? (cadr x))
+			 (error "set!: second argument must be a symbol"))
 		     (compile-sym g env (cadr x) [seta setc setg]))
 	   (define   (compile-in g env tail?
 				 (expand-define x)))
