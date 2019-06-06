@@ -89,6 +89,9 @@ void print_traverse(value_t v)
         for(i=0; i < vector_size(v); i++)
             print_traverse(vector_elt(v,i));
     }
+    else if (iscprim(v)) {
+        // don't consider shared references to e.g. chars
+    }
     else if (isclosure(v)) {
         mark_cons(v);
         function_t *f = (function_t*)ptr(v);
