@@ -12,6 +12,7 @@
   valid.
   A UTF-8 validation routine is included.
 */
+#define _XOPEN_SOURCE 700
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
