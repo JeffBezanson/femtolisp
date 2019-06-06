@@ -539,8 +539,10 @@ static void read_list(value_t *pval, value_t label)
             t = peek();
             if (ios_eof(F))
                 lerror(ParseError, "read: unexpected end of input");
-            if (t != TOK_CLOSE)
+            if (t != TOK_CLOSE) {
+                take();
                 lerror(ParseError, "read: expected ')'");
+            }
         }
     }
     take();
