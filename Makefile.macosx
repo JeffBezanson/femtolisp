@@ -51,6 +51,12 @@ debug: $(DOBJS) $(LIBFILES) $(LIBTARGET).da flmain.do
 release: $(OBJS) $(LIBFILES) $(LIBTARGET).a flmain.o
 	$(CC) $(SHIPFLAGS) $(OBJS) flmain.o -o $(EXENAME) $(LIBS) $(LIBTARGET).a
 
+install: release
+	mkdir -p /usr/local/share/flisp
+	cp -f flisp /usr/local/share/flisp/
+	cp -f flisp.boot /usr/local/share/flisp/
+	ln -sf /usr/local/share/flisp/flisp /usr/local/bin/flisp
+
 clean:
 	rm -f *.o
 	rm -f *.do
