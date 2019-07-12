@@ -25,13 +25,15 @@
 #  define OPENBSD
 #elif defined(__FreeBSD__)
 #  define FREEBSD
+#elif defined(__NetBSD__)
+#  define NETBSD
 #elif defined(_WIN32)
 #  define WIN32
 #else
 #  error "unknown platform"
 #endif
 
-#if defined(OPENBSD) || defined(FREEBSD)
+#if defined(OPENBSD) || defined(FREEBSD) || defined(NETBSD)
 #if defined(__x86_64__)
 #  define __SIZEOF_POINTER__ 8
 #else
@@ -72,7 +74,7 @@
 #  define BIG_ENDIAN     __BIG_ENDIAN
 #  define PDP_ENDIAN     __PDP_ENDIAN
 #  define BYTE_ORDER     __BYTE_ORDER
-#elif defined(MACOSX) || defined(OPENBSD) || defined(FREEBSD)
+#elif defined(MACOSX) || defined(OPENBSD) || defined(FREEBSD) || defined(NETBSD)
 #  include <machine/endian.h>
 #  define __LITTLE_ENDIAN  LITTLE_ENDIAN
 #  define __BIG_ENDIAN     BIG_ENDIAN
@@ -193,10 +195,12 @@ typedef u_ptrint_t uptrint_t;
 
 #define DBL_EPSILON      2.2204460492503131e-16
 #define FLT_EPSILON      1.192092896e-7
+#if !defined(NETBSD)
 #define DBL_MAX          1.7976931348623157e+308
 #define DBL_MIN          2.2250738585072014e-308
 #define FLT_MAX          3.402823466e+38
 #define FLT_MIN          1.175494351e-38
+#endif
 #define LOG2_10          3.3219280948873626
 #define rel_zero(a, b) (fabs((a)/(b)) < DBL_EPSILON)
 #define sign_bit(r) ((*(int64_t*)&(r)) & BIT63)

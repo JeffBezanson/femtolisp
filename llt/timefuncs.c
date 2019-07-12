@@ -82,7 +82,7 @@ void timestring(double seconds, char *buffer, size_t len)
 {
     time_t tme = (time_t)seconds;
 
-#if defined(LINUX) || defined(MACOSX) || defined(OPENBSD) || defined(FREEBSD)
+#if defined(LINUX) || defined(MACOSX) || defined(OPENBSD) || defined(FREEBSD) || defined(NETBSD)
     char *fmt = "%c"; /* needed to suppress GCC warning */
     struct tm tm;
 
@@ -106,7 +106,7 @@ void timestring(double seconds, char *buffer, size_t len)
 #endif
 }
 
-#if defined(LINUX) || defined(MACOSX) || defined(OPENBSD) || defined(FREEBSD)
+#if defined(LINUX) || defined(MACOSX) || defined(OPENBSD) || defined(FREEBSD) || defined(NETBSD)
 extern char *strptime(const char *s, const char *format, struct tm *tm);
 double parsetime(const char *str)
 {

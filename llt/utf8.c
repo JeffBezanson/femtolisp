@@ -15,6 +15,7 @@
 #define _XOPEN_SOURCE 700
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include <wchar.h>
@@ -26,9 +27,9 @@
 #include <malloc.h>
 #define snprintf _snprintf
 #else
-#if !defined(__FreeBSD__) && !defined(__OpenBSD__)
+#if !defined(__FreeBSD__) && !defined(__OpenBSD__) && !defined(__NetBSD__)
 #include <alloca.h>
-#endif /* __FreeBSD__ && __OpenBSD__ */
+#endif /* __FreeBSD__ && __OpenBSD__ && __NetBSD__ */
 #endif
 #include <assert.h>
 
