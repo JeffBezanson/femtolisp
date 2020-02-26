@@ -6,3 +6,7 @@
 /llt/*.o
 /llt/*.a
 /flisp.boot.bak
+/tiny/lisp
+/tiny/lisp-nontail
+/tiny/lisp2
+/tiny/lispf

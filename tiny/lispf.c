@@ -24,19 +24,32 @@
   Public Domain
 */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include <ctype.h>
+#include <inttypes.h>
 #include <setjmp.h>
 #include <stdarg.h>
-#include <ctype.h>
-#include <sys/types.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-typedef u_int32_t value_t;
+#ifdef __LP64__
+typedef uint64_t value_t;
+#else
+typedef uint32_t value_t;
+#endif
+
 #ifdef FLOAT
+#define NUM_FORMAT "%f"
 typedef float number_t;
 #else
+#ifdef __LP64__
+#define NUM_FORMAT "%" PRId64
+typedef int64_t number_t;
+#else
+#define NUM_FORMAT "%" PRId32
 typedef int32_t number_t;
+#endif
 #endif
 
 typedef struct {
@@ -63,13 +76,11 @@ typedef struct _symbol_t {
 #ifdef FLOAT
 #define number(x) ((*(value_t*)&(x))&~0x3)
 #define numval(x)  (*(number_t*)&(x))
-#define NUM_FORMAT "%f"
 extern float strtof(const char *nptr, char **endptr);
 #define strtonum(s, e) strtof(s, e)
 #else
 #define number(x) ((value_t)((x)<<2))
 #define numval(x)  (((number_t)(x))>>2)
-#define NUM_FORMAT "%d"
 #define strtonum(s, e) strtol(s, e, 10)
 #endif
 #define intval(x)  (((int)(x))>>2)
@@ -107,7 +118,7 @@ static char *stack_bottom;
 #define PROCESS_STACK_SIZE (2*1024*1024)
 #define N_STACK 49152
 static value_t Stack[N_STACK];
-static u_int32_t SP = 0;
+static uint32_t SP = 0;
 #define PUSH(v) (Stack[SP++] = (v))
 #define POP()   (Stack[--SP])
 #define POPN(n) (SP-=(n))
@@ -199,7 +210,7 @@ static unsigned char *fromspace;
 static unsigned char *tospace;
 static unsigned char *curheap;
 static unsigned char *lim;
-static u_int32_t heapsize = 64*1024;//bytes
+static uint32_t heapsize = 64*1024;//bytes
 
 void lisp_init(void)
 {
@@ -282,7 +293,7 @@ void gc(void)
 {
     static int grew = 0;
     unsigned char *temp;
-    u_int32_t i;
+    uint32_t i;
 
     curheap = tospace;
     lim = curheap+heapsize-sizeof(cons_t);
@@ -325,7 +336,7 @@ static int symchar(char c)
     return (!isspace(c) && !strchr(special, c));
 }
 
-static u_int32_t toktype = TOK_NONE;
+static uint32_t toktype = TOK_NONE;
 static value_t tokval;
 static char buf[256];
 
@@ -396,7 +407,7 @@ static int read_token(FILE *f, char c)
     return i;
 }
 
-static u_int32_t peek(FILE *f)
+static uint32_t peek(FILE *f)
 {
     char c, *end;
     number_t x;
@@ -447,7 +458,7 @@ static u_int32_t peek(FILE *f)
 static void read_list(FILE *f, value_t *pval)
 {
     value_t c, *pc;
-    u_int32_t t;
+    uint32_t t;
 
     PUSH(NIL);
     pc = &Stack[SP-1];  // to keep track of current cons cell
@@ -561,7 +572,7 @@ value_t eval_sexpr(value_t e, value_t *penv)
     value_t *rest;
     cons_t *c;
     symbol_t *sym;
-    u_int32_t saveSP;
+    uint32_t saveSP;
     int i, nargs, noeval=0;
     number_t s, n;
 
