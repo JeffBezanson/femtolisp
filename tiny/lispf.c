@@ -24,13 +24,14 @@
   Public Domain
 */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include <sys/types.h>
+
+#include <ctype.h>
 #include <setjmp.h>
 #include <stdarg.h>
-#include <ctype.h>
-#include <sys/types.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef __LP64__
 typedef u_int64_t value_t;
