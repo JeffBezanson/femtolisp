@@ -26,8 +26,13 @@
 #include <ctype.h>
 #include <sys/types.h>
 
+#ifdef __LP64__
+typedef u_int64_t value_t;
+typedef int64_t number_t;
+#else
 typedef u_int32_t value_t;
 typedef int32_t number_t;
+#endif
 
 typedef struct {
     value_t car;

@@ -32,11 +32,20 @@
 #include <ctype.h>
 #include <sys/types.h>
 
+#ifdef __LP64__
+typedef u_int64_t value_t;
+#else
 typedef u_int32_t value_t;
+#endif
+
 #ifdef FLOAT
 typedef float number_t;
 #else
+#ifdef __LP64__
+typedef int64_t number_t;
+#else
 typedef int32_t number_t;
+#endif
 #endif
 
 typedef struct {
