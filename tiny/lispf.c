@@ -27,6 +27,7 @@
 #include <sys/types.h>
 
 #include <ctype.h>
+#include <inttypes.h>
 #include <setjmp.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -40,11 +41,14 @@ typedef u_int32_t value_t;
 #endif
 
 #ifdef FLOAT
+#define NUM_FORMAT "%f"
 typedef float number_t;
 #else
 #ifdef __LP64__
+#define NUM_FORMAT "%" PRId64
 typedef int64_t number_t;
 #else
+#define NUM_FORMAT "%" PRId32
 typedef int32_t number_t;
 #endif
 #endif
@@ -73,13 +77,11 @@ typedef struct _symbol_t {
 #ifdef FLOAT
 #define number(x) ((*(value_t*)&(x))&~0x3)
 #define numval(x)  (*(number_t*)&(x))
-#define NUM_FORMAT "%f"
 extern float strtof(const char *nptr, char **endptr);
 #define strtonum(s, e) strtof(s, e)
 #else
 #define number(x) ((value_t)((x)<<2))
 #define numval(x)  (((number_t)(x))>>2)
-#define NUM_FORMAT "%d"
 #define strtonum(s, e) strtol(s, e, 10)
 #endif
 #define intval(x)  (((int)(x))>>2)

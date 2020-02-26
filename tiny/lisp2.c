@@ -42,6 +42,7 @@
 #include <sys/types.h>
 
 #include <ctype.h>
+#include <inttypes.h>
 #include <setjmp.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -49,9 +50,11 @@
 #include <string.h>
 
 #ifdef __LP64__
+#define NUM_FORMAT "%" PRId64
 typedef u_int64_t value_t;
 typedef int64_t number_t;
 #else
+#define NUM_FORMAT "%" PRId32
 typedef u_int32_t value_t;
 typedef int32_t number_t;
 #endif
@@ -765,7 +768,7 @@ static void do_print(FILE *f, value_t v, int princ)
     char *name;
 
     switch (tag(v)) {
-    case TAG_NUM: fprintf(f, "%d", numval(v)); break;
+    case TAG_NUM: fprintf(f, NUM_FORMAT, numval(v)); break;
     case TAG_SYM:
         name = ((symbol_t*)ptr(v))->name;
         if (princ)

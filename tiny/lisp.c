@@ -21,6 +21,7 @@
 #include <sys/types.h>
 
 #include <ctype.h>
+#include <inttypes.h>
 #include <setjmp.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -28,9 +29,11 @@
 #include <string.h>
 
 #ifdef __LP64__
+#define NUM_FORMAT "%" PRId64
 typedef u_int64_t value_t;
 typedef int64_t number_t;
 #else
+#define NUM_FORMAT "%" PRId32
 typedef u_int32_t value_t;
 typedef int32_t number_t;
 #endif
@@ -502,7 +505,7 @@ void print(FILE *f, value_t v)
     value_t cd;
 
     switch (tag(v)) {
-    case TAG_NUM: fprintf(f, "%ld", numval(v)); break;
+    case TAG_NUM: fprintf(f, NUM_FORMAT, numval(v)); break;
     case TAG_SYM: fprintf(f, "%s", ((symbol_t*)ptr(v))->name); break;
     case TAG_BUILTIN: fprintf(f, "#<builtin %s>",
                               builtin_names[intval(v)]); break;
