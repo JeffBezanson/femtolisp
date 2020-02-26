@@ -39,23 +39,22 @@
   Public Domain
 */
 
-#include <sys/types.h>
-
 #include <ctype.h>
 #include <inttypes.h>
 #include <setjmp.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #ifdef __LP64__
 #define NUM_FORMAT "%" PRId64
-typedef u_int64_t value_t;
+typedef uint64_t value_t;
 typedef int64_t number_t;
 #else
 #define NUM_FORMAT "%" PRId32
-typedef u_int32_t value_t;
+typedef uint32_t value_t;
 typedef int32_t number_t;
 #endif
 
@@ -120,7 +119,7 @@ static char *stack_bottom;
 #define PROCESS_STACK_SIZE (2*1024*1024)
 #define N_STACK 98304
 static value_t Stack[N_STACK];
-static u_int32_t SP = 0;
+static uint32_t SP = 0;
 #define PUSH(v) (Stack[SP++] = (v))
 #define POP()   (Stack[--SP])
 #define POPN(n) (SP-=(n))
@@ -130,7 +129,7 @@ value_t BACKQUOTE, COMMA, COMMAAT, COMMADOT;
 
 value_t read_sexpr(FILE *f);
 void print(FILE *f, value_t v, int princ);
-value_t eval_sexpr(value_t e, value_t *penv, int tail, u_int32_t envend);
+value_t eval_sexpr(value_t e, value_t *penv, int tail, uint32_t envend);
 value_t load_file(char *fname);
 value_t toplevel_eval(value_t expr);
 
@@ -230,8 +229,8 @@ static unsigned char *fromspace;
 static unsigned char *tospace;
 static unsigned char *curheap;
 static unsigned char *lim;
-static u_int32_t heapsize = 128*1024;//bytes
-static u_int32_t *consflags;
+static uint32_t heapsize = 128*1024;//bytes
+static uint32_t *consflags;
 static ltable_t printconses;
 
 void lisp_init(void)
@@ -337,7 +336,7 @@ void gc(int mustgrow)
 {
     static int grew = 0;
     void *temp;
-    u_int32_t i;
+    uint32_t i;
     readstate_t *rs;
 
     curheap = tospace;
@@ -375,7 +374,7 @@ void gc(int mustgrow)
             temp = bitvector_resize(consflags, heapsize/sizeof(cons_t));
             if (temp == NULL)
                 lerror("out of memory\n");
-            consflags = (u_int32_t*)temp;
+            consflags = (uint32_t*)temp;
         }
         grew = !grew;
     }
@@ -400,7 +399,7 @@ static int symchar(char c)
     return (!isspace(c) && !strchr(special, c));
 }
 
-static u_int32_t toktype = TOK_NONE;
+static uint32_t toktype = TOK_NONE;
 static value_t tokval;
 static char buf[256];
 
@@ -472,7 +471,7 @@ static int read_token(FILE *f, char c, int digits)
     return (dot && (totread==2));
 }
 
-static u_int32_t peek(FILE *f)
+static uint32_t peek(FILE *f)
 {
     char c, *end;
     number_t x;
@@ -505,7 +504,7 @@ static u_int32_t peek(FILE *f)
             toktype = TOK_SHARPQUOTE;
         }
         else if ((char)ch == '\\') {
-            u_int32_t cval = u8_fgetc(f);
+            uint32_t cval = u8_fgetc(f);
             toktype = TOK_NUM;
             tokval = number(cval);
         }
@@ -569,7 +568,7 @@ static value_t do_read_sexpr(FILE *f, int fixup);
 static void read_list(FILE *f, value_t *pval, int fixup)
 {
     value_t c, *pc;
-    u_int32_t t;
+    uint32_t t;
 
     PUSH(NIL);
     pc = &Stack[SP-1];  // to keep track of current cons cell
@@ -610,7 +609,7 @@ static void read_list(FILE *f, value_t *pval, int fixup)
 static value_t do_read_sexpr(FILE *f, int fixup)
 {
     value_t v, *head;
-    u_int32_t t, l;
+    uint32_t t, l;
     int i;
 
     t = peek(f);
@@ -865,12 +864,12 @@ static value_t assoc(value_t item, value_t v)
  environment, otherwise you have to put any new environment on the top
  of the stack.
 */
-value_t eval_sexpr(value_t e, value_t *penv, int tail, u_int32_t envend)
+value_t eval_sexpr(value_t e, value_t *penv, int tail, uint32_t envend)
 {
     value_t f, v, headsym, asym, *pv, *argsyms, *body, *lenv, *argenv;
     cons_t *c;
     symbol_t *sym;
-    u_int32_t saveSP;
+    uint32_t saveSP;
     int i, nargs, noeval=0;
     number_t s, n;
 
@@ -1209,7 +1208,7 @@ value_t eval_sexpr(value_t e, value_t *penv, int tail, u_int32_t envend)
             if (tag(v)<0x2) { SP=saveSP; return v; }
             if (tail) {
                 *penv = NIL;
-                envend = SP = (u_int32_t)(penv-&Stack[0]) + 1;
+                envend = SP = (uint32_t)(penv-&Stack[0]) + 1;
                 e=v; goto eval_top;
             }
             else {
@@ -1363,7 +1362,7 @@ value_t eval_sexpr(value_t e, value_t *penv, int tail, u_int32_t envend)
                 nargs = (int)(&Stack[SP] - argenv);
                 for(i=0; i < nargs; i++)
                     penv[i] = argenv[i];
-                envend = SP = (u_int32_t)((penv+nargs) - &Stack[0]);
+                envend = SP = (uint32_t)((penv+nargs) - &Stack[0]);
                 goto eval_top;
             }
             else {
@@ -1385,7 +1384,7 @@ static char *infile = NULL;
 value_t toplevel_eval(value_t expr)
 {
     value_t v;
-    u_int32_t saveSP = SP;
+    uint32_t saveSP = SP;
     PUSH(NIL);
     v = topeval(expr, &Stack[SP-1]);
     SP = saveSP;
